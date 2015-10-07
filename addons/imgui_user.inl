@@ -22,6 +22,7 @@
 #include "./imguivariouscontrols/imguivariouscontrols.cpp"
 #include "./imguistyleserializer/imguistyleserializer.cpp"
 #include "./imguidatechooser/imguidatechooser.cpp"
+#include "./imguinodegrapheditor/imguinodegrapheditor.cpp"
 
 #ifdef IMGUI_USE_AUTO_BINDING	// defined in imgui_user.h
 #	ifdef IMGUI_USE_GLUT_BINDING

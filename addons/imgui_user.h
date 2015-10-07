@@ -15,6 +15,7 @@
 #include "./imguivariouscontrols/imguivariouscontrols.h"
 #include "./imguistyleserializer/imguistyleserializer.h"
 #include "./imguidatechooser/imguidatechooser.h"
+#include "./imguinodegrapheditor/imguinodegrapheditor.h"
 
 #undef IMGUI_USE_AUTO_BINDING
 #if (defined(IMGUI_USE_GLUT_BINDING) || defined(IMGUI_USE_SDL2_BINDING) || defined(IMGUI_USE_GLFW_BINDING) || defined(IMGUI_USE_WINAPI_BINDING))

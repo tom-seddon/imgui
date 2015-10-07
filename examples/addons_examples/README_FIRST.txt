@@ -26,6 +26,17 @@ IMIMPL_SHADER_GLES # shader uses gles (and if IMIMPL_SHADER_GL3 is defined glsl 
 IMGUI_USE_GLEW     # inits the glew library (needs -lGLEW). This definition might be mandatory for IMGUI_USE_WINAPI_BINDING.
 
 
+----------------------------------------------------------------------------------------------------------------------------------
+SPARE SINGLE ADDON USAGE
+---------------------------
+If you just want to add a single addon (a pair of addonName.h/.cpp files) to an existing project WITHOUT following the steps above, you can probably just include its header file,
+add the include folders: $IMGUI_HOME and $IMGUI_HOME/addons/addonName to your project (where $IMGUI_HOME is the path where imgui.h/.cpp is located) and compile the file $IMGUI_HOME/addons/addonName/addonName.cpp, where "addonName" is the name of the addon you want to use. Be warned that some addons might depend on others: e.g. imguipanelmanager depends on imguitoolbar: so you may need to include both addons.
+
+However I'm not sure this approach works for all the addons, since some .cpp files need to be included after imgui.cpp to access its internals: recent imgui versions provide the file:
+imgui_internal.h, you may try including this at the top of the addonName.cpp file, but there's no
+guarantee it will work.
+
+
 -----------------------------------------------------------------------------------------------------------------------------------
 A MINIMAL EXAMPLE: mainBasic.cpp
 ---------------------------------

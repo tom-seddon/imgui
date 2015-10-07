@@ -1,9 +1,69 @@
 #include "imguidatechooser.h"
-#include <time.h>
+#include <time.h>               // very simple and common plain C header file (it's NOT the c++ <sys/time.h>). If not available it's probably better to implement it yourself rather than modifying this file.
 //#include <ctype.h>  // toupper()
 
 
 namespace ImGui {
+
+/*
+static bool IsPopupOpen(ImGuiID id) {
+    ImGuiState& g = *GImGui;
+    const bool opened = g.OpenedPopupStack.Size > g.CurrentPopupStack.Size && g.OpenedPopupStack[g.CurrentPopupStack.Size].PopupID == id;
+    return opened;
+}
+static void CloseInactivePopups()   {
+    ImGuiState& g = *GImGui;
+    if (g.OpenedPopupStack.empty())
+        return;
+
+    // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it.
+    // Don't close our own child popup windows
+    int n = 0;
+    if (g.FocusedWindow)
+    {
+        for (n = 0; n < g.OpenedPopupStack.Size; n++)
+        {
+            ImGuiPopupRef& popup = g.OpenedPopupStack[n];
+            if (!popup.Window)
+                continue;
+            IM_ASSERT((popup.Window->Flags & ImGuiWindowFlags_Popup) != 0);
+            if (popup.Window->Flags & ImGuiWindowFlags_ChildWindow)
+                continue;
+
+            bool has_focus = false;
+            for (int m = n; m < g.OpenedPopupStack.Size && !has_focus; m++)
+                has_focus = (g.OpenedPopupStack[m].Window && g.OpenedPopupStack[m].Window->RootWindow == g.FocusedWindow->RootWindow);
+            if (!has_focus)
+                break;
+        }
+    }
+    if (n < g.OpenedPopupStack.Size)   // This test is not required but it allows to set a useful breakpoint on the line below
+        g.OpenedPopupStack.resize(n);
+}
+static ImGuiWindow* GetFrontMostModalRootWindow()   {
+    ImGuiState& g = *GImGui;
+    if (!g.OpenedPopupStack.empty())
+        if (ImGuiWindow* front_most_popup = g.OpenedPopupStack.back().Window)
+            if (front_most_popup->Flags & ImGuiWindowFlags_Modal)
+                return front_most_popup;
+    return NULL;
+}
+static void ClosePopupToLevel(int remaining)    {
+    ImGuiState& g = *GImGui;
+    if (remaining > 0)
+        ImGui::FocusWindow(g.OpenedPopupStack[remaining-1].Window);
+    else
+        ImGui::FocusWindow(g.OpenedPopupStack[0].ParentWindow);
+    g.OpenedPopupStack.resize(remaining);
+}
+static void ClosePopup(ImGuiID id){
+    if (!IsPopupOpen(id))
+        return;
+    ImGuiState& g = *GImGui;
+    ClosePopupToLevel(g.OpenedPopupStack.Size - 1);
+}
+*/
+
 /*
 static float GetWindowFontScale() {
     ImGuiState& g = *GImGui;
@@ -50,6 +110,7 @@ inline static void RecalculateDateDependentFields(tm& date)    {
                     "%d/%m/%Y"
                     ,&d);
 }*/
+
 
 bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool closeWhenMouseLeavesIt,bool* pSetStartDateToDateOutThisFrame,const char* leftArrow,const char* rightArrow,const char* upArrowString,const char* downArrowString)    {
     ImGuiState& g = *GImGui;
@@ -157,32 +218,33 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
     if (label_size.x > 0) RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
     ImGui::PushID((int)id);
-    bool menu_toggled = false;
+    //bool menu_toggled = false;
     if (hovered)    {
         g.HoveredId = id;
         if (g.IO.MouseClicked[0])   {
-            menu_toggled = true;
-            g.ActiveId = (g.ActiveId == id) ? 0 : id;     // g.ActiveId was g.ActiveComboID actually (and all references below)
-            if (g.ActiveId)
-                FocusWindow(window);
-
+            //SetActiveID(0);
+            //if (IsPopupOpen(id))    ClosePopup(id);
+            //else    {
+                //menu_toggled = true;
+                g.ActiveId = (g.ActiveId == id) ? 0 : id;     // g.ActiveId was g.ActiveComboID actually (and all references below)
+                if (g.ActiveId) FocusWindow(window);
+            //}
         }
     }
 
     if (g.ActiveId == id)  {
-        // TODO: Fix: Actually this code was made by cloning the ImGui::Combo(...). Here I don't need any scrollbar, but I don't know how to disable it!
-        const int height_in_items = 1 + 1 + 1 + 6;  // If I set this too short, a scrollbar pops-in...
+        const int height_in_items = 1 + 1 + 1 + 4;
         const int items_count = height_in_items;
 
         const ImVec2 backup_pos = ImGui::GetCursorPos();
         const float popup_off_x = 0.0f;
         const float popup_height = (label_size.y + 2*style.ItemSpacing.y) * ImMin(items_count, height_in_items) + (style.FramePadding.y * 3);
-        const ImRect popup_rect(ImVec2(frame_bb.Min.x+popup_off_x, frame_bb.Max.y), ImVec2(frame_bb.Max.x+popup_off_x, frame_bb.Max.y + popup_height));
+        const ImRect popup_rect(ImVec2(frame_bb.Min.x+popup_off_x+ImGui::GetScrollX(), frame_bb.Max.y+ImGui::GetScrollY()), ImVec2(frame_bb.Max.x+popup_off_x + ImGui::GetScrollX(), frame_bb.Max.y + popup_height + ImGui::GetScrollY()));
         ImGui::SetCursorPos(popup_rect.Min - window->Pos);
 
-        const ImGuiWindowFlags flags = ImGuiWindowFlags_ComboBox | ((window->Flags & ImGuiWindowFlags_ShowBorders) ? ImGuiWindowFlags_ShowBorders : 0);
+        const ImGuiWindowFlags flags = ImGuiWindowFlags_ComboBox | ((window->Flags & ImGuiWindowFlags_ShowBorders) ? ImGuiWindowFlags_ShowBorders : 0) | ImGuiWindowFlags_NoScrollbar;
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
-        ImGui::BeginChild("#ComboBox", popup_rect.GetSize(), false, flags);
+        ImGui::BeginChild("#ComboBoxDateChooser", popup_rect.GetSize(), true, flags);
         ImGui::Spacing();
 
         bool combo_item_active = false;
@@ -201,8 +263,9 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
         ImGui::PushID(1234);
         if (ImGui::SmallButton(arrowLeft)) {d.tm_mon-=1;RecalculateDateDependentFields(d);}
         ImGui::SameLine();
+//#       undef  IMGUIVARIOUSCONTROLS_H_
 #       ifndef IMGUIVARIOUSCONTROLS_H_
-        ImGui::Text(monthNames[d.tm_mon]);
+        ImGui::Text("%s",monthNames[d.tm_mon]);
 #       else //IMGUIVARIOUSCONTROLS_H_
         static ImGui::PopupMenuSimpleParams popupMonthParams;
         ImVec2 menupos(ImGui::GetCursorPos().x+popup_rect.Min.x,ImGui::GetIO().MousePos.y);
@@ -218,7 +281,7 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
         if (ImGui::SmallButton(arrowRight)) {d.tm_mon+=1;RecalculateDateDependentFields(d);}
         ImGui::PopID();
 
-        ImGui::SameLine(ImGui::GetWindowWidth()-yearPartWidth-ImGui::GetStyle().WindowPadding.x-ImGui::GetStyle().ItemSpacing.x*3.f);
+        ImGui::SameLine(ImGui::GetWindowWidth()-yearPartWidth-ImGui::GetStyle().WindowPadding.x-ImGui::GetStyle().ItemSpacing.x*4.f);
 
         ImGui::PushID(1235);
         if (ImGui::SmallButton(arrowLeft)) {d.tm_year-=1;if(d.tm_year<0) d.tm_year=0;RecalculateDateDependentFields(d);}

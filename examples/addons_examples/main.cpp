@@ -170,6 +170,8 @@ void DrawGL()	// Mandatory
 
         static bool show_test_window = true;
         static bool show_another_window = false;
+        static bool show_node_graph_editor_window = false;
+        static bool show_splitter_test_window = false;
 
         // 1. Show a simple window
         {
@@ -186,6 +188,8 @@ void DrawGL()	// Mandatory
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
             show_test_window ^= ImGui::Button("Test Window");
             show_another_window ^= ImGui::Button("Another Window With Toolbar Test");
+            show_node_graph_editor_window ^= ImGui::Button("Another Window With NodeGraphEditor");
+            show_splitter_test_window ^= ImGui::Button("Show splitter test window");
 
             // Calculate and show framerate
             static float ms_per_frame[120] = { 0 };
@@ -220,6 +224,31 @@ void DrawGL()	// Mandatory
             }
             if (resetCurrentStyle)  ImGui::GetStyle() = ImGuiStyle();
 
+
+            /*//test modal dialogs (to remove)
+            if (ImGui::Button("Delete.."))
+                ImGui::OpenPopup("Delete?");
+            if (ImGui::BeginPopupModal("Delete?", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!\n\n");
+                ImGui::Separator();
+
+                static bool dont_ask_me_next_time = false;
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
+                ImGui::Checkbox("Don't ask me next time", &dont_ask_me_next_time);
+                ImGui::PopStyleVar();
+
+                ImGui::BeginChild("Test",ImVec2(200,20),true,0);
+                ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!\n\n");
+                ImGui::Separator();
+
+                ImGui::EndChild();
+
+                if (ImGui::Button("OK", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
+                ImGui::EndPopup();
+            }*/
 
             // imguifilesystem tests:
             ImGui::Text("\n");
@@ -261,7 +290,7 @@ void DrawGL()	// Mandatory
             }
 
             // DateChooser Test:
-            ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguidatechooser (BROKEN)");ImGui::Separator();
+            ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguidatechooser (BROKEN: no more interaction with recent imgui)");ImGui::Separator();
             /*struct tm {
   int tm_sec;			 Seconds.	[0-60] (1 leap second)
   int tm_min;			 Minutes.	[0-59]
@@ -272,16 +301,72 @@ void DrawGL()	// Mandatory
   int tm_wday;			 Day of week.	[0-6]
   int tm_yday;			 Days in year.[0-365]
   };*/
+            ImGui::Text("Choose a date:");ImGui::SameLine();
             tm myDate={0};
-            if (ImGui::DateChooser("Date Chooser",myDate)) {
+            if (ImGui::DateChooser("Date Chooser##MyDateChooser",myDate)) {
                 // A new date has been chosen
             }
             ImGui::Text("Chosen date: \"%d - %d - %d\"",myDate.tm_mday,myDate.tm_mon+1,myDate.tm_year+1900);
 
 
+            // imguivariouscontrols
+            ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguivariouscontrols");ImGui::Separator();
             // ProgressBar Test:
-            ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguiprogressbar");ImGui::Separator();
             ImGui::TestProgressBar();
+            // ColorChooser Test:
+            static ImVec4 chosenColor(1,1,1,1);
+            static bool openColorChooser = false;
+            ImGui::AlignFirstTextHeightToWidgets();ImGui::Text("Please choose a color:");ImGui::SameLine();
+            openColorChooser|=ImGui::ColorButton(chosenColor);
+            //if (openColorChooser) chosenColor.z=0.f;
+            if (ImGui::ColorChooser(&openColorChooser,&chosenColor)) {
+                // choice OK here
+            }
+            // PopupMenuSimple Test:
+            // Recent Files-like menu
+            static const char* recentFileList[] = {"filename01","filename02","filename03","filename04","filename05","filename06","filename07","filename08","filename09","filename10"};
+            static ImGui::PopupMenuSimpleParams pmsParams;
+            const bool popupMenuButtonClicked = ImGui::Button("Right-click me##PopupMenuSimpleTest");
+            pmsParams.open|= ImGui::GetIO().MouseClicked[1] && ImGui::IsItemHovered(); // RIGHT CLICK on the last widget
+                             //popupMenuButtonClicked;    // Or we can just click the button
+            const int selectedEntry = ImGui::PopupMenuSimple(pmsParams,recentFileList,(int) sizeof(recentFileList)/sizeof(recentFileList[0]),5,true,"RECENT FILES");
+            static int lastSelectedEntry = -1;
+            if (selectedEntry>=0) {
+                // Do something: clicked recentFileList[selectedEntry].
+                // Good in most cases, but here we want to persist the last choice because this branch happens only one frame:
+                lastSelectedEntry = selectedEntry;
+            }
+            if (lastSelectedEntry>=0) {ImGui::SameLine();ImGui::Text("Last selected: %s\n",recentFileList[lastSelectedEntry]);}
+            // Fast copy/cut/paste menus
+            static char buf[512]="Some sample text";
+            ImGui::InputTextMultiline("Right click to have\na (non-functional)\ncopy/cut/paste menu\nin one line of code##TestCopyCutPaste",buf,512);
+            const int cutCopyOrPasteSelected = ImGui::PopupMenuSimpleCopyCutPasteOnLastItem();
+            if (cutCopyOrPasteSelected>=0)  {
+                // Here we have 0 = cut, 1 = copy, 2 = paste
+                // However ImGui::PopupMenuSimpleCopyCutPasteOnLastItem() can't perform these operations for you
+                // and it's not trivial at all... at least I've got no idea on how to do it!
+                // Moreover, the selected text seems to lose focus when the menu is selected...
+            }
+
+            // Single column popup menu with icon support. It disappears when the mouse goes away. Never tested.
+            // User is supposed to create a static instance of it, add entries once, and then call "render()".
+            static ImGui::PopupMenu pm;
+            if (pm.isEmpty())   {
+                pm.addEntryTitle("Single Menu With Images");
+                char tmp[1024];ImVec2 uv0(0,0),uv1(0,0);
+                for (int i=0;i<9;i++) {
+                    strcpy(tmp,"Image Menu Entry ");
+                    sprintf(&tmp[strlen(tmp)],"%d",i+1);
+                    uv0 = ImVec2((float)(i%3)/3.f,(float)(i/3)/3.f);
+                    uv1 = ImVec2(uv0.x+1.f/3.f,uv0.y+1.f/3.f);
+
+                    pm.addEntry(tmp,reinterpret_cast<void*>(myImageTextureId2),uv0,uv1);
+                }
+
+            }
+            static bool trigger = false;
+            trigger|=ImGui::Button("Press me for a menu with images##PopupMenuWithImagesTest");
+            const int selectedImageMenuEntry = pm.render(trigger);   // -1 = none
 
 
             // ListView Test:
@@ -332,7 +417,49 @@ void DrawGL()	// Mandatory
             //ImGui::SetNewWindowDefaultPos(ImVec2(650, 20));        // Normally user code doesn't need/want to call this, because positions are saved in .ini file. Here we just want to make the demo initial state a bit more friendly!
             ImGui::ShowTestWindow(&show_test_window);
         }
+        if (show_node_graph_editor_window) {
+            static ImGui::NodeGraphEditor nge;
+            if (nge.isEmpty())	{
+                nge.addNode(0, "MainTex",  ImVec2(40,50), 0.5f, ImColor(255,100,100), 1, 1);
+                nge.addNode(1, "BumpMap",  ImVec2(40,150), 0.42f, ImColor(200,100,200), 1, 1);
+                nge.addNode(2, "Combine", ImVec2(270,80), 1.0f, ImColor(0,200,100), 2, 2);
+                nge.addLink(0, 0, 2, 0);
+                nge.addLink(1, 0, 2, 1);
+            }
+            nge.render(&show_node_graph_editor_window);
+        }
+        if (show_splitter_test_window)  {
+            // snippet by omar
+            ImGui::Begin("Splitter test",&show_splitter_test_window,ImVec2(500,500));
 
+            static float w = 200.0f;
+            static float h = 300.0f;
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
+
+            // window top left
+            ImGui::BeginChild("child1", ImVec2(w, h), true);
+            ImGui::EndChild();
+            // horizontal splitter
+            ImGui::SameLine();
+            ImGui::InvisibleButton("hsplitter", ImVec2(8.0f,h));
+            if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+            if (ImGui::IsItemActive())  w += ImGui::GetIO().MouseDelta.x;
+            ImGui::SameLine();
+            // window top right
+            ImGui::BeginChild("child2", ImVec2(0, h), true);
+            ImGui::EndChild();
+            // vertical splitter
+            ImGui::InvisibleButton("vsplitter", ImVec2(-1,8.0f));
+            if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+            if (ImGui::IsItemActive())  h += ImGui::GetIO().MouseDelta.y;
+            // window bottom
+            ImGui::BeginChild("child3", ImVec2(0,0), true);
+            ImGui::EndChild();
+
+            ImGui::PopStyleVar();
+
+            ImGui::End();
+        }
 
         // imguitoolbar test 2: two global toolbars one at the top and one at the left
 
@@ -350,11 +477,11 @@ void DrawGL()	// Mandatory
                     uv0 = ImVec2((float)(i%3)/3.f,(float)(i/3)/3.f);
                     uv1 = ImVec2(uv0.x+1.f/3.f,uv0.y+1.f/3.f);
 
-                    toolbar.addButton(ImGui::Toolbutton(tmp,(void*)myImageTextureId2,uv0,uv1));
+                    toolbar.addButton(ImGui::Toolbutton(tmp,reinterpret_cast<void*>(myImageTextureId2),uv0,uv1));
                 }
                 toolbar.addSeparator(16);
-                toolbar.addButton(ImGui::Toolbutton("toolbutton 11",(void*)myImageTextureId2,uv0,uv1,ImVec2(32,32),true,false,ImVec4(0.8,0.8,1.0,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
-                toolbar.addButton(ImGui::Toolbutton("toolbutton 12",(void*)myImageTextureId2,uv0,uv1,ImVec2(48,24),true,false,ImVec4(1.0,0.8,0.8,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
+                toolbar.addButton(ImGui::Toolbutton("toolbutton 11",reinterpret_cast<void*>(myImageTextureId2),uv0,uv1,ImVec2(32,32),true,false,ImVec4(0.8,0.8,1.0,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
+                toolbar.addButton(ImGui::Toolbutton("toolbutton 12",reinterpret_cast<void*>(myImageTextureId2),uv0,uv1,ImVec2(48,24),true,false,ImVec4(1.0,0.8,0.8,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
 
                 toolbar.setProperties(false,false,true,ImVec2(0.5f,0.f),ImVec2(-1,-1),ImVec4(1,1,1,1),displayPortion);
 
@@ -373,11 +500,11 @@ void DrawGL()	// Mandatory
                     uv0=ImVec2((float)(i%3)/3.f,(float)(i/3)/3.f);
                     uv1=ImVec2(uv0.x+1.f/3.f,uv0.y+1.f/3.f);
 
-                    toolbar.addButton(ImGui::Toolbutton(tmp,(void*)myImageTextureId2,uv0,uv1,ImVec2(24,48)));
+                    toolbar.addButton(ImGui::Toolbutton(tmp,reinterpret_cast<void*>(myImageTextureId2),uv0,uv1,ImVec2(24,48)));
                 }
                 toolbar.addSeparator(16);
-                toolbar.addButton(ImGui::Toolbutton("toolbutton 11",(void*)myImageTextureId2,uv0,uv1,ImVec2(24,32),true,false,ImVec4(0.8,0.8,1.0,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
-                toolbar.addButton(ImGui::Toolbutton("toolbutton 12",(void*)myImageTextureId2,uv0,uv1,ImVec2(24,32),true,false,ImVec4(1.0,0.8,0.8,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
+                toolbar.addButton(ImGui::Toolbutton("toolbutton 11",reinterpret_cast<void*>(myImageTextureId2),uv0,uv1,ImVec2(24,32),true,false,ImVec4(0.8,0.8,1.0,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
+                toolbar.addButton(ImGui::Toolbutton("toolbutton 12",reinterpret_cast<void*>(myImageTextureId2),uv0,uv1,ImVec2(24,32),true,false,ImVec4(1.0,0.8,0.8,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
 
                 toolbar.setProperties(true,true,false,ImVec2(0.0f,0.0f),ImVec2(0.25f,0.9f),ImVec4(0.85,0.85,1,1),displayPortion);
 
@@ -391,7 +518,7 @@ void DrawGL()	// Mandatory
 
 
 
-//#   define USE_ADVANCED_SETUP   // in file definition (see below). For now it just adds custom fonts and clamps FPS to 10.
+//#   define USE_ADVANCED_SETUP   // in-file definition (see below). For now it just adds custom fonts and clamps FPS to 10 (= jerky movements when moving windows).
 
 // Application code
 #ifndef IMGUI_USE_WINAPI_BINDING

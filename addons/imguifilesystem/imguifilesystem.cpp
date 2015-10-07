@@ -1745,15 +1745,33 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
 #       endif //DEBUG_HISTORY
     }
 
+//#   define USE_MODAL_WINDOWS    // in-file definition (DOES NOT WORK: my code is too complicated for this to work)
     if (I.rescan) {
         I.rescan = false; // Mandatory
-
+#       ifndef USE_MODAL_WINDOWS
         ImGui::Begin(I.wndTitle, &I.open, I.wndSize,windowAlpha);
+#       else //USE_MODAL_WINDOWS
+        ImGui::OpenPopup(I.wndTitle);
+        //ImGuiWindowFlags flags = ImGuiWindowFlags_Popup|ImGuiWindowFlags_Modal|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings;
+        //const bool popupOk = ImGui::Begin(I.wndTitle, &I.open, I.wndSize,windowAlpha,flags);
+        const bool popupOk = ImGui::BeginPopupModal(I.wndTitle, &I.open);//, I.wndSize,windowAlpha);
+        if (!popupOk) return rv;
+#       endif //USE_MODAL_WINDOWS
         ImGui::SetWindowPos(I.wndPos);
         ImGui::SetWindowSize(I.wndSize);
         //fprintf(stderr,"\"%s\" wndPos={%1.2f,%1.2f}\n",wndTitle.c_str(),wndPos.x,wndPos.y);
     }
+#   ifndef USE_MODAL_WINDOWS
     else ImGui::Begin(I.wndTitle, &I.open,ImVec2(0,0),windowAlpha);
+#   else //USE_MODAL_WINDOWS
+    else {
+        //ImGui::OpenPopup(I.wndTitle);
+        //ImGuiWindowFlags flags = ImGuiWindowFlags_Popup|ImGuiWindowFlags_Modal|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings;
+        //const bool popupOk = ImGui::Begin(I.wndTitle, &I.open, ImVec2(0,0),windowAlpha,flags);
+        const bool popupOk = ImGui::BeginPopupModal(I.wndTitle, &I.open);//,ImVec2(0,0),windowAlpha);
+        if (!popupOk) return rv;
+    }
+#   endif //USE_MODAL_WINDOWS
     ImGui::Separator();
 
     //------------------------------------------------------------------------------------
@@ -1798,7 +1816,11 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
         // -------------------------------------------------------
 
         if (historyBackClicked || historyForwardClicked)    {
+#           ifndef USE_MODAL_WINDOWS
             ImGui::End();
+#           else //USE_MODAL_WINDOWS
+            ImGui::EndPopup();
+#           endif //USE_MODAL_WINDOWS
 
             if (historyBackClicked)         I.history.goBack();
             else if (historyForwardClicked) I.history.goForward();
@@ -2089,7 +2111,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
             const ImVec4& r = style.Colors[ImGuiCol_Text];
             Internal::ColorCombine(c,r,sf);
 
-            ImGui::TextColored(ColorSet[Internal::ImGuiCol_Dialog_SelectedFolder_Text],"%s",&I.saveFileName[0],MAX_FILENAME_BYTES);
+            ImGui::TextColored(ColorSet[Internal::ImGuiCol_Dialog_SelectedFolder_Text],"%s",&I.saveFileName[0]);//,MAX_FILENAME_BYTES);
             ImGui::SameLine();
         }
 
@@ -2327,8 +2349,12 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
 
     }
     //-----------------------------------------------------------------------------
-
+#   ifndef USE_MODAL_WINDOWS
     ImGui::End();
+#   else //USE_MODAL_WINDOWS
+    ImGui::EndPopup();
+#   endif //USE_MODAL_WINDOWS
+#   undef USE_MODAL_WINDOWS     // Warning: from now on USE_MODAL_WINDOWS is undefined
     return rv;
 }
 

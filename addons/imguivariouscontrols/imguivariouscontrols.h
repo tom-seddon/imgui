@@ -47,8 +47,8 @@ void TestProgressBar();
 // Optional scrollUpEntryText returns index of -2,scrollDownEntryText -3 (but they must be manually handled by the user)
 int PopupMenuSimple(bool& open,const char** pEntries,int numEntries,const char* optionalTitle=NULL,int* pOptionalHoveredEntryOut=NULL,int startIndex=0,int endIndex=-1,bool reverseItems=false,const char* scrollUpEntryText=NULL,const char* scrollDownEntryText=NULL);
 
-void TestPopupMenuSimple();
-
+// returns -1 if nothing has been chosen, 0 if copy has been clicked, 1 if cut has been clicked and 2 if paste has been clicked
+int PopupMenuSimpleCopyCutPasteOnLastItem(bool readOnly=false);
 
 class PopupMenuSimpleParams {
 public:
@@ -70,7 +70,7 @@ friend int PopupMenuSimple(PopupMenuSimpleParams& params,const char** pTotalEntr
 
 int PopupMenuSimple(PopupMenuSimpleParams& params,const char** pTotalEntries,int numTotalEntries,int numAllowedEntries,bool reverseItems=false,const char* optionalTitle=NULL,const char* scrollUpEntryText="   ^   ",const char* scrollDownEntryText="   v   ");
 
-void TestPopupMenuSimple2(const char* scrollUpEntryText="   ^   ",const char* scrollDownEntryText="   v   ");
+void TestPopupMenuSimple(const char* scrollUpEntryText="   ^   ",const char* scrollDownEntryText="   v   ");
 
 
 // Single column popup menu with icon support. It disappears when the mouse goes away. Never tested.
@@ -219,9 +219,12 @@ int render(bool& open) const    {
     return selectedEntry;
 }
 
+bool isEmpty() const {return entries.size()==0;}
 
 };
 
+
+bool ColorChooser(bool* open,ImVec4* pColorOut=NULL, bool supportsAlpha=true);
 
 
 } // namespace ImGui
