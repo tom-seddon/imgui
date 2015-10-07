@@ -2,7 +2,7 @@
 
 namespace ImGui {
 static float GetWindowFontScale() {
-    ImGuiState& g = *GImGui;
+    //ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     return window->FontWindowScale;
 }
@@ -22,7 +22,7 @@ float ProgressBar(const char *optionalPrefixText, float value, const float minVa
 
     if (optionalPrefixText && strlen(optionalPrefixText)>0) {
         ImGui::AlignFirstTextHeightToWidgets();
-        ImGui::Text(optionalPrefixText);
+        ImGui::Text("%s",optionalPrefixText);
         ImGui::SameLine();
     }
 
@@ -39,9 +39,9 @@ float ProgressBar(const char *optionalPrefixText, float value, const float minVa
     return valueFraction;
 }
 
-void TestProgressBar()  {
-    static float progress=0; static float progressSign = 1.f;
-    progress+=progressSign*.0001f;if (progress>=1.f || progress<=0.f) progressSign*=-1.f;
+void TestProgressBar()  {    
+    const float time = ((float)(((unsigned int) (ImGui::GetTime()*1000.f))%50000)-25000.f)/25000.f;
+    float progress=(time>0?time:-time);
     // No IDs needed for ProgressBars:
     ImGui::ProgressBar("ProgressBar",progress);
     ImGui::ProgressBar("ProgressBar",1.f-progress);
@@ -69,7 +69,7 @@ int PopupMenuSimple(bool &open, const char **pEntries, int numEntries, const cha
     //ImGui::BeginPopup(&open);
     ImGui::OpenPopup("MyOwnPopupSimpleMenu");
     if (ImGui::BeginPopup("MyOwnPopupSimpleMenu"))  {
-        if (optionalTitle) {ImGui::Text(optionalTitle);ImGui::Separator();}
+        if (optionalTitle) {ImGui::Text("%s",optionalTitle);ImGui::Separator();}
         if (startIndex<0) startIndex=0;
         if (endIndex<0) endIndex = numEntries-1;
         if (endIndex>=numEntries) endIndex = numEntries-1;
@@ -139,17 +139,17 @@ int PopupMenuSimple(bool &open, const char **pEntries, int numEntries, const cha
     return selectedEntry;    
 }
 
-void TestPopupMenuSimple() {
+int PopupMenuSimpleCopyCutPasteOnLastItem(bool readOnly) {
     static bool open = false;
     static const char* entries[] = {"Copy","Cut","","Paste"};   // "" is separator
     //open|=ImGui::Button("Show Popup Menu Simple");                    // BUTTON
-    open|= ImGui::GetIO().MouseClicked[1];// && ImGui::IsItemHovered(); // RIGHT CLICK
-    const int selectedEntry = PopupMenuSimple(open,entries,(int)sizeof(entries)/sizeof(entries[0]),"TEST MENU");
-    if (selectedEntry>=0) {
-        // Do something: clicked entries[selectedEntry]
-    }
+    open|= ImGui::GetIO().MouseClicked[1] && ImGui::IsItemHovered(); // RIGHT CLICK
+    int selectedEntry = PopupMenuSimple(open,entries,readOnly?1:4);
+    if (selectedEntry>2) selectedEntry = 2; // Normally separator takes out one space
+    return selectedEntry;
     // About "open": when user exits popup-menu, "open" becomes "false". Please set it to "true" to display it again (we do it using open|=[...])
 }
+
 
 int PopupMenuSimple(PopupMenuSimpleParams &params, const char **pTotalEntries, int numTotalEntries, int numAllowedEntries, bool reverseItems, const char *optionalTitle, const char *scrollUpEntryText, const char *scrollDownEntryText)    {
     if (numAllowedEntries<1 || numTotalEntries==0) {params.open=false;return -1;}
@@ -176,7 +176,7 @@ int PopupMenuSimple(PopupMenuSimpleParams &params, const char **pTotalEntries, i
     return params.selectedEntry;
 }
 
-void TestPopupMenuSimple2(const char *scrollUpEntryText, const char *scrollDownEntryText) {
+void TestPopupMenuSimple(const char *scrollUpEntryText, const char *scrollDownEntryText) {
     // Recent Files-like menu
     static const char* recentFileList[] = {"filename01","filename02","filename03","filename04","filename05","filename06","filename07","filename08","filename09","filename10"};
 
@@ -188,115 +188,206 @@ void TestPopupMenuSimple2(const char *scrollUpEntryText, const char *scrollDownE
     }
 }
 
+inline static void ClampColor(ImVec4& color)    {
+    float* pf;
+    pf = &color.x;if (*pf<0) *pf=0;if (*pf>1) *pf=1;
+    pf = &color.y;if (*pf<0) *pf=0;if (*pf>1) *pf=1;
+    pf = &color.z;if (*pf<0) *pf=0;if (*pf>1) *pf=1;
+    pf = &color.w;if (*pf<0) *pf=0;if (*pf>1) *pf=1;
+}
 
-/*
-//TODO: A modified version of this method for unwrapped text that supports a horizontal scrollbar
-void ImGui::TextUnformatted(const char* text, const char* text_end)
-{
-    ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return;
+// Based on the code from: https://github.com/benoitjacquier/imgui
+bool ColorChooser(bool* open,ImVec4 *pColorOut,bool supportsAlpha)   {
+    static bool lastOpen = false;
+    static const ImVec2 windowSize(175,285);
 
-    IM_ASSERT(text != NULL);
-    const char* text_begin = text;
-    if (text_end == NULL)
-        text_end = text + strlen(text); // FIXME-OPT
+    if (open && !*open) {lastOpen=false;return false;}
+    if (open && *open && *open!=lastOpen) {
+        ImGui::SetNextWindowPos(ImGui::GetCursorScreenPos());
+        ImGui::SetNextWindowSize(windowSize);
+        lastOpen=*open;
+    }
 
-    const float wrap_pos_x = window->DC.TextWrapPos.back();
-    const bool wrap_enabled = wrap_pos_x >= 0.0f;
-    if (text_end - text > 2000 && !wrap_enabled)
+    //ImGui::OpenPopup("Color Chooser##myColorChoserPrivate");
+
+    bool colorSelected = false;
+
+    ImGuiWindowFlags WindowFlags = 0;
+    //WindowFlags |= ImGuiWindowFlags_NoTitleBar;
+    WindowFlags |= ImGuiWindowFlags_NoResize;
+    //WindowFlags |= ImGuiWindowFlags_NoMove;
+    WindowFlags |= ImGuiWindowFlags_NoScrollbar;
+    WindowFlags |= ImGuiWindowFlags_NoCollapse;
+    WindowFlags |= ImGuiWindowFlags_NoScrollWithMouse;
+
+    //if (ImGui::BeginPopupModal("Color Chooser##myColorChoserPrivate",open,WindowFlags))
+    if (ImGui::Begin("Color Chooser##myColorChoserPrivate",open,windowSize,-1.f,WindowFlags))
     {
-        // Long text!
-        // Perform manual coarse clipping to optimize for long multi-line text
-        // From this point we will only compute the width of lines that are visible. Optimization only available when word-wrapping is disabled.
-        // We also don't vertically center the text within the line full height, which is unlikely to matter because we are likely the biggest and only item on the line.
-        const char* line = text;
-        const float line_height = ImGui::GetTextLineHeight();
-        const ImVec2 text_pos = window->DC.CursorPos + ImVec2(0.0f, window->DC.CurrentLineTextBaseOffset);
-        const ImVec4 clip_rect = window->ClipRectStack.back();
-        ImVec2 text_size(0,0);
+        ImVec4 color = pColorOut ? *pColorOut : ImVec4(0,0,0,1);
+        if (!supportsAlpha) color.w=1.f;
 
-        if (text_pos.y <= clip_rect.w)
-        {
-            ImVec2 pos = text_pos;
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
 
-            // Lines to skip (can't skip when logging text)
-            if (!g.LogEnabled)
-            {
-                int lines_skippable = (int)((clip_rect.y - text_pos.y) / line_height) - 1;
-                if (lines_skippable > 0)
-                {
-                    int lines_skipped = 0;
-                    while (line < text_end && lines_skipped <= lines_skippable)
-                    {
-                        const char* line_end = strchr(line, '\n');
-                        line = line_end + 1;
-                        lines_skipped++;
-                    }
-                    pos.y += lines_skipped * line_height;
+
+            ImGuiState& g = *GImGui;
+            const int windowWidth = 180;
+            const int smallWidth = 20;
+
+            static const ImU32 black = ColorConvertFloat4ToU32(ImVec4(0,0,0,1));
+            static const ImU32 white = ColorConvertFloat4ToU32(ImVec4(1,1,1,1));
+            static float hue, sat, val;
+
+            ImGui::ColorConvertRGBtoHSV( color.x, color.y, color.z, hue, sat, val );
+
+
+            ImGuiWindow* colorWindow = GetCurrentWindow();
+
+        const int quadSize = windowWidth - smallWidth - colorWindow->WindowPadding.x * 2 - g.Style.ItemSpacing.x;
+        // Hue Saturation Value
+        if (ImGui::BeginChild("ValueSaturationQuad", ImVec2(quadSize, quadSize), false ))   {
+            const int step = 5;
+            ImVec2 pos = ImVec2(0, 0);
+            ImGuiWindow* window = GetCurrentWindow();
+
+            ImVec4 c00(1, 1, 1, 1);
+            ImVec4 c10(1, 1, 1, 1);
+            ImVec4 c01(1, 1, 1, 1);
+            ImVec4 c11(1, 1, 1, 1);
+            for (int y = 0; y < step; y++) {
+                for (int x = 0; x < step; x++) {
+                    float s0 = (float)x / (float)step;
+                    float s1 = (float)(x + 1) / (float)step;
+                    float v0 = 1.0 - (float)(y) / (float)step;
+                    float v1 = 1.0 - (float)(y + 1) / (float)step;
+
+
+                    ImGui::ColorConvertHSVtoRGB(hue, s0, v0, c00.x, c00.y, c00.z);
+                    ImGui::ColorConvertHSVtoRGB(hue, s1, v0, c10.x, c10.y, c10.z);
+                    ImGui::ColorConvertHSVtoRGB(hue, s0, v1, c01.x, c01.y, c01.z);
+                    ImGui::ColorConvertHSVtoRGB(hue, s1, v1, c11.x, c11.y, c11.z);
+
+                    window->DrawList->AddRectFilledMultiColor(window->Pos + pos, window->Pos + pos + ImVec2(quadSize / step, quadSize / step),
+                        ImGui::ColorConvertFloat4ToU32(c00),
+                        ImGui::ColorConvertFloat4ToU32(c10),
+                        ImGui::ColorConvertFloat4ToU32(c11),
+                        ImGui::ColorConvertFloat4ToU32(c01));
+
+                    pos.x += quadSize / step;
                 }
+                pos.x = 0;
+                pos.y += quadSize / step;
             }
 
-            // Lines to render
-            if (line < text_end)
-            {
-                ImRect line_rect(pos, pos + ImVec2(ImGui::GetWindowWidth(), line_height));
-                while (line < text_end)
-                {
-                    const char* line_end = strchr(line, '\n');
-                    if (IsClipped(line_rect))
-                        break;
+            window->DrawList->AddCircle(window->Pos + ImVec2(sat, 1-val)*quadSize, 4, val<0.5f?white:black, 4);
 
-                    const ImVec2 line_size = CalcTextSize(line, line_end, false);
-                    text_size.x = ImMax(text_size.x, line_size.x);
-                    RenderText(pos, line, line_end, false);
-                    if (!line_end)
-                        line_end = text_end;
-                    line = line_end + 1;
-                    line_rect.Min.y += line_height;
-                    line_rect.Max.y += line_height;
-                    pos.y += line_height;
-                }
-
-                // Count remaining lines
-                int lines_skipped = 0;
-                while (line < text_end)
-                {
-                    const char* line_end = strchr(line, '\n');
-                    if (!line_end)
-                        line_end = text_end;
-                    line = line_end + 1;
-                    lines_skipped++;
-                }
-                pos.y += lines_skipped * line_height;
+            const ImGuiID id = window->GetID("ValueSaturationQuad");
+            ImRect bb(window->Pos, window->Pos + window->Size);
+            bool hovered, held;
+            /*bool pressed = */ImGui::ButtonBehavior(bb, id, &hovered, &held, false, false);
+            if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
+            if (held)   {
+                ImVec2 pos = g.IO.MousePos - window->Pos;
+                sat = ImSaturate(pos.x / (float)quadSize);
+                val = 1 - ImSaturate(pos.y / (float)quadSize);
+                ImGui::ColorConvertHSVtoRGB(hue, sat, val, color.x, color.y, color.z);
+                colorSelected = true;
             }
-
-            text_size.y += (pos - text_pos).y;
+        ImGui::EndChild();	// ValueSaturationQuad
         }
 
-        ImRect bb(text_pos, text_pos + text_size);
-        ItemSize(bb);
-        ItemAdd(bb, NULL);
+        ImGui::SameLine();
+
+        //Vertical tint
+        if (ImGui::BeginChild("Tint", ImVec2(20, quadSize), false))  {
+            const int step = 8;
+            const int width = 20;
+            ImGuiWindow* window = GetCurrentWindow();
+            ImVec2 pos(0, 0);
+            ImVec4 c0(1, 1, 1, 1);
+            ImVec4 c1(1, 1, 1, 1);
+            for (int y = 0; y < step; y++) {
+                float tint0 = (float)(y) / (float)step;
+                float tint1 = (float)(y + 1) / (float)step;
+                ImGui::ColorConvertHSVtoRGB(tint0, 1.0, 1.0, c0.x, c0.y, c0.z);
+                ImGui::ColorConvertHSVtoRGB(tint1, 1.0, 1.0, c1.x, c1.y, c1.z);
+
+                window->DrawList->AddRectFilledMultiColor(window->Pos + pos, window->Pos + pos + ImVec2(width, quadSize / step),
+                    ColorConvertFloat4ToU32(c0),
+                    ColorConvertFloat4ToU32(c0),
+                    ColorConvertFloat4ToU32(c1),
+                    ColorConvertFloat4ToU32(c1));
+
+                pos.y += quadSize / step;
+            }
+
+            window->DrawList->AddCircle(window->Pos + ImVec2(10, hue*quadSize), 4, black, 4);
+            //window->DrawList->AddLine(window->Pos + ImVec2(0, hue*quadSize), window->Pos + ImVec2(width, hue*quadSize), ColorConvertFloat4ToU32(ImVec4(0, 0, 0, 1)));
+            bool hovered, held;
+            const ImGuiID id = window->GetID("Tint");
+            ImRect bb(window->Pos, window->Pos + window->Size);
+            /*bool pressed = */ButtonBehavior(bb, id, &hovered, &held, false, false);
+            if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
+            if (held)
+            {
+
+                ImVec2 pos = g.IO.MousePos - window->Pos;
+                hue = ImClamp( pos.y / (float)quadSize, 0.0f, 1.0f );                
+                ImGui::ColorConvertHSVtoRGB( hue, sat, val, color.x, color.y, color.z );
+                colorSelected = true;
+            }
+            ImGui::EndChild(); // "Tint"
+        }
+
+
+        //Sliders
+        ImGui::AlignFirstTextHeightToWidgets();
+        ImGui::Text("Sliders");
+        static bool useHsvSliders = false;
+        static const char* btnNames[2] = {"to HSV","to RGB"};
+        const int index = useHsvSliders?1:0;
+        ImGui::SameLine();
+        if (ImGui::SmallButton(btnNames[index])) useHsvSliders=!useHsvSliders;
+
+        ImGui::Separator();
+
+        {
+            int r = ImSaturate( useHsvSliders ? hue : color.x )*255.f;
+            int g = ImSaturate( useHsvSliders ? sat : color.y )*255.f;
+            int b = ImSaturate( useHsvSliders ? val : color.z )*255.f;
+            int a = ImSaturate( color.w )*255.f;
+
+            static const char* names[2][3]={{"R","G","B"},{"H","S","V"}};
+            bool sliderMoved = false;
+            sliderMoved|= ImGui::SliderInt(names[index][0], &r, 0, 255);
+            sliderMoved|= ImGui::SliderInt(names[index][1], &g, 0, 255);
+            sliderMoved|= ImGui::SliderInt(names[index][2], &b, 0, 255);
+            sliderMoved|= (supportsAlpha && ImGui::SliderInt("A", &a, 0, 255));
+            if (sliderMoved)
+            {
+                colorSelected = true;
+                color.x = (float)r/255.f;
+                color.y = (float)g/255.f;
+                color.z = (float)b/255.f;
+                if (useHsvSliders)  ImGui::ColorConvertHSVtoRGB(color.x,color.y,color.z,color.x,color.y,color.z);
+                if (supportsAlpha) color.w = (float)a/255.f;
+            }
+            //ColorConvertRGBtoHSV(s_color.x, s_color.y, s_color.z, tint, sat, val);*/
+        }
+
+
+        ImGui::PopStyleVar();
+
+        //ImGui::EndPopup();
+        ImGui::End();
+
+        if (colorSelected && pColorOut) *pColorOut = color;
+
     }
-    else
-    {
-        const float wrap_width = wrap_enabled ? CalcWrapWidthForPos(window->DC.CursorPos, wrap_pos_x) : 0.0f;
-        const ImVec2 text_size = CalcTextSize(text_begin, text_end, false, wrap_width);
 
-        // Account of baseline offset
-        ImVec2 text_pos = window->DC.CursorPos;
-        text_pos.y += window->DC.CurrentLineTextBaseOffset;
+    return colorSelected;
 
-        ImRect bb(text_pos, text_pos + text_size);
-        ItemSize(bb.GetSize());
-        if (!ItemAdd(bb, NULL))
-            return;
-
-        // Render (we don't hide text after ## in this end-user function)
-        RenderTextWrapped(bb.Min, text_begin, text_end, wrap_width);
-    }
 }
-*/
+
+
 
 } // namespace ImGui

@@ -57,6 +57,7 @@ static size_t ImFormatString(char* buf, size_t buf_size, const char* fmt, ...)
 
 namespace ImGui	{
 
+
 bool SaveStyle(const char* filename,const ImGuiStyle& style)
 {
     // Write .style file
@@ -79,9 +80,13 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
     fprintf(f, "[ColumnsMinSpacing]\n%1.3f\n", style.ColumnsMinSpacing);
     fprintf(f, "[ScrollbarSize]\n%1.3f\n", style.ScrollbarSize);
     fprintf(f, "[GrabMinSize]\n%1.3f\n", style.GrabMinSize);
+    fprintf(f, "[GrabRounding]\n%1.3f\n", style.GrabRounding);
     fprintf(f, "[ChildWindowRounding]\n%1.3f\n", style.ChildWindowRounding);
     fprintf(f, "[DisplayWindowPadding]\n%1.3f %1.3f\n", style.DisplayWindowPadding.x,style.DisplaySafeAreaPadding.y);
     fprintf(f, "[DisplaySafeAreaPadding]\n%1.3f %1.3f\n", style.DisplaySafeAreaPadding.x,style.DisplaySafeAreaPadding.y);
+    fprintf(f, "[AntiAliasedLines]\n%d\n", style.AntiAliasedLines?1:0);
+    fprintf(f, "[AntiAliasedShapes]\n%d\n", style.AntiAliasedShapes?1:0);
+    fprintf(f, "[CurveTessellationTol]\n%1.3f\n", style.CurveTessellationTol);
 
     for (size_t i = 0; i != ImGuiCol_COUNT; i++)
     {
@@ -138,7 +143,7 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
         
         if (name[0]=='\0' && line_start[0] == '[' && line_end > line_start && line_end[-1] == ']')
         {        
-            ImFormatString(name, IM_ARRAYSIZE(name), "%.*s", line_end-line_start-2, line_start+1);
+            ImFormatString(name, IM_ARRAYSIZE(name), "%.*s", (int)(line_end-line_start-2), line_start+1);
             //fprintf(stderr,"name: %s\n",name);  // dbg
         }
         else if (name[0]!='\0')
@@ -148,6 +153,8 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
             int npf = 0;
             int *pi[4]={0,0,0,0};
             int npi = 0;
+            bool *pb[4]= {0,0,0,0};
+            int npb = 0;
 
             // parsing 'name' here by filling the fields above
             {
@@ -167,9 +174,14 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
                 else if (strcmp(name, "ColumnsMinSpacing")==0)         {npf=1;pf[0]=&style.ColumnsMinSpacing;}
                 else if (strcmp(name, "ScrollbarSize")==0)            {npf=1;pf[0]=&style.ScrollbarSize;}
                 else if (strcmp(name, "GrabMinSize")==0)               {npf=1;pf[0]=&style.GrabMinSize;}
+                else if (strcmp(name, "GrabRounding")==0)               {npf=1;pf[0]=&style.GrabRounding;}
                 else if (strcmp(name, "ChildWindowRounding")==0)       {npf=1;pf[0]=&style.ChildWindowRounding;}
                 else if (strcmp(name, "DisplayWindowPadding")==0)    {npf=2;pf[0]=&style.DisplayWindowPadding.x;pf[1]=&style.DisplayWindowPadding.y;}
                 else if (strcmp(name, "DisplaySafeAreaPadding")==0)    {npf=2;pf[0]=&style.DisplaySafeAreaPadding.x;pf[1]=&style.DisplaySafeAreaPadding.y;}
+                else if (strcmp(name, "AntiAliasedLines")==0)          {npb=1;pb[0]=&style.AntiAliasedLines;}
+                else if (strcmp(name, "AntiAliasedShapes")==0)          {npb=1;pb[0]=&style.AntiAliasedShapes;}
+                else if (strcmp(name, "CurveTessellationTol")==0)               {npf=1;pf[0]=&style.CurveTessellationTol;}
+
                 // all the colors here
                 else {
                     for (int j=0;j<ImGuiCol_COUNT;j++)    {
@@ -239,7 +251,35 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
                     else fprintf(stderr,"Warning in ImGui::LoadStyle(\"%s\"): skipped [%s] (parsing error).\n",filename,name);
                     break;
                 default:
-                    fprintf(stderr,"Warning in ImGui::LoadStyle(\"%s\"): skipped [%s] (unknown field).\n",filename,name);
+                    switch (npb)    {
+                    case 1:
+                        if (sscanf(line_start, "%d", &xi) == npb)	{
+                            *pb[0] = (xi!=0);
+                        }
+                        else fprintf(stderr,"Warning in ImGui::LoadStyle(\"%s\"): skipped [%s] (parsing error).\n",filename,name);
+                        break;
+                    case 2:
+                        if (sscanf(line_start, "%d %d", &xi, &yi) == npb)	{
+                            *pb[0] = (xi!=0);*pb[1] = (yi!=0);
+                        }
+                        else fprintf(stderr,"Warning in ImGui::LoadStyle(\"%s\"): skipped [%s] (parsing error).\n",filename,name);
+                        break;
+                    case 3:
+                        if (sscanf(line_start, "%d %d %d", &xi, &yi, &zi) == npb)	{
+                            *pb[0] = (xi!=0);*pb[1] = (yi!=0);*pb[2] = (zi!=0);
+                        }
+                        else fprintf(stderr,"Warning in ImGui::LoadStyle(\"%s\"): skipped [%s] (parsing error).\n",filename,name);
+                        break;
+                    case 4:
+                        if (sscanf(line_start, "%d %d %d %d", &xi, &yi, &zi, &wi) == npb)	{
+                            *pb[0] = (xi!=0);*pb[1] = (yi!=0);*pb[2] = (zi!=0);*pb[3] = (wi!=0);
+                        }
+                        else fprintf(stderr,"Warning in ImGui::LoadStyle(\"%s\"): skipped [%s] (parsing error).\n",filename,name);
+                        break;
+                    default:
+                        fprintf(stderr,"Warning in ImGui::LoadStyle(\"%s\"): skipped [%s] (unknown field).\n",filename,name);
+                        break;
+                    }
                     break;
                 }
                 break;

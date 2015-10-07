@@ -7,7 +7,7 @@ DESTDIR = ./
 # START USER EDITABLE AREA -----------------------------------------------------------------------
 
 # When commented out, main.cpp is built, otherwise main2.cpp is built
-CONFIG+= use_main2
+#CONFIG+= use_main2
 
 # Only one of these must be active:
 CONFIG+= use_glfw3
@@ -52,11 +52,13 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"				\
 	   $$IMGUI_BASE_PATH"/addons/imguifilesystem/dirent_portable.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguilistview/imguilistview.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguitoolbar/imguitoolbar.h"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguivariousbindings/imguivariousbindings.h"	    \
+	   $$IMGUI_BASE_PATH"/addons/imguivariouscontrols/imguivariouscontrols.h"   \
+	   $$IMGUI_BASE_PATH"/addons/imguihelper/imguihelper.h"			    \
+	   $$IMGUI_BASE_PATH"/addons/imguistring/imguistring.h"			    \
 	   $$IMGUI_BASE_PATH"/addons/imguipanelmanager/imguipanelmanager.h"	    \
-	   $$IMGUI_BASE_PATH"/addons/imguistyleserializer/imguistyleserializer.h"
-	   #./dirent_for_windows/dirent.h
-	   #./stb.h
+	   $$IMGUI_BASE_PATH"/addons/imguistyleserializer/imguistyleserializer.h"   \
+	   $$IMGUI_BASE_PATH"/addons/imguidatechooser/imguidatechooser.h"	    \
+	   $$IMGUI_BASE_PATH"/addons/imguinodegrapheditor/imguinodegrapheditor.h"
 
 SOURCES+=  $$IMGUI_BASE_PATH"/imgui.cpp" \
 	   $$IMGUI_BASE_PATH"/imgui_draw.cpp" \
@@ -78,11 +80,16 @@ LIBS+=-lz
 OTHER_FILES+= 	   $$IMGUI_BASE_PATH"/addons/imguifilesystem/imguifilesystem.cpp"   \
 	   $$IMGUI_BASE_PATH"/addons/imguilistview/imguilistview.cpp"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguitoolbar/imguitoolbar.cpp"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguivariousbindings/imguivariousbindings.cpp"	    \
+	   $$IMGUI_BASE_PATH"/addons/imguivariousbindings/imguivariousbindings.cpp" \
 	   $$IMGUI_BASE_PATH"/addons/imguipanelmanager/imguipanelmanager.cpp"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguistyeserializer/imguistyeserializer.cpp"   \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/imguibindings.cpp"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguibindings/imguistring/imguistring.cpp"
+	   $$IMGUI_BASE_PATH"/addons/imguibindings/imguistring/imguistring.cpp"	    \
+	   $$IMGUI_BASE_PATH"/addons/imguidatechooser/imguidatechooser.cpp"	    \
+	   $$IMGUI_BASE_PATH"/addons/imguivariouscontrols/imguivariouscontrols.cpp" \
+	   $$IMGUI_BASE_PATH"/addons/imguihelper/imguihelper.cpp"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguistring/imguistring.cpp"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguinodegrapheditor/imguinodegrapheditor.cpp"
 
 
 

@@ -130,6 +130,7 @@ bool ImGui::ListViewBase::render(float listViewHeight, const ImVector<int> *pOpt
                     const HeaderData::Editing& hdEditing = hd->editing;
 
                     // Draw editor here--------------------------------------------
+                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
                     const int hdPrecision = hdEditing.precisionOrStringBufferSize;
                     static const int precisionStrSize = 16;static char precisionStr[precisionStrSize];int precisionLastCharIndex;
                     if (hdPrecision>0) {
@@ -262,6 +263,7 @@ bool ImGui::ListViewBase::render(float listViewHeight, const ImVector<int> *pOpt
                     }
                     default: break;
                     }
+                    ImGui::PopStyleVar();
                     // End Draw Editor here----------------------------------------
 
                 }

@@ -61,7 +61,7 @@ x> Never tested on a real Windows OS and on MacOS.
 #include <imgui.h>
 #endif //IMGUI_API
 
-//#define IMGUIFS_NO_EXTRA_METHODS    // optional, but it makes this header havier... TODO: see if I can extract PATH_MAX and FILENAME_MAX with minimal overhead
+//#define IMGUIFS_NO_EXTRA_METHODS    // optional, but it makes this header heavier... TODO: see if I can extract PATH_MAX and FILENAME_MAX with minimal overhead
 #ifndef IMGUIFS_NO_EXTRA_METHODS
 #include "dirent_portable.h"    // just for PATH_MAX
 #include <stdio.h>              // just for FILENAME_MAX
