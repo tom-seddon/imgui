@@ -1,7 +1,8 @@
 #include "imguihelper.h"
 
 #ifdef _WIN32
-//#include <>	// where is ShellExecuteA(...) ???
+#include <Shellapi.h>	// ShellExecuteA(...) - Shell32.lib
+#include <Objbase.h>    // CoInitializeEx(...)  - ole32.lib
 #else //_WIN32
 #include <unistd.h>
 #endif //_WIN32
@@ -32,7 +33,7 @@ bool IsWindowDoubleClicked(const ImGuiAabb& bb, const ImGuiID& id,int button,boo
 
 bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS)	{
 #       ifdef _WIN32
-            //CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);  // Needed ???
+            //CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);  // Needed ??? Well, let's suppose the user initializes it himself for now"
             return ShellExecuteA( NULL, exploreModeForWindowsOS ? "explore" : "open", url, "", ".", SW_SHOWNORMAL )>32;
 #       else //_WIN32
             if (exploreModeForWindowsOS) exploreModeForWindowsOS = false;   // No warnings
