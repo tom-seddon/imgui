@@ -301,12 +301,15 @@ void DrawGL()	// Mandatory
   int tm_wday;			 Day of week.	[0-6]
   int tm_yday;			 Days in year.[0-365]
   };*/
-            ImGui::Text("Choose a date:");ImGui::SameLine();
-            tm myDate={0};
-            if (ImGui::DateChooser("Date Chooser##MyDateChooser",myDate)) {
+            ImGui::AlignFirstTextHeightToWidgets();
+            ImGui::Text("Choose a date:");
+            ImGui::SameLine();
+            static tm myDate={0};       // IMPORTANT: must be static!
+            if (ImGui::DateChooser("Date Chooser##MyDateChooser",myDate,"%d/%m/%Y",true)) {
                 // A new date has been chosen
+                //fprintf(stderr,"A new date has been chosen exacty now: \"%.2d-%.2d-%.4d\"\n",myDate.tm_mday,myDate.tm_mon+1,myDate.tm_year+1900);
             }
-            ImGui::Text("Chosen date: \"%d - %d - %d\"",myDate.tm_mday,myDate.tm_mon+1,myDate.tm_year+1900);
+            ImGui::Text("Chosen date: \"%.2d-%.2d-%.4d\"",myDate.tm_mday,myDate.tm_mon+1,myDate.tm_year+1900);
 
 
             // imguivariouscontrols

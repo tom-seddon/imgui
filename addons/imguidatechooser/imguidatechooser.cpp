@@ -5,73 +5,6 @@
 
 namespace ImGui {
 
-/*
-static bool IsPopupOpen(ImGuiID id) {
-    ImGuiState& g = *GImGui;
-    const bool opened = g.OpenedPopupStack.Size > g.CurrentPopupStack.Size && g.OpenedPopupStack[g.CurrentPopupStack.Size].PopupID == id;
-    return opened;
-}
-static void CloseInactivePopups()   {
-    ImGuiState& g = *GImGui;
-    if (g.OpenedPopupStack.empty())
-        return;
-
-    // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it.
-    // Don't close our own child popup windows
-    int n = 0;
-    if (g.FocusedWindow)
-    {
-        for (n = 0; n < g.OpenedPopupStack.Size; n++)
-        {
-            ImGuiPopupRef& popup = g.OpenedPopupStack[n];
-            if (!popup.Window)
-                continue;
-            IM_ASSERT((popup.Window->Flags & ImGuiWindowFlags_Popup) != 0);
-            if (popup.Window->Flags & ImGuiWindowFlags_ChildWindow)
-                continue;
-
-            bool has_focus = false;
-            for (int m = n; m < g.OpenedPopupStack.Size && !has_focus; m++)
-                has_focus = (g.OpenedPopupStack[m].Window && g.OpenedPopupStack[m].Window->RootWindow == g.FocusedWindow->RootWindow);
-            if (!has_focus)
-                break;
-        }
-    }
-    if (n < g.OpenedPopupStack.Size)   // This test is not required but it allows to set a useful breakpoint on the line below
-        g.OpenedPopupStack.resize(n);
-}
-static ImGuiWindow* GetFrontMostModalRootWindow()   {
-    ImGuiState& g = *GImGui;
-    if (!g.OpenedPopupStack.empty())
-        if (ImGuiWindow* front_most_popup = g.OpenedPopupStack.back().Window)
-            if (front_most_popup->Flags & ImGuiWindowFlags_Modal)
-                return front_most_popup;
-    return NULL;
-}
-static void ClosePopupToLevel(int remaining)    {
-    ImGuiState& g = *GImGui;
-    if (remaining > 0)
-        ImGui::FocusWindow(g.OpenedPopupStack[remaining-1].Window);
-    else
-        ImGui::FocusWindow(g.OpenedPopupStack[0].ParentWindow);
-    g.OpenedPopupStack.resize(remaining);
-}
-static void ClosePopup(ImGuiID id){
-    if (!IsPopupOpen(id))
-        return;
-    ImGuiState& g = *GImGui;
-    ClosePopupToLevel(g.OpenedPopupStack.Size - 1);
-}
-*/
-
-/*
-static float GetWindowFontScale() {
-    ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
-    return window->FontWindowScale;
-}
-*/
-
 
 //struct tm
 //{
@@ -112,6 +45,7 @@ inline static void RecalculateDateDependentFields(tm& date)    {
 }*/
 
 
+
 bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool closeWhenMouseLeavesIt,bool* pSetStartDateToDateOutThisFrame,const char* leftArrow,const char* rightArrow,const char* upArrowString,const char* downArrowString)    {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -124,14 +58,24 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
         *pSetStartDateToDateOutThisFrame=false;
         if (dateOut.tm_mday==0) dateOut = GetCurrentDate();
         d = dateOut;
-        d.tm_mday = 1;  // Mandatory
+        // move d at the first day of the month: mandatory fo the algo I'll use below
+        d.tm_mday = 1;
+        RecalculateDateDependentFields(d);  // now d.tm_wday is correct
     }
     else if (dateOut.tm_mday==0) {
         dateOut = GetCurrentDate();
         d = dateOut;
-        d.tm_mday = 1;  // Mandatory
+        // move d at the first day of the month: mandatory fo the algo I'll use below
+        d.tm_mday = 1;
+        RecalculateDateDependentFields(d);  // now d.tm_wday is correct
     }
-    else if (d.tm_mday==0) {d = GetCurrentDate();d.tm_mday = 1;}
+    else if (d.tm_mday==0) {
+        d = GetCurrentDate();
+        // move d at the first day of the month: mandatory fo the algo I'll use below
+        d.tm_mday = 1;
+        RecalculateDateDependentFields(d);  // now d.tm_wday is correct
+    }
+
     static const int nameBufferSize = 64;
     static char dayNames[7][nameBufferSize]={"","","","","","",""};
     static char monthNames[12][nameBufferSize]={"","","","","","",""};
@@ -217,22 +161,18 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
 
     if (label_size.x > 0) RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
+    static bool isOpen = false;
+
     ImGui::PushID((int)id);
     //bool menu_toggled = false;
     if (hovered)    {
-        g.HoveredId = id;
-        if (g.IO.MouseClicked[0])   {
-            //SetActiveID(0);
-            //if (IsPopupOpen(id))    ClosePopup(id);
-            //else    {
-                //menu_toggled = true;
-                g.ActiveId = (g.ActiveId == id) ? 0 : id;     // g.ActiveId was g.ActiveComboID actually (and all references below)
-                if (g.ActiveId) FocusWindow(window);
-            //}
-        }
+        //g.HoveredId = id;
+        if (g.IO.MouseClicked[0])   isOpen = !isOpen;
     }
 
-    if (g.ActiveId == id)  {
+
+    if (isOpen)  {
+
         const int height_in_items = 1 + 1 + 1 + 4;
         const int items_count = height_in_items;
 
@@ -248,7 +188,6 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
         ImGui::Spacing();
 
         bool combo_item_active = false;
-        combo_item_active |= (g.ActiveId == GetCurrentWindow()->GetID("#SCROLLY"));
 
         static const ImVec4 transparent(1,1,1,0);
         ImGui::PushStyleColor(ImGuiCol_Button,transparent);
@@ -309,7 +248,7 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
 
         ImGui::Spacing();
 
-        const static int numDaysPerMonth[12]={31,28,31,30,31,30,31,31,30,31,31,31};
+        const static int numDaysPerMonth[12]={31,28,31,30,31,30,31,31,30,31,30,31};
         int maxDayOfCurMonth = numDaysPerMonth[d.tm_mon];   // This could be calculated only when needed (but I guess it's fast in any case...)
         if (maxDayOfCurMonth==28)   {
             const int year = d.tm_year+1900;
@@ -321,6 +260,7 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered,style.Colors[ImGuiCol_HeaderHovered]);
         ImGui::PushStyleColor(ImGuiCol_ButtonActive,style.Colors[ImGuiCol_HeaderActive]);
 
+        IM_ASSERT(d.tm_mday==1);    // Otherwise the algo does not work
         // Display items
         for (int dw=0;dw<7;dw++)    {
             ImGui::BeginGroup();
@@ -334,7 +274,7 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
             ImGui::Separator();
             ImGui::Spacing();
             //-----------------------------------------------------------------------
-            int curDay = dw-d.tm_wday;
+            int curDay = dw-d.tm_wday;      // tm_wday is in [0,6]. For this to work here d must point to the first day of the month: i.e.: d.tm_mday = 1;
             for (int row=0;row<7;row++) {
                 int cday=curDay+7*row;
                 if (cday>=0 && cday<maxDayOfCurMonth)  {
@@ -342,16 +282,15 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
                     if (cday<9) sprintf(curDayStr," %d",cday+1);
                     else sprintf(curDayStr,"%d",cday+1);
                     if (ImGui::SmallButton(curDayStr)) {
-                        //ImGui::SetActiveId(0);    // Equivalent to:
-                        g.ActiveId = 0;
-                        g.ActiveIdIsFocusedOnly = false;
-                        g.ActiveIdIsJustActivated = true;
-                        g.ActiveIdWindow = NULL;
+                        ImGui::SetActiveID(0);
                         //-------------------------
                         value_changed = true;
                         dateOut = d;
                         dateOut.tm_mday = cday+1;
                         RecalculateDateDependentFields(dateOut);
+                        //fprintf(stderr,"Chosen date: %d-%d-%d/n",dateOut.tm_mday,dateOut.tm_mon+1,dateOut.tm_year+1900);
+                        combo_item_active = true;
+                        isOpen = false;
                     }
                     combo_item_active |= ImGui::IsItemActive();
                     ImGui::PopID();
@@ -370,14 +309,15 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
 
         if (closeWhenMouseLeavesIt || (!combo_item_active && g.ActiveId != 0))
         {
-            const float distance = g.FontSize*1.3334f;//24;
+            const float distance = g.FontSize*1.75f;//1.3334f;//24;
             //fprintf(stderr,"%1.f",distance);
             ImVec2 pos = ImGui::GetWindowPos();pos.x-=distance;pos.y-=distance;
             ImVec2 size = ImGui::GetWindowSize();size.x+=2.f*distance;size.y+=2.f*distance;
             const ImVec2& mousePos = ImGui::GetIO().MousePos;
             if (mousePos.x<pos.x || mousePos.y<pos.y || mousePos.x>pos.x+size.x || mousePos.y>pos.y+size.y) {
-                g.ActiveId = 0;
+                isOpen = false;
                 d = dateOut;
+                //fprintf(stderr,"Leaving DateChooser\n");
             }
         }
 
