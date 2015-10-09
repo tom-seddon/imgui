@@ -290,7 +290,7 @@ void DrawGL()	// Mandatory
             }
 
             // DateChooser Test:
-            ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguidatechooser (BROKEN: no more interaction with recent imgui)");ImGui::Separator();
+            ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguidatechooser");ImGui::Separator();
             /*struct tm {
   int tm_sec;			 Seconds.	[0-60] (1 leap second)
   int tm_min;			 Minutes.	[0-59]
