@@ -75,6 +75,11 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
         d.tm_mday = 1;
         RecalculateDateDependentFields(d);  // now d.tm_wday is correct
     }
+    else if (d.tm_mday!=1) {
+        // move d at the first day of the month: mandatory fo the algo I'll use below
+        d.tm_mday = 1;
+        RecalculateDateDependentFields(d);  // now d.tm_wday is correct
+    }
 
     static const int nameBufferSize = 64;
     static char dayNames[7][nameBufferSize]={"","","","","","",""};
@@ -168,6 +173,13 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
     if (hovered)    {
         //g.HoveredId = id;
         if (g.IO.MouseClicked[0])   isOpen = !isOpen;
+        if (g.IO.MouseClicked[1])   {
+            // reset date when user right clicks the date chooser header
+            d = GetCurrentDate();
+            // move d at the first day of the month: mandatory fo the algo I'll use below
+            d.tm_mday = 1;
+            RecalculateDateDependentFields(d);  // now d.tm_wday is correct
+        }
     }
 
 
@@ -288,6 +300,7 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
                         dateOut = d;
                         dateOut.tm_mday = cday+1;
                         RecalculateDateDependentFields(dateOut);
+                        d=dateOut;
                         //fprintf(stderr,"Chosen date: %d-%d-%d/n",dateOut.tm_mday,dateOut.tm_mon+1,dateOut.tm_year+1900);
                         combo_item_active = true;
                         isOpen = false;
@@ -331,7 +344,7 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
 
     ImGui::PopID();
 
-    if (value_changed) d.tm_mday=0;    //reset d
+    //if (value_changed) d.tm_mday=0;    //reset d
     return value_changed;
 
 }
