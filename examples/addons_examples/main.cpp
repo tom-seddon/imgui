@@ -423,11 +423,17 @@ void DrawGL()	// Mandatory
         if (show_node_graph_editor_window) {
             static ImGui::NodeGraphEditor nge;
             if (nge.isEmpty())	{
-                nge.addNode(0, "MainTex",  ImVec2(40,50), 0.5f, ImColor(255,100,100), 1, 1);
-                nge.addNode(1, "BumpMap",  ImVec2(40,150), 0.42f, ImColor(200,100,200), 1, 1);
-                nge.addNode(2, "Combine", ImVec2(270,80), 1.0f, ImColor(0,200,100), 2, 2);
+                static const char* mainTexOutputNames[2] = {"rgb","alpha"};
+                nge.addNode(0, "MainTex",  ImVec2(40,50), 0.5f, ImColor(255,100,100), 0, 2,NULL,mainTexOutputNames);
+                static const char* bumpMapInputNames[1] = {"in"};
+                static const char* bumpMapOutputNames[1] = {"bumpOut"};
+                nge.addNode(1, "BumpMap",  ImVec2(40,150), 0.42f, ImColor(200,100,200), 1, 1,bumpMapInputNames,bumpMapOutputNames);
+                static const char* combineInputNames[3] = {"c1","c2","c3"};
+                static const char* combineOutputNames[1] = {"out"};
+                nge.addNode(2, "Combine", ImVec2(270,80), 1.0f, ImColor(0,200,100), 3, 1,combineInputNames,combineOutputNames);
                 nge.addLink(0, 0, 2, 0);
-                nge.addLink(1, 0, 2, 1);
+                nge.addLink(0, 1, 2, 1);
+                nge.addLink(1, 0, 2, 2);
             }
             nge.render(&show_node_graph_editor_window);
         }

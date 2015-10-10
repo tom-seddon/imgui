@@ -63,7 +63,9 @@ void NodeGraphEditor::render(bool* opened)
     const ImVec2 NODE_WINDOW_PADDING(8.0f, 8.0f);
 
     // Create our child canvas
-    ImGui::Text("Hold middle mouse button to scroll (%.2f,%.2f)", scrolling.x, scrolling.y);
+    ImGui::Text("Hold MMB to scroll (%.2f,%.2f)", scrolling.x, scrolling.y);
+    ImGui::SameLine(ImGui::GetWindowWidth()-300);
+    ImGui::Checkbox("Show connection names", &show_connection_names);
     ImGui::SameLine(ImGui::GetWindowWidth()-100);
     ImGui::Checkbox("Show grid", &show_grid);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1,1));
@@ -141,11 +143,29 @@ void NodeGraphEditor::render(bool* opened)
         ImU32 node_bg_color = (node_hovered_in_list == node->ID || node_hovered_in_scene == node->ID || (node_hovered_in_list == -1 && node_selected == node->ID)) ? ImColor(75,75,75) : ImColor(60,60,60);
         draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, 4.0f); 
         draw_list->AddRect(node_rect_min, node_rect_max, ImColor(100,100,100), 4.0f); 
-        for (int slot_idx = 0; slot_idx < node->InputsCount; slot_idx++)
+        // Display connectors
+        const ImVec2 oldCursorScreenPos = ImGui::GetCursorScreenPos();
+        for (int slot_idx = 0; slot_idx < node->InputsCount; slot_idx++)    {
             draw_list->AddCircleFilled(offset + node->GetInputSlotPos(slot_idx), NODE_SLOT_RADIUS, ImColor(150,150,150,150));
-        for (int slot_idx = 0; slot_idx < node->OutputsCount; slot_idx++)
+            if (show_connection_names && node->InputNames)   {
+                const char* name = node->InputNames[slot_idx];
+                if (name)   {
+                    ImGui::SetCursorScreenPos(offset + node->GetInputSlotPos(slot_idx)-ImVec2(NODE_SLOT_RADIUS,0)-ImGui::CalcTextSize(name));
+                    ImGui::Text("%s",name);
+                }
+            }
+        }
+        for (int slot_idx = 0; slot_idx < node->OutputsCount; slot_idx++)   {
             draw_list->AddCircleFilled(offset + node->GetOutputSlotPos(slot_idx), NODE_SLOT_RADIUS, ImColor(150,150,150,150));
-
+            if (show_connection_names && node->OutputNames)   {
+                const char* name = node->OutputNames[slot_idx];
+                if (name)   {
+                    ImGui::SetCursorScreenPos(offset + node->GetOutputSlotPos(slot_idx)+ImVec2(NODE_SLOT_RADIUS,0)-ImVec2(0,ImGui::CalcTextSize(name).y));
+                    ImGui::Text("%s",name);
+                }
+            }
+        }
+        ImGui::SetCursorScreenPos(oldCursorScreenPos);
         ImGui::PopID();
     }
     draw_list->ChannelsMerge();
