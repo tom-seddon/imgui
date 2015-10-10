@@ -173,8 +173,8 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
     if (hovered)    {
         //g.HoveredId = id;
         if (g.IO.MouseClicked[0])   isOpen = !isOpen;
-        if (g.IO.MouseClicked[1])   {
-            // reset date when user right clicks the date chooser header
+        if (isOpen && g.IO.MouseClicked[1])   {
+            // reset date when user right clicks the date chooser header whe the dialog is open
             d = GetCurrentDate();
             // move d at the first day of the month: mandatory fo the algo I'll use below
             d.tm_mday = 1;

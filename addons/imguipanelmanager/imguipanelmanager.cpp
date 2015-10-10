@@ -974,7 +974,7 @@ size_t ImGui::PanelManager::Pane::deleteButtonAt(int index)   {
 
 
 size_t ImGui::PanelManager::Pane::getSize() const {
-    IM_ASSERT(bar.getNumButtons()==windows.size());
+    IM_ASSERT((int)bar.getNumButtons()==windows.size());
     return windows.size();
 }
 
@@ -984,6 +984,10 @@ void ImGui::PanelManager::Pane::setToolbarProperties(bool _keepAButtonSelected, 
     if (al.x==-1000)    al.x = (pos>=TOP) ? 0.5f : pos == RIGHT ? 1.0f : 0.f;
     if (al.y==-1000)    al.y = (pos<TOP) ? 0.0f : pos == BOTTOM ? 1.0f : 0.f;
     bar.setProperties(_keepAButtonSelected,_vertical,_lightAllBarWhenHovered,al,_opacityOffAndOn,_bg_col,_displayPortion);
+}
+
+void ImGui::PanelManager::Pane::setDisplayProperties(const ImVec2 &_opacityOffAndOn, const ImVec4 &_bg_col) {
+    bar.setDisplayProperties(_opacityOffAndOn,_bg_col);
 }
 
 bool ImGui::PanelManager::Pane::isButtonPressed(int index) const   {
@@ -1290,6 +1294,12 @@ void ImGui::PanelManager::setToolbarsScaling(float scalingX, float scalingY) {
     }
 }
 
+void ImGui::PanelManager::overrideAllExistingPanesDisplayProperties(const ImVec2 &_opacityOffAndOn, const ImVec4 &_bg_col)  {
+    for (size_t pi=0,pisz=panes.size();pi<pisz;pi++) {
+        Pane& pane = panes[pi];
+        pane.setDisplayProperties(_opacityOffAndOn,_bg_col);
+    }
+}
 
 void ImGui::PanelManager::updateSizes() const  {
     if (innerBarQuadSize.x<=0 || innerBarQuadSize.y<=0) calculateInnerBarQuadPlacement();

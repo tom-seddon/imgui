@@ -80,7 +80,7 @@ struct PanelManager {
 
         size_t deleteButtonAt(int index);
 
-        inline size_t getSize() const;
+        size_t getSize() const;
 
         void setVisible(bool flag) {visible=flag;}
         bool getVisible() const {return visible;}
@@ -92,6 +92,7 @@ struct PanelManager {
         ImVec2 getToolbarScaling() const {return bar.getScaling();}
 
         void setToolbarProperties(bool _keepAButtonSelected=true,bool _lightAllBarWhenHovered=false,const ImVec2& _hvAlignmentsIn01=ImVec2(-1000,-1000),const ImVec2& _opacityOffAndOn=ImVec2(-1.f,-1.f),const ImVec4& _bg_col=ImVec4(1,1,1,1),const ImVec4& _displayPortion=ImVec4(0,0,-1,-1));
+        void setDisplayProperties(const ImVec2& _opacityOffAndOn=ImVec2(-1.f,-1.f),const ImVec4& _bg_col=ImVec4(1,1,1,1));
 
         const char* getWindowName(int index) const;     // Can return NULL
         int findWindowIndex(const char* windowName) const;  // Can return -1
@@ -153,6 +154,8 @@ struct PanelManager {
 
 
     void setToolbarsScaling(float scalingX,float scalingY);
+    void overrideAllExistingPanesDisplayProperties(const ImVec2& _opacityOffAndOn=ImVec2(-1.f,-1.f),const ImVec4& _bg_col=ImVec4(1,1,1,1));
+
 
     void updateSizes() const;
 

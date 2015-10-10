@@ -148,13 +148,16 @@ public:
         keepAButtonSelected = _keepAButtonSelected;
         vertical = _vertical;
         hvAlignmentsIn01 = _hvAlignmentsIn01;
-        opacityOffAndOn = ImVec2(_opacityOffAndOn.x<0 ? 0.35f : _opacityOffAndOn.x,_opacityOffAndOn.y<0 ? 1.f : _opacityOffAndOn.y);
-        bgColor = _bg_col;
+        setDisplayProperties(_opacityOffAndOn,_bg_col);
         hoverButtonIndex = selectedButtonIndex = -1;
         lightAllBarWhenHovered=_lightAllBarWhenHovered;
         displayPortion = _displayPortion;
 
         if (buttons.size()>0) updatePositionAndSize();
+    }
+    void setDisplayProperties(const ImVec2& _opacityOffAndOn=ImVec2(-1.f,-1.f),const ImVec4& _bg_col=ImVec4(1,1,1,1)) {
+        opacityOffAndOn = ImVec2(_opacityOffAndOn.x<0 ? 0.35f : _opacityOffAndOn.x,_opacityOffAndOn.y<0 ? 1.f : _opacityOffAndOn.y);
+        bgColor = _bg_col;
     }
 
     int render() const {
@@ -239,7 +242,7 @@ public:
                 if (ImGui::IsItemHovered()) {
                     if (!tooltipsDisabled && strlen(tb.tooltip)>0)   {
                         //if (!inWindowMode) ImGui::SetNextWindowFocus();
-                        ImGui::SetTooltip(tb.tooltip);
+                        ImGui::SetTooltip("%s",tb.tooltip);
 
                         /*SetNextWindowPos(ImGui::GetIO().MousePos);
                         ImGui::BeginTooltip();
