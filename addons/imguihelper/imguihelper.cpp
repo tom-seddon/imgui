@@ -1,8 +1,8 @@
 #include "imguihelper.h"
 
 #ifdef _WIN32
-#include <Shellapi.h>	// ShellExecuteA(...) - Shell32.lib
-#include <Objbase.h>    // CoInitializeEx(...)  - ole32.lib
+#include <shellapi.h>	// ShellExecuteA(...) - Shell32.lib
+#include <objbase.h>    // CoInitializeEx(...)  - ole32.lib
 #else //_WIN32
 #include <unistd.h>
 #endif //_WIN32
@@ -25,16 +25,16 @@ bool IsWindowDoubleClicked(const ImGuiAabb& bb, const ImGuiID& id,int button,boo
         ButtonBehavior(bb, id, out_hovered, &held, allow_key_modifiers, repeat, pressed_on_click);
         if (out_held) *out_held=held;
         if (g.HoveredWindow == g.CurrentWindow && held && g.IO.MouseDoubleClicked[button])
-		return true;	
+		return true;
 	}
-    return false;            
+    return false;
 }
 */
 
 bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS)	{
 #       ifdef _WIN32
             //CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);  // Needed ??? Well, let's suppose the user initializes it himself for now"
-            return ShellExecuteA( NULL, exploreModeForWindowsOS ? "explore" : "open", url, "", ".", SW_SHOWNORMAL )>32;
+            return ((size_t)ShellExecuteA( NULL, exploreModeForWindowsOS ? "explore" : "open", url, "", ".", SW_SHOWNORMAL ))>32;
 #       else //_WIN32
             if (exploreModeForWindowsOS) exploreModeForWindowsOS = false;   // No warnings
             char tmp[2024];

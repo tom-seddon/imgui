@@ -87,8 +87,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         io.KeyShift = (wParam&MK_SHIFT);
         io.KeyAlt = (wParam&MK_ALT);
         io.MouseDown[0] = (wParam&MK_LBUTTON);
-        io.MouseDown[1] = (wParam&MK_MBUTTON);
-        io.MouseDown[2] = (wParam&MK_RBUTTON);
+        io.MouseDown[2] = (wParam&MK_MBUTTON);
+        io.MouseDown[1] = (wParam&MK_RBUTTON);
         io.MouseWheel = GET_WHEEL_DELTA_WPARAM(wParam) > 0  ? 1 : -1;   // it's 120 or -120
         return 0;
     case WM_LBUTTONDBLCLK:
@@ -102,14 +102,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         io.KeyCtrl = (wParam&MK_CONTROL);
         io.KeyShift = (wParam&MK_SHIFT);
         io.KeyAlt = (wParam&MK_ALT);
-        gImGuiBindingMouseDblClicked[1] = true;
+        gImGuiBindingMouseDblClicked[2] = true;
         io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
         return 0;
     case WM_RBUTTONDBLCLK:
         io.KeyCtrl = (wParam&MK_CONTROL);
         io.KeyShift = (wParam&MK_SHIFT);
         io.KeyAlt = (wParam&MK_ALT);
-        gImGuiBindingMouseDblClicked[2] = true;
+        gImGuiBindingMouseDblClicked[1] = true;
         io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
         return 0;
     case WM_LBUTTONDOWN:
@@ -130,7 +130,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         io.KeyCtrl = (wParam&MK_CONTROL);
         io.KeyShift = (wParam&MK_SHIFT);
         io.KeyAlt = (wParam&MK_ALT);
-        io.MouseDown[1] = true;
+        io.MouseDown[2] = true;
         io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
         return 0;
     case WM_MBUTTONUP:
@@ -144,14 +144,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         io.KeyCtrl = (wParam&MK_CONTROL);
         io.KeyShift = (wParam&MK_SHIFT);
         io.KeyAlt = (wParam&MK_ALT);
-        io.MouseDown[2] = true;
+        io.MouseDown[1] = true;
         io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
         return 0;
     case WM_RBUTTONUP:
         io.KeyCtrl = (wParam&MK_CONTROL);
         io.KeyShift = (wParam&MK_SHIFT);
         io.KeyAlt = (wParam&MK_ALT);
-        io.MouseDown[2] = false;
+        io.MouseDown[1] = false;
         io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
         return 0;
     default:
@@ -186,6 +186,8 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
     io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
     io.KeyMap[ImGuiKey_DownArrow] = VK_DOWN;
+    io.KeyMap[ImGuiKey_PageUp] = VK_PRIOR;
+    io.KeyMap[ImGuiKey_PageDown] = VK_NEXT;
     io.KeyMap[ImGuiKey_Home] = VK_HOME;
     io.KeyMap[ImGuiKey_End] = VK_END;
     io.KeyMap[ImGuiKey_Delete] = VK_DELETE;
@@ -367,7 +369,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
             // Start the frame
             ImGui::NewFrame();
             for (size_t i = 0; i < 5; i++) {
-                io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
+                //io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
             }
         }
 
