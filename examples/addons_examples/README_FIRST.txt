@@ -1,11 +1,51 @@
-To compile these examples, no make file is provided.
+===================================
+HOW TO COMPILE THE ADDON EXAMPLES:
+===================================
 
-A single Qt Creator .pro file is provided. It can be used in Ubuntu only and must be edited to set the paths and the example to compile.
+To compile these two examples (main.cpp and main2.cpp), no makefile is provided.
 
+Instead two project files are present:
+->	addons_examples.pro: A Qt Creator project file that can be used in Ubuntu only and must be edited to set the paths and the example to compile (handy for Linux and Mac users). This file can be tweaked to use the libraries of your choice (see below).
+->	addons_examples_mingw.cbp: A CodeBlocks project file that can be used to compile the first demo for Windows (to compile the second demo simply replace main.cpp with main2.cpp). This demo requires the glew library only to compile.
+Even if you use another IDE, in case of compilation problems, it can still be useful to open these files with a text editor and see their content.
 
-But basically you can follow these steps:
+====================================
+WHAT IS IMGUI ADDONS ?
+====================================
+It's a collection of "extra imgui widgets" together with an automatic way of "binding" ImGui to a specific openGL library (glfw, SDL2, glut and WinAPI), so that a single cpp "main" file can be used for all of them.
 
-1 -> No additional .cpp file must be added to your project (i.e. DO NOT add any .cpp file inside the addons folder). Instead define at the project level: IMGUI_INCLUDE_IMGUI_USER_H and IMGUI_INCLUDE_IMGUI_USER_INL. This way the two files imgui_user.h and imgui_user.inl should include all the addons automatically.
+It supports openGL only (==> DIRECTX IS NOT SUPPORTED <==).
+
+ImGui Addons does NOT modify the ImGui library itself in any way (i.e. imgui.cpp, imgui_draw.cpp and imgui_demo.cpp are untouched); it just adds:
+-> the "addons" subfolder.
+-> the two files "imgui_user.h" and "imgui_user.inl" (in the base ImGui folder).
+
+Currently the extra imgui widgets that are available are:
+-> imguistyleserializer: 	to loads and save ImGuiStyle from/to file.
+-> imguifilesystem:			this addon provides: chooseFileDialog, chooseFolderDialog, saveFileDialog
+							together with plenty of handy methods to perform file system operations and
+							an experimental support for browsing inside zip files (through an additional definition).
+-> imguidatechooser:		a combobox-like datechooser.
+-> imguilistview:			a list view widget with a lot of optional features (setting its height, row sorting through column header clicking, cell editing).
+-> imguitoolbar:			a very flexible imagebutton-bar that can be used inside ImGui Windows (with dynamic layout) and outside (docked at the sides of the screen).
+-> imguipanelmanager:		a mini dock panel layout. Basically it uses imguitoolbar and optionally assigns an ImGui Window to some buttons. Please see main2.cpp for an extensie example on how to use it.
+-> imguivariouscontrols:	a series of minor widgets, such as:
+							-> ProgressBar.
+							-> PopupMenuSimple	(a fast, single column, scrollable, popup menu).
+							-> PopupMenu (a single column menu with image entries).
+							-> ColorChooser (based on the code from: https://github.com/benoitjacquier/imgui)
+-> imguinodegrapheditor:	W.I.P. (based on the code posted by Omar, the creator of ImGui)
+
+And in addition:
+-> imguistring:				a string class based on ImVector<char>. It does not support iterators, but has many methods that std::string has: thus it can be used to replace std::string in many algorithms.
+-> imguihelper:				currently it just has: OpenWithDefaultApplication(...) that should work with urls, folders and files.
+
+===========================================
+HOW TO USE IMGUI ADDONS IN YOUR PROJECTS:
+===========================================
+Basically to use and compile projects that use the imgui addon framework you can follow these steps:
+
+1 -> No ADDITIONAL .cpp file must be added to your project (i.e. DO NOT add any .cpp file inside the "addons" folder). Instead define at the project level: IMGUI_INCLUDE_IMGUI_USER_H and IMGUI_INCLUDE_IMGUI_USER_INL. This way the two files "imgui_user.h" and "imgui_user.inl" should include all the addons automatically.
 
 2 -> OPTIONALLY define ONE (and only one) of the following at the project level (typically when you're using ImGui in a new demo project):
 IMGUI_USE_GLUT_BINDING		# needs -lglut (or maybe -lGLUT)
@@ -17,7 +57,7 @@ void InitGL() {}
 void ResizeGL(int w,int h) {}
 void DrawGL() {}
 void DestroyGL() {}
-And then in our main function you can simply call a method (for example ImImpl_Main(NULL,argc,argv);) to have the automatic binding with the library you've chosen (see the code in the examples for further info).
+And then in our main function you can simply call a method (for example ImImpl_Main(NULL,argc,argv);) to have the automatic binding with the library you've chosen (see the code below or in the examples for further info).
 
 3 -> If you use a binding, OPTIONALLY some of these definitions might work at the project level (depending on the binding you choose):
 IMIMPL_SHADER_NONE # no shaders at all, and no vertex buffer object as well (minimal implementation).
@@ -30,11 +70,10 @@ IMGUI_USE_GLEW     # inits the glew library (needs -lGLEW). This definition migh
 SPARE SINGLE ADDON USAGE
 ---------------------------
 If you just want to add a single addon (a pair of addonName.h/.cpp files) to an existing project WITHOUT following the steps above, you can probably just include its header file,
-add the include folders: $IMGUI_HOME and $IMGUI_HOME/addons/addonName to your project (where $IMGUI_HOME is the path where imgui.h/.cpp is located) and compile the file $IMGUI_HOME/addons/addonName/addonName.cpp, where "addonName" is the name of the addon you want to use. Be warned that some addons might depend on others: e.g. imguipanelmanager depends on imguitoolbar: so you may need to include both addons.
+add the include folders: $IMGUI_HOME and $IMGUI_HOME/addons/addonName to your project (where $IMGUI_HOME is the path where imgui.h/.cpp are located) and compile the file $IMGUI_HOME/addons/addonName/addonName.cpp, where "addonName" is the name of the addon you want to use. Be warned that some addons might depend on others: e.g. imguipanelmanager depends on imguitoolbar: so you may need to include both addons.
 
 However I'm not sure this approach works for all the addons, since some .cpp files need to be included after imgui.cpp to access its internals: recent imgui versions provide the file:
-imgui_internal.h, you may try including this at the top of the addonName.cpp file, but there's no
-guarantee it will work.
+imgui_internal.h, you may try including this at the top of the addonName.cpp file, but there's no guarantee it will work.
 
 
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -57,7 +96,7 @@ void DrawGL()
         ImGui::Text("Hello, world!");
 		ImGui::End();	
 
-		// However I got access to all addons from here now
+		// However I get access to all addons from here now
 }
 
 int main(int argc, char** argv)
