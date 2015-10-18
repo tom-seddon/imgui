@@ -38,7 +38,7 @@ static void ImImpl_ImeSetInputScreenPosFn(int x, int y)
     }
 }
 
-static bool gImGuiBindingMouseDblClicked[5]={false,false,false,false,false};
+//static bool gImGuiBindingMouseDblClicked[5]={false,false,false,false,false};  // moved
 static bool gImGuiAppIconized = false;
 
 // Window Procedure
@@ -369,7 +369,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
             // Start the frame
             ImGui::NewFrame();
             for (size_t i = 0; i < 5; i++) {
-                //io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
+                io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
             }
         }
 

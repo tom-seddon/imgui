@@ -63,7 +63,7 @@ void NodeGraphEditor::render(bool* opened)
     const ImVec2 NODE_WINDOW_PADDING(8.0f, 8.0f);
 
     // Create our child canvas
-    ImGui::Text("Hold RMB to scroll (%.2f,%.2f)", scrolling.x, scrolling.y);
+    ImGui::Text("Hold MMB to scroll (%.2f,%.2f)", scrolling.x, scrolling.y);
     ImGui::SameLine(ImGui::GetWindowWidth()-300);
     ImGui::Checkbox("Show connection names", &show_connection_names);
     ImGui::SameLine(ImGui::GetWindowWidth()-100);

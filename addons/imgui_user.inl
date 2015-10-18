@@ -14,17 +14,38 @@
 //}
 #endif //IMGUI_USE_MINIZIP
 
+#ifndef NO_IMGUIHELPER
 #include "./imguihelper/imguihelper.cpp"
+#endif //NO_IMGUIHELPER
+#ifndef NO_IMGUILISTVIEW
 #include "./imguilistview/imguilistview.cpp"
+#endif //NO_IMGUILISTVIEW
+#ifndef NO_IMGUIFILESYSTEM
 #include "./imguifilesystem/imguifilesystem.cpp"
+#endif //NO_IMGUIFILESYSTEM
+#ifndef NO_IMGUITOOLBAR
 #include "./imguitoolbar/imguitoolbar.cpp"
+#endif //NO_IMGUITOOLBAR
+#ifndef NO_IMGUIPANELMANAGER
 #include "./imguipanelmanager/imguipanelmanager.cpp"
+#endif //NO_IMGUIPANELMANAGER
+#ifndef NO_IMGUIVARIOUSCONTROLS
 #include "./imguivariouscontrols/imguivariouscontrols.cpp"
+#endif //NO_IMGUIVARIOUSCONTROLS
+#ifndef NO_IMGUISTYLESERIALIZER
 #include "./imguistyleserializer/imguistyleserializer.cpp"
+#endif //NO_IMGUISTYLESERIALIZER
+#ifndef NO_IMGUIDATECHOOSER
 #include "./imguidatechooser/imguidatechooser.cpp"
+#endif //NO_IMGUIDATECHOOSER
+#ifndef NO_IMGUIGRAPHEDITOR
 #include "./imguinodegrapheditor/imguinodegrapheditor.cpp"
+#endif //NO_IMGUIGRAPHEDITOR
 
 #ifdef IMGUI_USE_AUTO_BINDING	// defined in imgui_user.h
+#	ifdef __EMSCRIPTEN__
+#	include <emscripten.h>		// wip: doesn't work by itself (ATM I'm currently preparing it for use with IMGUI_USE_SDL2_BINDING only)
+#	endif //__EMSCRIPTEN__
 #	ifdef IMGUI_USE_GLUT_BINDING
 #		include "./imguibindings/ImImpl_Binding_Glut.h"
 #	elif IMGUI_USE_SDL2_BINDING

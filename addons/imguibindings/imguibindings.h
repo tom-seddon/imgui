@@ -102,6 +102,7 @@ extern void DestroyGL();
 extern bool gImGuiPaused;// = false;
 extern float gImGuiInverseFPSClamp;// = -1.0f;    // CAN'T BE 0. < 0 = No clamping.
 extern bool gImGuiCapturesInput;             // When false the input events can be directed somewhere else
+extern bool gImGuiBindingMouseDblClicked[5];
 // --------------------------------------------------------------------------------------------------------------
 
 struct ImImpl_InitParams	{

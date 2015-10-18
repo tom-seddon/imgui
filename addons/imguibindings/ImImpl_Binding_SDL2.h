@@ -76,6 +76,8 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.KeyMap[ImGuiKey_RightArrow] =    specialKeyMap[SDLK_RIGHT]            = numKeyMaps - cnt++;
     io.KeyMap[ImGuiKey_UpArrow] =       specialKeyMap[SDLK_UP]               = numKeyMaps - cnt++;
     io.KeyMap[ImGuiKey_DownArrow] =     specialKeyMap[SDLK_DOWN]             = numKeyMaps - cnt++;
+    io.KeyMap[ImGuiKey_PageUp] =        specialKeyMap[SDL_GetKeyFromScancode(SDL_SCANCODE_PAGEUP)]             = numKeyMaps - cnt++;
+    io.KeyMap[ImGuiKey_PageDown] =      specialKeyMap[SDL_GetKeyFromScancode(SDL_SCANCODE_PAGEDOWN)]             = numKeyMaps - cnt++;
     io.KeyMap[ImGuiKey_Home] =          specialKeyMap[SDLK_HOME]             = numKeyMaps - cnt++;
     io.KeyMap[ImGuiKey_End] =           specialKeyMap[SDLK_END]              = numKeyMaps - cnt++;
     io.KeyMap[ImGuiKey_Delete] =        specialKeyMap[SDLK_DELETE]           = numKeyMaps - cnt++;
@@ -95,6 +97,8 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.KeyMap[ImGuiKey_RightArrow] = SDL_GetScancodeFromKey( SDLK_RIGHT );
     io.KeyMap[ImGuiKey_UpArrow] = SDL_GetScancodeFromKey( SDLK_UP );
     io.KeyMap[ImGuiKey_DownArrow] = SDL_GetScancodeFromKey( SDLK_DOWN );
+    io.KeyMap[ImGuiKey_PageUp] = SDL_SCANCODE_PAGEUP;
+    io.KeyMap[ImGuiKey_PageDown] = SDL_SCANCODE_PAGEDOWN;
     io.KeyMap[ImGuiKey_Home] = SDL_GetScancodeFromKey( SDLK_HOME );
     io.KeyMap[ImGuiKey_End] = SDL_GetScancodeFromKey( SDLK_END );
     io.KeyMap[ImGuiKey_Delete] = SDL_GetScancodeFromKey( SDLK_DELETE );
@@ -124,7 +128,17 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
 
 static bool InitBinding(const ImImpl_InitParams* pOptionalInitParams=NULL,int argc=0, char** argv=NULL)	{
 
-    if (SDL_Init(SDL_INIT_EVERYTHING) < 0)  {
+#   ifndef __EMSCRIPTEN__
+    if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
+#   else   // __EMSCRIPTEN__
+    /*  // From the web:
+    SDL_INIT_EVERYTHING & ~(SDL_INIT_TIMER | SDL_INIT_HAPTIC) succeeds in Firefox. Timer doesn't work because it requires threads, and haptic support also isn't included. SDL_INIT_AUDIO requires Web Audio, and causes failure in IE. There is no flag for threads; they are simply initialized by default if they are enabled.
+    In the SDL2 version of my DOSBox port, I simply don't use SDL_INIT_TIMER and call SDL_GetTicks() anyways. Yes, that is wrong according to SDL documentation, but it works. Availability of that function is probably important for games. For audio, I use SDL_InitSubSystem(SDL_INIT_AUDIO), and run in no audio mode if that fails.
+    I think failing in SDL_Init() when a requested subsystem doesn't work properly is reasonable. When porting it's a lot easier to understand that failure than than failures later on when trying to use it.
+    */
+    if (SDL_Init(SDL_INIT_VIDEO)<0)
+#   endif //__EMSCRIPTEN__
+    {
         fprintf(stderr, "Couldn't initialize SDL: %s\n", SDL_GetError());
         return false;
     }
@@ -192,30 +206,13 @@ static bool InitBinding(const ImImpl_InitParams* pOptionalInitParams=NULL,int ar
 	return true;
 }
 
-// Application code
-int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** argv)
-{
-    if (!InitBinding(pOptionalInitParams,argc,argv)) return -1;
-    // New: create cursors-------------------------------------------
-    for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
-        sdlCursors[i] = SDL_CreateSystemCursor(sdlCursorIds[i]);
-    }
-    //---------------------------------------------------------------
 
-    InitImGui(pOptionalInitParams);
-    ImGuiIO& io = ImGui::GetIO();           
-    
-    InitGL();
-    ResizeGL((int) io.DisplaySize.x,(int) io.DisplaySize.y);
-	
-    gImGuiInverseFPSClamp = pOptionalInitParams ? ((pOptionalInitParams->gFpsClamp!=0) ? (1.0f/pOptionalInitParams->gFpsClamp) : 1.0f) : -1.0f;
-	
-    static bool gImGuiBindingMouseDblClicked[5]={false,false,false,false,false};
 
-    int done = 0;
+static void ImImplMainLoopFrame(void* pDone)	{
+    ImGuiIO& io = ImGui::GetIO();
+    int& done = *((int*) pDone);
     SDL_Event event;
-    while (!done)
-    {
+
         if (!gImGuiPaused) {
             for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
 
@@ -299,8 +296,9 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
                 io.KeyShift = (mod & (KMOD_LSHIFT|KMOD_RSHIFT)) != 0;
                 io.KeyAlt = (mod & (KMOD_LALT|KMOD_RALT)) != 0;
                 if (event.button.button>0 && event.button.button<6) {
-                    io.MouseDown[event.button.button-1] = (event.button.type == SDL_MOUSEBUTTONDOWN);
-                    if (event.button.clicks==2 && event.button.type == SDL_MOUSEBUTTONDOWN) gImGuiBindingMouseDblClicked[event.button.button-1] = true;
+                    static const int evBtnMap[5]={0,2,1,3,4};
+                    io.MouseDown[ evBtnMap[event.button.button-1] ] = (event.button.type == SDL_MOUSEBUTTONDOWN);
+                    if (event.button.clicks==2 && event.button.type == SDL_MOUSEBUTTONDOWN) gImGuiBindingMouseDblClicked[evBtnMap[event.button.button-1]] = true;
                     //else gImGuiBindingMouseDblClicked[event.button.button-1] = false;
                 }
                 //fprintf(stderr,"mousePressed[%d] = %s\n",event.button.button-1,(event.button.type == SDL_MOUSEBUTTONDOWN)?"true":"false");
@@ -318,6 +316,9 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
                 break;
             case SDL_QUIT:
                 done = 1;
+#				ifdef __EMSCRIPTEN__
+                emscripten_cancel_main_loop();
+#				endif //
                 break;
             default:
                 break;
@@ -361,7 +362,34 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
         // If needed we must wait (gImGuiInverseFPSClamp-deltaTime) seconds (=> honestly I shouldn't add the * 2.0f factor at the end, but ImGui tells me the wrong FPS otherwise... why? <=)
         else if (gImGuiInverseFPSClamp>0.f && deltaTime < gImGuiInverseFPSClamp)  WaitFor((unsigned int) ((gImGuiInverseFPSClamp-deltaTime)*1000.f * 2.0f) );
 
+}
+
+// Application code
+int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** argv)
+{
+    if (!InitBinding(pOptionalInitParams,argc,argv)) return -1;
+    // New: create cursors-------------------------------------------
+    for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
+        sdlCursors[i] = SDL_CreateSystemCursor(sdlCursorIds[i]);
     }
+    //---------------------------------------------------------------
+
+    InitImGui(pOptionalInitParams);
+    ImGuiIO& io = ImGui::GetIO();           
+    
+    InitGL();
+    ResizeGL((int) io.DisplaySize.x,(int) io.DisplaySize.y);
+	
+    gImGuiInverseFPSClamp = pOptionalInitParams ? ((pOptionalInitParams->gFpsClamp!=0) ? (1.0f/pOptionalInitParams->gFpsClamp) : 1.0f) : -1.0f;
+	
+	int done = 0;
+#	ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop_arg(ImImplMainLoopFrame,&done, 0, 1);
+#	else
+	while (!done)	{
+		ImImplMainLoopFrame((void*)&done);
+	}
+#	endif //__EMSCRIPTEN__
 
     DestroyGL();
     ImGui::Shutdown();

@@ -9,6 +9,9 @@ Instead two project files are present:
 ->	addons_examples_mingw.cbp: A CodeBlocks project file that can be used to compile the first demo for Windows (to compile the second demo simply replace main.cpp with main2.cpp). This demo requires the glew library only to compile.
 Even if you use another IDE, in case of compilation problems, it can still be useful to open these files with a text editor and see their content.
 
+You can test the two examples (without compiling them) in your web browser by clicking on the two .html files inside the html subfolder (although not all addons are active in this build).
+If you want to compile the examples to .html, please read at the bottom of this page.
+
 ====================================
 WHAT IS IMGUI ADDONS ?
 ====================================
@@ -39,6 +42,8 @@ Currently the extra imgui widgets that are available are:
 And in addition:
 -> imguistring:				a string class based on ImVector<char>. It does not support iterators, but has many methods that std::string has: thus it can be used to replace std::string in many algorithms.
 -> imguihelper:				currently it just has: OpenWithDefaultApplication(...) that should work with urls, folders and files.
+
+Tip: every single imgui "widget" addon listd above can be excluded by defining at the project level something like: NO_IMGUIFILESYSTEM, etc (and the first demo, main.cpp, should always compile).
 
 ===========================================
 HOW TO USE IMGUI ADDONS IN YOUR PROJECTS:
@@ -108,5 +113,26 @@ int main(int argc, char** argv)
 On Ubuntu, I can compile it with the following command line (provided that imgui.h is two folders up, and that I want to use glfw):
 gcc  -o basicExample mainBasic.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -I"/usr/include/GLFW" -D"IMGUI_USE_GLFW_BINDING" -L"/usr/lib/x86_64-linux-gnu" -lglfw -lX11 -lm -lGL -lstdc++ -s
 
+
+
+======================================================================================================================================
+EXTRA: COMPILING TO HTML USING EMSCRIPTEN:
+===========================================
+Follow these steps:
+1) Using a terminal (=command line), make sure you have a working emcc setup (try: emcc -v).
+2) Navigate (cd) to this folder.
+3) To compile the first example try:
+em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  --preload-file myNumbersTexture.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_SDL2_BINDING" -D"NO_IMGUIFILESYSTEM" -D"NO_IMGUISTYLESERIALIZER" -s USE_SDL=2 -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
+4) To compile the second example try:
+em++ -O2 -o main2.html main2.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  --preload-file myNumbersTexture.png  --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_SDL2_BINDING" -D"NO_IMGUIFILESYSTEM" -s USE_SDL=2 -s LEGACY_GL_EMULATION=0 -lm -lGL
+
+Some notes:
+->	As you can see it now uses the SDL2 binding (-D"IMGUI_USE_SDL2_BINDING"). Further work is required from my side to make the GLFW3 and GLUT bindings compatible with emscripten.
+
+->	Also note that I used: -D"NO_IMGUIFILESYSTEM": this is because the filesystem is not accessible from the browser AFAIK (but I'm a very newbie here...).
+
+->	In addition: -D"NO_IMGUISTYLESERIALIZER" has been added to the first demo, because I don't know if it's possible to save a .style file. 
+	However I bet we can simply load an existing style in InitGL() from a .style file (named myimgui.style and placed in this folder) this way: 
+	em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  --preload-file myNumbersTexture.png --preload-file myimgui.style -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_SDL2_BINDING" -D"NO_IMGUIFILESYSTEM" -D"NO_IMGUISTYLESERIALIZER_SAVE_STYLE" -s USE_SDL=2 -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
 
 

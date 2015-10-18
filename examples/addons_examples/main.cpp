@@ -1,5 +1,7 @@
 #include <imgui.h>
+#ifndef NO_IMGUIDATECHOOSER
 #include <time.h>   // very common plain c header file used only by DateChooser
+#endif //NO_IMGUIDATECHOOSER
 
 // Helper stuff we'll use later ----------------------------------------------------
 GLuint myImageTextureId2 = 0;
@@ -19,6 +21,7 @@ static void ShowExampleAppMainMenuBar() {
         ImGui::EndMainMenuBar();
     }
 }
+#ifndef NO_IMGUILISTVIEW
 inline void MyTestListView() {
     ImGui::Spacing();
     static ImGui::ListView lv;
@@ -139,15 +142,17 @@ inline void MyTestListView() {
     lv.render((float)maxListViewHeight);//(float)maxListViewHeight,&optionalColumnReorder,-1);   // This method returns true when the selectedRow is changed by the user (however when selectedRow gets changed because of sorting it still returns false, because the pointed row-item does not change)
 
 }
+#endif //NO_IMGUILISTVIEW
 //------------------------------------------------------------------------------------
 
 void InitGL()	// Mandatory
 {
     if (!myImageTextureId2) myImageTextureId2 = ImImpl_LoadTexture("./myNumbersTexture.png");
+#   if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_LOAD_STYLE))
     if (!ImGui::LoadStyle("./myimgui.style",ImGui::GetStyle()))   {
         fprintf(stderr,"Warning: \"./myimgui.style\" not present.\n");
     }
-
+#   endif //NO_IMGUISTYLESERIALIZER
     //ImGui::GetIO().MouseDrawCursor = true;
     //ImGui::GetIO().FontAllowUserScaling = true;
 }
@@ -186,9 +191,15 @@ void DrawGL()	// Mandatory
             static float f;
             ImGui::Text("Hello, world!");
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+#           if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_SAVE_STYLE))
             show_test_window ^= ImGui::Button("Test Window");
+#           endif //NO_IMGUISTYLESERIALIZER
+#           ifndef NO_IMGUITOOLBAR
             show_another_window ^= ImGui::Button("Another Window With Toolbar Test");
+#           endif //NO_IMGUITOOLBAR
+#           ifndef NO_IMGUINODEGRAPHEDITOR
             show_node_graph_editor_window ^= ImGui::Button("Another Window With NodeGraphEditor");
+#           endif //NO_IMGUINODEGRAPHEDITOR
             show_splitter_test_window ^= ImGui::Button("Show splitter test window");
 
             // Calculate and show framerate
@@ -204,6 +215,7 @@ void DrawGL()	// Mandatory
 
             // imguistyleserializer test
             ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguistyleserializer");ImGui::Separator();
+#           if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_SAVE_STYLE))
             ImGui::Text("Please modify the current style in:");
             ImGui::Text("ImGui Demo->Window Options->Style Editor");
             static bool loadCurrentStyle = false;
@@ -223,36 +235,16 @@ void DrawGL()	// Mandatory
                 }
             }
             if (resetCurrentStyle)  ImGui::GetStyle() = ImGuiStyle();
+#           else //NO_IMGUISTYLESERIALIZER
+            ImGui::Text("%s","Excluded from this build.\n");
+#           endif //NO_IMGUISTYLESERIALIZER
 
 
-            /*//test modal dialogs (to remove)
-            if (ImGui::Button("Delete.."))
-                ImGui::OpenPopup("Delete?");
-            if (ImGui::BeginPopupModal("Delete?", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-            {
-                ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!\n\n");
-                ImGui::Separator();
 
-                static bool dont_ask_me_next_time = false;
-                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
-                ImGui::Checkbox("Don't ask me next time", &dont_ask_me_next_time);
-                ImGui::PopStyleVar();
-
-                ImGui::BeginChild("Test",ImVec2(200,20),true,0);
-                ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!\n\n");
-                ImGui::Separator();
-
-                ImGui::EndChild();
-
-                if (ImGui::Button("OK", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
-                ImGui::SameLine();
-                if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
-                ImGui::EndPopup();
-            }*/
 
             // imguifilesystem tests:
-            ImGui::Text("\n");
-            ImGui::Separator();ImGui::Text("imguifilesystem");ImGui::Separator();
+            ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguifilesystem");ImGui::Separator();
+#           ifndef NO_IMGUIFILESYSTEM
             const char* startingFolder = "./";
             const char* optionalFileExtensionFilterString = "";//".jpg;.jpeg;.png;.tiff;.bmp;.gif;.txt";
 
@@ -288,9 +280,13 @@ void DrawGL()	// Mandatory
             if (strlen(fsInstance3.getChosenPath())>0) {
                 ImGui::Text("Chosen save path: \"%s\"",fsInstance3.getChosenPath());
             }
+#           else //NO_IMGUIFILESYSTEM
+            ImGui::Text("%s","Excluded from this build.\n");
+#           endif //NO_IMGUIFILESYSTEM
 
             // DateChooser Test:
             ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguidatechooser");ImGui::Separator();
+ #          ifndef NO_IMGUIDATECHOOSER
             /*struct tm {
   int tm_sec;			 Seconds.	[0-60] (1 leap second)
   int tm_min;			 Minutes.	[0-59]
@@ -310,10 +306,13 @@ void DrawGL()	// Mandatory
                 //fprintf(stderr,"A new date has been chosen exacty now: \"%.2d-%.2d-%.4d\"\n",myDate.tm_mday,myDate.tm_mon+1,myDate.tm_year+1900);
             }
             ImGui::Text("Chosen date: \"%.2d-%.2d-%.4d\"",myDate.tm_mday,myDate.tm_mon+1,myDate.tm_year+1900);
+#           else       //NO_IMGUIDATECHOOSER
+            ImGui::Text("%s","Excluded from this build.\n");
+#           endif      //NO_IMGUIDATECHOOSER
 
-
-            // imguivariouscontrols
+            // imguivariouscontrols            
             ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguivariouscontrols");ImGui::Separator();
+#           ifndef NO_IMGUIVARIOUSCONTROLS
             // ProgressBar Test:
             ImGui::TestProgressBar();
             // ColorChooser Test:
@@ -329,7 +328,7 @@ void DrawGL()	// Mandatory
             // Recent Files-like menu
             static const char* recentFileList[] = {"filename01","filename02","filename03","filename04","filename05","filename06","filename07","filename08","filename09","filename10"};
             static ImGui::PopupMenuSimpleParams pmsParams;
-            const bool popupMenuButtonClicked = ImGui::Button("Right-click me##PopupMenuSimpleTest");
+            /*const bool popupMenuButtonClicked = */ImGui::Button("Right-click me##PopupMenuSimpleTest");
             pmsParams.open|= ImGui::GetIO().MouseClicked[1] && ImGui::IsItemHovered(); // RIGHT CLICK on the last widget
                              //popupMenuButtonClicked;    // Or we can just click the button
             const int selectedEntry = ImGui::PopupMenuSimple(pmsParams,recentFileList,(int) sizeof(recentFileList)/sizeof(recentFileList[0]),5,true,"RECENT FILES");
@@ -369,13 +368,19 @@ void DrawGL()	// Mandatory
             }
             static bool trigger = false;
             trigger|=ImGui::Button("Press me for a menu with images##PopupMenuWithImagesTest");
-            const int selectedImageMenuEntry = pm.render(trigger);   // -1 = none
+            /*const int selectedImageMenuEntry =*/ pm.render(trigger);   // -1 = none
+#           else //NO_IMGUIVARIOUSCONTROLS
+            ImGui::Text("%s","Excluded from this build.\n");
+#           endif //NO_IMGUIVARIOUSCONTROLS
 
 
             // ListView Test:
             ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguilistview");ImGui::Separator();
+#           ifndef NO_IMGUILISTVIEW
             MyTestListView();
-
+#           else //NO_IMGUILISTVIEW
+            ImGui::Text("%s","Excluded from this build.\n");
+#           endif //NO_IMGUILISTVIEW
 
             ImGui::Separator();
 
@@ -383,6 +388,7 @@ void DrawGL()	// Mandatory
         }
 
         // 2. Show another simple window, this time using an explicit Begin/End pair
+#       ifndef NO_IMGUITOOLBAR
         if (show_another_window)
         {
             ImGui::Begin("Another Window", &show_another_window, ImVec2(500,100));
@@ -413,13 +419,17 @@ void DrawGL()	// Mandatory
             ImGui::Spacing();ImGui::Text("imguitoolbar can be used inside windows too.\nThe first series of buttons can be used as a tab control.\nPlease resize the window and see the dynamic layout.\n");
             ImGui::End();
         }
+#       endif //NO_IMGUITOOLBAR
 
         // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
+#       if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_SAVE_STYLE))
         if (show_test_window)
         {
             //ImGui::SetNewWindowDefaultPos(ImVec2(650, 20));        // Normally user code doesn't need/want to call this, because positions are saved in .ini file. Here we just want to make the demo initial state a bit more friendly!
             ImGui::ShowTestWindow(&show_test_window);
         }
+#       endif // NO_IMGUISTYLESERIALIZER
+#       ifndef NO_IMGUINODEGRAPHEDITOR
         if (show_node_graph_editor_window) {
             static ImGui::NodeGraphEditor nge;
             if (nge.isEmpty())	{
@@ -437,6 +447,7 @@ void DrawGL()	// Mandatory
             }
             nge.render(&show_node_graph_editor_window);
         }
+#       endif //NO_IMGUINODEGRAPHEDITOR
         if (show_splitter_test_window)  {
             // snippet by omar
             ImGui::Begin("Splitter test",&show_splitter_test_window,ImVec2(500,500));
@@ -471,7 +482,7 @@ void DrawGL()	// Mandatory
         }
 
         // imguitoolbar test 2: two global toolbars one at the top and one at the left
-
+#       ifndef NO_IMGUITOOLBAR
         // These two lines are only necessary to accomodate space for the global menu bar we're using:
         const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
         const ImVec4 displayPortion = ImVec4(0,gMainMenuBarSize.y,displaySize.x,displaySize.y-gMainMenuBarSize.y);
@@ -497,7 +508,7 @@ void DrawGL()	// Mandatory
 
             }
             const int pressed = toolbar.render();
-            if (pressed>=0) fprintf(stderr,"Toolbar1: pressed:%d\n",pressed);
+            if (pressed>=0) {printf("Toolbar1: pressed:%d\n",pressed);fflush(stdout);}
         }
         {
             static ImGui::Toolbar toolbar("myFirstToolbar2##foo");
@@ -520,9 +531,9 @@ void DrawGL()	// Mandatory
                 //toolbar.setScaling(2.0f,1.1f);
             }
             const int pressed = toolbar.render();
-            if (pressed>=0) fprintf(stderr,"Toolbar2: pressed:%d\n",pressed);
+            if (pressed>=0) {printf("Toolbar2: pressed:%d\n",pressed);fflush(stdout);}
         }
-
+#       endif //NO_IMGUITOOLBAR
 }
 
 

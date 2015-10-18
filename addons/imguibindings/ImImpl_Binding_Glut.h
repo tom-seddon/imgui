@@ -117,7 +117,6 @@ static void GlutKeyboard(unsigned char key,int x,int y)   {
 static void GlutKeyboardUp(unsigned char key,int x,int y)   {
     GlutKeyboardUpDown(key,x,y,false);
 }
-static bool gImGuiBindingMouseDblClicked[5]={false,false,false,false,false};
 static void GlutMouse(int b,int s,int x,int y)  {
     //fprintf(stderr,"GlutMouse(%d,%d,%d,%d);\n",b,s,x,y);
     ImGuiIO& io = ImGui::GetIO();
@@ -127,15 +126,16 @@ static void GlutMouse(int b,int s,int x,int y)  {
     io.KeyAlt = (mods&GLUT_ACTIVE_ALT) != 0;
     io.MousePos.x = x;io.MousePos.y = y;
     if (b>=0 && b<5)    {
-        io.MouseDown[b] = (s==0);
+        const int d = (b==1 ? 2 : b==2 ? 1 : b);
+        io.MouseDown[d] = (s==0);
 #       ifndef _WIN32
-        if (s==0)   io.MouseWheel = b==3 ? 1 : b==4 ? -1 : 0;
+        if (s==0)   io.MouseWheel = d==3 ? 1 : d==4 ? -1 : 0;
 #       endif //_WIN32
         // Manual double click handling:
         static double dblClickTimes[6]={-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX};  // seconds
         if (s == 0)   {
             double time = glutGet(GLUT_ELAPSED_TIME);
-            double& oldTime = dblClickTimes[b];
+            double& oldTime = dblClickTimes[d];
             bool& mouseDoubleClicked = gImGuiBindingMouseDblClicked[b];
             if (time - oldTime < io.MouseDoubleClickTime*1000.f) {
                 mouseDoubleClicked = true;
@@ -186,7 +186,7 @@ static void GlutDrawGL()    {
 
     // Setup timestep
     static double time = 0.0f;
-    const double current_time =  (double) glutGet(GLUT_ELAPSED_TIME);
+    const double current_time =  (double) glutGet(GLUT_ELAPSED_TIME)*0.001;
     static float deltaTime = (float)(current_time -time);
     deltaTime = (float) (current_time - time);
     time = current_time;
@@ -279,6 +279,8 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)    {
     io.KeyMap[ImGuiKey_RightArrow] =    GLUT_KEY_RIGHT;   // Right
     io.KeyMap[ImGuiKey_UpArrow] =       GLUT_KEY_UP;      // Up
     io.KeyMap[ImGuiKey_DownArrow] =     GLUT_KEY_DOWN;    // Down
+    io.KeyMap[ImGuiKey_PageUp] =        GLUT_KEY_PAGE_UP;    // Prior
+    io.KeyMap[ImGuiKey_PageDown] =      GLUT_KEY_PAGE_DOWN;  // Next
     io.KeyMap[ImGuiKey_Home] =          GLUT_KEY_HOME;    // Home
     io.KeyMap[ImGuiKey_End] =           GLUT_KEY_END;     // End
 

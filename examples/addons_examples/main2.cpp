@@ -427,7 +427,7 @@ void DrawGL()	// Mandatory
                 ImGui::Toolbutton* pButton = NULL;
                 pressedPane->getButtonAndWindow(pressedPaneButtonIndex,&pButton);
                 if (pButton->isToggleButton) {
-                    fprintf(stderr,"Pressed manual toggle button (number: %d on pane: %s)\n",pressedPaneButtonIndex,paneNames[pressedPane->pos]);
+                    printf("Pressed manual toggle button (number: %d on pane: %s)\n",pressedPaneButtonIndex,paneNames[pressedPane->pos]);
                     if (pressedPane->pos==ImGui::PanelManager::TOP && pressedPaneButtonIndex==(int)pressedPane->getSize()-2) {
                         gShowMainMenuBar=!gShowMainMenuBar;
                         const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
@@ -435,13 +435,15 @@ void DrawGL()	// Mandatory
                         mgr.setDisplayPortion(gShowMainMenuBar ? displayPortion : ImVec4(0,0,-1,-1));
                     }
                 }
-                else fprintf(stderr,"Pressed manual button (number: %d on pane: %s)\n",pressedPaneButtonIndex,paneNames[pressedPane->pos]);
+                else printf("Pressed manual button (number: %d on pane: %s)\n",pressedPaneButtonIndex,paneNames[pressedPane->pos]);
+                fflush(stdout);
             }
             else {
                 ImGui::Toolbutton* pButton = NULL;
                 pressedPane->getButtonAndWindow(pressedPaneButtonIndex,&pButton);
-                if (pButton->isToggleButton) fprintf(stderr,"Pressed toggle button (number: %d on pane: %s)\n",pressedPaneButtonIndex,paneNames[pressedPane->pos]);
-                else fprintf(stderr,"Pressed dock button (number: %d on pane: %s)\n",pressedPaneButtonIndex,paneNames[pressedPane->pos]);
+                if (pButton->isToggleButton) printf("Pressed toggle button (number: %d on pane: %s)\n",pressedPaneButtonIndex,paneNames[pressedPane->pos]);
+                else printf("Pressed dock button (number: %d on pane: %s)\n",pressedPaneButtonIndex,paneNames[pressedPane->pos]);
+                fflush(stdout);
             }
 
         }

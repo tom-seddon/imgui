@@ -58,11 +58,13 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"				\
 	   $$IMGUI_BASE_PATH"/addons/imguipanelmanager/imguipanelmanager.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguistyleserializer/imguistyleserializer.h"   \
 	   $$IMGUI_BASE_PATH"/addons/imguidatechooser/imguidatechooser.h"	    \
-	   $$IMGUI_BASE_PATH"/addons/imguinodegrapheditor/imguinodegrapheditor.h"
+	   $$IMGUI_BASE_PATH"/addons/imguinodegrapheditor/imguinodegrapheditor.h" \
+    ../../addons/imgui_user.h
 
 SOURCES+=  $$IMGUI_BASE_PATH"/imgui.cpp" \
 	   $$IMGUI_BASE_PATH"/imgui_draw.cpp" \
-	   $$IMGUI_BASE_PATH"/imgui_demo.cpp" #\ # optional: for ImGui::ShowTestWindow()
+	   $$IMGUI_BASE_PATH"/imgui_demo.cpp" \ #\ # optional: for ImGui::ShowTestWindow()
+    ../../addons/imgui_user.inl
 
 use_main2 {
 SOURCES+=main2.cpp

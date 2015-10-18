@@ -102,7 +102,6 @@ static void glfw_window_size_callback(GLFWwindow* window,int w,int h)  {
     mousePosScale.y = (float)fb_h / h;
     ResizeGL(w,h);
 }
-static bool gImGuiBindingMouseDblClicked[5]={false,false,false,false,false};
 static void glfw_mouse_button_callback(GLFWwindow* window, int button, int action, int mods)	{
     ImGuiIO& io = ImGui::GetIO();
     if (button >= 0 && button < 5) {

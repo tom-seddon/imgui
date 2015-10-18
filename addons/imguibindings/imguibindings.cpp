@@ -5,6 +5,7 @@
 bool gImGuiPaused = false;
 float gImGuiInverseFPSClamp = -1.0f;    // CAN'T BE 0. < 0 = No clamping.
 bool gImGuiCapturesInput = false;
+bool gImGuiBindingMouseDblClicked[5]={false,false,false,false,false};
 // --------------------------------------------------------------------------------------------------------------
 
 struct ImImpl_PrivateParams  {
@@ -504,6 +505,9 @@ static const GLchar* gFragmentShaderSource[] = {
       "precision mediump float;\n"
       "uniform lowp sampler2D Texture;\n"
 #else //IMIMPL_SHADER_GLES
+#   ifdef __EMSCRIPTEN__
+    "precision mediump float;\n"
+#   endif //__EMSCRIPTEN__
       "uniform sampler2D Texture;\n"
 #endif //IMIMPL_SHADER_GLES
       "varying vec2 Frag_UV;\n"

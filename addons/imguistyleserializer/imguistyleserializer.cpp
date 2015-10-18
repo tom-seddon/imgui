@@ -57,7 +57,7 @@ static size_t ImFormatString(char* buf, size_t buf_size, const char* fmt, ...)
 
 namespace ImGui	{
 
-
+#ifndef NO_IMGUISTYLESERIALIZER_SAVESTYLE
 bool SaveStyle(const char* filename,const ImGuiStyle& style)
 {
     // Write .style file
@@ -100,7 +100,8 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
     
     return true;
 }
-
+#endif //NO_IMGUISTYLESERIALIZER_SAVESTYLE
+#ifndef NO_IMGUISTYLESERIALIZER_LOADSTYLE
 bool LoadStyle(const char* filename,ImGuiStyle& style)
 {
 	// Load .style file
@@ -306,6 +307,7 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
     ImGui::MemFree(f_data);
     return true;
 }
+#endif //NO_IMGUISTYLESERIALIZER_LOADSTYLE
 
 } // namespace ImGui
 
