@@ -69,7 +69,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     }
 
     const int current_frame = ImGui::GetFrameCount();
-    const bool first_begin_of_the_frame = (window->LastFrameDrawn != current_frame);
+    const bool first_begin_of_the_frame = (window->LastFrameActive != current_frame);
     if (first_begin_of_the_frame)
         window->Flags = (ImGuiWindowFlags)flags;
     else
@@ -82,7 +82,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     CheckStacksSize(window, true);
     IM_ASSERT(parent_window != NULL || !(flags & ImGuiWindowFlags_ChildWindow));
 
-    bool window_was_visible = (window->LastFrameDrawn == current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
+    bool window_was_visible = (window->LastFrameActive == current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
     if (flags & ImGuiWindowFlags_Popup)
     {
         ImGuiPopupRef& popup_ref = g.OpenedPopupStack[g.CurrentPopupStack.Size];
@@ -162,7 +162,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->BeginCount = 0;
         window->DrawList->Clear();
         window->ClipRect = ImVec4(-FLT_MAX,-FLT_MAX,+FLT_MAX,+FLT_MAX);
-        window->LastFrameDrawn = current_frame;
+        window->LastFrameActive = current_frame;
         window->IDStack.resize(1);
 
         // Setup texture, outer clipping rectangle
