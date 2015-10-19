@@ -81,14 +81,14 @@ static void ImImpl_ImeSetInputScreenPosFn(int x, int y)
 #endif
 
 // GLFW callbacks to get events
-static void glfw_error_callback(int error, const char* description)	{
+static void glfw_error_callback(int /*error*/, const char* description)	{
     fputs(description, stderr);
 }
 static bool gImGuiAppIsIconified = false;
-static void glfw_window_iconify_callback(GLFWwindow* window,int iconified)    {
+static void glfw_window_iconify_callback(GLFWwindow* /*window*/,int iconified)    {
     gImGuiAppIsIconified = iconified == GL_TRUE;
 }
-static void glfw_framebuffer_size_callback(GLFWwindow* window,int fb_w,int fb_h)  {
+static void glfw_framebuffer_size_callback(GLFWwindow* /*window*/,int fb_w,int fb_h)  {
     int w, h;glfwGetWindowSize(window, &w, &h);
     mousePosScale.x = (float)fb_w / w;                  // Some screens e.g. Retina display have framebuffer size != from window size, and mouse inputs are given in window/screen coordinates.
     mousePosScale.y = (float)fb_h / h;
@@ -96,13 +96,13 @@ static void glfw_framebuffer_size_callback(GLFWwindow* window,int fb_w,int fb_h)
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2((float)fb_w, (float)fb_h);
 }
-static void glfw_window_size_callback(GLFWwindow* window,int w,int h)  {
+static void glfw_window_size_callback(GLFWwindow* /*window*/,int w,int h)  {
     int fb_w, fb_h;glfwGetFramebufferSize(window, &fb_w, &fb_h);
     mousePosScale.x = (float)fb_w / w;                  // Some screens e.g. Retina display have framebuffer size != from window size, and mouse inputs are given in window/screen coordinates.
     mousePosScale.y = (float)fb_h / h;
     ResizeGL(w,h);
 }
-static void glfw_mouse_button_callback(GLFWwindow* window, int button, int action, int mods)	{
+static void glfw_mouse_button_callback(GLFWwindow* /*window*/, int button, int action, int mods)	{
     ImGuiIO& io = ImGui::GetIO();
     if (button >= 0 && button < 5) {
         io.MouseDown[button] = (action == GLFW_PRESS);
@@ -129,11 +129,11 @@ static void glfw_mouse_button_callback(GLFWwindow* window, int button, int actio
     io.KeyAlt = (mods & GLFW_MOD_ALT);
 
 }
-static void glfw_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)	{
+static void glfw_scroll_callback(GLFWwindow* /*window*/, double /*xoffset*/, double yoffset)	{
     ImGuiIO& io = ImGui::GetIO();
     io.MouseWheel = (yoffset != 0.0f) ? yoffset > 0.0f ? 1 : - 1 : 0;           // Mouse wheel: -1,0,+1
 }
-static void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)	{
+static void glfw_key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action, int mods)	{
     ImGuiIO& io = ImGui::GetIO();
     if (action == GLFW_PRESS)   io.KeysDown[key] = true;
     if (action == GLFW_RELEASE) io.KeysDown[key] = false;
@@ -141,16 +141,16 @@ static void glfw_key_callback(GLFWwindow* window, int key, int scancode, int act
     io.KeyShift = (mods & GLFW_MOD_SHIFT);
     io.KeyAlt = (mods & GLFW_MOD_ALT);
 }
-static void glfw_char_callback(GLFWwindow* window, unsigned int c)	{
+static void glfw_char_callback(GLFWwindow* /*window*/, unsigned int c)	{
     if (c > 0 && c < 0x10000 && !ImGui::GetIO().KeyCtrl) ImGui::GetIO().AddInputCharacter((unsigned short)c);
 }
-static void glfw_mouse_enter_leave_callback(GLFWwindow* window, int entered)	{
+static void glfw_mouse_enter_leave_callback(GLFWwindow* /*window*/, int entered)	{
     if (entered==GL_FALSE) {
         ImGuiIO& io = ImGui::GetIO();
         io.MousePos.x=io.MousePos.y=-1.f;
     }
 }
-static void glfw_mouse_move_callback(GLFWwindow* window, double x,double y)	{
+static void glfw_mouse_move_callback(GLFWwindow* /*window*/, double x,double y)	{
     ImGuiIO& io = ImGui::GetIO();
     io.MousePos = ImVec2((float)x * mousePosScale.x, (float)y * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
 }

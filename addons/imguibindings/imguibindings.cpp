@@ -172,32 +172,6 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     DestroyImGuiFontTexture();	// reentrant
 
     ImFont* my_font = NULL; // must be freed at the end of the program ??? I'm not doing it!
-
-    unsigned char* image = NULL;
-//#   define TEST_TO_REMOVE
-#   ifdef  TEST_TO_REMOVE
-//#   define TEST_SDF_FONT    // tweakable
-    {
-#   ifndef TEST_SDF_FONT
-    //const char* fntPath = "./fonts/DejaVuSerifCondensedBoldOutlineRGBAtxt18.fnt";
-    //const char* imgPath = "./fonts/DejaVuSerifCondensedBoldOutlineRGBAtxt18_0.png";
-    const char* fntPath = "./fonts/DejaVuSerifCondensed-Bold.ttf_outline.txt";
-    const char* imgPath = "./fonts/DejaVuSerifCondensed-Bold.ttf_outline.png";
-#   else // TEST_SDF_FONT
-    const char* fntPath = "./fonts/DejaVuSerifCondensed-Bold.ttf_sdf.txt";
-    const char* imgPath = "./fonts/DejaVuSerifCondensed-Bold.ttf_sdf.png";
-#   endif //TEST_SDF_FONT
-    int imageWidth,imageHeight,imageN;
-    image = stbi_load(imgPath,&imageWidth,&imageHeight,&imageN,0);
-    if (image)  {
-        ImFont* my_font = io.Fonts->AddFontFromFileFnt(fntPath,image,imageWidth,imageHeight,imageN);
-        if (!my_font) fprintf(stderr,"Error loading: \"%s\"\n",fntPath);
-    }
-    else fprintf(stderr,"Error loading: \"%s\"\n",imgPath);
-    }
-#   endif //TEST_TO_REMOVE
-
-
     if (OptionalTTFFilePath) {
         my_font = io.Fonts->AddFontFromFileTTF(OptionalTTFFilePath,pOptionalInitParams->gOptionalTTFFileFontSizeInPixels,NULL,pOptionalInitParams->gOptionalTTFFileGlyphRanges);
         if (!my_font) fprintf(stderr,"Error loading: \"%s\"\n",OptionalTTFFilePath);
@@ -263,9 +237,6 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     // Store our identifier
     io.Fonts->TexID = (void *)(intptr_t)gImImplPrivateParams.fontTex;
     //fprintf(stderr,"Loaded font texture\n");
-
-
-    if (image) stbi_image_free(image);image=NULL;
 
 }
 
@@ -498,7 +469,6 @@ static const GLchar* gVertexShaderSource[] = {
       "}\n"
     };
 
-#ifndef TEST_SDF_FONT
 static const GLchar* gFragmentShaderSource[] = {
 #ifdef IMIMPL_SHADER_GLES
       "#version 100\n"
@@ -517,75 +487,6 @@ static const GLchar* gFragmentShaderSource[] = {
       " gl_FragColor = Frag_Colour * texture2D( Texture, Frag_UV.st);\n"
       "}\n"
     };
-#else //TEST_SDF_FONT
-static const GLchar* gFragmentShaderSource[] = {
-      "#define SPECIAL_EFFECT 1 // 0 = WORKS; 1 = OUTLINE; 2 = PULSATE; 3 = SQUIGGLE\n"
-      "#define SUPERSAMPLED_VERSION 0\n"
-#ifdef IMIMPL_SHADER_GLES
-      "#version 100\n"
-      "precision mediump float;\n"
-      "uniform lowp sampler2D Texture;\n"
-#else //IMIMPL_SHADER_GLES
-      "#version 120 // GLSL 1.2 to correspond with OpenGL 2.0\n"
-      "uniform sampler2D Texture;\n"
-#endif //IMIMPL_SHADER_GLES
-      "varying vec2 Frag_UV;\n"
-      "varying vec4 Frag_Colour;\n"
-      "float contour(in float d, in float w) {\n"
-      "return smoothstep(0.5 - w, 0.5 + w, d); // smoothstep(lower edge0, upper edge1, x)\n"
-      "}\n"
-      "float samp(in vec2 uv, float w) {\n"
-      "return contour(texture2D(Texture, Frag_UV).a, w);\n"
-      "}\n"
-      "\n"
-      "void main(void) {\n"
-      "float dist = texture2D(Texture, Frag_UV.st).a; // retrieve distance from texture\n"
-      "// fwidth helps keep outlines a constant width irrespective of scaling\n"
-      "// GLSL's fwidth = abs(dFdx(uv)) + abs(dFdy(uv))\n"
-      "float width = fwidth(dist);"
-      "// Stefan Gustavson's fwidth\n"
-      "//float width = 0.7 * length(vec2(dFdx(dist), dFdy(dist)));\n"
-      "\n"
-      "float alphaThreshold = 0.5;\n"
-      "\n"
-      "#if SPECIAL_EFFECT==0\n"
-      "vec3 fragcolor = Frag_Colour.rgb;\n"
-      "#elif SPECIAL_EFFECT==1 // OUTLINE EFFECT \n"
-      "float outlineDarkeningFactor = 0.3f;\n"
-      "alphaThreshold = 0.2f;\n"
-      "float outlineThreshold = 0.5f;"
-      "float inside = smoothstep(outlineThreshold - width, outlineThreshold + width, dist) ;\n"
-      "//float glow = 1.0-inside;//smoothstep (0.0 , 20.0 , dist ) ;\n"
-      "float glow = smoothstep (0.0 , 20.0 , dist ) ; // I don't understand this...\n"
-      "vec3 insidecolor = Frag_Colour.rgb;\n"
-      "vec3 outlinecolor = Frag_Colour.rgb*outlineDarkeningFactor;\n"
-      "vec3 fragcolor = mix ( glow * outlinecolor , insidecolor , inside ) ;\n"
-      "#elif SPECIAL_EFFECT==2 // PULSATE EFFECT \n"
-      "dist = dist - 2.0 + 2.0 * sin ( Frag_UV.s * 10.0) ;\n"
-      "vec3 fragcolor = vec3 ( smoothstep ( -0.5 , 0.5 , dist ) )*Frag_Colour.rgb ;\n"
-      "#elif SPECIAL_EFFECT==3 // SQUIGGLE EFFECT \n"
-      "dist = dist + 2.0 * noise(20.0* Frag_UV ) ;\n"
-      "vec3 fragcolor = vec3 (1.0 - smoothstep ( -2.0 , -1.0 , dist ) + smoothstep (1.0 , 2.0 , dist ) ) ;\n"
-      "#endif //SPECIAL_EFFECT\n"
-      "\n"
-      "#if !SUPERSAMPLED_VERSION\n"
-      "float alpha = smoothstep(alphaThreshold - width, alphaThreshold + width, dist);\n"
-      "#else //SUPERSAMPLED_VERSION\n\n"
-      "float alpha = contour( dist, width );\n"
-      "//float alpha = aastep( 0.5, dist );\n"
-      "// Supersample, 4 extra points\n"
-      "float dscale = 0.354; // half of 1/sqrt2; you can play with this\n"
-      "vec2 duv = dscale * (dFdx(Frag_UV) + dFdy(Frag_UV));\n"
-      "vec4 box = vec4(Frag_UV-duv, Frag_UV+duv);\n"
-      "float asum = samp( box.xy, width ) + samp( box.zw, width ) + samp( box.xw, width ) + samp( box.zy, width );\n"
-      "// weighted average, with 4 extra points having 0.5 weight each, so 1 + 0.5*4 = 3 is the divisor\n"
-      "alpha = (alpha + 0.5 * asum) / 3.0;\n"
-      "#endif //SUPERSAMPLED_VERSION\n\n"
-      "\n"
-      "gl_FragColor = vec4(fragcolor, alpha);\n"
-      "}\n"
-    };
-#endif //TEST_SDF_FONT
 #endif //IMIMPL_SHADER_GL3
 //------------------------------------------------------------------------
 // END SHADER CODE

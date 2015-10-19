@@ -123,11 +123,12 @@ struct ImImpl_InitParams	{
             size_t                  _pOptionalSizeOfTTFFileInMemory=0,
             const float OptionalTTFFontSizeInPixels=15.0f,
             const ImWchar* OptionalTTFGlyphRanges=NULL
-    ) : gFpsClamp(-1.0f)
-    ,pOptionalReferenceToTTFFileInMemory(_pOptionalReferenceToTTFFileInMemory),
-    pOptionalSizeOfTTFFileInMemory(_pOptionalSizeOfTTFFileInMemory),
+    ) :
     gOptionalTTFFileFontSizeInPixels(OptionalTTFFontSizeInPixels),
-    gOptionalTTFFileGlyphRanges(OptionalTTFGlyphRanges)
+    gOptionalTTFFileGlyphRanges(OptionalTTFGlyphRanges),
+    gFpsClamp(-1.0f),
+    pOptionalReferenceToTTFFileInMemory(_pOptionalReferenceToTTFFileInMemory),
+    pOptionalSizeOfTTFFileInMemory(_pOptionalSizeOfTTFFileInMemory)
 	{
         gWindowSize.x = windowWidth<=0?1270:windowWidth;gWindowSize.y = windowHeight<=0?720:windowHeight;
 

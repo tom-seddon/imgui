@@ -45,6 +45,30 @@ inline static void RecalculateDateDependentFields(tm& date)    {
 }*/
 
 
+inline static tm GetDateZero() {
+    tm date;
+    date.tm_isdst=-1;
+    date.tm_sec=0;		//	 Seconds.	[0-60] (1 leap second)
+    date.tm_min=0;		//	 Minutes.	[0-59]
+    date.tm_hour=0;		//	 Hours.	[0-23]
+    date.tm_mday=0;		//	 Day.		[1-31]
+    date.tm_mon=0;		//	 Month.	[0-11]
+    date.tm_year=0;		//	 Year	- 1900.
+    date.tm_wday=0;     //	 Day of week.	[0-6]
+    date.tm_yday=0;		//	 Days in year.[0-365]
+    return date;
+}
+void SetDateZero(tm* date) {
+    if (!date) return;
+    *date = GetDateZero();
+    return;
+}
+void SetDateToday(tm* date)    {
+    if (!date) return;
+    *date = GetCurrentDate();
+    return;
+}
+
 
 bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool closeWhenMouseLeavesIt,bool* pSetStartDateToDateOutThisFrame,const char* leftArrow,const char* rightArrow,const char* upArrowString,const char* downArrowString)    {
     ImGuiState& g = *GImGui;
@@ -53,7 +77,7 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
     if (window->SkipItems)
         return false;
 
-    static tm d={0};
+    static tm d=GetDateZero();
     if (pSetStartDateToDateOutThisFrame && *pSetStartDateToDateOutThisFrame) {
         *pSetStartDateToDateOutThisFrame=false;
         if (dateOut.tm_mday==0) dateOut = GetCurrentDate();
@@ -351,7 +375,7 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
 
 
 void TestDateChooser(const char* dateFormat,bool closeWhenMouseLeavesIt,const char* leftArrow,const char* rightArrow,const char* upArrowString,const char* downArrowString)  {
-    static tm date={0};
+    static tm date=GetDateZero();
     if (DateChooser("DateChooser##id",date,dateFormat,closeWhenMouseLeavesIt,NULL,leftArrow,rightArrow,upArrowString,downArrowString)) {
         // Do spmething with date
     }

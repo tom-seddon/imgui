@@ -183,7 +183,7 @@ if (!wd.isToggleWindow || ImGui::Begin(wd.name,&wd.closed,wd.pos,-1.f,ImGuiWindo
                 //ImGui::SetNextWindowFocus();  // No way
             }
             ImGui::SameLine();
-            ImGui::Text(selected_fish == -1 ? "<None>" : fishes[selected_fish]);
+            ImGui::Text("%s",selected_fish == -1 ? "<None>" : fishes[selected_fish]);
             if (popup_open)
             {
 
@@ -215,8 +215,8 @@ if (!wd.isToggleWindow || ImGui::Begin(wd.name,&wd.closed,wd.pos,-1.f,ImGuiWindo
             ImGui::TreePop();
         }
         if (ImGui::Button("Launch Browser"))    {
-            const char* url = "/home/flix/Downloads2/Column separator_border sizing issue · Issue #170 · ocornut_imgui.html.maff";
-            //const char* url = "/media/flix/HDMaxi/Video";   // opens a folder
+            //const char* url = "/home/flix/Downloads2/Column separator_border sizing issue · Issue #170 · ocornut_imgui.html.maff";
+            const char* url = "/media/flix/HDMaxi/Video";   // opens a folder
             //const char* url = "/home/flix/Pictures/Selection_003.png";  //opens an image
             ImGui::OpenWithDefaultApplication(url);
         }

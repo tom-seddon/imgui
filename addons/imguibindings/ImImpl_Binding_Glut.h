@@ -12,11 +12,11 @@ static ImVec2 mousePosScale(1.0f, 1.0f);
 static const char* ImImpl_GetClipboardTextFn()
 {
     //fprintf(stderr,"ImImpl_GetClipboardTextFn()\n");
-    static char* txt = "copy and paste not implemented in the glut backend!";
+    static const char* txt = "copy and paste not implemented in the glut backend!";
     //return SDL_GetClipboardText();
     return txt;
 }
-static void ImImpl_SetClipboardTextFn(const char* text)
+static void ImImpl_SetClipboardTextFn(const char* /*text*/)
 {
     //fprintf(stderr,"ImImpl_SetClipboardTextFn()\n");
     //SDL_SetClipboardText(text);

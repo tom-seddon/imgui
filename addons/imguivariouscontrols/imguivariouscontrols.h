@@ -202,7 +202,7 @@ int render(bool& open) const    {
                     open = false;    // Hide menu
                 }
             }
-            else ImGui::Text(entry.text);
+            else ImGui::Text("%s",entry.text);
         }
         if (open)   // close menu when mouse goes away
         {

@@ -1193,7 +1193,7 @@ bool FileGetContent(const char* path,ImVector<unsigned char>& bufferOut,const ch
     fseek(fin,0,SEEK_SET);
     if (sz>0)   {
         bufferOut.resize(sz);
-        if (bufferOut.size()==sz) fread(&bufferOut[0],(size_t)sz,1,fin);
+        if (bufferOut.size()==(int)sz) fread(&bufferOut[0],(size_t)sz,1,fin);
         else {
             fprintf(stderr,"Error in: FileGetContent(\"%s\"): file too big.\n",mainPath);
             bufferOut.clear();

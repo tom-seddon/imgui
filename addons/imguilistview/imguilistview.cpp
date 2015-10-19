@@ -40,14 +40,14 @@ bool ImGui::ListViewBase::render(float listViewHeight, const ImVector<int> *pOpt
         else if (!useFullHeight) ImGui::SetColumnOffset(colID,m_columnOffsets[col]+8);//useFullHeight ? 0 : 8);
         mustDisplayTooltip = hd.formatting.headerTooltip && strlen(hd.formatting.headerTooltip)>0;
         if (!hd.sorting.sortable) {
-            ImGui::Text(hd.name);
-            if (mustDisplayTooltip && ImGui::IsItemHovered()) ImGui::SetTooltip(hd.formatting.headerTooltip);
+            ImGui::Text("%s",hd.name);
+            if (mustDisplayTooltip && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",hd.formatting.headerTooltip);
         }
         else {
             if (ImGui::SmallButton(hd.name)) {
                 lastSortedColumn = columnSortingIndex = col;
             }
-            if (mustDisplayTooltip && ImGui::IsItemHovered()) ImGui::SetTooltip(hd.formatting.headerTooltip);
+            if (mustDisplayTooltip && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",hd.formatting.headerTooltip);
             if (lastSortedColumn == col)    {
                 if (!mustFetchHeaderData) {
                     hd.reset();

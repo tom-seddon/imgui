@@ -1034,7 +1034,7 @@ void ImGui::PanelManager::Pane::getButtonAndWindow(size_t index, ImGui::Toolbutt
 {
     if (pToolbutton) *pToolbutton=bar.getButton(index);
     if (pAssociatedWindow)  {
-        if (index<windows.size()) *pAssociatedWindow=NULL;
+        if ((int)index<windows.size()) *pAssociatedWindow=NULL;
         else *pAssociatedWindow=&windows[index];
     }
 }
@@ -1043,7 +1043,7 @@ void ImGui::PanelManager::Pane::getButtonAndWindow(size_t index, const ImGui::To
 {
     if (pToolbutton) *pToolbutton=bar.getButton(index);
     if (pAssociatedWindow)  {
-        if (index<windows.size()) *pAssociatedWindow=NULL;
+        if ((int)index<windows.size()) *pAssociatedWindow=NULL;
         else *pAssociatedWindow=&windows[index];
     }
 }
@@ -1111,7 +1111,7 @@ bool ImGui::PanelManager::render(Pane** pPanePressedOut, int *pPaneToolbuttonPre
     bool mustUpdateSizes = false;
 
     // Fill mustUpdateSizes:
-    for (size_t paneIndex=0;paneIndex<panes.size();paneIndex++) {
+    for (size_t paneIndex=0,panesSize=(size_t)panes.size();paneIndex<panesSize;paneIndex++) {
         const Pane& pane = panes[paneIndex];
         if (!pane.visible) continue;
         const Toolbar& bar = pane.bar;
@@ -1191,7 +1191,7 @@ bool ImGui::PanelManager::render(Pane** pPanePressedOut, int *pPaneToolbuttonPre
                 const char* windowName = pane.windows[selectedButtonIndex].windowName;
                 if (!windowName) continue;
                 // We must turn off the newly selected windows from other panes if present:
-                for (size_t pi=0;pi<panes.size();pi++) {
+                for (size_t pi=0,panesSize=(size_t)panes.size();pi<panesSize;pi++) {
                     if (pi==paneIndex) continue;    // this pane
                     const Pane& pn = panes[pi];
                     const int si = pn.getSelectedIndex();
@@ -1208,7 +1208,7 @@ bool ImGui::PanelManager::render(Pane** pPanePressedOut, int *pPaneToolbuttonPre
                     const char* windowName = pane.windows[hoverButtonIndex].windowName;
                     // we must avoid hovering if "windowName" is selected on another pane
                     if (windowName) {
-                        for (size_t pi=0;pi<panes.size();pi++) {
+                        for (size_t pi=0,panesSize=(size_t)panes.size();pi<panesSize;pi++) {
                             if (pi==paneIndex) continue;    // this pane
                             const Pane& pn = panes[pi];
                             const int si = pn.getSelectedIndex();
@@ -1227,10 +1227,10 @@ bool ImGui::PanelManager::render(Pane** pPanePressedOut, int *pPaneToolbuttonPre
     if (mustUpdateSizes) this->updateSizes();
 
     // Draw windows:
-    for (size_t paneIndex=0;paneIndex<panes.size();paneIndex++) {
+    for (size_t paneIndex=0,panesSize=(size_t)panes.size();paneIndex<panesSize;paneIndex++) {
         const Pane& pane = panes[paneIndex];
         if (!pane.visible) continue;
-        for (size_t windowIndex=0;windowIndex<pane.windows.size();windowIndex++)    {
+        for (size_t windowIndex=0,paneWindowsSize=(size_t)pane.windows.size();windowIndex<paneWindowsSize;windowIndex++)    {
             const Pane::AssociatedWindow& window = pane.windows[windowIndex];
             window.draw(*this,pane,windowIndex);
         }

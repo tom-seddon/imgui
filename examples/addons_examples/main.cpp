@@ -97,7 +97,7 @@ inline void MyTestListView() {
         MyListViewItem* item;ImGui::ListViewIconData ti;
         for (int i=0,isz=(int)lv.items.size();i<isz;i++) {
 
-            ti.user_texture_id = (void*) myImageTextureId2;
+            ti.user_texture_id = reinterpret_cast<void*> (myImageTextureId2);
             float y = (float)(i/3)/3.f,x=(float)(i%3)/3.f;
             ti.uv0.x=x;ti.uv0.y=y;
             ti.uv1.x=x+1.f/3.f;ti.uv1.y=y+1.f/3.f;
@@ -156,7 +156,7 @@ void InitGL()	// Mandatory
     //ImGui::GetIO().MouseDrawCursor = true;
     //ImGui::GetIO().FontAllowUserScaling = true;
 }
-void ResizeGL(int w,int h)	// Mandatory
+void ResizeGL(int /*w*/,int /*h*/)	// Mandatory
 {
 
 }
@@ -300,7 +300,7 @@ void DrawGL()	// Mandatory
             ImGui::AlignFirstTextHeightToWidgets();
             ImGui::Text("Choose a date:");
             ImGui::SameLine();
-            static tm myDate={0};       // IMPORTANT: must be static!
+            static tm myDate={0};       // IMPORTANT: must be static! (plenty of compiler warnings here...)
             if (ImGui::DateChooser("Date Chooser##MyDateChooser",myDate,"%d/%m/%Y",true)) {
                 // A new date has been chosen
                 //fprintf(stderr,"A new date has been chosen exacty now: \"%.2d-%.2d-%.4d\"\n",myDate.tm_mday,myDate.tm_mon+1,myDate.tm_year+1900);
@@ -396,6 +396,7 @@ void DrawGL()	// Mandatory
                 // imguitoolbar test (note that it can be used both inside and outside windows (see below)
                 ImGui::Separator();ImGui::Text("imguitoolbar");ImGui::Separator();
                 static ImGui::Toolbar toolbar;
+                void* myImageTextureIdVoitPtr = reinterpret_cast<void*>(myImageTextureId2);
                 if (toolbar.getNumButtons()==0)  {
                     char tmp[1024];ImVec2 uv0(0,0),uv1(0,0);
                     for (int i=0;i<9;i++) {
@@ -404,11 +405,11 @@ void DrawGL()	// Mandatory
                         uv0 = ImVec2((float)(i%3)/3.f,(float)(i/3)/3.f);
                         uv1 = ImVec2(uv0.x+1.f/3.f,uv0.y+1.f/3.f);
 
-                        toolbar.addButton(ImGui::Toolbutton(tmp,(void*)myImageTextureId2,uv0,uv1,ImVec2(16,16)));
+                        toolbar.addButton(ImGui::Toolbutton(tmp,myImageTextureIdVoitPtr,uv0,uv1,ImVec2(16,16)));
                     }
                     toolbar.addSeparator(16);
-                    toolbar.addButton(ImGui::Toolbutton("toolbutton 11",(void*)myImageTextureId2,uv0,uv1,ImVec2(16,16),true,true,ImVec4(0.8,0.8,1.0,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
-                    toolbar.addButton(ImGui::Toolbutton("toolbutton 12",(void*)myImageTextureId2,uv0,uv1,ImVec2(16,16),true,false,ImVec4(1.0,0.8,0.8,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
+                    toolbar.addButton(ImGui::Toolbutton("toolbutton 11",myImageTextureIdVoitPtr,uv0,uv1,ImVec2(16,16),true,true,ImVec4(0.8,0.8,1.0,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
+                    toolbar.addButton(ImGui::Toolbutton("toolbutton 12",myImageTextureIdVoitPtr,uv0,uv1,ImVec2(16,16),true,false,ImVec4(1.0,0.8,0.8,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
 
                     toolbar.setProperties(true,false,false,ImVec2(0.0f,0.f),ImVec2(0.25,1));
                 }

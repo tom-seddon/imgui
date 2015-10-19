@@ -270,7 +270,7 @@ protected:
     virtual void getCellData(size_t row,size_t column,CellData& cellDataOut) const=0;   // Just fill cellDataOut. string fields are not intended to be allocated! Just make them point your copies!
 
 public:
-    virtual bool sort(size_t column) {return false;}    // This must be implemented to perform sorting ('selectedRow' is going to change after sorting: that's why it's a good practice to call updateSelectedRow(...) at the end of its implementation)
+    virtual bool sort(size_t /*column*/) {return false;}    // This must be implemented to perform sorting ('selectedRow' is going to change after sorting: that's why it's a good practice to call updateSelectedRow(...) at the end of its implementation)
     // end virtual methods that can/must be implemented by derived classes:-----------
 
     // ctr dctr
@@ -606,7 +606,7 @@ public:
     };
     class ItemBase {
     public:
-        virtual const char* getCustomText(size_t column) const {return "";}     // Must be implemented only for columns with type HT_CUSTOM
+        virtual const char* getCustomText(size_t /*column*/) const {return "";}     // Must be implemented only for columns with type HT_CUSTOM
         virtual const void* getDataPtr(size_t column) const=0;                  // Must be implemented for all fields
 
         ItemBase() : selected(false) {}
@@ -660,6 +660,7 @@ public:
                     if (v0==v1) continue;
                     return (getAscendingOrder() ? (v0?-1:1) : (v0?1:-1));
                 }
+                return 0;
             }
             inline static int Compare_HT_CUSTOM(const void* item0,const void* item1) {
                 const ItemBase* it0 = *((const ItemBase**) item0);
@@ -697,7 +698,7 @@ public:
     // overridden methods:
     void getHeaderData(size_t column,HeaderData& headerDataOut) const {
         // Here we just have to fill as many headerDataOut fields as we can. IMPORTANT: headerDataOut strings are only references (i.e. don't use strcpy(...)!)
-        if (column>=headers.size()) return;
+        if ((int)column>=headers.size()) return;
         const Header& h = headers[column];
         headerDataOut = h.hd;  // To speed up this code I've added hd inside h, but this is not necessary.
         // Mandatory: headerDataOut just stores the string references:
@@ -707,7 +708,7 @@ public:
         headerDataOut.formatting.headerTooltip = h.tooltip;
     }
     void getCellData(size_t row,size_t column,CellData& cellDataOut) const  {
-        if (row>=items.size() || column>=headers.size()) return;
+        if ((int)row>=items.size() || (int)column>=headers.size()) return;
         const ItemBase& it = *(items[row]);
         cellDataOut.fieldPtr = it.getDataPtr(column);
         cellDataOut.selectedRowPtr = &it.selected;
@@ -716,7 +717,7 @@ public:
     }
 
     bool sort(size_t column) {
-        if (column>=headers.size()) return false;
+        if ((int)column>=headers.size()) return false;
         Header& h = headers[column];
         HeaderData::Sorting& hds = h.hd.sorting;
         if (!hds.sortable) return false;

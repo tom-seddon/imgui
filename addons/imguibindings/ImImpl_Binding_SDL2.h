@@ -3,12 +3,6 @@
 
 #include "imguibindings.h"
 
-#define IMIMPL_SDL2_USE_STL   // Different handling of SDL_KEYDOWN/SDL_KEYUP events
-#ifdef IMIMPL_SDL2_USE_STL
-#include <map>              // we could work around this dependency if needed
-static std::map<int,int> specialKeyMap;
-#endif //IMIMPL_SDL2_USE_STL
-
 
 static SDL_Window* window = NULL;
 static ImVec2 mousePosScale(1.0f, 1.0f);
@@ -68,50 +62,25 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.DeltaTime = 1.0f/60.0f;                          // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
     //io.PixelCenterOffset = 0.0f;                        // Align OpenGL texels
 
-#   ifdef IMIMPL_SDL2_USE_STL
-    specialKeyMap.clear();const int numKeyMaps = 512;
-    int cnt = 1;
-    io.KeyMap[ImGuiKey_Tab] =           specialKeyMap[SDLK_TAB]              = numKeyMaps - cnt++;             // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
-    io.KeyMap[ImGuiKey_LeftArrow] =     specialKeyMap[SDLK_LEFT]             = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_RightArrow] =    specialKeyMap[SDLK_RIGHT]            = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_UpArrow] =       specialKeyMap[SDLK_UP]               = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_DownArrow] =     specialKeyMap[SDLK_DOWN]             = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_PageUp] =        specialKeyMap[SDL_GetKeyFromScancode(SDL_SCANCODE_PAGEUP)]             = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_PageDown] =      specialKeyMap[SDL_GetKeyFromScancode(SDL_SCANCODE_PAGEDOWN)]             = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_Home] =          specialKeyMap[SDLK_HOME]             = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_End] =           specialKeyMap[SDLK_END]              = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_Delete] =        specialKeyMap[SDLK_DELETE]           = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_Backspace] =     specialKeyMap[SDLK_BACKSPACE]        = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_Enter] =         specialKeyMap[SDLK_RETURN]           = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_Escape] =        specialKeyMap[SDLK_ESCAPE]           = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_A] =             specialKeyMap[SDLK_a]                = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_C] =             specialKeyMap[SDLK_c]                = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_V] =             specialKeyMap[SDLK_v]                = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_X] =             specialKeyMap[SDLK_x]                = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_Y] =             specialKeyMap[SDLK_y]                = numKeyMaps - cnt++;
-    io.KeyMap[ImGuiKey_Z] =             specialKeyMap[SDLK_z]                = numKeyMaps - cnt++;
-#   else //IMIMPL_SDL2_USE_STL
-    // thanks to mattiasljungstrom:
-    io.KeyMap[ImGuiKey_Tab] = SDL_GetScancodeFromKey( SDLK_TAB );
-    io.KeyMap[ImGuiKey_LeftArrow] = SDL_GetScancodeFromKey( SDLK_LEFT );
-    io.KeyMap[ImGuiKey_RightArrow] = SDL_GetScancodeFromKey( SDLK_RIGHT );
-    io.KeyMap[ImGuiKey_UpArrow] = SDL_GetScancodeFromKey( SDLK_UP );
-    io.KeyMap[ImGuiKey_DownArrow] = SDL_GetScancodeFromKey( SDLK_DOWN );
+    io.KeyMap[ImGuiKey_Tab] = SDLK_TAB;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
+    io.KeyMap[ImGuiKey_LeftArrow] = SDL_SCANCODE_LEFT;
+    io.KeyMap[ImGuiKey_RightArrow] = SDL_SCANCODE_RIGHT;
+    io.KeyMap[ImGuiKey_UpArrow] = SDL_SCANCODE_UP;
+    io.KeyMap[ImGuiKey_DownArrow] = SDL_SCANCODE_DOWN;
     io.KeyMap[ImGuiKey_PageUp] = SDL_SCANCODE_PAGEUP;
     io.KeyMap[ImGuiKey_PageDown] = SDL_SCANCODE_PAGEDOWN;
-    io.KeyMap[ImGuiKey_Home] = SDL_GetScancodeFromKey( SDLK_HOME );
-    io.KeyMap[ImGuiKey_End] = SDL_GetScancodeFromKey( SDLK_END );
-    io.KeyMap[ImGuiKey_Delete] = SDL_GetScancodeFromKey( SDLK_DELETE );
-    io.KeyMap[ImGuiKey_Backspace] = SDL_GetScancodeFromKey( SDLK_BACKSPACE );
-    io.KeyMap[ImGuiKey_Enter] = SDL_GetScancodeFromKey( SDLK_RETURN );
-    io.KeyMap[ImGuiKey_Escape] = SDL_GetScancodeFromKey( SDLK_ESCAPE );
+    io.KeyMap[ImGuiKey_Home] = SDL_SCANCODE_HOME;
+    io.KeyMap[ImGuiKey_End] = SDL_SCANCODE_END;
+    io.KeyMap[ImGuiKey_Delete] = SDLK_DELETE;
+    io.KeyMap[ImGuiKey_Backspace] = SDLK_BACKSPACE;
+    io.KeyMap[ImGuiKey_Enter] = SDLK_RETURN;
+    io.KeyMap[ImGuiKey_Escape] = SDLK_ESCAPE;
     io.KeyMap[ImGuiKey_A] = SDLK_a;
     io.KeyMap[ImGuiKey_C] = SDLK_c;
     io.KeyMap[ImGuiKey_V] = SDLK_v;
     io.KeyMap[ImGuiKey_X] = SDLK_x;
     io.KeyMap[ImGuiKey_Y] = SDLK_y;
     io.KeyMap[ImGuiKey_Z] = SDLK_z;
-#   endif //IMIMPL_SDL2_USE_STL
 
     io.RenderDrawListsFn = ImImpl_RenderDrawLists;
     io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
@@ -127,7 +96,6 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
 }
 
 static bool InitBinding(const ImImpl_InitParams* pOptionalInitParams=NULL,int argc=0, char** argv=NULL)	{
-
 #   ifndef __EMSCRIPTEN__
     if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
 #   else   // __EMSCRIPTEN__
@@ -256,37 +224,19 @@ static void ImImplMainLoopFrame(void* pDone)	{
             case SDL_KEYDOWN:
             case SDL_KEYUP:
             {
-                SDL_Keymod mod;
-                //mod = event.key.keysym.mod; // event.key.keysym.mod == 0 always!
-                mod = SDL_GetModState();
+                const SDL_Keymod mod = SDL_GetModState();
                 io.KeyCtrl = (mod & (KMOD_LCTRL|KMOD_RCTRL)) != 0;
                 io.KeyShift = (mod & (KMOD_LSHIFT|KMOD_RSHIFT)) != 0;
                 io.KeyAlt = (mod & (KMOD_LALT|KMOD_RALT)) != 0;
-                // SDLK_UNKNOWN enums...
-                //io.KeysDown[event.key.keysym.sym] = event.key.type == SDL_KEYDOWN;
-#               ifdef IMIMPL_SDL2_USE_STL
-                std::map<int,int>::const_iterator it = specialKeyMap.find(event.key.keysym.sym);
-                if ( it!=specialKeyMap.end() ) {
-                    io.KeysDown[it->second] = (event.key.type == SDL_KEYDOWN);
-                }
-                // Must I set the other io.KeysDown[...] here too ?
-#               else  //IMIMPL_SDL2_USE_STL
-                // thanks to mattiasljungstrom:
-                const SDL_Scancode key = event.key.keysym.scancode;
-                if (key>=0 && key<512)  io.KeysDown[key] = (event.key.type == SDL_KEYDOWN);
-#               endif //IMIMPL_SDL2_USE_STL
+
+                io.KeysDown[event.key.keysym.sym & ~SDLK_SCANCODE_MASK] = (event.type == SDL_KEYDOWN);
 
             }
                 break;
             //case SDL_TEXTEDITING:   break;
             case SDL_TEXTINPUT:
             {
-                size_t i=0;char c;
-                while ((c = event.text.text[i])!='\0')   {
-                    if (c > 0 && c < 0x10000)   ImGui::GetIO().AddInputCharacter((unsigned short)c);
-                    if (++i==SDL_TEXTINPUTEVENT_TEXT_SIZE) break;
-                }
-
+                io.AddInputCharactersUTF8(event.text.text);
             }
                 break;
             case SDL_MOUSEBUTTONDOWN:        /**< Mouse button pressed */

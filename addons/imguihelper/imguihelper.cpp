@@ -9,27 +9,6 @@
 
 namespace ImGui {
 
-/*
-bool GetButtonBehavior(const ImRect& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat, bool pressed_on_click)	{
-    return ButtonBehavior(bb,id,out_hovered,out_held,allow_key_modifiers,repeat,pressed_on_click);
-}
-ImRect GetWindowRect()	{
- 	ImGuiState& g = *GImGui;
-    if (g.CurrentWindow) return  g.CurrentWindow->Rect();
-    return ImRect(0,0,0,0);
-}
-bool IsWindowDoubleClicked(const ImGuiAabb& bb, const ImGuiID& id,int button,bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat, bool pressed_on_click)	{
-	ImGuiState& g = *GImGui;
-    if (g.CurrentWindow) {
-        bool held=false;
-        ButtonBehavior(bb, id, out_hovered, &held, allow_key_modifiers, repeat, pressed_on_click);
-        if (out_held) *out_held=held;
-        if (g.HoveredWindow == g.CurrentWindow && held && g.IO.MouseDoubleClicked[button])
-		return true;
-	}
-    return false;
-}
-*/
 
 bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS)	{
 #       ifdef _WIN32
@@ -37,7 +16,7 @@ bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS)	{
             return ((size_t)ShellExecuteA( NULL, exploreModeForWindowsOS ? "explore" : "open", url, "", ".", SW_SHOWNORMAL ))>32;
 #       else //_WIN32
             if (exploreModeForWindowsOS) exploreModeForWindowsOS = false;   // No warnings
-            char tmp[2024];
+            char tmp[4096];
             const char* openPrograms[]={"xdg-open","gnome-open"};	// Not sure what can I append here for MacOS
 
             static int openProgramIndex=-2;
