@@ -24,28 +24,22 @@ void NodeGraphEditor::render(bool* opened)
         ImGui::End();
         return;
     }
-    if (isEmpty())  {
-		ImGui::End();        
-		return;
-    }
     const ImGuiIO io = ImGui::GetIO();
 
     // Draw a list of nodes on the left side
     bool open_context_menu = false;
-    int node_hovered_in_list = -1;
-    int node_hovered_in_scene = -1;
+    Node* node_hovered_in_list = NULL;
+    Node* node_hovered_in_scene = NULL;
     ImGui::BeginChild("node_list", ImVec2(100,0));
     ImGui::Text("Nodes");
     ImGui::Separator();
     for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
     {
-        Node* node = &nodes[node_idx];
-        ImGui::PushID(node->ID);
-        if (ImGui::Selectable(node->Name, node->ID == node_selected))
-            node_selected = node->ID;
-        if (ImGui::IsItemHovered())
-        {
-            node_hovered_in_list = node->ID;
+        Node* node = nodes[node_idx];
+        ImGui::PushID((const void*) node);
+        if (ImGui::Selectable(node->Name, node == selectedNode)) selectedNode = node;
+        if (ImGui::IsItemHovered()) {
+            node_hovered_in_list = node;
             open_context_menu |= ImGui::IsMouseClicked(1);
         }
         ImGui::PopID();
@@ -57,7 +51,7 @@ void NodeGraphEditor::render(bool* opened)
     ImGui::SameLine();
     ImGui::BeginGroup();
 
-    const float NODE_SLOT_RADIUS = 4.0f;
+    const float NODE_SLOT_RADIUS = 5.0f;
     const float NODE_SLOT_RADIUS_SQUARED = (NODE_SLOT_RADIUS*NODE_SLOT_RADIUS);
     const ImVec2 NODE_WINDOW_PADDING(8.0f, 8.0f);
 
@@ -90,24 +84,42 @@ void NodeGraphEditor::render(bool* opened)
             draw_list->AddLine(ImVec2(0.0f,y)+win_pos, ImVec2(canvas_sz.x,y)+win_pos, GRID_COLOR);
     }
 
+    //
+    //updateDragging(scrolling);
+
     // Display links
     draw_list->ChannelsSetCurrent(0); // Background
     for (int link_idx = 0; link_idx < links.Size; link_idx++)
     {
-        NodeLink* link = &links[link_idx];
-        Node* node_inp = &nodes[link->InputIdx];
-        Node* node_out = &nodes[link->OutputIdx];
-        ImVec2 p1 = offset + node_inp->GetOutputSlotPos(link->InputSlot);
-        ImVec2 p2 = offset + node_out->GetInputSlotPos(link->OutputSlot);		
+        NodeLink& link = links[link_idx];
+        Node* node_inp = link.InputNode;
+        Node* node_out = link.OutputNode;
+        ImVec2 p1 = offset + node_inp->GetOutputSlotPos(link.InputSlot);
+        ImVec2 p2 = offset + node_out->GetInputSlotPos(link.OutputSlot);
         draw_list->AddBezierCurve(p1, p1+ImVec2(+50,0), p2+ImVec2(-50,0), p2, ImColor(200,200,100), 3.0f);
+    }
+    // Display dragging link
+    bool isLMBDraggingForMakingLinks = ImGui::IsMouseDragging(0, 0.0f);
+    bool isDragNodeValid = dragNode.isValid();
+    if (isLMBDraggingForMakingLinks && isDragNodeValid)   {
+        if (dragNode.inputSlotIdx!=-1)  {
+            ImVec2 p1 = offset + dragNode.node->GetOutputSlotPos(dragNode.inputSlotIdx);
+            const ImVec2& p2 = io.MousePos;//offset + node_out->GetInputSlotPos(link.OutputSlot);
+            draw_list->AddBezierCurve(p1, p1+ImVec2(+50,0), p2+ImVec2(-50,0), p2, ImColor(200,200,100), 3.0f);
+        }
+        else if (dragNode.outputSlotIdx!=-1)  {
+            const ImVec2& p1 = io.MousePos;//
+            ImVec2 p2 = offset + dragNode.node->GetInputSlotPos(dragNode.outputSlotIdx);
+            draw_list->AddBezierCurve(p1, p1+ImVec2(+50,0), p2+ImVec2(-50,0), p2, ImColor(200,200,100), 3.0f);
+        }
     }
 
     // Display nodes
     bool isSomeNodeMoving = false;
     for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
     {
-        Node* node = &nodes[node_idx];
-        ImGui::PushID(node->ID);
+        Node* node = nodes[node_idx];
+        ImGui::PushID((const void*) node);
         ImVec2 node_rect_min = offset + node->Pos;
 
         // Display node contents first
@@ -130,20 +142,22 @@ void NodeGraphEditor::render(bool* opened)
         ImGui::SetCursorScreenPos(node_rect_min);
         ImGui::InvisibleButton("node", node->Size);
         if (ImGui::IsItemHovered()) {
-            node_hovered_in_scene = node->ID;
+            node_hovered_in_scene = node;
             open_context_menu |= ImGui::IsMouseClicked(1);
         }
         bool node_moving_active = ImGui::IsItemActive();
-        if (node_widgets_active || node_moving_active)  node_selected = node->ID;
-        if (node_moving_active && ImGui::IsMouseDragging(0)) {node->Pos = node->Pos + io.MouseDelta;isSomeNodeMoving=true;}
+        if (node_widgets_active || node_moving_active)  selectedNode = node;
+        if (node_moving_active && !isDragNodeValid && ImGui::IsMouseDragging(0, 8.0f)) {node->Pos = node->Pos + io.MouseDelta;isSomeNodeMoving=true;}
 
-        ImU32 node_bg_color = (node_hovered_in_list == node->ID || node_hovered_in_scene == node->ID || (node_hovered_in_list == -1 && node_selected == node->ID)) ? ImColor(75,75,75) : ImColor(60,60,60);
+        ImU32 node_bg_color = (node_hovered_in_list == node || node_hovered_in_scene == node || (node_hovered_in_list == NULL && selectedNode == node)) ? ImColor(75,75,75) : ImColor(60,60,60);
         draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, 4.0f); 
         draw_list->AddRect(node_rect_min, node_rect_max, ImColor(100,100,100), 4.0f); 
         // Display connectors
         const ImVec2 oldCursorScreenPos = ImGui::GetCursorScreenPos();
         const ImVec2 mouseScreenPos = io.MousePos;;
-        ImVec2 connectorScreenPos,deltaPos;
+        ImVec2 connectorScreenPos,deltaPos;const bool canDeleteLinks = true;
+        const bool mustDeleteLinkIfSlotIsHovered = canDeleteLinks && io.MouseDoubleClicked[0];
+        const bool mustDetectIfSlotIsHoveredForDragNDrop = !isSomeNodeMoving && (!isDragNodeValid || isLMBDraggingForMakingLinks);
         for (int slot_idx = 0; slot_idx < node->InputsCount; slot_idx++)    {
             connectorScreenPos = offset + node->GetInputSlotPos(slot_idx);
             draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, ImColor(150,150,150,150));
@@ -154,20 +168,52 @@ void NodeGraphEditor::render(bool* opened)
                     ImGui::Text("%s",name);
                 }
             }
-            if (io.MouseDoubleClicked[0])    {
+            if (mustDetectIfSlotIsHoveredForDragNDrop || mustDeleteLinkIfSlotIsHovered)    {
                 deltaPos.x = mouseScreenPos.x-connectorScreenPos.x;
                 deltaPos.y = mouseScreenPos.y-connectorScreenPos.y;
                 if ((deltaPos.x*deltaPos.x)+(deltaPos.y*deltaPos.y)<NODE_SLOT_RADIUS_SQUARED)   {
-                    // remove the link
-                    //printf("To be removed: input slot %d.\n",slot_idx);fflush(stdout);
-                    for (int link_idx=0;link_idx<links.size();link_idx++)   {
-                        NodeLink& link = links[link_idx];
-                        if (link.OutputIdx == node->ID && slot_idx == link.OutputSlot)   {
-                            // remove link
-                            if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
-                            links.resize(links.size()-1);
-                            --link_idx;
+                    if (mustDeleteLinkIfSlotIsHovered)  {
+                        // remove the link
+                        //printf("To be removed: input slot %d.\n",slot_idx);fflush(stdout);
+                        for (int link_idx=0;link_idx<links.size();link_idx++)   {
+                            NodeLink& link = links[link_idx];
+                            if (link.OutputNode == node && slot_idx == link.OutputSlot)   {
+                                // remove link
+                                if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
+                                links.resize(links.size()-1);
+                                --link_idx;
+                            }
                         }
+                    }
+                    else if (isLMBDraggingForMakingLinks && !isDragNodeValid) {
+                        dragNode.node = node;
+                        dragNode.outputSlotIdx = slot_idx;
+                        dragNode.inputSlotIdx = -1;
+                        dragNode.pos = mouseScreenPos;
+                        //printf("Start dragging.\n");fflush(stdout);
+                    }
+                    else if (isDragNodeValid && dragNode.node!=node) {
+                        // verify compatibility
+                        if (dragNode.inputSlotIdx!=-1)  {
+                            if (allowOnlyOneLinkPerInputSlot)   {
+                                // Remove all existing node links to node-slot_idx before adding new link:
+                                for (int link_idx=0;link_idx<links.size();link_idx++)   {
+                                    NodeLink& link = links[link_idx];
+                                    if (link.OutputNode == node && slot_idx == link.OutputSlot)   {
+                                        // remove link
+                                        if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
+                                        links.resize(links.size()-1);
+                                        --link_idx;
+                                    }
+                                }
+                            }
+                            // create link
+                            addLink(dragNode.node,dragNode.inputSlotIdx,node,slot_idx,true);
+                        }
+                        // clear dragNode
+                        dragNode.node = NULL;
+                        dragNode.outputSlotIdx = dragNode.inputSlotIdx = -1;
+                        //printf("End dragging.\n");fflush(stdout);
                     }
                 }
             }
@@ -182,24 +228,64 @@ void NodeGraphEditor::render(bool* opened)
                     ImGui::Text("%s",name);
                 }
             }
-            if (io.MouseDoubleClicked[0])    {
+            if (mustDetectIfSlotIsHoveredForDragNDrop || mustDeleteLinkIfSlotIsHovered)    {
                 deltaPos.x = mouseScreenPos.x-connectorScreenPos.x;
                 deltaPos.y = mouseScreenPos.y-connectorScreenPos.y;
                 if ((deltaPos.x*deltaPos.x)+(deltaPos.y*deltaPos.y)<NODE_SLOT_RADIUS_SQUARED)   {
-                    // remove the link
-                    //printf("To be removed: output slot %d.\n",slot_idx);fflush(stdout);
-                    for (int link_idx=0;link_idx<links.size();link_idx++)   {
-                        NodeLink& link = links[link_idx];
-                        if (link.InputIdx == node->ID && slot_idx == link.InputSlot)   {
-                            // remove link
-                            if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
-                            links.resize(links.size()-1);
-                            --link_idx;
+                    if (mustDeleteLinkIfSlotIsHovered)  {
+                        // remove the link
+                        //printf("To be removed: output slot %d.\n",slot_idx);fflush(stdout);
+                        for (int link_idx=0;link_idx<links.size();link_idx++)   {
+                            NodeLink& link = links[link_idx];
+                            if (link.InputNode == node && slot_idx == link.InputSlot)   {
+                                // remove link
+                                if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
+                                links.resize(links.size()-1);
+                                --link_idx;
+                            }
                         }
+                    }
+                    else if (isLMBDraggingForMakingLinks && !isDragNodeValid) {
+                        dragNode.node = node;
+                        dragNode.inputSlotIdx = slot_idx;
+                        dragNode.outputSlotIdx = -1;
+                        dragNode.pos = mouseScreenPos;
+                        //printf("Start dragging.\n");fflush(stdout);
+                    }
+                    else if (isDragNodeValid && dragNode.node!=node) {
+                        // verify compatibility
+                        if (dragNode.outputSlotIdx!=-1)  {
+                            if (allowOnlyOneLinkPerInputSlot)   {
+                                // Remove all existing node links to dragNode before adding new link:
+                                for (int link_idx=0;link_idx<links.size();link_idx++)   {
+                                    NodeLink& link = links[link_idx];
+                                    if (link.OutputNode == dragNode.node && dragNode.outputSlotIdx == link.OutputSlot)   {
+                                        // remove link
+                                        if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
+                                        links.resize(links.size()-1);
+                                        --link_idx;
+                                    }
+                                }
+                            }
+                            // create link
+                            addLink(node,slot_idx,dragNode.node,dragNode.outputSlotIdx,true);
+                        }
+                        // clear dragNode
+                        dragNode.node = NULL;
+                        dragNode.outputSlotIdx = dragNode.inputSlotIdx = -1;
+                        //printf("End dragging.\n");fflush(stdout);
                     }
                 }
             }
         }
+        if (!isLMBDraggingForMakingLinks) {
+            dragNode.node = NULL; // clear dragNode
+            //printf("Quit dragging.\n");fflush(stdout);
+        }
+
+        /*if (node == selectedNode) selected_nodeIdx = node_idx;
+        if (node == node_hovered_in_list) node_hovered_in_list_idx = node_idx;
+        if (node == node_hovered_in_scene) node_hovered_in_scene_idx = node_idx;*/
         ImGui::SetCursorScreenPos(oldCursorScreenPos);
         ImGui::PopID();
     }
@@ -208,36 +294,36 @@ void NodeGraphEditor::render(bool* opened)
     // Open context menu
     if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow())   {
         if (ImGui::IsMouseClicked(1))   {   // Open context menu
-            node_selected = node_hovered_in_list = node_hovered_in_scene = -1;
+            selectedNode = node_hovered_in_list = node_hovered_in_scene = NULL;
             open_context_menu = true;
         }
     }
     if (open_context_menu)
     {
         ImGui::OpenPopup("context_menu");
-        if (node_hovered_in_list != -1)
-            node_selected = node_hovered_in_list;
-        if (node_hovered_in_scene != -1)
-            node_selected = node_hovered_in_scene;
+        if (node_hovered_in_list) selectedNode = node_hovered_in_list;
+        if (node_hovered_in_scene) selectedNode = node_hovered_in_scene;
     }
 
     // Draw context menu
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8,8));
-    if (ImGui::BeginPopup("context_menu"))
-    {
-        Node* node = node_selected != -1 ? &nodes[node_selected] : NULL;
+    if (ImGui::BeginPopup("context_menu"))  {
+        Node* node = selectedNode;
         ImVec2 scene_pos = ImGui::GetMousePosOnOpeningCurrentPopup() - offset;
-        if (node)
-        {
+        if (node)   {
             ImGui::Text("Node '%s'", node->Name);
             ImGui::Separator();
-            if (ImGui::MenuItem("Rename..", NULL, false, false)) {}
-            if (ImGui::MenuItem("Delete", NULL, false, false)) {}
-            if (ImGui::MenuItem("Copy", NULL, false, false)) {}
+            //if (ImGui::MenuItem("Rename..", NULL, false, false)) {}
+            if (ImGui::MenuItem("Delete", NULL, false, true)) {
+                //printf("Current nodes.size()=%d; Deleting node %s.\n",nodes.size(),node->Name);fflush(stdout);
+                deleteNode(node);
+            }
+            //if (ImGui::MenuItem("Copy", NULL, false, false)) {}
         }
-        else
-        {
-            if (ImGui::MenuItem("Add")) { nodes.push_back(Node(nodes.Size, "New node", scene_pos, 0.5f, ImColor(100,100,200), 2, 2)); }
+        else    {
+            if (ImGui::MenuItem("Add")) {
+                addNode("New node",scene_pos,0.5f, ImColor(100,100,200), 2, 2);
+            }
             if (ImGui::MenuItem("Paste", NULL, false, false)) {}
         }
         ImGui::EndPopup();
@@ -245,7 +331,7 @@ void NodeGraphEditor::render(bool* opened)
     ImGui::PopStyleVar();
 
     // Scrolling
-    if (!isSomeNodeMoving && ImGui::IsWindowHovered() && ImGui::IsMouseDragging(0, -1.0f)) scrolling = scrolling - io.MouseDelta;
+    if (!isSomeNodeMoving && !dragNode.node && ImGui::IsWindowHovered() &&  ImGui::IsMouseDragging(0, 6.0f)) scrolling = scrolling - io.MouseDelta;
 
     ImGui::PopItemWidth();
     ImGui::EndChild();
@@ -255,6 +341,52 @@ void NodeGraphEditor::render(bool* opened)
 
     ImGui::End();
 }
+
+
+
+void NodeGraphEditor::removeAnyLinkFromNode(Node* node, bool removeInputLinks, bool removeOutputLinks)  {
+    for (int link_idx=0;link_idx<links.size();link_idx++)    {
+        NodeLink& link = links[link_idx];
+        if ((removeOutputLinks && link.InputNode==node) || (removeInputLinks && link.OutputNode==node))    {
+            // remove link
+            if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
+            links.resize(links.size()-1);
+            --link_idx;
+        }
+    }
+}
+
+bool NodeGraphEditor::isLinkPresent(Node *inputNode, int input_slot, Node *outputNode, int output_slot) const  {
+    for (int link_idx=0;link_idx<links.size();link_idx++)    {
+        const NodeLink& l = links[link_idx];
+        if (l.InputNode==inputNode && l.InputSlot==input_slot &&
+            l.OutputNode==outputNode && l.OutputSlot==output_slot) return true;
+    }
+    return false;
+}
+
+void NodeGraphEditor::getInputNodesForNodeAndSlot(const Node* node,int input_slot,ImVector<Node *> &returnValueOut, ImVector<int> *pOptionalReturnValueOutputSlotOut) const  {
+    returnValueOut.clear();if (pOptionalReturnValueOutputSlotOut) pOptionalReturnValueOutputSlotOut->clear();
+    for (int link_idx=0,link_idx_size=links.size();link_idx<link_idx_size;link_idx++)   {
+        const NodeLink& link = links[link_idx];
+        if (link.OutputNode == node && link.OutputSlot == input_slot)  {
+            returnValueOut.push_back(link.OutputNode);
+            if (pOptionalReturnValueOutputSlotOut) pOptionalReturnValueOutputSlotOut->push_back(link.OutputSlot);
+        }
+    }
+}
+
+void NodeGraphEditor::getOutputNodesForNodeAndSlot(const Node* node,int output_slot,ImVector<Node *> &returnValueOut, ImVector<int> *pOptionalReturnValueInputSlotOut) const {
+    returnValueOut.clear();if (pOptionalReturnValueInputSlotOut) pOptionalReturnValueInputSlotOut->clear();
+    for (int link_idx=0,link_idx_size=links.size();link_idx<link_idx_size;link_idx++)   {
+        const NodeLink& link = links[link_idx];
+        if (link.InputNode == node && link.InputSlot == output_slot)  {
+            returnValueOut.push_back(link.InputNode);
+            if (pOptionalReturnValueInputSlotOut) pOptionalReturnValueInputSlotOut->push_back(link.InputSlot);
+        }
+    }
+}
+
 
 }	//nmespace ImGui
 
