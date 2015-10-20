@@ -20,19 +20,15 @@ void NodeGraphEditor::render(bool* opened)
 {
 
     ImGui::SetNextWindowSize(ImVec2(700,600), ImGuiSetCond_FirstUseEver);
-    if (!ImGui::Begin("Example: Custom Node Graph", opened))
-    {
+    if (!ImGui::Begin("Example: Custom Node Graph", opened)){
         ImGui::End();
         return;
     }
-
-    
-    if (isEmpty())
-    {
+    if (isEmpty())  {
 		ImGui::End();        
 		return;
-
     }
+    const ImGuiIO io = ImGui::GetIO();
 
     // Draw a list of nodes on the left side
     bool open_context_menu = false;
@@ -54,16 +50,19 @@ void NodeGraphEditor::render(bool* opened)
         }
         ImGui::PopID();
     }
+    ImGui::Separator();
+    ImGui::Text("Tip:\nDouble-click\nLMB on slots\nto remove\ntheir links.\n");
     ImGui::EndChild();
 
     ImGui::SameLine();
     ImGui::BeginGroup();
 
     const float NODE_SLOT_RADIUS = 4.0f;
+    const float NODE_SLOT_RADIUS_SQUARED = (NODE_SLOT_RADIUS*NODE_SLOT_RADIUS);
     const ImVec2 NODE_WINDOW_PADDING(8.0f, 8.0f);
 
     // Create our child canvas
-    ImGui::Text("Hold MMB to scroll (%.2f,%.2f)", scrolling.x, scrolling.y);
+    ImGui::Text("Hold LMB to scroll (%.2f,%.2f)", scrolling.x, scrolling.y);
     ImGui::SameLine(ImGui::GetWindowWidth()-300);
     ImGui::Checkbox("Show connection names", &show_connection_names);
     ImGui::SameLine(ImGui::GetWindowWidth()-100);
@@ -104,6 +103,7 @@ void NodeGraphEditor::render(bool* opened)
     }
 
     // Display nodes
+    bool isSomeNodeMoving = false;
     for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
     {
         Node* node = &nodes[node_idx];
@@ -129,24 +129,24 @@ void NodeGraphEditor::render(bool* opened)
         draw_list->ChannelsSetCurrent(0); // Background
         ImGui::SetCursorScreenPos(node_rect_min);
         ImGui::InvisibleButton("node", node->Size);
-        if (ImGui::IsItemHovered())
-        {
+        if (ImGui::IsItemHovered()) {
             node_hovered_in_scene = node->ID;
             open_context_menu |= ImGui::IsMouseClicked(1);
         }
         bool node_moving_active = ImGui::IsItemActive();
-        if (node_widgets_active || node_moving_active)
-            node_selected = node->ID;
-        if (node_moving_active && ImGui::IsMouseDragging(0))
-            node->Pos = node->Pos + ImGui::GetIO().MouseDelta;
+        if (node_widgets_active || node_moving_active)  node_selected = node->ID;
+        if (node_moving_active && ImGui::IsMouseDragging(0)) {node->Pos = node->Pos + io.MouseDelta;isSomeNodeMoving=true;}
 
         ImU32 node_bg_color = (node_hovered_in_list == node->ID || node_hovered_in_scene == node->ID || (node_hovered_in_list == -1 && node_selected == node->ID)) ? ImColor(75,75,75) : ImColor(60,60,60);
         draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, 4.0f); 
         draw_list->AddRect(node_rect_min, node_rect_max, ImColor(100,100,100), 4.0f); 
         // Display connectors
         const ImVec2 oldCursorScreenPos = ImGui::GetCursorScreenPos();
+        const ImVec2 mouseScreenPos = io.MousePos;;
+        ImVec2 connectorScreenPos,deltaPos;
         for (int slot_idx = 0; slot_idx < node->InputsCount; slot_idx++)    {
-            draw_list->AddCircleFilled(offset + node->GetInputSlotPos(slot_idx), NODE_SLOT_RADIUS, ImColor(150,150,150,150));
+            connectorScreenPos = offset + node->GetInputSlotPos(slot_idx);
+            draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, ImColor(150,150,150,150));
             if (show_connection_names && node->InputNames)   {
                 const char* name = node->InputNames[slot_idx];
                 if (name)   {
@@ -154,14 +154,49 @@ void NodeGraphEditor::render(bool* opened)
                     ImGui::Text("%s",name);
                 }
             }
+            if (io.MouseDoubleClicked[0])    {
+                deltaPos.x = mouseScreenPos.x-connectorScreenPos.x;
+                deltaPos.y = mouseScreenPos.y-connectorScreenPos.y;
+                if ((deltaPos.x*deltaPos.x)+(deltaPos.y*deltaPos.y)<NODE_SLOT_RADIUS_SQUARED)   {
+                    // remove the link
+                    //printf("To be removed: input slot %d.\n",slot_idx);fflush(stdout);
+                    for (int link_idx=0;link_idx<links.size();link_idx++)   {
+                        NodeLink& link = links[link_idx];
+                        if (link.OutputIdx == node->ID && slot_idx == link.OutputSlot)   {
+                            // remove link
+                            if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
+                            links.resize(links.size()-1);
+                            --link_idx;
+                        }
+                    }
+                }
+            }
         }
         for (int slot_idx = 0; slot_idx < node->OutputsCount; slot_idx++)   {
+            connectorScreenPos = offset + node->GetOutputSlotPos(slot_idx);
             draw_list->AddCircleFilled(offset + node->GetOutputSlotPos(slot_idx), NODE_SLOT_RADIUS, ImColor(150,150,150,150));
             if (show_connection_names && node->OutputNames)   {
                 const char* name = node->OutputNames[slot_idx];
                 if (name)   {
                     ImGui::SetCursorScreenPos(offset + node->GetOutputSlotPos(slot_idx)+ImVec2(NODE_SLOT_RADIUS,0)-ImVec2(0,ImGui::CalcTextSize(name).y));
                     ImGui::Text("%s",name);
+                }
+            }
+            if (io.MouseDoubleClicked[0])    {
+                deltaPos.x = mouseScreenPos.x-connectorScreenPos.x;
+                deltaPos.y = mouseScreenPos.y-connectorScreenPos.y;
+                if ((deltaPos.x*deltaPos.x)+(deltaPos.y*deltaPos.y)<NODE_SLOT_RADIUS_SQUARED)   {
+                    // remove the link
+                    //printf("To be removed: output slot %d.\n",slot_idx);fflush(stdout);
+                    for (int link_idx=0;link_idx<links.size();link_idx++)   {
+                        NodeLink& link = links[link_idx];
+                        if (link.InputIdx == node->ID && slot_idx == link.InputSlot)   {
+                            // remove link
+                            if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
+                            links.resize(links.size()-1);
+                            --link_idx;
+                        }
+                    }
                 }
             }
         }
@@ -171,10 +206,11 @@ void NodeGraphEditor::render(bool* opened)
     draw_list->ChannelsMerge();
 
     // Open context menu
-    if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() && ImGui::IsMouseClicked(1))
-    {
-        node_selected = node_hovered_in_list = node_hovered_in_scene = -1;
-        open_context_menu = true;
+    if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow())   {
+        if (ImGui::IsMouseClicked(1))   {   // Open context menu
+            node_selected = node_hovered_in_list = node_hovered_in_scene = -1;
+            open_context_menu = true;
+        }
     }
     if (open_context_menu)
     {
@@ -209,8 +245,7 @@ void NodeGraphEditor::render(bool* opened)
     ImGui::PopStyleVar();
 
     // Scrolling
-    if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemActive() && ImGui::IsMouseDragging(2, 0.0f))
-        scrolling = scrolling - ImGui::GetIO().MouseDelta;
+    if (!isSomeNodeMoving && ImGui::IsWindowHovered() && ImGui::IsMouseDragging(0, -1.0f)) scrolling = scrolling - io.MouseDelta;
 
     ImGui::PopItemWidth();
     ImGui::EndChild();
