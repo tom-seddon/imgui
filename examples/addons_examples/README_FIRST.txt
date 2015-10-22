@@ -24,14 +24,14 @@ ImGui Addons does NOT modify the ImGui library itself in any way (i.e. imgui.cpp
 -> the two files "imgui_user.h" and "imgui_user.inl" (in the base ImGui folder).
 
 Currently the extra imgui widgets that are available are:
--> imguistyleserializer: 	to loads and save ImGuiStyle from/to file.
+-> imguistyleserializer: 	to load and save ImGuiStyle from/to file.
 -> imguifilesystem:			this addon provides: chooseFileDialog, chooseFolderDialog, saveFileDialog
 							together with plenty of handy methods to perform file system operations and
 							an experimental support for browsing inside zip files (through an additional definition).
 -> imguidatechooser:		a combobox-like datechooser.
 -> imguilistview:			a list view widget with a lot of optional features (setting its height, row sorting through column header clicking, cell editing).
 -> imguitoolbar:			a very flexible imagebutton-bar that can be used inside ImGui Windows (with dynamic layout) and outside (docked at the sides of the screen).
--> imguipanelmanager:		a mini dock panel layout. Basically it uses imguitoolbar and optionally assigns an ImGui Window to some buttons. Please see main2.cpp for an extensie example on how to use it.
+-> imguipanelmanager:		a mini dock panel layout. Basically it uses imguitoolbar and optionally assigns an ImGui Window to some buttons. Please see main2.cpp for an extensive example on how to use it.
 -> imguivariouscontrols:	a series of minor widgets, such as:
 							-> ProgressBar.
 							-> PopupMenuSimple	(a fast, single column, scrollable, popup menu).
@@ -43,7 +43,7 @@ And in addition:
 -> imguistring:				a string class based on ImVector<char>. It does not support iterators, but has many methods that std::string has: thus it can be used to replace std::string in many algorithms.
 -> imguihelper:				currently it just has: OpenWithDefaultApplication(...) that should work with urls, folders and files.
 
-Tip: every single imgui "widget" addon listd above can be excluded by defining at the project level something like: NO_IMGUIFILESYSTEM, etc (and the first demo, main.cpp, should always compile).
+Tip: every single imgui "widget" addon listed above can be excluded by defining at the project level something like: NO_IMGUIFILESYSTEM, etc (and the first demo, main.cpp, should always compile).
 
 ===========================================
 HOW TO USE IMGUI ADDONS IN YOUR PROJECTS:

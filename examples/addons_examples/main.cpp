@@ -447,7 +447,12 @@ void DrawGL()	// Mandatory
                 nge.addLink(mainTexNode, 1, combineNode, 1);
                 nge.addLink(bumpMapNode, 0, combineNode, 2);
             }
-            nge.render(&show_node_graph_editor_window);
+
+            ImGui::SetNextWindowSize(ImVec2(700,600), ImGuiSetCond_FirstUseEver);
+            if (ImGui::Begin("Example: Custom Node Graph", &show_node_graph_editor_window)){
+                nge.render();
+                ImGui::End();
+            }
         }
 #       endif //NO_IMGUINODEGRAPHEDITOR
         if (show_splitter_test_window)  {
