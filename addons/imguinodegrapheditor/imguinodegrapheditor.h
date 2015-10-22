@@ -57,7 +57,7 @@ struct Node
     int     InputsCount, OutputsCount;
     const char** InputNames;
     const char** OutputNames;
-    mutable float startEditingTime;
+    mutable float startEditingTime; // used for Node Editing Callbacks
     mutable bool isOpen;
 
     public:
@@ -107,6 +107,8 @@ struct NodeGraphEditor	{
     Node* selectedNode;
     bool inited;
     bool allowOnlyOneLinkPerInputSlot;  // multiple links can still be connected to single output slots
+    mutable bool isaNodeInActiveState;  // when user clicks/drags/edits values inside a node
+
 
     enum NodeState {NS_ADDED,NS_DELETED,NS_EDITED};
     typedef void (*NodeCallback)(Node*& node,NodeState state,NodeGraphEditor& editor);
@@ -166,8 +168,8 @@ struct NodeGraphEditor	{
     bool show_connection_names;
     bool show_node_list;
     bool show_info;
-    Style style;
     mutable void* user_ptr;
+    static Style& GetStyle() {return style;}
 
     NodeGraphEditor(bool show_grid_= true,bool show_connection_names_=true,bool _allowOnlyOneLinkPerInputSlot=true,bool init_in_ctr=false) {
         scrolling = ImVec2(0.0f, 0.0f);
@@ -179,6 +181,7 @@ struct NodeGraphEditor	{
         user_ptr = NULL;
         show_node_list = true;
         show_info = true;
+        isaNodeInActiveState = false;
         inited = init_in_ctr;
     }
     virtual ~NodeGraphEditor() {
@@ -283,7 +286,7 @@ struct NodeGraphEditor	{
     DragNode dragNode;
 
     bool removeLinkAt(int link_idx);
-
+    static Style style;
 };
 
 

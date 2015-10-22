@@ -14,6 +14,9 @@
 
 
 namespace ImGui	{
+
+NodeGraphEditor::Style NodeGraphEditor::style;  // static variable initialization
+
 // Really dumb data structure provided for the example.
 // Note that we storing links are INDICES (not ID) to make example code shorter, obviously a bad idea for any general purpose code.
 void NodeGraphEditor::render()
@@ -100,7 +103,8 @@ void NodeGraphEditor::render()
         draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2,style.color_link, style.link_line_width, style.link_num_segments);
     }
     // Display dragging link
-    bool isLMBDraggingForMakingLinks = ImGui::IsMouseDragging(0, 0.0f);
+    const bool cantDragAnything = isaNodeInActiveState;
+    bool isLMBDraggingForMakingLinks = !cantDragAnything && ImGui::IsMouseDragging(0, 0.0f);
     bool isDragNodeValid = dragNode.isValid();
     if (isLMBDraggingForMakingLinks && isDragNodeValid)   {
         if (dragNode.inputSlotIdx!=-1)  {
@@ -120,7 +124,7 @@ void NodeGraphEditor::render()
     ImGui::PushStyleColor(ImGuiCol_Header,transparent);
     ImGui::PushStyleColor(ImGuiCol_HeaderActive,transparent);
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered,transparent);
-    bool isSomeNodeMoving = false;Node* node_to_fire_edit_callback = NULL;bool aNodeIsInEditMode=false;
+    bool isSomeNodeMoving = false;Node* node_to_fire_edit_callback = NULL;isaNodeInActiveState=false;
     for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
     {
         Node* node = nodes[node_idx];
@@ -142,11 +146,14 @@ void NodeGraphEditor::render()
         {
             // TODO: this code goes into a virtual method========================
             nodeInEditMode|=ImGui::SliderFloat("##value", &node->Value, 0.0f, 1.0f, "Alpha %.2f");
+            isaNodeInActiveState|=ImGui::IsItemActive();
             nodeInEditMode|=ImGui::ColorEdit3("##color", &node->Color.x);
+            isaNodeInActiveState|=ImGui::IsItemActive();
             //===================================================================
+            isaNodeInActiveState|=nodeInEditMode;
         }
         ImGui::EndGroup();
-        if (nodeInEditMode) {node->startEditingTime = -1.f;aNodeIsInEditMode=true;}
+        if (nodeInEditMode) node->startEditingTime = -1.f;
         else if (node->startEditingTime!=0.f) {
             if (nodeCallback)   {
                 if (node->startEditingTime<0) node->startEditingTime = ImGui::GetTime();
@@ -186,7 +193,7 @@ void NodeGraphEditor::render()
         const ImVec2 mouseScreenPos = io.MousePos;;
         ImVec2 connectorScreenPos,deltaPos;const bool canDeleteLinks = true;
         const bool mustDeleteLinkIfSlotIsHovered = canDeleteLinks && io.MouseDoubleClicked[0];
-        const bool mustDetectIfSlotIsHoveredForDragNDrop = !isSomeNodeMoving && (!isDragNodeValid || isLMBDraggingForMakingLinks);
+        const bool mustDetectIfSlotIsHoveredForDragNDrop = !cantDragAnything && !isSomeNodeMoving && (!isDragNodeValid || isLMBDraggingForMakingLinks);
         ImGui::PushStyleColor(ImGuiCol_Text,style.color_node_input_slots_names);
         for (int slot_idx = 0; slot_idx < node->InputsCount; slot_idx++)    {
             connectorScreenPos = offset + node->GetInputSlotPos(slot_idx);
@@ -372,7 +379,7 @@ void NodeGraphEditor::render()
     ImGui::PopStyleVar();
 
     // Scrolling
-    if (!isSomeNodeMoving && !aNodeIsInEditMode && !dragNode.node && ImGui::IsWindowHovered() &&  ImGui::IsMouseDragging(0, 6.0f)) scrolling = scrolling - io.MouseDelta;
+    if (!isSomeNodeMoving && !isaNodeInActiveState && !dragNode.node && ImGui::IsWindowHovered() &&  ImGui::IsMouseDragging(0, 6.0f)) scrolling = scrolling - io.MouseDelta;
 
     if (nodeCallback && node_to_fire_edit_callback) nodeCallback(node_to_fire_edit_callback,NS_EDITED,*this);
 
