@@ -1,5 +1,5 @@
 /* 	Refactoring from https://github.com/ocornut/imgui/issues/306
-    It's basically the same exact code with a few modifications
+    It's basically the same exact code with a few modifications (and tons of additions)
 */
 
 #ifndef IMGUINODEGRAPHEDITOR_H_
@@ -9,79 +9,200 @@
 #include <imgui.h>
 #endif //IMGUI_API
 
-/*  // Basic usage:
-    static ImGui::NodeGraphEditor nge;
-    if (nge.mustInit())	{
-        nge.init(); // So nge.mustInit() returns false next time
-        static const char* mainTexOutputNames[2] = {"rgb","alpha"}; // Must be static
-        ImGui::Node* mainTexNode = nge.addNode("MainTex",  ImVec2(40,50), 0.5f, ImColor(255,100,100), 0, 2,NULL,mainTexOutputNames);
-        static const char* bumpMapInputNames[1] = {"in"};
-        static const char* bumpMapOutputNames[1] = {"bumpOut"};
-        ImGui::Node* bumpMapNode = nge.addNode("BumpMap",  ImVec2(40,150), 0.42f, ImColor(200,100,200), 1, 1,bumpMapInputNames,bumpMapOutputNames);
-        static const char* combineInputNames[3] = {"c1","c2","c3"};
-        static const char* combineOutputNames[1] = {"out"};
-        ImGui::Node* combineNode = nge.addNode("Combine", ImVec2(270,80), 1.0f, ImColor(0,200,100), 3, 1,combineInputNames,combineOutputNames);
-        nge.addLink(mainTexNode, 0, combineNode, 0);
-        nge.addLink(mainTexNode, 1, combineNode, 1);
-        nge.addLink(bumpMapNode, 0, combineNode, 2);
-    }
-
+/*
+ *   // Basic usage:
     // Here we create a window (please skip if already in a window)
     ImGui::SetNextWindowSize(ImVec2(700,600), ImGuiSetCond_FirstUseEver);
     if (ImGui::Begin("Example: Custom Node Graph", NULL))
     {
-        nge.render();
+        ImGui::TestNodeGraphEditor();   // see its code for furthr info
         ImGui::End();
     }
 */
-/*  // Minimal usage from inside a window:
-    static ImGui::NodeGraphEditor nge;
-    nge.render();
+
+// TODO:
+/*
+-> Implement a copy/paste functionality for standard Nodes (i.e. nodes that use FieldInfo)
+-> Load/Save NodeGraphEditor Style.
+-> Serialization/Deserialization of the whole NodeGraphEditor + Nodes
+-> Add/Adjust/Fix more FieldTypes
 */
 
 
 namespace ImGui	{
 
-// TODO: make abstract or just use a ImVector of some powerful generic data structures
-struct Node
-{
+// The meaning of all these support classes (FieldInfo & C) is to ease future serialization and copy/paste functionality... is it worthy?
+    enum FieldType {
+        FT_INT=0,
+        FT_UNSIGNED,
+        FT_FLOAT,
+        FT_DOUBLE,
+        //--------------- End types that support 1 to 4 array components ----------
+        FT_STRING,
+        FT_ENUM,        // like FT_INT, but the text is retrieved through HeaderData::textFromEnumFunctionPointer function ptr
+        FT_BOOL,
+        FT_COLOR,
+        FT_CUSTOM
+    };    
+    class FieldInfo {
     protected:
-    float   Value;
-    ImVec4  Color;
-
-
-    protected:
-
-    char    Name[32];
-    ImVec2  Pos, Size;
-    int     InputsCount, OutputsCount;
-    const char** InputNames;
-    const char** OutputNames;
-    mutable float startEditingTime; // used for Node Editing Callbacks
-    mutable bool isOpen;
+#       ifndef IMGUIFIELDINFO_MAX_LABEL_LENGTH
+#       define IMGUIFIELDINFO_MAX_LABEL_LENGTH 32
+#       endif //IMGUIFIELDINFO_MAX_LABEL_LENGTH
+#       ifndef IMGUIFIELDINFO_MAX_TOOLTIP_LENGTH
+#       define IMGUIFIELDINFO_MAX_TOOLTIP_LENGTH 64
+#       endif //IMGUIFIELDINFO_MAX_TOOLTIP_LENGTH
 
     public:
-    Node(const char* name, const ImVec2& pos, float value, const ImVec4& color, int inputs_count, int outputs_count,const char** input_names=NULL,const char** output_names=NULL) {
-        strncpy(Name, name, 31); Name[31] = 0; Pos = pos; Value = value; Color = color;
-        InputsCount = inputs_count; OutputsCount = outputs_count;
-        InputNames = input_names;
-        OutputNames = output_names;
-        user_ptr = NULL;
-        startEditingTime = 0;
-        isOpen = true;
-    }
-    virtual ~Node() {}
-    mutable void* user_ptr;
-    const char* getName() const {return Name;}
+        FieldType type;
+        void* pdata;                // ptr to a variable of type "type" (or to an array of "types")
+        char label[IMGUIFIELDINFO_MAX_LABEL_LENGTH];
+        char tooltip[IMGUIFIELDINFO_MAX_TOOLTIP_LENGTH];
+        // in case of FT_STRING max number of characters, in case of FT_FLOAT or FT_DOUBLE the number of decimals to be displayed (experiment for other types and see)
+        int precision;
+        // used only for FT_INT, FT_UNSIGNED, FT_FLOAT, FT_DOUBLE
+        int numArrayElements;       // up to 4
+        double minValue,maxValue;
+        bool needsRadiansToDegs;    // optional for FT_FLOAT and FT_DOUBLE only
+        // used only for FT_ENUM (internally it uses FT_INT, pdata must point to an int):
+        int numEnumElements;
+        typedef bool (*TextFromEnumDelegate)(void*, int, const char**); // userData is the first param
+        TextFromEnumDelegate  textFromEnumFunctionPointer;  // used only when type==FT_ENUM, otherwise set it to NULL. The method is used to convert an int to a char*.
+        void* userData;          // passed to textFromEnumFunctionPointer when type==FT_ENUM (useful if you want to share the same TextFromEnumDelegate for multiple enums). Otherwise set it to NULL or use it as you like.
+        // used only for FT_CUSTOM
+        typedef bool (*RenderFieldDelegate)(FieldInfo& field);
+        RenderFieldDelegate renderFieldDelegate;
+        typedef bool (*CopyFieldDelegate)(FieldInfo& fdst,const FieldInfo& fsrc);
+        CopyFieldDelegate copyFieldDelegate;
+        // TODO: serialize/deserialize delegates
+        // ------------------------------------------------------
 
     protected:
+        FieldInfo() {}
+        void init (FieldType _type=FT_INT,void* _pdata=NULL,const char* _label=NULL,const char* _tooltip=NULL,
+                   int _precision=0,int _numArrayElements=0,double _lowerLimit=0,double _upperLimit=1,bool _needsRadiansToDegs=false,
+                   int _numEnumElements=0,TextFromEnumDelegate _textFromEnumFunctionPointer=NULL,void* _userData=NULL,
+                   RenderFieldDelegate _renderFieldDelegate=NULL)
+        {
+            label[0]='\0';if (_label) {strncpy(label,_label,IMGUIFIELDINFO_MAX_LABEL_LENGTH);label[IMGUIFIELDINFO_MAX_LABEL_LENGTH]='\0';}
+            tooltip[0]='\0';if (_tooltip) {strncpy(tooltip,_tooltip,IMGUIFIELDINFO_MAX_TOOLTIP_LENGTH);tooltip[IMGUIFIELDINFO_MAX_TOOLTIP_LENGTH]='\0';}
+            type = _type;
+            pdata = _pdata;
+            precision = _precision;
+            numArrayElements = _numArrayElements;
+            minValue = _lowerLimit;
+            maxValue = _upperLimit;
+            needsRadiansToDegs = _needsRadiansToDegs;
+            numEnumElements = _numEnumElements;
+            textFromEnumFunctionPointer = _textFromEnumFunctionPointer;
+            userData = _userData;
+            renderFieldDelegate = _renderFieldDelegate;
+        }
+
+        inline bool isCompatibleWith(const FieldInfo& f) const {
+            return (type==f.type &&
+                    numArrayElements == f.numArrayElements);   // Warning: we can't use numArrayElements for other purposes when it's not used....
+        }
+        bool copyFrom(const FieldInfo& f);
+        bool copyPDataValueFrom(const FieldInfo& f);
+
+        //void serialize() {}
+        //void deserialize() {}
+        friend class FieldInfoVector;
+        friend class Node;
+    };
+    class FieldInfoVector : public ImVector < FieldInfo >    {
+    public:
+    // Warning: returned reference might not stay valid for long in these methods
+    FieldInfo& addFieldInt(void* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=0,int lowerLimit=0,int upperLimit=100,void* userData=NULL);
+    FieldInfo& addFieldUnsigned(void* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=0,unsigned lowerLimit=0,unsigned upperLimit=100,void* userData=NULL);
+    FieldInfo& addFieldFloat(void* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,float lowerLimit=0,float upperLimit=1,void* userData=NULL,bool needsRadiansToDegs=false);
+    FieldInfo& addFieldDouble(void* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,double lowerLimit=0,double upperLimit=100,void* userData=NULL,bool needsRadiansToDegs=false);
+    FieldInfo& addFieldText(void* pdata,int textLength=0,const char* label=NULL,const char* tooltip=NULL,bool readOnly=false,bool multiline=false,void* userData=NULL);
+
+    FieldInfo& addFieldEnum(void* pdata,int numEnumElements,FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
+    FieldInfo& addFieldBool(void* pdata,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
+    FieldInfo& addFieldColor(void* pdata,bool useAlpha=true,const char* label=NULL,const char* tooltip=NULL,int precision=3,void* userData=NULL);
+    FieldInfo& addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,void* userData);
+
+private:
+    template<typename T> inline static T GetRadiansToDegs() {
+        static T factor = T(180)/(3.1415926535897932384626433832795029);
+        return factor;
+    }
+    template<typename T> inline static T GetDegsToRadians() {
+        static T factor = T(3.1415926535897932384626433832795029)/T(180);
+        return factor;
+    }
+
+protected:
+    bool render();
+    friend class Node;
+};
+//--------------------------------------------------------------------------------------------
+
+class Node
+{
+    public:
+    virtual ~Node() {}
+    mutable void* user_ptr;
+    mutable int userID;
+    inline const char* getName() const {return Name;}
+    inline int getType() const {return typeID;}
+    inline int getNumInputSlots() const {return InputsCount;}
+    inline int getNumOutputSlots() const {return OutputsCount;}
+    const ImVec2& getPosition() const {return Pos;}
+    inline void setOpen(bool flag) {isOpen=flag;}
+
+    protected:
+    FieldInfoVector fields; // I guess you can just skip these at all and implement virtual methods... but it was supposed to be useful...
+    // virtual methods
+    virtual bool render() // should return "true" if the node has been edited and its values modified (to fire "edited callbacks")
+    {
+        return fields.render();
+    }
+    virtual const char* getTooltip() const {return NULL;}
+    virtual const char* getInfo() const {return NULL;}
+
+
+    // some constants
+#   ifndef IMGUINODE_MAX_NAME_LENGTH
+#   define IMGUINODE_MAX_NAME_LENGTH 32
+#   endif //IMGUINODE_MAX_NAME_LENGTH
+#   ifndef IMGUINODE_MAX_INPUT_SLOTS
+#   define IMGUINODE_MAX_INPUT_SLOTS 8
+#   endif //IMGUINODE_MAX_INPUT_SLOTS
+#   ifndef IMGUINODE_MAX_OUTPUT_SLOTS
+#   define IMGUINODE_MAX_OUTPUT_SLOTS 8
+#   endif //IMGUINODE_MAX_OUTPUT_SLOTS
+#   ifndef IMGUINODE_MAX_SLOT_NAME_LENGTH
+#   define IMGUINODE_MAX_SLOT_NAME_LENGTH 12
+#   endif //IMGUINODE_MAX_SLOT_NAME_LENGTH
+    // ---------------
+
+    char    Name[IMGUINODE_MAX_NAME_LENGTH];
+    ImVec2  Pos, Size;
+    int     InputsCount, OutputsCount;
+    char   InputNames[IMGUINODE_MAX_INPUT_SLOTS][IMGUINODE_MAX_SLOT_NAME_LENGTH];
+    char   OutputNames[IMGUINODE_MAX_OUTPUT_SLOTS][IMGUINODE_MAX_SLOT_NAME_LENGTH];
+    mutable float startEditingTime; // used for Node Editing Callbacks
+    mutable bool isOpen;
+    int typeID;
+
+    Node() {}
+    void init(const char* name, const ImVec2& pos,const char* inputSlotNamesSeparatedBySemicolons=NULL,const char* outputSlotNamesSeparatedBySemicolons=NULL,int _nodeTypeID=0);
 
     ImVec2 GetInputSlotPos(int slot_no) const   { return ImVec2(Pos.x, Pos.y + Size.y * ((float)slot_no+1) / ((float)InputsCount+1)); }
     ImVec2 GetOutputSlotPos(int slot_no) const  { return ImVec2(Pos.x + Size.x, Pos.y + Size.y * ((float)slot_no+1) / ((float)OutputsCount+1)); }
 
-
     friend struct NodeLink;
     friend struct NodeGraphEditor;
+
+    // Helper static methods to simplify code of the derived classes
+    // casts:
+    template <typename T> inline static T* Cast(Node* n,int TYPE) {return ((n && n->getType()==TYPE) ? static_cast<T*>(n) : NULL);}
+    template <typename T> inline static const T* Cast(const Node* n,int TYPE) {return ((n && n->getType()==TYPE) ? static_cast<const T*>(n) : NULL);}
+
 
 };
 
@@ -98,8 +219,10 @@ struct NodeLink
     friend struct NodeGraphEditor;
 };
 
-
 struct NodeGraphEditor	{
+    public:
+    typedef Node* (*NodeFactoryDelegate)(int nodeType,const ImVec2& pos);
+
     protected:
     ImVector<Node*> nodes;          // used as a garbage collector too
     ImVector<NodeLink> links;
@@ -107,8 +230,13 @@ struct NodeGraphEditor	{
     Node* selectedNode;
     bool inited;
     bool allowOnlyOneLinkPerInputSlot;  // multiple links can still be connected to single output slots
-    mutable bool isaNodeInActiveState;  // when user clicks/drags/edits values inside a node
+    bool avoidCircularLinkLoopsInOut;   // however multiple paths from a node to another are still allowed (only in-out circuits are prevented)
 
+    // Node types here are supposed to be zero-based and contiguous
+    const char** pNodeTypeNames; // NOT OWNED! -> Must point to a static reference
+    int numNodeTypeNames;
+    NodeFactoryDelegate nodeFactoryFunctionPtr;
+    ImVector<int> availableNodeTypes;   // These will appear in the "add node menu"
 
     enum NodeState {NS_ADDED,NS_DELETED,NS_EDITED};
     typedef void (*NodeCallback)(Node*& node,NodeState state,NodeGraphEditor& editor);
@@ -170,19 +298,24 @@ struct NodeGraphEditor	{
     bool show_info;
     mutable void* user_ptr;
     static Style& GetStyle() {return style;}
+    mutable ImGuiColorEditMode colorEditMode;
 
-    NodeGraphEditor(bool show_grid_= true,bool show_connection_names_=true,bool _allowOnlyOneLinkPerInputSlot=true,bool init_in_ctr=false) {
+    NodeGraphEditor(bool show_grid_= true,bool show_connection_names_=true,bool _allowOnlyOneLinkPerInputSlot=true,bool _avoidCircularLinkLoopsInOut=true,bool init_in_ctr=false) {
         scrolling = ImVec2(0.0f, 0.0f);
         show_grid = show_grid_;
         show_connection_names = show_connection_names_;
         selectedNode = dragNode.node = NULL;
         allowOnlyOneLinkPerInputSlot = _allowOnlyOneLinkPerInputSlot;
+        avoidCircularLinkLoopsInOut = _avoidCircularLinkLoopsInOut;
         nodeCallback = NULL;linkCallback=NULL;nodeEditedTimeThreshold=1.5f;
         user_ptr = NULL;
         show_node_list = true;
         show_info = true;
-        isaNodeInActiveState = false;
+        pNodeTypeNames = NULL;
+        numNodeTypeNames = 0;
+        nodeFactoryFunctionPtr = NULL;
         inited = init_in_ctr;
+        colorEditMode = ImGuiColorEditMode_RGB;
     }
     virtual ~NodeGraphEditor() {
         clear();
@@ -213,17 +346,18 @@ struct NodeGraphEditor	{
     void init() {inited=true;}
 
     bool isEmpty() const {return nodes.size()==0;}
-    Node* addNode(const char* name, const ImVec2& pos, float value, const ImVec4& color, int inputs_count, int outputs_count,const char** input_names=NULL,const char** output_names=NULL)	{
-        // MANDATORY (NodeGraphEditor::~NodeGraphEditor() will delete these with ImGui::MemFree(...))
-        Node* node = (Node*) ImGui::MemAlloc(sizeof(Node));
-        // MANDATORY even with blank ctrs. Requires: #include <new>. Reason: ImVector does not call ctrs/dctrs on items.
-        new (node) Node(name, pos,value,color, inputs_count,outputs_count,input_names,output_names);
 
-        if (node) {
-            nodes.push_back(node);
+    // nodeTypeNames must point to a block of static memory: it's not owned, nor copied. pOptionalNodeTypesToUse is copied.
+    void registerNodeTypes(const char* nodeTypeNames[],int numNodeTypeNames,NodeFactoryDelegate _nodeFactoryFunctionPtr,const int* pOptionalNodeTypesToUse=NULL,int numNodeTypesToUse=-1);
+    inline int getNumAvailableNodeTypes() const {return availableNodeTypes.size();}
+
+    // BEST PRACTICE: always call this method like: Node* node = addNode(ExampleNode::Create(...));
+    Node* addNode(Node* justCreatedNode)	{
+        if (justCreatedNode) {
+            nodes.push_back(justCreatedNode);
             if (nodeCallback) nodeCallback(nodes[nodes.size()-1],NS_ADDED,*this);
         }
-        return node;
+        return justCreatedNode;
     }
     bool deleteNode(Node* node) {
         if (node == selectedNode)  selectedNode = NULL;
@@ -268,6 +402,10 @@ struct NodeGraphEditor	{
     void getInputNodesForNodeAndSlot(const Node* node,int input_slot,ImVector<Node*>& returnValueOut,ImVector<int>* pOptionalReturnValueOutputSlotOut=NULL) const;
     // if allowOnlyOneLinkPerInputSlot == true:
     Node* getInputNodeForNodeAndSlot(const Node* node,int input_slot,int* pOptionalReturnValueOutputSlotOut=NULL) const;
+    bool isNodeReachableFrom(const Node *node1, int slot1, bool goBackward,const Node* nodeToFind,int* pOptionalNodeToFindSlotOut=NULL) const;
+    bool isNodeReachableFrom(const Node *node1, bool goBackward,const Node* nodeToFind,int* pOptionalNode1SlotOut=NULL,int* pOptionalNodeToFindSlotOut=NULL) const;
+    bool hasLinks(Node* node) const;
+
 
     // It should be better not to add/delete node/links in the callbacks... (but all is untested here)
     void setNodeCallback(NodeCallback cb) {nodeCallback=cb;}
@@ -289,6 +427,10 @@ struct NodeGraphEditor	{
     static Style style;
 };
 
+
+#ifndef IMGUINODEGRAPHEDITOR_NOTESTDEMO
+void TestNodeGraphEditor();
+#endif //IMGUINODEGRAPHEDITOR_NOTESTDEMO
 
 
 }	// namespace ImGui
