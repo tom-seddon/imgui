@@ -16,14 +16,51 @@
 namespace ImGui	{
 
 NodeGraphEditor::Style NodeGraphEditor::style;  // static variable initialization
+inline static bool EditColorImU32(const char* label,ImU32& color) {
+    static ImVec4 tmp;
+    tmp = ImColor(color);
+    const bool changed = ImGui::ColorEdit4(label,&tmp.x);
+    if (changed) color = ImColor(tmp);
+    return changed;
+}
+bool NodeGraphEditor::Style::Edit(NodeGraphEditor::Style& s) {
+    bool changed = false;ImVec4 tmp;
+    const float dragSpeed = 0.5f;
+    const char prec[] = "%1.1f";
+    ImGui::PushID(&s);
+    changed|=ImGui::ColorEdit4( "color_background",&s.color_background.x);
+    changed|=EditColorImU32(    "color_grid",s.color_grid);
+    changed|=ImGui::DragFloat(  "grid_line_width",&s.grid_line_width,dragSpeed,1.f,32.f,prec);
+    changed|=ImGui::DragFloat(  "grid_size",&s.grid_size,dragSpeed,8.f,512.f,prec);
 
+    changed|=EditColorImU32(    "color_node",s.color_node);
+    changed|=EditColorImU32(    "color_node_frame",s.color_node_frame);
+    changed|=EditColorImU32(    "color_node_selected",s.color_node_selected);
+    changed|=EditColorImU32(    "color_node_hovered",s.color_node_hovered);
+    changed|=ImGui::DragFloat(  "node_rounding",&s.node_rounding,dragSpeed,0.f,16.f,prec);
+    changed|=ImGui::DragFloat2(  "node_window_padding",&s.node_window_padding.x,dragSpeed,0.f,8.f,prec);
 
-// Really dumb data structure provided for the example.
-// Note that we storing links are INDICES (not ID) to make example code shorter, obviously a bad idea for any general purpose code.
+    changed|=EditColorImU32(    "color_node_input_slots",s.color_node_input_slots);
+    changed|=EditColorImU32(    "color_node_output_slots",s.color_node_output_slots);
+    changed|=ImGui::DragFloat(  "node_slots_radius",&s.node_slots_radius,dragSpeed,1.f,10.f,prec);
+
+    changed|=EditColorImU32(    "color_link",s.color_link);
+    changed|=ImGui::DragFloat(  "link_line_width",&s.link_line_width,dragSpeed,1.f,6.f,prec);
+    changed|=ImGui::DragFloat(  "link_control_point_distance",&s.link_control_point_distance,dragSpeed,10.f,200.f,prec);
+    changed|=ImGui::DragInt(  "link_num_segments",&s.link_num_segments,dragSpeed,0,16.f);
+
+    changed|=ImGui::ColorEdit4( "color_node_title",&s.color_node_title.x);
+    changed|=ImGui::ColorEdit4( "color_node_input_slots_names",&s.color_node_input_slots_names.x);
+    changed|=ImGui::ColorEdit4( "color_node_output_slots_names",&s.color_node_output_slots_names.x);
+
+    ImGui::PopID();
+    return changed;
+}
+
 void NodeGraphEditor::render()
 {
     if (!inited) init();
-    ImGui::ColorEditMode(colorEditMode);
+    static const ImVec4 transparent = ImVec4(1,1,1,0);
 
     const ImGuiIO io = ImGui::GetIO();
 
@@ -33,40 +70,88 @@ void NodeGraphEditor::render()
     Node* node_hovered_in_scene = NULL;
 
     if (show_node_list) {
-        ImGui::BeginChild("node_list", ImVec2(100,0));
-        ImGui::Text("Nodes");
-        ImGui::Separator();
-        for (int node_idx = 0; node_idx < nodes.Size; node_idx++)   {
-            Node* node = nodes[node_idx];
-            ImGui::PushID((const void*) node);
-            if (ImGui::Selectable(node->Name, node == selectedNode)) selectedNode = node;
-            if (ImGui::IsItemHovered()) {
-                node_hovered_in_list = node;
-                open_context_menu |= ImGui::IsMouseClicked(1);
-            }
-            ImGui::PopID();
-        }
-        if (show_info)   {
-            ImGui::Separator();
-            ImGui::Text("Tip:\nDouble-click\nLMB on slots\nto remove\ntheir links.\n");
+        // Helper stuff for setting up the left splitter
+        static ImVec2 lastWindowSize=ImGui::GetWindowSize();      // initial window size
+        ImVec2 windowSize = ImGui::GetWindowSize();
+        const bool windowSizeChanged = lastWindowSize.x!=windowSize.x || lastWindowSize.y!=windowSize.y;
+        if (windowSizeChanged) lastWindowSize = windowSize;
+        static float w = lastWindowSize.x*0.2f;                    // initial width of the left window
 
-            if (selectedNode) {
-                const char* nodeInfo = selectedNode->getInfo();
-                if (nodeInfo && nodeInfo[0]!='\0')  {
-                    ImGui::Separator();
-                    ImGui::TextWrapped("%s",nodeInfo);
+        //ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
+
+        ImGui::BeginChild("node_list", ImVec2(w,0));
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        if (ImGui::CollapsingHeader("Node List##node_list_1",NULL,false))   {
+            ImGui::Separator();
+            for (int node_idx = 0; node_idx < nodes.Size; node_idx++)   {
+                Node* node = nodes[node_idx];
+                ImGui::PushID((const void*) node);
+                if (ImGui::Selectable(node->Name, node == selectedNode)) selectedNode = node;
+                if (ImGui::IsItemHovered()) {
+                    node_hovered_in_list = node;
+                    open_context_menu |= ImGui::IsMouseClicked(1);
                 }
+                ImGui::PopID();
             }
+        }
+        ImGui::Separator();
+        if (selectedNode)   {
+            const char* nodeInfo = selectedNode->getInfo();
+            if (nodeInfo && nodeInfo[0]!='\0')  {
+            ImGui::Spacing();
+            ImGui::Separator();
+            if (ImGui::CollapsingHeader("Selected Node##selectedNode",NULL,false))   {
+                ImGui::Separator();
+                ImGui::TextWrapped("%s",nodeInfo);
+            }
+            ImGui::Separator();
+            }
+        }
+        if (show_style_editor)   {
+            ImGui::Spacing();
+            ImGui::Separator();
+            if (ImGui::CollapsingHeader("Style Editor##styleEditor",NULL,false))   {
+                ImGui::Separator();
+                ImGui::ColorEditMode(colorEditMode);
+                Style::Edit(this->style);
+
+            }
+            ImGui::Separator();
         }
         ImGui::EndChild();
 
-        ImGui::SameLine();
+
+        // horizontal splitter
+        ImGui::SameLine(0);
+        static const float splitterWidth = 6.f;
+
+        ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(1,1,1,0.2f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(1,1,1,0.35f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(1,1,1,0.5f));
+        ImGui::Button("##hsplitter1", ImVec2(splitterWidth,-1));
+        ImGui::PopStyleColor(3);
+        const bool splitterActive = ImGui::IsItemActive();
+        if (ImGui::IsItemHovered() || splitterActive) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+        if (splitterActive)  w += ImGui::GetIO().MouseDelta.x;
+        if (splitterActive || windowSizeChanged)  {
+            const float minw = ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().FramePadding.x;
+            const float maxw = minw + windowSize.x - splitterWidth - ImGui::GetStyle().WindowMinSize.x;
+            if (w>maxw)         w = maxw;
+            else if (w<minw)    w = minw;
+        }
+        ImGui::SameLine(0);
+
+        //ImGui::PopStyleVar();
+
     }
 
 
     const bool isMouseDraggingForScrolling = ImGui::IsMouseDragging(2, 0.0f);
 
-    ImGui::BeginGroup();
+    ImGui::BeginChild("GraphNodeChildWindow", ImVec2(0,0), true);
+
 
     const float& NODE_SLOT_RADIUS = style.node_slots_radius;
     const float NODE_SLOT_RADIUS_SQUARED = (NODE_SLOT_RADIUS*NODE_SLOT_RADIUS);
@@ -74,11 +159,31 @@ void NodeGraphEditor::render()
 
     // Create our child canvas
     if (show_info)   {
-        ImGui::Text("Hold MMB to scroll (%.2f,%.2f)", scrolling.x, scrolling.y);
-        ImGui::SameLine(ImGui::GetWindowWidth()-300);
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0,0));
+
         ImGui::Checkbox("Show connection names", &show_connection_names);
-        ImGui::SameLine(ImGui::GetWindowWidth()-100);
+        ImGui::SameLine(ImGui::GetWindowWidth()-120);
         ImGui::Checkbox("Show grid", &show_grid);
+        ImGui::TextWrapped("%s","Hold MMB to scroll. Double-click LMB on slots to remove their links.\n");
+        ImGui::SameLine(ImGui::GetWindowWidth()-120);
+        // Color Mode
+        static const char* btnlbls[2]={"HSV##myColorBtnType","RGB##myColorBtnType"};
+        if (colorEditMode!=ImGuiColorEditMode_RGB)  {
+            if (ImGui::SmallButton(btnlbls[0])) {
+                colorEditMode = ImGuiColorEditMode_RGB;
+                ImGui::ColorEditMode(colorEditMode);
+            }
+        }
+        else if (colorEditMode!=ImGuiColorEditMode_HSV)  {
+            if (ImGui::SmallButton(btnlbls[1])) {
+                colorEditMode = ImGuiColorEditMode_HSV;
+                ImGui::ColorEditMode(colorEditMode);
+            }
+        }
+        ImGui::SameLine(0);ImGui::Text("Color Mode");
+        // ------------------
+        ImGui::PopStyleVar(2);
     }
 
 
@@ -96,13 +201,14 @@ void NodeGraphEditor::render()
     // Display grid
     if (show_grid)
     {
+        ImVec2 offset2 = ImGui::GetCursorPos() - scrolling;
         const ImU32& GRID_COLOR = style.color_grid;
         const float& GRID_SZ = style.grid_size;
         ImVec2 win_pos = ImGui::GetCursorScreenPos();
         ImVec2 canvas_sz = ImGui::GetWindowSize();
-        for (float x = fmodf(offset.x,GRID_SZ); x < canvas_sz.x; x += GRID_SZ)
+        for (float x = fmodf(offset2.x,GRID_SZ); x < canvas_sz.x; x += GRID_SZ)
             draw_list->AddLine(ImVec2(x,0.0f)+win_pos, ImVec2(x,canvas_sz.y)+win_pos, GRID_COLOR,style.grid_line_width);
-        for (float y = fmodf(offset.y,GRID_SZ); y < canvas_sz.y; y += GRID_SZ)
+        for (float y = fmodf(offset2.y,GRID_SZ); y < canvas_sz.y; y += GRID_SZ)
             draw_list->AddLine(ImVec2(0.0f,y)+win_pos, ImVec2(canvas_sz.x,y)+win_pos, GRID_COLOR,style.grid_line_width);
     }
 
@@ -137,11 +243,11 @@ void NodeGraphEditor::render()
     }
 
     // Display nodes
-    static const ImVec4 transparent = ImVec4(1,1,1,0);
     ImGui::PushStyleColor(ImGuiCol_Header,transparent);
     ImGui::PushStyleColor(ImGuiCol_HeaderActive,transparent);
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered,transparent);
     bool isSomeNodeMoving = false;Node* node_to_fire_edit_callback = NULL;bool mustDeleteANodeSoon = false;
+    ImGui::ColorEditMode(colorEditMode);
     for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
     {
         Node* node = nodes[node_idx];
@@ -182,7 +288,6 @@ void NodeGraphEditor::render()
         }
         ImGui::PopStyleColor(4);
         //=================================================================
-
 
         if (node->isOpen)
         {
@@ -236,7 +341,7 @@ void NodeGraphEditor::render()
         ImGui::PushStyleColor(ImGuiCol_Text,style.color_node_input_slots_names);
         for (int slot_idx = 0; slot_idx < node->InputsCount; slot_idx++)    {
             connectorScreenPos = offset + node->GetInputSlotPos(slot_idx);
-            draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, style.color_node_slots);
+            draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, style.color_node_input_slots);
             if (show_connection_names && node->InputNames[slot_idx][0]!='\0')   {
                 const char* name = node->InputNames[slot_idx];
                 if (name)   {
@@ -303,7 +408,7 @@ void NodeGraphEditor::render()
         ImGui::PushStyleColor(ImGuiCol_Text,style.color_node_output_slots_names);
         for (int slot_idx = 0; slot_idx < node->OutputsCount; slot_idx++)   {
             connectorScreenPos = offset + node->GetOutputSlotPos(slot_idx);
-            draw_list->AddCircleFilled(offset + node->GetOutputSlotPos(slot_idx), NODE_SLOT_RADIUS, ImColor(150,150,150,150));
+            draw_list->AddCircleFilled(offset + node->GetOutputSlotPos(slot_idx), NODE_SLOT_RADIUS, style.color_node_output_slots);
             if (show_connection_names && node->OutputNames[slot_idx][0]!='\0')   {
                 const char* name = node->OutputNames[slot_idx];
                 if (name)   {
@@ -440,13 +545,14 @@ void NodeGraphEditor::render()
 
     // Scrolling
     //if (!isSomeNodeMoving && !isaNodeInActiveState && !dragNode.node && ImGui::IsWindowHovered() &&  ImGui::IsMouseDragging(0, 6.0f)) scrolling = scrolling - io.MouseDelta;
-    if (isMouseDraggingForScrolling /*&& ImGui::IsWindowHovered()*/ && (ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused())) scrolling = scrolling - io.MouseDelta;
+    if (isMouseDraggingForScrolling /*&& ImGui::IsWindowHovered()*/ && (ImGui::IsWindowHovered() || ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused())) scrolling = scrolling - io.MouseDelta;
 
 
     ImGui::EndChild();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(2);
-    ImGui::EndGroup();
+
+    ImGui::EndChild();  // GraphNodeChildWindow
 
 
     if (nodeCallback && node_to_fire_edit_callback) nodeCallback(node_to_fire_edit_callback,NS_EDITED,*this);
@@ -1064,6 +1170,7 @@ void TestNodeGraphEditor()  {
         //----------------------------------------------------------------------
         // This adds entries to the "add node" context menu
         nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,NULL,-1); // last 2 args can be used to add only a subset of nodes (or to sort their order inside the context menu)
+        nge.show_style_editor = true;
     }
     nge.render();
 }

@@ -389,5 +389,45 @@ bool ColorChooser(bool* open,ImVec4 *pColorOut,bool supportsAlpha)   {
 }
 
 
+/* // Snippet by Omar. To evalutate. But in main.cpp thare's another example that supports correct window resizing.
+ * // And here is not straightforward to determine the sizes we want to use...
+//#include <imgui_internal.h>
+static void DrawSplitter(float& size0, float& size1,const char* label="##Splitter",int split_vertically=true,float min_size0=20.f, float min_size1=20.f,float thickness=8.f)
+{
+    ImVec2 backup_pos = ImGui::GetCursorPos();
+    if (split_vertically) ImGui::SetCursorPosY(backup_pos.y + size0);
+    else ImGui::SetCursorPosX(backup_pos.x + size0);
+
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,0,0,0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0,0,0,0));          // We don't draw while active/pressed because as we move the panes the splitter button will be 1 frame late
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f,0.6f,0.6f,0.10f));
+    ImGui::Button(label, ImVec2(!split_vertically ? thickness : -1.0f, split_vertically ? thickness : -1.0f));
+    ImGui::PopStyleColor(3);
+
+
+    // This is to allow having other buttons OVER our splitter. All of this should be moved to ImGui
+    // GImGui can be accessed with: #include <imgui_internal.h>
+    if (GImGui->HoveredId == GImGui->CurrentWindow->DC.LastItemID)
+        GImGui->HoveredIdAllowHoveringOthers = true;
+    if (GImGui->ActiveId == GImGui->CurrentWindow->DC.LastItemID)
+        GImGui->ActiveIdAllowHoveringOthers = true;
+
+    if (ImGui::IsItemActive())
+    {
+        ImGui::SetMouseCursor(split_vertically ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS);
+        float mouse_delta = split_vertically ? ImGui::GetIO().MouseDelta.y : ImGui::GetIO().MouseDelta.x;
+
+        // Minimum pane size
+        if (mouse_delta < min_size0 - size0)   mouse_delta = min_size0 - size0;
+        if (mouse_delta > size1 - min_size1)   mouse_delta = size1 - min_size1;
+
+        // Apply resize
+        size0 += mouse_delta;
+        size1 -= mouse_delta;
+    }
+    ImGui::SetCursorPos(backup_pos);
+}
+*/
+
 
 } // namespace ImGui

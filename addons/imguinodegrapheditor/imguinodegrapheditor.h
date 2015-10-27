@@ -257,7 +257,8 @@ struct NodeGraphEditor	{
         ImU32 color_node_hovered;
         float node_rounding;
         ImVec2 node_window_padding;
-        ImU32 color_node_slots;
+        ImU32 color_node_input_slots;
+        ImU32 color_node_output_slots;
         float node_slots_radius;
         ImU32 color_link;
         float link_line_width;
@@ -279,7 +280,8 @@ struct NodeGraphEditor	{
             node_rounding =         4.f;
             node_window_padding =   ImVec2(8.f,8.f);
 
-            color_node_slots = ImColor(150,150,150,150);
+            color_node_input_slots = ImColor(150,150,150,150);
+            color_node_output_slots = ImColor(150,150,150,150);
             node_slots_radius =     5.f;
 
             color_link =            ImColor(200,200,100);
@@ -291,11 +293,14 @@ struct NodeGraphEditor	{
             color_node_input_slots_names = ImGui::GetStyle().Colors[ImGuiCol_Text];color_node_input_slots_names.w=0.75f;
             color_node_output_slots_names = ImGui::GetStyle().Colors[ImGuiCol_Text];color_node_output_slots_names.w=0.75f;
         }
+
+        static bool Edit(Style& style);
     };
     bool show_grid;
     bool show_connection_names;
     bool show_node_list;
     bool show_info;
+    bool show_style_editor;
     mutable void* user_ptr;
     static Style& GetStyle() {return style;}
     mutable ImGuiColorEditMode colorEditMode;
@@ -311,6 +316,7 @@ struct NodeGraphEditor	{
         user_ptr = NULL;
         show_node_list = true;
         show_info = true;
+        show_style_editor = false;
         pNodeTypeNames = NULL;
         numNodeTypeNames = 0;
         nodeFactoryFunctionPtr = NULL;

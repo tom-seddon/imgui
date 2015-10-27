@@ -3,6 +3,7 @@
 #include <time.h>   // very common plain c header file used only by DateChooser
 #endif //NO_IMGUIDATECHOOSER
 
+
 // Helper stuff we'll use later ----------------------------------------------------
 GLuint myImageTextureId2 = 0;
 static ImVec2 gMainMenuBarSize(0,0);
@@ -442,11 +443,20 @@ void DrawGL()	// Mandatory
         }
 #       endif //NO_IMGUINODEGRAPHEDITOR
         if (show_splitter_test_window)  {
-            // snippet by omar
-            ImGui::Begin("Splitter test",&show_splitter_test_window,ImVec2(500,500));
-
-            static float w = 200.0f;
+            // based on a snippet by Omar
+            static ImVec2 lastWindowSize(500,500);      // initial window size
+            static const float splitterWidth = 6.f;
+            static float w = 200.0f;                    // initial size of the top/left window
             static float h = 300.0f;
+
+            ImGui::Begin("Splitter test",&show_splitter_test_window,lastWindowSize);//,-1.f,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize);
+            const ImVec2 windowSize = ImGui::GetWindowSize();
+            const bool sizeChanged = lastWindowSize.x!=windowSize.x || lastWindowSize.y!=windowSize.y;
+            if (sizeChanged) lastWindowSize = windowSize;
+            bool splitterActive = false;
+            const ImVec2 os(ImGui::GetStyle().FramePadding.x + ImGui::GetStyle().WindowPadding.x,
+                            ImGui::GetStyle().FramePadding.y + ImGui::GetStyle().WindowPadding.y);
+
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
 
             // window top left
@@ -454,17 +464,31 @@ void DrawGL()	// Mandatory
             ImGui::EndChild();
             // horizontal splitter
             ImGui::SameLine();
-            ImGui::InvisibleButton("hsplitter", ImVec2(8.0f,h));
+            ImGui::InvisibleButton("hsplitter", ImVec2(splitterWidth,h));
             if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
-            if (ImGui::IsItemActive())  w += ImGui::GetIO().MouseDelta.x;
+            splitterActive = ImGui::IsItemActive();
+            if (splitterActive)  w += ImGui::GetIO().MouseDelta.x;
+            if (splitterActive || sizeChanged)  {
+                const float minw = ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().FramePadding.x;
+                const float maxw = minw + windowSize.x - splitterWidth - ImGui::GetStyle().WindowMinSize.x;
+                if (w>maxw)         w = maxw;
+                else if (w<minw)    w = minw;
+            }
             ImGui::SameLine();
             // window top right
             ImGui::BeginChild("child2", ImVec2(0, h), true);
             ImGui::EndChild();
             // vertical splitter
-            ImGui::InvisibleButton("vsplitter", ImVec2(-1,8.0f));
+            ImGui::InvisibleButton("vsplitter", ImVec2(-1,splitterWidth));
             if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
-            if (ImGui::IsItemActive())  h += ImGui::GetIO().MouseDelta.y;
+            splitterActive = ImGui::IsItemActive();
+            if (splitterActive)  h += ImGui::GetIO().MouseDelta.y;
+            if (splitterActive || sizeChanged)  {
+                const float minh = ImGui::GetStyle().WindowPadding.y + ImGui::GetStyle().FramePadding.y;
+                const float maxh = windowSize.y - splitterWidth - ImGui::GetStyle().WindowMinSize.y;
+                if (h>maxh)         h = maxh;
+                else if (h<minh)    h = minh;
+            }
             // window bottom
             ImGui::BeginChild("child3", ImVec2(0,0), true);
             ImGui::EndChild();
@@ -528,6 +552,8 @@ void DrawGL()	// Mandatory
         }
 #       endif //NO_IMGUITOOLBAR
 }
+
+
 
 
 
