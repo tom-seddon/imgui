@@ -104,8 +104,8 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
 #ifndef NO_IMGUISTYLESERIALIZER_LOADSTYLE
 bool LoadStyle(const char* filename,ImGuiStyle& style)
 {
-	// Load .style file
-   	if (!filename)  return false;
+    // Load .style file
+    if (!filename)  return false;
 
     // Load file into memory
     FILE* f;

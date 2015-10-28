@@ -295,6 +295,17 @@ struct NodeGraphEditor	{
         }
 
         static bool Edit(Style& style);
+        static void Reset(Style& style) {style = Style();}
+
+#       ifndef NO_IMGUIHELPER_SERIALIZATION
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+        static bool Save(const Style& style,const char* filename);
+#       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+        static bool Load(Style& style,const char* filename);
+#       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#       endif //NO_IMGUIHELPER_SERIALIZATION
+
     };
     bool show_grid;
     bool show_connection_names;

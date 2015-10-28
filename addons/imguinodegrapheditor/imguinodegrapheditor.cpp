@@ -57,6 +57,88 @@ bool NodeGraphEditor::Style::Edit(NodeGraphEditor::Style& s) {
     return changed;
 }
 
+#ifndef NO_IMGUIHELPER_SERIALIZATION
+#ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+#include "../imguihelper/imguihelper.h"
+bool NodeGraphEditor::Style::Save(const NodeGraphEditor::Style &style, const char *filename)    {
+    ImGuiHelper::Serializer s(filename);
+    if (!s.isValid()) return false;
+
+    ImVec4 tmpColor = ImColor(style.color_background);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_background",4);
+    tmpColor = ImColor(style.color_grid);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_grid",4);
+    s.save(ImGuiHelper::FT_FLOAT,&style.grid_line_width,"grid_line_width");
+    s.save(ImGuiHelper::FT_FLOAT,&style.grid_size,"grid_size");
+
+    tmpColor = ImColor(style.color_node);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_node",4);
+    tmpColor = ImColor(style.color_node_frame);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_node_frame",4);
+    tmpColor = ImColor(style.color_node_selected);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_node_selected",4);
+    tmpColor = ImColor(style.color_node_hovered);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_node_hovered",4);
+    s.save(ImGuiHelper::FT_FLOAT,&style.node_rounding,"node_rounding");
+    s.save(ImGuiHelper::FT_FLOAT,&style.node_window_padding.x,"node_window_padding",2);
+
+    tmpColor = ImColor(style.color_node_input_slots);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_node_input_slots",4);
+    tmpColor = ImColor(style.color_node_output_slots);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_node_output_slots",4);
+    s.save(ImGuiHelper::FT_FLOAT,&style.node_slots_radius,"node_slots_radius");
+
+    tmpColor = ImColor(style.color_link);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_link",4);
+    s.save(ImGuiHelper::FT_FLOAT,&style.link_line_width,"link_line_width");
+    s.save(ImGuiHelper::FT_FLOAT,&style.link_control_point_distance,"link_control_point_distance");
+    s.save(ImGuiHelper::FT_INT,&style.link_num_segments,"link_num_segments");
+
+    s.save(ImGuiHelper::FT_COLOR,&style.color_node_title.x,"color_node_title",4);
+    s.save(ImGuiHelper::FT_COLOR,&style.color_node_input_slots_names.x,"color_node_input_slots_names",4);
+    s.save(ImGuiHelper::FT_COLOR,&style.color_node_output_slots_names.x,"color_node_output_slots_names",4);
+
+    return true;
+}
+#endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+#include "../imguihelper/imguihelper.h"
+static bool StyleParser(ImGuiHelper::FieldType ft,int /*numArrayElements*/,void* pValue,const char* name,void* userPtr)    {
+    NodeGraphEditor::Style& s = *((NodeGraphEditor::Style*) userPtr);
+    ImVec4& tmp = *((ImVec4*) pValue);  // we cast it soon to float for now...
+    switch (ft) {
+    case FT_FLOAT:
+        if (strcmp(name,"grid_line_width")==0)                              s.grid_line_width = tmp.x;
+        else if (strcmp(name,"grid_size")==0)                               s.grid_size = tmp.x;
+        else if (strcmp(name,"node_rounding")==0)                           s.node_rounding = tmp.x;
+        else if (strcmp(name,"node_window_padding")==0)                     s.node_window_padding = ImVec2(tmp.x,tmp.y);
+        else if (strcmp(name,"node_slots_radius")==0)                       s.node_slots_radius = tmp.x;
+        else if (strcmp(name,"link_line_width")==0)                         s.link_line_width = tmp.x;
+        else if (strcmp(name,"link_control_point_distance")==0)             s.link_control_point_distance = tmp.x;
+    break;
+    case FT_INT:
+        if (strcmp(name,"link_num_segments")==0)                            s.link_num_segments = *((int*)pValue);
+    break;
+    case FT_COLOR:
+        if (strcmp(name,"color_background")==0)                             s.color_background = ImColor(tmp);
+        else if (strcmp(name,"color_grid")==0)                              s.color_grid = ImColor(tmp);
+        else if (strcmp(name,"color_node")==0)                              s.color_node = ImColor(tmp);
+        else if (strcmp(name,"color_node_frame")==0)                        s.color_node_frame = ImColor(tmp);
+        else if (strcmp(name,"color_node_selected")==0)                     s.color_node_selected = ImColor(tmp);
+        else if (strcmp(name,"color_node_hovered")==0)                      s.color_node_hovered = ImColor(tmp);
+        else if (strcmp(name,"color_node_input_slots")==0)                  s.color_node_input_slots = ImColor(tmp);
+        else if (strcmp(name,"color_node_output_slots")==0)                 s.color_node_output_slots = ImColor(tmp);
+        else if (strcmp(name,"color_link")==0)                              s.color_link = ImColor(tmp);
+        else if (strcmp(name,"color_node_title")==0)                        s.color_node_title = ImColor(tmp);
+        else if (strcmp(name,"color_node_input_slots_names")==0)            s.color_node_input_slots_names = ImColor(tmp);
+        else if (strcmp(name,"color_node_output_slots_names")==0)           s.color_node_output_slots_names = ImColor(tmp);
+    break;
+    default:
+    // TODO: check
+    break;
+    }
+    return false;
+}
+bool NodeGraphEditor::Style::Load(NodeGraphEditor::Style &style, const char *filename)  {
+    ImGuiHelper::Deserializer d(filename);
+    if (!d.isValid()) return false;
+    d.parse(StyleParser,(void*)&style);
+    return true;
+}
+#endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#endif //NO_IMGUIHELPER_SERIALIZATION
+
 void NodeGraphEditor::render()
 {
     if (!inited) init();
@@ -116,7 +198,26 @@ void NodeGraphEditor::render()
                 ImGui::Separator();
                 ImGui::ColorEditMode(colorEditMode);
                 Style::Edit(this->style);
+                ImGui::Separator();
+#               ifndef NO_IMGUIHELPER_SERIALIZATION
+                const char* saveName = "nodeGraphEditor.nge.style";
+#               ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+                if (ImGui::SmallButton("Save##saveGNEStyle")) {
+                    Style::Save(this->style,saveName);
+                }
+                ImGui::SameLine();
+#               endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#               ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+                if (ImGui::SmallButton("Load##loadGNEStyle")) {
+                    Style::Load(this->style,saveName);
+                }
+                ImGui::SameLine();
+#               endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#               endif //NO_IMGUIHELPER_SERIALIZATION
 
+                if (ImGui::SmallButton("Reset##resetGNEStyle")) {
+                    Style::Reset(this->style);
+                }
             }
             ImGui::Separator();
         }
