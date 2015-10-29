@@ -71,15 +71,15 @@ class Serializer {
     ~Serializer() {clear();}
     bool isValid() const {return (f);}
 
-    bool save(FieldType ft, const float* pValue, const char* name, int numArrayElements=1);
-    bool save(const double* pValue, const char* name, int numArrayElements=1);
-    bool save(FieldType ft, const int* pValue, const char* name, int numArrayElements=1);
-    bool save(const unsigned* pValue, const char* name, int numArrayElements=1);
-    bool save(const float* pValue,const char* name,int numArrayElements=1)    {
-        return save(FT_FLOAT,pValue,name,numArrayElements);
+    bool save(FieldType ft, const float* pValue, const char* name, int numArrayElements=1,const char* prec="%1.3f");
+    bool save(const double* pValue, const char* name, int numArrayElements=1,const char* prec="%f");
+    bool save(FieldType ft, const int* pValue, const char* name, int numArrayElements=1,const char* prec="%d");
+    bool save(const unsigned* pValue, const char* name, int numArrayElements=1,const char* prec="%u");
+    bool save(const float* pValue,const char* name,int numArrayElements=1,const char* prec="%1.3f")    {
+        return save(FT_FLOAT,pValue,name,numArrayElements,prec);
     }
-    bool save(const int* pValue,const char* name,int numArrayElements)  {
-        return save(FT_INT,pValue,name,numArrayElements);
+    bool save(const int* pValue,const char* name,int numArrayElements,const char* prec="%d")  {
+        return save(FT_INT,pValue,name,numArrayElements,prec);
     }
     bool save(const char* pValue,const char* name,int pValueSize=-1);
 

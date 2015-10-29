@@ -275,7 +275,7 @@ Serializer::Serializer(const char *filename) {
     if (filename) saveToFile(filename);
 }
 
-template <typename T> inline static bool SaveTemplate(FILE* f,FieldType ft, const T* pValue, const char* name, int numArrayElements=1)   {
+template <typename T> inline static bool SaveTemplate(FILE* f,FieldType ft, const T* pValue, const char* name, int numArrayElements=1, const char *prec=NULL)   {
     if (!f || ft==FT_COUNT || numArrayElements<0 || numArrayElements>4 || !pValue || !name || name[0]=='\0') return false;
     // name
     fprintf(f, "[%s",FieldTypeNames[ft]);
@@ -283,26 +283,27 @@ template <typename T> inline static bool SaveTemplate(FILE* f,FieldType ft, cons
     if (numArrayElements>1) fprintf(f, "-%d",numArrayElements);
     fprintf(f, ":%s]\n",name);
     // value
+    const char* precision = (prec && prec[0]!='\0') ? prec : FieldTypeFormats[ft];
     for (int t=0;t<numArrayElements;t++) {
         if (t>0) fprintf(f," ");
-        fprintf(f,FieldTypeFormats[ft],pValue[t]);
+        fprintf(f,precision,pValue[t]);
     }
     fprintf(f,"\n\n");
     return true;
 }
-bool Serializer::save(FieldType ft,const float* pValue,const char* name,int numArrayElements)   {
+bool Serializer::save(FieldType ft, const float* pValue, const char* name, int numArrayElements, const char *prec)   {
     IM_ASSERT(ft==FT_FLOAT || ft==FT_COLOR);
-    return SaveTemplate<float>(f,ft,pValue,name,numArrayElements);
+    return SaveTemplate<float>(f,ft,pValue,name,numArrayElements,prec);
 }
-bool Serializer::save(const double* pValue,const char* name,int numArrayElements)   {
-    return SaveTemplate<double>(f,FT_DOUBLE,pValue,name,numArrayElements);
+bool Serializer::save(const double* pValue,const char* name,int numArrayElements,const char* prec)   {
+    return SaveTemplate<double>(f,FT_DOUBLE,pValue,name,numArrayElements,prec);
 }
-bool Serializer::save(FieldType ft,const int* pValue,const char* name,int numArrayElements) {
+bool Serializer::save(FieldType ft,const int* pValue,const char* name,int numArrayElements,const char* prec) {
     IM_ASSERT(ft==FT_INT || ft==FT_BOOL || ft==FT_ENUM);
-    return SaveTemplate<int>(f,ft,pValue,name,numArrayElements);
+    return SaveTemplate<int>(f,ft,pValue,name,numArrayElements,prec);
 }
-bool Serializer::save(const unsigned* pValue,const char* name,int numArrayElements) {
-    return SaveTemplate<unsigned>(f,FT_UNSIGNED,pValue,name,numArrayElements);
+bool Serializer::save(const unsigned* pValue,const char* name,int numArrayElements,const char* prec) {
+    return SaveTemplate<unsigned>(f,FT_UNSIGNED,pValue,name,numArrayElements,prec);
 }
 bool Serializer::save(const char* pValue,const char* name,int pValueSize)    {
     FieldType ft = FT_STRING;

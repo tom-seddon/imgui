@@ -23,7 +23,7 @@
 // TODO:
 /*
 -> Implement a copy/paste functionality for standard Nodes (i.e. nodes that use FieldInfo)
--> Load/Save NodeGraphEditor Style.
+-> Load/Save NodeGraphEditor Style. DONE!
 -> Serialization/Deserialization of the whole NodeGraphEditor + Nodes
 -> Add/Adjust/Fix more FieldTypes
 */
@@ -123,7 +123,15 @@ namespace ImGui	{
     FieldInfo& addFieldEnum(void* pdata,int numEnumElements,FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
     FieldInfo& addFieldBool(void* pdata,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
     FieldInfo& addFieldColor(void* pdata,bool useAlpha=true,const char* label=NULL,const char* tooltip=NULL,int precision=3,void* userData=NULL);
-    FieldInfo& addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,void* userData);
+    FieldInfo& addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,FieldInfo::CopyFieldDelegate copyFieldDelegate,void* userData);
+
+    void copyValuesFrom(const FieldInfoVector& o)   {
+        for (int i=0,isz=o.size()<size()?o.size():size();i<isz;i++) {
+            const FieldInfo& of = o[i];
+            FieldInfo& f = (*this)[i];
+            f.copyPDataValueFrom(of);
+        }
+    }
 
 private:
     template<typename T> inline static T GetRadiansToDegs() {
@@ -227,7 +235,7 @@ struct NodeGraphEditor	{
     ImVector<Node*> nodes;          // used as a garbage collector too
     ImVector<NodeLink> links;
     ImVec2 scrolling;
-    Node* selectedNode;
+    Node *selectedNode,*sourceCopyNode;
     bool inited;
     bool allowOnlyOneLinkPerInputSlot;  // multiple links can still be connected to single output slots
     bool avoidCircularLinkLoopsInOut;   // however multiple paths from a node to another are still allowed (only in-out circuits are prevented)
@@ -320,7 +328,7 @@ struct NodeGraphEditor	{
         scrolling = ImVec2(0.0f, 0.0f);
         show_grid = show_grid_;
         show_connection_names = show_connection_names_;
-        selectedNode = dragNode.node = NULL;
+        selectedNode = dragNode.node = sourceCopyNode = NULL;
         allowOnlyOneLinkPerInputSlot = _allowOnlyOneLinkPerInputSlot;
         avoidCircularLinkLoopsInOut = _avoidCircularLinkLoopsInOut;
         nodeCallback = NULL;linkCallback=NULL;nodeEditedTimeThreshold=1.5f;
@@ -356,7 +364,7 @@ struct NodeGraphEditor	{
         nodes.clear();
         links.clear();
         scrolling = ImVec2(0,0);
-        selectedNode = dragNode.node = NULL;
+        selectedNode = dragNode.node = sourceCopyNode = NULL;
     }
 
     bool mustInit() const {return !inited;}
@@ -379,6 +387,7 @@ struct NodeGraphEditor	{
     bool deleteNode(Node* node) {
         if (node == selectedNode)  selectedNode = NULL;
         if (node == dragNode.node) dragNode.node = NULL;
+        if (node == sourceCopyNode) sourceCopyNode = NULL;
         for (int i=0;i<nodes.size();i++)    {
             Node*& n = nodes[i];
             if (n==node)  {
@@ -415,6 +424,10 @@ struct NodeGraphEditor	{
     void render();
 
     // Optional helper methods:
+    Node* getSelectedNode() {return selectedNode;}
+    const Node* getSelectedNode() const {return selectedNode;}
+    const char* getSelectedNodeInfo() const {return selectedNode->getInfo();}
+
     void getOutputNodesForNodeAndSlot(const Node* node,int output_slot,ImVector<Node*>& returnValueOut,ImVector<int>* pOptionalReturnValueInputSlotOut=NULL) const;
     void getInputNodesForNodeAndSlot(const Node* node,int input_slot,ImVector<Node*>& returnValueOut,ImVector<int>* pOptionalReturnValueOutputSlotOut=NULL) const;
     // if allowOnlyOneLinkPerInputSlot == true:

@@ -147,7 +147,7 @@ void NodeGraphEditor::render()
     const ImGuiIO io = ImGui::GetIO();
 
     // Draw a list of nodes on the left side
-    bool open_context_menu = false;
+    bool open_context_menu = false,open_delete_only_context_menu = false;
     Node* node_hovered_in_list = NULL;
     Node* node_hovered_in_scene = NULL;
 
@@ -346,8 +346,13 @@ void NodeGraphEditor::render()
     ImGui::PushStyleColor(ImGuiCol_Header,transparent);
     ImGui::PushStyleColor(ImGuiCol_HeaderActive,transparent);
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered,transparent);
-    bool isSomeNodeMoving = false;Node* node_to_fire_edit_callback = NULL;bool mustDeleteANodeSoon = false;
+    bool isSomeNodeMoving = false;Node *node_to_fire_edit_callback = NULL,* node_to_paste_from_copy_source = NULL;bool mustDeleteANodeSoon = false;
     ImGui::ColorEditMode(colorEditMode);
+
+    //static const char* btnNames[3]={"v","^","x"};
+    //const float textSizeButtonPaste = ImGui::CalcTextSize(btnNames[0]).x;
+    //const float textSizeButtonCopy = ImGui::CalcTextSize(btnNames[1]).x;
+    const float textSizeButtonX = ImGui::CalcTextSize("x").x;
     for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
     {
         Node* node = nodes[node_idx];
@@ -374,18 +379,42 @@ void NodeGraphEditor::render()
         }
         //ImGui::PopStyleColor();
         // BUTTONS ========================================================
+        //const bool canPaste = sourceCopyNode && sourceCopyNode->typeID==node->typeID;
         if (!node->isOpen) ImGui::SameLine();
-        else ImGui::SameLine(-scrolling.x+node->Pos.x+node->Size.x-ImGui::CalcTextSize("x").x-10);
+        else ImGui::SameLine(-scrolling.x+node->Pos.x+node->Size.x-textSizeButtonX-10
+                             //-textSizeButtonCopy
+                             //-(canPaste?(textSizeButtonPaste):0)
+                             );
         static const ImVec4 transparentColor(1,1,1,0);
         ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(0.75,0.75,0.75,0.5));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.75,0.75,0.75,0.77));
         //ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(0.8,0.7,0.7,1));
-        if (ImGui::SmallButton("x##CloseButton")) {
+        ImGui::PushID("NodeButtons");
+        /*
+        if (canPaste) {
+            if (ImGui::SmallButton(btnNames[0])) {
+                node_to_paste_from_copy_source = node_hovered_in_scene = selectedNode = node;
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
+            ImGui::SameLine(0);
+        }
+        const bool copyNodePushed = sourceCopyNode == node;
+        if (copyNodePushed) ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0.75,0.75,0.75,0.675));
+        if (ImGui::SmallButton(btnNames[1])) {
+            sourceCopyNode = node_hovered_in_scene = selectedNode = node;
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Set as a copy source");
+        ImGui::SameLine(0);
+        if (copyNodePushed) ImGui::PopStyleColor();
+        */
+        if (ImGui::SmallButton("x")) {
             node_hovered_in_scene = selectedNode = node;
             if (!hasLinks(node))  mustDeleteANodeSoon=true;
-            else open_context_menu = true;  // will ask to delete node later
+            else open_delete_only_context_menu = true;  // will ask to delete node later
         }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Delete");
+        ImGui::PopID();
         ImGui::PopStyleColor(4);
         //=================================================================
 
@@ -591,6 +620,7 @@ void NodeGraphEditor::render()
     if (!open_context_menu && selectedNode && (selectedNode==node_hovered_in_list || selectedNode==node_hovered_in_scene) && (ImGui::IsKeyReleased(io.KeyMap[ImGuiKey_Delete]) || mustDeleteANodeSoon)) {
         // Delete selected node directly:
         if (selectedNode==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
+        if (selectedNode==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
         deleteNode(selectedNode);
         selectedNode = node_hovered_in_list = node_hovered_in_scene = NULL;
     }
@@ -600,23 +630,54 @@ void NodeGraphEditor::render()
             open_context_menu = true;
         }
     }
+    if (open_delete_only_context_menu)  {
+        ImGui::OpenPopup("delete_only_context_menu");
+        if (node_hovered_in_list) selectedNode = node_hovered_in_list;
+        if (node_hovered_in_scene) selectedNode = node_hovered_in_scene;
+    }
     if (open_context_menu)  {
         ImGui::OpenPopup("context_menu");
         if (node_hovered_in_list) selectedNode = node_hovered_in_list;
         if (node_hovered_in_scene) selectedNode = node_hovered_in_scene;
     }
 
+
     // Draw context menu
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8,8));
-    if (ImGui::BeginPopup("context_menu"))  {
+    if (ImGui::BeginPopup("delete_only_context_menu"))  {
+        Node* node = selectedNode;
+        if (node)   {
+            ImGui::Text("Node '%s'", node->Name);
+            ImGui::Separator();
+            if (ImGui::MenuItem("Delete", NULL, false, true)) {
+            if (node==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
+            if (node==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
+                //printf("Current nodes.size()=%d; Deleting node %s.\n",nodes.size(),node->Name);fflush(stdout);
+            deleteNode(node);
+            }
+        }
+        ImGui::EndPopup();
+    }
+    else if (ImGui::BeginPopup("context_menu"))  {
         Node* node = selectedNode;
         ImVec2 scene_pos = ImGui::GetMousePosOnOpeningCurrentPopup() - offset;
         if (node)   {
             ImGui::Text("Node '%s'", node->Name);
             ImGui::Separator();
             //if (ImGui::MenuItem("Rename..", NULL, false, false)) {}
+            if (sourceCopyNode!=node) {
+                if (ImGui::MenuItem("Set as copy source", NULL, false, true)) {
+                    sourceCopyNode = node;
+                }
+            }
+            if (sourceCopyNode && sourceCopyNode->typeID==node->typeID) {
+                if (ImGui::MenuItem("Paste", NULL, false, true)) {
+                    node_to_paste_from_copy_source = node;
+                }
+            }
             if (ImGui::MenuItem("Delete", NULL, false, true)) {
                 if (node==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
+                if (node==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
                 //printf("Current nodes.size()=%d; Deleting node %s.\n",nodes.size(),node->Name);fflush(stdout);
                 deleteNode(node);
             }
@@ -629,6 +690,13 @@ void NodeGraphEditor::render()
             ImGui::Text("%s","Add Node Menu");
             ImGui::Separator();
             if (nodeFactoryFunctionPtr) {
+                if (sourceCopyNode) {
+                    if (ImGui::MenuItem("Clone copy source##cloneCopySource")) {
+                        Node* clonedNode = addNode(nodeFactoryFunctionPtr(sourceCopyNode->typeID,scene_pos));
+                        clonedNode->fields.copyValuesFrom(sourceCopyNode->fields);
+                    }
+                    ImGui::Separator();
+                }
                 for (int nt=0,ntSize=getNumAvailableNodeTypes();nt<ntSize;nt++) {
                     ImGui::PushID(nt);
                     if (ImGui::MenuItem(pNodeTypeNames[availableNodeTypes[nt]])) {
@@ -658,7 +726,8 @@ void NodeGraphEditor::render()
 
     ImGui::EndChild();  // GraphNodeChildWindow
 
-
+    if (node_to_paste_from_copy_source && sourceCopyNode && node_to_paste_from_copy_source->typeID==sourceCopyNode->typeID)
+        node_to_paste_from_copy_source->fields.copyValuesFrom(sourceCopyNode->fields);
     if (nodeCallback && node_to_fire_edit_callback) nodeCallback(node_to_fire_edit_callback,NS_EDITED,*this);
 
 
@@ -936,12 +1005,13 @@ FieldInfo &FieldInfoVector::addFieldColor(void *pdata, bool useAlpha, const char
     f.userData = userData;
     return f;
 }
-FieldInfo &FieldInfoVector::addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate, void *userData)   {
+FieldInfo &FieldInfoVector::addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,FieldInfo::CopyFieldDelegate copyFieldDelegate, void *userData)   {
     IM_ASSERT(renderFieldDelegate);
     push_back(FieldInfo());
     FieldInfo& f = (*this)[size()-1];
     f.init(FT_CUSTOM);
     f.renderFieldDelegate=renderFieldDelegate;
+    f.copyFieldDelegate=copyFieldDelegate;
     f.userData = userData;
     return f;
 }
