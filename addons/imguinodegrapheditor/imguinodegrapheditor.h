@@ -235,7 +235,8 @@ struct NodeGraphEditor	{
     ImVector<Node*> nodes;          // used as a garbage collector too
     ImVector<NodeLink> links;
     ImVec2 scrolling;
-    Node *selectedNode,*sourceCopyNode;
+    Node *selectedNode;
+    Node *sourceCopyNode;           // this is owned by the NodeGraphEditor
     bool inited;
     bool allowOnlyOneLinkPerInputSlot;  // multiple links can still be connected to single output slots
     bool avoidCircularLinkLoopsInOut;   // however multiple paths from a node to another are still allowed (only in-out circuits are prevented)
@@ -364,7 +365,12 @@ struct NodeGraphEditor	{
         nodes.clear();
         links.clear();
         scrolling = ImVec2(0,0);
-        selectedNode = dragNode.node = sourceCopyNode = NULL;
+        if (sourceCopyNode) {
+                sourceCopyNode->~Node();              // ImVector does not call it
+                ImGui::MemFree(sourceCopyNode);       // items MUST be allocated by the user using ImGui::MemAlloc(...)
+                sourceCopyNode = NULL;
+        }
+        selectedNode = dragNode.node = NULL;
     }
 
     bool mustInit() const {return !inited;}
@@ -387,7 +393,6 @@ struct NodeGraphEditor	{
     bool deleteNode(Node* node) {
         if (node == selectedNode)  selectedNode = NULL;
         if (node == dragNode.node) dragNode.node = NULL;
-        if (node == sourceCopyNode) sourceCopyNode = NULL;
         for (int i=0;i<nodes.size();i++)    {
             Node*& n = nodes[i];
             if (n==node)  {
@@ -452,6 +457,8 @@ struct NodeGraphEditor	{
         void reset() {*this=DragNode();}
     };
     DragNode dragNode;
+
+    void copyNode(Node* n);
 
     bool removeLinkAt(int link_idx);
     static Style style;

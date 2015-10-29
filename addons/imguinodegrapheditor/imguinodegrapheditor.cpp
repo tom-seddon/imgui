@@ -399,15 +399,13 @@ void NodeGraphEditor::render()
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
             ImGui::SameLine(0);
         }
-        const bool copyNodePushed = sourceCopyNode == node;
-        if (copyNodePushed) ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0.75,0.75,0.75,0.675));
-        if (ImGui::SmallButton(btnNames[1])) {
-            sourceCopyNode = node_hovered_in_scene = selectedNode = node;
+	if (ImGui::SmallButton(btnNames[1])) {
+	    node_hovered_in_scene = selectedNode = node;
+	    copyNode(node);
         }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Set as a copy source");
+	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
         ImGui::SameLine(0);
-        if (copyNodePushed) ImGui::PopStyleColor();
-        */
+	*/
         if (ImGui::SmallButton("x")) {
             node_hovered_in_scene = selectedNode = node;
             if (!hasLinks(node))  mustDeleteANodeSoon=true;
@@ -449,7 +447,7 @@ void NodeGraphEditor::render()
         ImGui::InvisibleButton("node##nodeinvbtn", node->Size);
         if (ImGui::IsItemHovered()) {
             node_hovered_in_scene = node;
-            open_context_menu |= ImGui::IsMouseClicked(1);            
+	    open_context_menu |= ImGui::IsMouseClicked(1);
         }
         bool node_moving_active = !isMouseDraggingForScrolling && !nodeInEditMode && ImGui::IsItemActive();
         if (node_widgets_active || node_moving_active)  selectedNode = node;
@@ -626,7 +624,7 @@ void NodeGraphEditor::render()
     }
     else if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() && getNumAvailableNodeTypes()>0 && nodeFactoryFunctionPtr)   {
         if (ImGui::IsMouseClicked(1))   {   // Open context menu
-            selectedNode = node_hovered_in_list = node_hovered_in_scene = NULL;
+	    selectedNode = node_hovered_in_list = node_hovered_in_scene = NULL;
             open_context_menu = true;
         }
     }
@@ -636,7 +634,7 @@ void NodeGraphEditor::render()
         if (node_hovered_in_scene) selectedNode = node_hovered_in_scene;
     }
     if (open_context_menu)  {
-        ImGui::OpenPopup("context_menu");
+	ImGui::OpenPopup("context_menu");
         if (node_hovered_in_list) selectedNode = node_hovered_in_list;
         if (node_hovered_in_scene) selectedNode = node_hovered_in_scene;
     }
@@ -665,11 +663,7 @@ void NodeGraphEditor::render()
             ImGui::Text("Node '%s'", node->Name);
             ImGui::Separator();
             //if (ImGui::MenuItem("Rename..", NULL, false, false)) {}
-            if (sourceCopyNode!=node) {
-                if (ImGui::MenuItem("Set as copy source", NULL, false, true)) {
-                    sourceCopyNode = node;
-                }
-            }
+	    if (ImGui::MenuItem("Copy", NULL, false, true)) copyNode(node);
             if (sourceCopyNode && sourceCopyNode->typeID==node->typeID) {
                 if (ImGui::MenuItem("Paste", NULL, false, true)) {
                     node_to_paste_from_copy_source = node;
@@ -691,7 +685,7 @@ void NodeGraphEditor::render()
             ImGui::Separator();
             if (nodeFactoryFunctionPtr) {
                 if (sourceCopyNode) {
-                    if (ImGui::MenuItem("Clone copy source##cloneCopySource")) {
+		    if (ImGui::MenuItem("Paste##cloneCopySource")) {
                         Node* clonedNode = addNode(nodeFactoryFunctionPtr(sourceCopyNode->typeID,scene_pos));
                         clonedNode->fields.copyValuesFrom(sourceCopyNode->fields);
                     }
@@ -791,6 +785,21 @@ bool NodeGraphEditor::hasLinks(Node *node) const    {
         if (l.InputNode==node || l.OutputNode==node) return true;
     }
     return false;
+}
+
+void NodeGraphEditor::copyNode(Node *n)	{
+    const bool mustDeleteSourceCopyNode = sourceCopyNode && (!n || n->typeID!=sourceCopyNode->typeID);
+    if (mustDeleteSourceCopyNode)   {
+	sourceCopyNode->~Node();              // ImVector does not call it
+	ImGui::MemFree(sourceCopyNode);       // items MUST be allocated by the user using ImGui::MemAlloc(...)
+	sourceCopyNode = NULL;
+    }
+    if (!n) return;
+    if (!sourceCopyNode)    {
+	if (!nodeFactoryFunctionPtr) return;
+	sourceCopyNode = nodeFactoryFunctionPtr(n->typeID,ImVec2(0,0));
+    }
+    sourceCopyNode->fields.copyValuesFrom(n->fields);
 }
 
 void NodeGraphEditor::getInputNodesForNodeAndSlot(const Node* node,int input_slot,ImVector<Node *> &returnValueOut, ImVector<int> *pOptionalReturnValueOutputSlotOut) const  {
