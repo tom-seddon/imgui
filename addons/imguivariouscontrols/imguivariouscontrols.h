@@ -124,10 +124,10 @@ public:
         }
         PopupMenuEntry(const PopupMenuEntry& o) : IconData(o) {*this = o;}
         inline int compareTo(const PopupMenuEntry& o) const {
-            if (!text)  {
-                if (o.text) return 1;
+            if (text[0]=='\0')  {
+                if (o.text[0]!='\0') return 1;
             }
-            else if (!o.text) return -1;
+            else if (o.text[0]=='\0') return -1;
             const int c = strcmp(text,o.text);
             if (c!=0) return c;
             if ((size_t) user_texture_id < (size_t) o.user_texture_id) return -1;
@@ -143,7 +143,7 @@ public:
         const PopupMenuEntry& operator=(const PopupMenuEntry& o) {
             IconData::operator=(o);
             selectable = o.selectable;
-            if (o.text) strcpy(text,o.text);
+            if (o.text[0]!='\0') strcpy(text,o.text);
             else text[0]='\0';
             return *this;
         }

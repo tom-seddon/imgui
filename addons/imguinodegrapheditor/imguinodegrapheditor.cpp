@@ -792,7 +792,7 @@ bool NodeGraphEditor::isNodeReachableFrom(const Node *node1, bool goBackward,con
 }
 
 void Node::init(const char *name, const ImVec2 &pos, const char *inputSlotNamesSeparatedBySemicolons, const char *outputSlotNamesSeparatedBySemicolons, int _nodeTypeID) {
-    strncpy(Name, name, IMGUINODE_MAX_NAME_LENGTH); Name[IMGUINODE_MAX_NAME_LENGTH] = '\0'; Pos = pos;
+    strncpy(Name, name, IMGUINODE_MAX_NAME_LENGTH); Name[IMGUINODE_MAX_NAME_LENGTH-1] = '\0'; Pos = pos;
     InputsCount = 0; OutputsCount = 0;
     const char *input_names = inputSlotNamesSeparatedBySemicolons, *output_names = outputSlotNamesSeparatedBySemicolons;
     const char *tmp = NULL,*tmp2 = NULL;int length;
@@ -954,7 +954,7 @@ bool FieldInfoVector::render()   {
         FieldInfo& f = (*this)[i];
         ImGui::PushID((const void*) &f);
 
-        const char* label = (f.label && f.label[0]!='\0') ? &f.label[0] : "##DummyLabel";
+        const char* label = (/*f.label &&*/ f.label[0]!='\0') ? &f.label[0] : "##DummyLabel";
         if (f.precision>0) {
             strcpy(precisionStr,"%.");
             snprintf(&precisionStr[2], precisionStrSize-2,"%ds",f.precision);
@@ -1094,7 +1094,7 @@ bool FieldInfoVector::render()   {
             break;
         }
         if (f.type!=FT_CUSTOM)  {
-            if (f.tooltip && f.tooltip[0]!='\0' && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",f.tooltip);
+            if (/*f.tooltip &&*/ f.tooltip[0]!='\0' && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",f.tooltip);
         }
         nodeEdited|=changed;
         ImGui::PopID();

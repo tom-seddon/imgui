@@ -117,7 +117,7 @@ struct PanelManager {
     };
     protected:
     ImVector<Pane> panes;
-    Pane *paneLeft=NULL,*paneRight=NULL,*paneTop=NULL,*paneBottom=NULL;
+    Pane *paneLeft,*paneRight,*paneTop,*paneBottom;
     bool visible;
     mutable ImVec2 innerBarQuadPos;mutable ImVec2 innerBarQuadSize;    // placement of the blank quad contained inside the toolbars only
     mutable ImVec2 innerQuadPos;mutable ImVec2 innerQuadSize;          // placement of the blank quad contained inside the toolbars AND the selected windows that are docked to them
