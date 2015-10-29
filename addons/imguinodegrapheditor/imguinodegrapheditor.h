@@ -297,7 +297,7 @@ struct NodeGraphEditor	{
         static bool Edit(Style& style);
         static void Reset(Style& style) {style = Style();}
 
-#       ifndef NO_IMGUIHELPER_SERIALIZATION
+#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
         static bool Save(const Style& style,const char* filename);
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
@@ -309,8 +309,8 @@ struct NodeGraphEditor	{
     };
     bool show_grid;
     bool show_connection_names;
-    bool show_node_list;
-    bool show_info;
+    bool show_left_pane;
+    bool show_top_pane;
     bool show_style_editor;
     mutable void* user_ptr;
     static Style& GetStyle() {return style;}
@@ -325,8 +325,8 @@ struct NodeGraphEditor	{
         avoidCircularLinkLoopsInOut = _avoidCircularLinkLoopsInOut;
         nodeCallback = NULL;linkCallback=NULL;nodeEditedTimeThreshold=1.5f;
         user_ptr = NULL;
-        show_node_list = true;
-        show_info = true;
+        show_left_pane = true;
+        show_top_pane = true;
         show_style_editor = false;
         pNodeTypeNames = NULL;
         numNodeTypeNames = 0;

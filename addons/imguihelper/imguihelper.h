@@ -16,9 +16,12 @@ bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS=fal
 
 
 #ifndef NO_IMGUIHELPER_SERIALIZATION
+// These classed are supposed to be used internally
 #include <stdio.h> // FILE*. Why must I include this if only a FILE* appears in this header ?
 namespace ImGuiHelper {
 
+// IMPORTANT: the serialization/deserialization supports only 5 types: FT_INT,FT_UNSIGNED,FT_FLOAT,FT_DOUBLE and FT_STRING.
+// The other types are just "hints" to the user that must convert the values.
 enum FieldType {
     FT_INT=0,
     FT_UNSIGNED,

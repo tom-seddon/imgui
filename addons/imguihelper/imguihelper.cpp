@@ -173,10 +173,10 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
                             for (int sp=0;sp<numArrayElements && line_end < buf_end;sp++) line_end++;
                             while (line_end < buf_end && *line_end != '\n' && *line_end != '\r') line_end++;
                             static char textBuffer[2050];
-                            textBuffer[0]='\0';
-                            strcpy(format,"%.");
-                            sprintf(&format[2],"%d",numArrayElements);
-                            strcat(format,".s");
+                            textBuffer[0]=textBuffer[2049]='\0';
+                            strcpy(format,"%");
+                            sprintf(&format[1],"%d",numArrayElements>2049?2049:numArrayElements);
+                            strcat(format,"s");
                             //if (
                             sscanf(line_start,format,textBuffer)
                             //==numArrayElements)

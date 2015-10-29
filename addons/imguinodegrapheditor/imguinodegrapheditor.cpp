@@ -57,7 +57,7 @@ bool NodeGraphEditor::Style::Edit(NodeGraphEditor::Style& s) {
     return changed;
 }
 
-#ifndef NO_IMGUIHELPER_SERIALIZATION
+#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 #include "../imguihelper/imguihelper.h"
 bool NodeGraphEditor::Style::Save(const NodeGraphEditor::Style &style, const char *filename)    {
@@ -151,7 +151,7 @@ void NodeGraphEditor::render()
     Node* node_hovered_in_list = NULL;
     Node* node_hovered_in_scene = NULL;
 
-    if (show_node_list) {
+    if (show_left_pane) {
         // Helper stuff for setting up the left splitter
         static ImVec2 lastWindowSize=ImGui::GetWindowSize();      // initial window size
         ImVec2 windowSize = ImGui::GetWindowSize();
@@ -199,7 +199,7 @@ void NodeGraphEditor::render()
                 ImGui::ColorEditMode(colorEditMode);
                 Style::Edit(this->style);
                 ImGui::Separator();
-#               ifndef NO_IMGUIHELPER_SERIALIZATION
+#if             (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
                 const char* saveName = "nodeGraphEditor.nge.style";
 #               ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
                 if (ImGui::SmallButton("Save##saveGNEStyle")) {
@@ -248,18 +248,18 @@ void NodeGraphEditor::render()
 
     }
 
-
     const bool isMouseDraggingForScrolling = ImGui::IsMouseDragging(2, 0.0f);
 
     ImGui::BeginChild("GraphNodeChildWindow", ImVec2(0,0), true);
 
-
     const float& NODE_SLOT_RADIUS = style.node_slots_radius;
     const float NODE_SLOT_RADIUS_SQUARED = (NODE_SLOT_RADIUS*NODE_SLOT_RADIUS);
     const ImVec2& NODE_WINDOW_PADDING = style.node_window_padding;
+    const float MOUSE_DELTA_SQUARED = io.MouseDelta.x*io.MouseDelta.x+io.MouseDelta.y*io.MouseDelta.y;
+    const float MOUSE_DELTA_SQUARED_THRESHOLD = NODE_SLOT_RADIUS_SQUARED * 0.05f;    // We don't detect "mouse release" events while dragging links onto slots. Instead we check that our mouse delta is small enough. Otherwise we couldn't hover other slots while dragging links.
 
     // Create our child canvas
-    if (show_info)   {
+    if (show_top_pane)   {
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
         ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0,0));
 
@@ -286,7 +286,6 @@ void NodeGraphEditor::render()
         // ------------------
         ImGui::PopStyleVar(2);
     }
-
 
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1,1));
@@ -373,7 +372,7 @@ void NodeGraphEditor::render()
             const char* tooltip = node->getTooltip();
             if (tooltip && tooltip[0]!='\0') ImGui::SetTooltip("%s",tooltip);
         }
-        ImGui::PopStyleColor();
+        //ImGui::PopStyleColor();
         // BUTTONS ========================================================
         if (!node->isOpen) ImGui::SameLine();
         else ImGui::SameLine(-scrolling.x+node->Pos.x+node->Size.x-ImGui::CalcTextSize("x").x-10);
@@ -381,7 +380,7 @@ void NodeGraphEditor::render()
         ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(0.75,0.75,0.75,0.5));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.75,0.75,0.75,0.77));
-        ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(0.8,0.7,0.7,1));
+        //ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(0.8,0.7,0.7,1));
         if (ImGui::SmallButton("x##CloseButton")) {
             node_hovered_in_scene = selectedNode = node;
             if (!hasLinks(node))  mustDeleteANodeSoon=true;
@@ -475,7 +474,9 @@ void NodeGraphEditor::render()
                         dragNode.pos = mouseScreenPos;
                         //printf("Start dragging.\n");fflush(stdout);
                     }
-                    else if (isDragNodeValid && dragNode.node!=node) {
+                    else if (isDragNodeValid && dragNode.node!=node
+                        && MOUSE_DELTA_SQUARED<MOUSE_DELTA_SQUARED_THRESHOLD   // optional... what I wanted is not to end a connection just when I hover another node...
+                    ) {
                         // verify compatibility
                         if (dragNode.inputSlotIdx!=-1)  {
                             // drag goes from the output (dragNode.inputSlotIdx) slot of dragNode.node to the input slot of 'node':
@@ -496,11 +497,11 @@ void NodeGraphEditor::render()
                                 // create link
                                 addLink(dragNode.node,dragNode.inputSlotIdx,node,slot_idx,true);
                             }
-                        }
                         // clear dragNode
                         dragNode.node = NULL;
                         dragNode.outputSlotIdx = dragNode.inputSlotIdx = -1;
                         //printf("End dragging.\n");fflush(stdout);
+                        }
                     }
                 }
             }
@@ -542,7 +543,9 @@ void NodeGraphEditor::render()
                         dragNode.pos = mouseScreenPos;
                         //printf("Start dragging.\n");fflush(stdout);
                     }
-                    else if (isDragNodeValid && dragNode.node!=node) {
+                    else if (isDragNodeValid && dragNode.node!=node
+                             && MOUSE_DELTA_SQUARED<MOUSE_DELTA_SQUARED_THRESHOLD    // optional... what I wanted is not to end a connection just when I hover another node...
+                    ) {
                         // verify compatibility
                         if (dragNode.outputSlotIdx!=-1)  {
                             // drag goes from the output slot_idx of node to the input slot (dragNode.outputSlotIdx) of dragNode.node:
@@ -563,11 +566,11 @@ void NodeGraphEditor::render()
                                 // create link
                                 addLink(node,slot_idx,dragNode.node,dragNode.outputSlotIdx,true);
                             }
-                        }
                         // clear dragNode
                         dragNode.node = NULL;
                         dragNode.outputSlotIdx = dragNode.inputSlotIdx = -1;
                         //printf("End dragging.\n");fflush(stdout);
+                        }
                     }
                 }
             }
