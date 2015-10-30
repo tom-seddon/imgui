@@ -283,7 +283,7 @@ bool ColorChooser(bool* open,ImVec4 *pColorOut,bool supportsAlpha)   {
             const ImGuiID id = window->GetID("ValueSaturationQuad");
             ImRect bb(window->Pos, window->Pos + window->Size);
             bool hovered, held;
-            /*bool pressed = */ImGui::ButtonBehavior(bb, id, &hovered, &held, false, false);
+            /*bool pressed = */ImGui::ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_NoKeyModifiers);///*false,*/ false);
             if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
             if (held)   {
                 ImVec2 pos = g.IO.MousePos - window->Pos;
@@ -325,7 +325,7 @@ bool ColorChooser(bool* open,ImVec4 *pColorOut,bool supportsAlpha)   {
             bool hovered, held;
             const ImGuiID id = window->GetID("Tint");
             ImRect bb(window->Pos, window->Pos + window->Size);
-            /*bool pressed = */ButtonBehavior(bb, id, &hovered, &held, false, false);
+            /*bool pressed = */ButtonBehavior(bb, id, &hovered, &held,ImGuiButtonFlags_NoKeyModifiers);// /*false,*/ false);
             if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
             if (held)
             {

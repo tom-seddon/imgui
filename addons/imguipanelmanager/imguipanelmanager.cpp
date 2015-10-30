@@ -23,7 +23,7 @@ static bool DockWindowButton(bool* p_undocked,bool *p_open=NULL)
                        );
 
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb, id, &hovered, &held, true);
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held);//, true);
 
     // Render
     ImU32 col = window->Color((held && hovered) ? ColorDockButtonActive : hovered ? ColorDockButtonHovered : ColorDockButton);
@@ -210,7 +210,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             if (wd && pDraggingStarted && (*pDraggingStarted || (g.HoveredWindow == window && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max))))  {
                 const ImGuiID resize_id = window->GetID("#RESIZE");
                 bool hovered, held=false,wheel = false;//g.IO.MouseWheel!=0.f;
-                if (!wheel) ButtonBehavior(title_bar_without_buttons_rect, resize_id, &hovered, &held, true);
+                if (!wheel) ButtonBehavior(title_bar_without_buttons_rect, resize_id, &hovered, &held);//, true);
                 if (hovered || held || wheel) {
                     g.MouseCursor = wd->dockPos<PanelManager::TOP ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS;
                     if (!wd->isToggleWindow) wd->isResizing = true;
@@ -447,7 +447,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 const ImRect resize_rect(br - ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f), br);
                 const ImGuiID resize_id = window->GetID("#RESIZE");
                 bool hovered, held;
-                ButtonBehavior(resize_rect, resize_id, &hovered, &held, true, ImGuiButtonFlags_FlattenChilds);
+                ButtonBehavior(resize_rect, resize_id, &hovered, &held, /*true,*/ ImGuiButtonFlags_FlattenChilds);
                 resize_col = window->Color(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
 
                 if (hovered || held)
@@ -788,7 +788,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
                                             amin.y+gripDist,
                                             amax.x-gripDist,
                                             amax.y-gripDist);
-                    ButtonBehavior(resize_aabb, resize_id, &hovered, &held, true);
+                    ButtonBehavior(resize_aabb, resize_id, &hovered, &held);//, true);
                     if (held) {
                         newSize = ImMax(window->SizeFull + g.IO.MouseDelta, style.WindowMinSize);
                         wd.length = newSize.x;
@@ -799,7 +799,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
                                             amin.y+gripDist,
                                             amin.x+gripDist+gripSize,
                                             amax.y-gripDist);
-                    ButtonBehavior(resize_aabb, resize_id, &hovered, &held, true);
+                    ButtonBehavior(resize_aabb, resize_id, &hovered, &held);//, true);
                     if (held) {
                         newSize = ImMax(window->SizeFull - g.IO.MouseDelta, style.WindowMinSize);
                         wd.length = newSize.x;
@@ -810,7 +810,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
                                             amax.y-gripDist-gripSize,
                                             amax.x-gripDist,
                                             amax.y-gripDist);
-                    ButtonBehavior(resize_aabb, resize_id, &hovered, &held, true);
+                    ButtonBehavior(resize_aabb, resize_id, &hovered, &held);//, true);
                     if (held) {
                         newSize = ImMax(window->SizeFull + g.IO.MouseDelta, style.WindowMinSize);
                         wd.length = newSize.y;
@@ -821,7 +821,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
                                             amin.y+gripDist,
                                             amax.x-gripDist,
                                             amin.y+gripDist+gripSize);
-                    ButtonBehavior(resize_aabb, resize_id, &hovered, &held, true);
+                    ButtonBehavior(resize_aabb, resize_id, &hovered, &held);//, true);
                     if (held) {
                         newSize = ImMax(window->SizeFull - g.IO.MouseDelta, style.WindowMinSize);
                         wd.length = newSize.y;
