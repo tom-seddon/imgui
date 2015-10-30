@@ -392,7 +392,9 @@ static bool InitBinding(const ImImpl_InitParams* pOptionalInitParams=NULL,int ar
     glutMotionFunc(GlutMotion);
     glutPassiveMotionFunc(GlutPassiveMotion);
 
+#ifndef __EMSCRIPTEN__
     glutEntryFunc(GlutEntryFunc);
+#endif //__EMSCRIPTEN__
 
     // Apparently, there's no way to detect when the user minimizes a window using glut (at least on my system these callbacks don't provide this info)
     //glutVisibilityFunc(GlutVisibilityFunc);       // never called
@@ -404,6 +406,15 @@ static bool InitBinding(const ImImpl_InitParams* pOptionalInitParams=NULL,int ar
 
 	return true;
 }
+
+/*
+#	ifdef __EMSCRIPTEN__
+static void ImImplMainLoopFrame()	{
+    ImGuiIO& io = ImGui::GetIO();
+    // TODO:
+}
+#   endif //__EMSCRIPTEN__
+*/
 
 // Application code
 int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** argv)
@@ -417,13 +428,17 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
     InitGL();
     ResizeGL((int)io.DisplaySize.x,(int)io.DisplaySize.y);
 	
-
-
-#ifdef __FREEGLUT_EXT_H__
+#   ifdef __FREEGLUT_EXT_H__
     glutSetOption ( GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION ) ;
-#endif //__FREEGLUT_STD_H__
+#   endif //__FREEGLUT_STD_H__
 
+//#	ifdef __EMSCRIPTEN__
+//    emscripten_set_main_loop(glutMainLoop, 0, 1);
+//#	else
     glutMainLoop();     // GLUT has its own main loop, which calls display();
+//#   endif //__EMSCRIPTEN__
+
+
 
     ImGui::Shutdown();
     DestroyGL();

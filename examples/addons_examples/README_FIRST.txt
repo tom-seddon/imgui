@@ -127,7 +127,8 @@ em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  
 em++ -O2 -o main2.html main2.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  --preload-file myNumbersTexture.png  --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_SDL2_BINDING" -D"NO_IMGUIFILESYSTEM" -s USE_SDL=2 -s LEGACY_GL_EMULATION=0 -lm -lGL
 
 Some notes:
-->	As you can see it now uses the SDL2 binding (-D"IMGUI_USE_SDL2_BINDING"). Further work is required from my side to make the GLFW3 and GLUT bindings compatible with emscripten.
+->	As you can see we have used uses the SDL2 binding (-D"IMGUI_USE_SDL2_BINDING"). 
+	The GLFW3 and GLUT bindings are compatible with emscripten too [see (*) below]. 
 
 ->	Also note that I used: -D"NO_IMGUIFILESYSTEM": this is because the filesystem is not accessible from the browser AFAIK (but I'm a very newbie here...).
 
@@ -137,4 +138,16 @@ Some notes:
 	em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  --preload-file myNumbersTexture.png --preload-file myimgui.style -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_SDL2_BINDING" -D"NO_IMGUIFILESYSTEM" -D"NO_IMGUISTYLESERIALIZER_SAVE_STYLE" -D"NO_IMGUIHELPER_SERIALIZATION" -s USE_SDL=2 -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
 	because we can simply use NO_IMGUISTYLESERIALIZER_SAVE_STYLE to allow file loading using --preload-file.
 	[We could have done something similiar (for the node graph editor) using -D"NO_IMGUIHELPER_SERIALIZATION_SAVE"]
+
+(*): To compile the first demo using the GLUT binding, please try:
+em++ -O2 -o html/main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  --preload-file myNumbersTexture.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_GLUT_BINDING" -D"NO_IMGUIFILESYSTEM" -D"NO_IMGUISTYLESERIALIZER" -D"NO_IMGUIHELPER_SERIALIZATION" -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
+	To compile it using GLFW3 try: 
+em++ -O2 -o html/main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  --preload-file myNumbersTexture.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_GLFW_BINDING" -D"IMGUI_GLFW_NO_NATIVE_CURSORS" -D"NO_IMGUIFILESYSTEM" -D"NO_IMGUISTYLESERIALIZER" -D"NO_IMGUIHELPER_SERIALIZATION" -s USE_GLFW=3 -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
+	As you can see, due to the lack of cursor support inside the glfw library, in the cpp code we had to use header file <glfwnative.h>, that is missing in emscripten.
+	Thus native cursors have been disabled with: -D"IMGUI_GLFW_NO_NATIVE_CURSORS" (in InitGL() we can use: ImGui::GetIO().MouseDrawCursor = true; to use ImGui cursors instead).
+
+In short I suggest you use the SDL2 binding when building with the emscripten compiler, because you can use native cursors (that are missing from GLFW3), and unicode support (that is missing from GLUT).
+
+
+
 

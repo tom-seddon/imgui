@@ -4,6 +4,7 @@
 
 #include "imguibindings.h"
 
+#ifndef IMGUI_GLFW_NO_NATIVE_CURSORS
 #ifdef _WIN32
 #   define IMGUI_USE_WIN32_CURSORS     // Optional, but needs at window creation: wc.hCursor = LoadCursor( NULL, NULL); // Now the window class is inside glfw3... Not sure how I can access it...
 #   ifdef IMGUI_USE_WIN32_CURSORS
@@ -42,7 +43,7 @@
     static Cursor x11Cursors[ImGuiMouseCursor_Count_+1];
 #   endif //IMGUI_USE_X11_CURSORS
 #endif //_WIN32
-
+#endif //IMGUI_GLFW_NO_NATIVE_CURSORS
 
 
 
@@ -135,11 +136,15 @@ static void glfw_scroll_callback(GLFWwindow* /*window*/, double /*xoffset*/, dou
 }
 static void glfw_key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action, int mods)	{
     ImGuiIO& io = ImGui::GetIO();
-    if (action == GLFW_PRESS)   io.KeysDown[key] = true;
-    if (action == GLFW_RELEASE) io.KeysDown[key] = false;
     io.KeyCtrl = (mods & GLFW_MOD_CONTROL);
     io.KeyShift = (mods & GLFW_MOD_SHIFT);
     io.KeyAlt = (mods & GLFW_MOD_ALT);
+    if (action == GLFW_PRESS)           io.KeysDown[key] = true;
+    else if (action == GLFW_RELEASE)    io.KeysDown[key] = false;
+    if (key==GLFW_KEY_LEFT_CONTROL || key==GLFW_KEY_RIGHT_CONTROL)  io.KeyCtrl = (action == GLFW_PRESS);
+    else if (key==GLFW_KEY_LEFT_SHIFT || key==GLFW_KEY_RIGHT_SHIFT) io.KeyShift = (action == GLFW_PRESS);
+    else if (key==GLFW_KEY_LEFT_ALT || key==GLFW_KEY_RIGHT_ALT)     io.KeyAlt = (action == GLFW_PRESS);
+
 }
 static void glfw_char_callback(GLFWwindow* /*window*/, unsigned int c)	{
     if (c > 0 && c < 0x10000 && !ImGui::GetIO().KeyCtrl) ImGui::GetIO().AddInputCharacter((unsigned short)c);
@@ -171,6 +176,8 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
     io.KeyMap[ImGuiKey_UpArrow] = GLFW_KEY_UP;
     io.KeyMap[ImGuiKey_DownArrow] = GLFW_KEY_DOWN;
+    io.KeyMap[ImGuiKey_PageUp] = GLFW_KEY_PAGE_UP;
+    io.KeyMap[ImGuiKey_PageDown] = GLFW_KEY_PAGE_DOWN;
     io.KeyMap[ImGuiKey_Home] = GLFW_KEY_HOME;
     io.KeyMap[ImGuiKey_End] = GLFW_KEY_END;
     io.KeyMap[ImGuiKey_Delete] = GLFW_KEY_DELETE;
@@ -308,105 +315,136 @@ if (pOptionalInitParams && pOptionalInitParams->useOpenGLDebugContext) glfwWindo
 	return true;
 }
 
+struct ImImplMainLoopFrameStruct {
+int done;
+#ifndef IMGUI_GLFW_NO_NATIVE_CURSORS
+#if (!defined(IMGUI_USE_WIN32_CURSORS) && defined(IMGUI_USE_X11_CURSORS))
+Display* x11Display;
+Window x11Window;
+#endif //IMGUI_USE_CURSORS
+#endif //IMGUI_GLFW_NO_NATIVE_CURSORS
+};
+
+static void ImImplMainLoopFrame(void* userPtr)	{
+    ImImplMainLoopFrameStruct& mainLoopFrameStruct = *((ImImplMainLoopFrameStruct*) userPtr);
+
+    static double time = 0.0f;
+    ImGuiIO& io = ImGui::GetIO();
+
+    if (!gImGuiPaused)	{
+        for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
+
+        static ImGuiMouseCursor oldCursor = ImGuiMouseCursor_Arrow;
+        static bool oldMustHideCursor = io.MouseDrawCursor;
+        if (oldMustHideCursor!=io.MouseDrawCursor) {
+            glfwSetInputMode(window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
+            oldMustHideCursor = io.MouseDrawCursor;
+            oldCursor = ImGuiMouseCursor_Count_;
+        }
+        if (!io.MouseDrawCursor) {
+            if (oldCursor!=ImGui::GetMouseCursor()) {
+                oldCursor=ImGui::GetMouseCursor();
+#               ifndef IMGUI_GLFW_NO_NATIVE_CURSORS
+                // set the 'native' window cursor to "oldCursor" here (Hehe: glut and SDL2 can handle them automatically, glfw no!)
+#               ifdef IMGUI_USE_WIN32_CURSORS
+                SetCursor(win32Cursors[oldCursor]);           // If this does not work, it's bacause the native Window must be created with a NULL cursor (but how to tell glfw about it?)
+#               elif defined IMGUI_USE_X11_CURSORS
+                XDefineCursor(mainLoopFrameStruct.x11Display,mainLoopFrameStruct.x11Window,x11Cursors[oldCursor]);
+#               endif
+#               endif //IMGUI_GLFW_NO_NATIVE_CURSORS
+            }
+        }
+    }
+    if (gImGuiAppIsIconified || gImGuiInverseFPSClamp==0) {
+        //fprintf(stderr,"glfwWaitEvents() Start %1.4f\n",glfwGetTime());
+        glfwWaitEvents();
+        //fprintf(stderr,"glfwWaitEvents() End %1.4f\n",glfwGetTime());
+    }
+    else glfwPollEvents();
+
+    // Setup timestep
+    const double current_time =  glfwGetTime();
+    static float deltaTime = (float)(current_time -time);
+    deltaTime = (float) (current_time - time);
+    time = current_time;
+
+    if (!gImGuiPaused)	{
+        io.DeltaTime = (float) deltaTime;
+        // Start the frame
+        ImGui::NewFrame();
+        for (size_t i = 0; i < 5; i++) {
+            io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
+        }
+    }
+
+    DrawGL();
+
+    if (!gImGuiPaused)	{
+        bool imguiNeedsInputNow = ImGui::IsMouseHoveringAnyWindow() | ImGui::IsAnyItemActive();
+        if (gImGuiCapturesInput != imguiNeedsInputNow) {
+            gImGuiCapturesInput = imguiNeedsInputNow;
+            //fprintf(stderr,"gImGuiCapturesInput=%s\n",gImGuiCapturesInput?"true":"false");
+        }
+
+        // Rendering
+        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+        ImGui::Render();
+    }
+
+    glfwSwapBuffers(window);
+
+    // If needed we must wait (inverseFPSClamp-deltaTime) seconds (=> honestly I shouldn't add the * 2.0f factor at the end, but ImGui tells me the wrong FPS otherwise... why? <=)
+    if (gImGuiInverseFPSClamp>0 && deltaTime < gImGuiInverseFPSClamp)  WaitFor((unsigned int) ((gImGuiInverseFPSClamp-deltaTime)*1000.f * 2.0f) );
+
+#	ifdef __EMSCRIPTEN__
+    if ((mainLoopFrameStruct.done=!glfwWindowShouldClose(window))==0) emscripten_cancel_main_loop();
+#   endif //__EMSCRIPTEN__
+}
+
+
 // Application code
 int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** argv)
 {
     if (!InitBinding(pOptionalInitParams,argc,argv)) return -1;
     InitImGui(pOptionalInitParams);
     ImGuiIO& io = ImGui::GetIO();        
-    
+
+ImImplMainLoopFrameStruct mainLoopFrameStruct;
     // New: create cursors-------------------------------------------
+#ifndef IMGUI_GLFW_NO_NATIVE_CURSORS
 #   ifdef IMGUI_USE_WIN32_CURSORS
     for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
         win32Cursors[i] = LoadCursor(NULL,(LPCTSTR) win32CursorIds[i]);
         if (i==0) SetCursor(win32Cursors[i]);
     }
 #   elif defined IMGUI_USE_X11_CURSORS
-    Display* x11Display = glfwGetX11Display();
-    Window x11Window = glfwGetX11Window(window);
-    XColor white;white.red=white.green=white.blue=255;
-    XColor black;black.red=black.green=black.blue=0;
+    mainLoopFrameStruct.x11Display = glfwGetX11Display();
+    mainLoopFrameStruct.x11Window = glfwGetX11Window(window);
+    //XColor white;white.red=white.green=white.blue=255;
+    //XColor black;black.red=black.green=black.blue=0;
     for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
-        x11Cursors[i] = XCreateFontCursor(x11Display,x11CursorIds[i]);
+        x11Cursors[i] = XCreateFontCursor(mainLoopFrameStruct.x11Display,x11CursorIds[i]);
         //XRecolorCursor(x11Display, x11Cursors[i], &white,&black);
-        if (i==0) XDefineCursor(x11Display,x11Window,x11Cursors[i]);
+        if (i==0) XDefineCursor(mainLoopFrameStruct.x11Display,mainLoopFrameStruct.x11Window,x11Cursors[i]);
     }
 #   endif
+#endif //IMGUI_GLFW_NO_NATIVE_CURSORS
     //---------------------------------------------------------------
 
     InitGL();
  	ResizeGL(io.DisplaySize.x,io.DisplaySize.y);
 	
-    static double time = 0.0f;
-
     gImGuiInverseFPSClamp = pOptionalInitParams ? ((pOptionalInitParams->gFpsClamp!=0) ? (1.0f/pOptionalInitParams->gFpsClamp) : 1.0f) : -1.0f;
 	
-    while (!glfwWindowShouldClose(window))
-    {
-        if (!gImGuiPaused)	{
-            for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
-
-            static ImGuiMouseCursor oldCursor = ImGuiMouseCursor_Arrow;
-            static bool oldMustHideCursor = io.MouseDrawCursor;
-            if (oldMustHideCursor!=io.MouseDrawCursor) {
-                glfwSetInputMode(window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
-                oldMustHideCursor = io.MouseDrawCursor;
-                oldCursor = ImGuiMouseCursor_Count_;
-            }
-            if (!io.MouseDrawCursor) {
-                if (oldCursor!=ImGui::GetMouseCursor()) {
-                    oldCursor=ImGui::GetMouseCursor();
-                    // set the 'native' window cursor to "oldCursor" here (Hehe: glut and SDL2 can handle them automatically, glfw no!)
-#                   ifdef IMGUI_USE_WIN32_CURSORS
-                    SetCursor(win32Cursors[oldCursor]);           // If this does not work, it's bacause the native Window must be created with a NULL cursor (but how to tell glfw about it?)
-#                   elif defined IMGUI_USE_X11_CURSORS
-                    XDefineCursor(x11Display,x11Window,x11Cursors[oldCursor]);
-#                   endif
-                }
-            }
-        }
-        if (gImGuiAppIsIconified || gImGuiInverseFPSClamp==0) {
-            //fprintf(stderr,"glfwWaitEvents() Start %1.4f\n",glfwGetTime());
-            glfwWaitEvents();
-            //fprintf(stderr,"glfwWaitEvents() End %1.4f\n",glfwGetTime());
-        }
-        else glfwPollEvents();
-  
-    	// Setup timestep    	
-    	const double current_time =  glfwGetTime();
-        static float deltaTime = (float)(current_time -time);
-        deltaTime = (float) (current_time - time);
-        time = current_time;
-
-        if (!gImGuiPaused)	{
-            io.DeltaTime = (float) deltaTime;
-            // Start the frame
-            ImGui::NewFrame();
-            for (size_t i = 0; i < 5; i++) {
-                io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
-            }
-        }
-
-		DrawGL();
-
-        if (!gImGuiPaused)	{
-            bool imguiNeedsInputNow = ImGui::IsMouseHoveringAnyWindow() | ImGui::IsAnyItemActive();
-            if (gImGuiCapturesInput != imguiNeedsInputNow) {
-                gImGuiCapturesInput = imguiNeedsInputNow;
-                //fprintf(stderr,"gImGuiCapturesInput=%s\n",gImGuiCapturesInput?"true":"false");
-            }
-
-	        // Rendering        
-	        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-    	    ImGui::Render();    	    
-        }
-
-        glfwSwapBuffers(window);
-
-        // If needed we must wait (inverseFPSClamp-deltaTime) seconds (=> honestly I shouldn't add the * 2.0f factor at the end, but ImGui tells me the wrong FPS otherwise... why? <=)
-        if (gImGuiInverseFPSClamp>0 && deltaTime < gImGuiInverseFPSClamp)  WaitFor((unsigned int) ((gImGuiInverseFPSClamp-deltaTime)*1000.f * 2.0f) );
-
+    mainLoopFrameStruct.done = 0;
+#	ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop_arg(ImImplMainLoopFrame,&mainLoopFrameStruct, 0, 1);
+#	else
+    while ((mainLoopFrameStruct.done=!glfwWindowShouldClose(window)))   {
+        ImImplMainLoopFrame((void*)&mainLoopFrameStruct);
     }
+#	endif //__EMSCRIPTEN__
+
 
     DestroyGL();
     ImGui::Shutdown();
@@ -415,14 +453,16 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
     DestroyImGuiBuffer();
 
     // New: delete cursors-------------------------------------------
+#ifndef IMGUI_GLFW_NO_NATIVE_CURSORS
 #   ifdef IMGUI_USE_WIN32_CURSORS
     // Nothing to do
 #   elif defined IMGUI_USE_X11_CURSORS
-    XUndefineCursor(x11Display,x11Window);
+    XUndefineCursor(mainLoopFrameStruct.x11Display,mainLoopFrameStruct.x11Window);
     for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
-        XFreeCursor(x11Display,x11Cursors[i]);
+        XFreeCursor(mainLoopFrameStruct.x11Display,x11Cursors[i]);
     }
 #   endif
+#endif //IMGUI_GLFW_NO_NATIVE_CURSORS
     //---------------------------------------------------------------
 
     glfwTerminate();

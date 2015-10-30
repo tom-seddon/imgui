@@ -39,6 +39,7 @@
 #   else //__APPLE
 #       include <GL/glut.h>
 #   endif //__APPLE
+#ifndef __EMSCRIPTEN__
 #   ifdef __FREEGLUT_STD_H__
 #       ifdef __APPLE__   // or __MACOSX__ ?
 #           include <OpenGL/freeglut_ext.h>     // guessing...
@@ -46,6 +47,7 @@
 #           include <GL/freeglut_ext.h>
 #       endif //__APPLE
 #   endif //__FREEGLUT_STD_H__
+#endif //__EMSCRIPTEN__
 //-------------------------------------------------------------------------------
 #elif IMGUI_USE_SDL2_BINDING
 //-------------------------------------------------------------------------------

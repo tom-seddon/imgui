@@ -349,10 +349,11 @@ void NodeGraphEditor::render()
     bool isSomeNodeMoving = false;Node *node_to_fire_edit_callback = NULL,* node_to_paste_from_copy_source = NULL;bool mustDeleteANodeSoon = false;
     ImGui::ColorEditMode(colorEditMode);
 
-    //static const char* btnNames[3]={"v","^","x"};
-    //const float textSizeButtonPaste = ImGui::CalcTextSize(btnNames[0]).x;
-    //const float textSizeButtonCopy = ImGui::CalcTextSize(btnNames[1]).x;
-    const float textSizeButtonX = ImGui::CalcTextSize("x").x;
+
+    static const char* btnNames[3]={"v","^","x"};
+    const float textSizeButtonPaste = ImGui::CalcTextSize(btnNames[0]).x;
+    const float textSizeButtonCopy = ImGui::CalcTextSize(btnNames[1]).x;
+    const float textSizeButtonX = ImGui::CalcTextSize(btnNames[2]).x;
     for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
     {
         Node* node = nodes[node_idx];
@@ -377,43 +378,53 @@ void NodeGraphEditor::render()
             const char* tooltip = node->getTooltip();
             if (tooltip && tooltip[0]!='\0') ImGui::SetTooltip("%s",tooltip);
         }
-        //ImGui::PopStyleColor();
+        ImGui::PopStyleColor();
         // BUTTONS ========================================================
-        //const bool canPaste = sourceCopyNode && sourceCopyNode->typeID==node->typeID;
-        if (!node->isOpen) ImGui::SameLine();
-        else ImGui::SameLine(-scrolling.x+node->Pos.x+node->Size.x-textSizeButtonX-10
-                             //-textSizeButtonCopy
-                             //-(canPaste?(textSizeButtonPaste):0)
-                             );
-        static const ImVec4 transparentColor(1,1,1,0);
-        ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(0.75,0.75,0.75,0.5));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.75,0.75,0.75,0.77));
-        //ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(0.8,0.7,0.7,1));
-        ImGui::PushID("NodeButtons");
-        /*
-        if (canPaste) {
-            if (ImGui::SmallButton(btnNames[0])) {
-                node_to_paste_from_copy_source = node_hovered_in_scene = selectedNode = node;
+        if (node->Size.x!=0)    {
+            const bool canPaste = sourceCopyNode && sourceCopyNode->typeID==node->typeID;
+            if (!node->isOpen) ImGui::SameLine();
+            else ImGui::SameLine(-scrolling.x+node->Pos.x+node->Size.x-textSizeButtonX-10
+                                 -(show_node_copy_paste_buttons ?
+                                       (
+                                           (textSizeButtonCopy+2) +
+                                           (canPaste?(textSizeButtonPaste+2):0)
+                                        )
+                                  : 0)
+                                 ,0);
+            static const ImVec4 transparentColor(1,1,1,0);
+            ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(0.75,0.75,0.75,0.5));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.75,0.75,0.75,0.77));
+            ImGui::PushStyleColor(ImGuiCol_Text,style.color_node_title);
+            ImGui::PushID("NodeButtons");
+            if (show_node_copy_paste_buttons)   {
+                static const ImVec2 vec2zero(0,0);
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,vec2zero);
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing,vec2zero);
+                if (canPaste) {
+                    if (ImGui::SmallButton(btnNames[0])) {
+                        node_to_paste_from_copy_source = node_hovered_in_scene = selectedNode = node;
+                    }
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
+                    ImGui::SameLine(0);
+                }
+                if (ImGui::SmallButton(btnNames[1])) {
+                    node_hovered_in_scene = selectedNode = node;
+                    copyNode(node);
+                }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
+                ImGui::SameLine(0);
             }
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
-            ImGui::SameLine(0);
+            if (ImGui::SmallButton(btnNames[2])) {
+                node_hovered_in_scene = selectedNode = node;
+                if (!hasLinks(node))  mustDeleteANodeSoon=true;
+                else open_delete_only_context_menu = true;  // will ask to delete node later
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Delete");
+            if (show_node_copy_paste_buttons) ImGui::PopStyleVar(2);
+            ImGui::PopID();
+            ImGui::PopStyleColor(4);
         }
-	if (ImGui::SmallButton(btnNames[1])) {
-	    node_hovered_in_scene = selectedNode = node;
-	    copyNode(node);
-        }
-	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
-        ImGui::SameLine(0);
-	*/
-        if (ImGui::SmallButton("x")) {
-            node_hovered_in_scene = selectedNode = node;
-            if (!hasLinks(node))  mustDeleteANodeSoon=true;
-            else open_delete_only_context_menu = true;  // will ask to delete node later
-        }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Delete");
-        ImGui::PopID();
-        ImGui::PopStyleColor(4);
         //=================================================================
 
         if (node->isOpen)
@@ -621,27 +632,28 @@ void NodeGraphEditor::render()
         if (selectedNode==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
         deleteNode(selectedNode);
         selectedNode = node_hovered_in_list = node_hovered_in_scene = NULL;
+	open_delete_only_context_menu = false;	// just in case...
     }
     else if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() && getNumAvailableNodeTypes()>0 && nodeFactoryFunctionPtr)   {
-        if (ImGui::IsMouseClicked(1))   {   // Open context menu
+	if (ImGui::IsMouseClicked(1))   {   // Open context menu for adding nodes
 	    selectedNode = node_hovered_in_list = node_hovered_in_scene = NULL;
             open_context_menu = true;
+	    // TODO: we must close the "context_menu" popup here if it's already open. How to do it ?
         }
     }
-    if (open_delete_only_context_menu)  {
-        ImGui::OpenPopup("delete_only_context_menu");
-        if (node_hovered_in_list) selectedNode = node_hovered_in_list;
-        if (node_hovered_in_scene) selectedNode = node_hovered_in_scene;
-    }
-    if (open_context_menu)  {
-	ImGui::OpenPopup("context_menu");
-        if (node_hovered_in_list) selectedNode = node_hovered_in_list;
-        if (node_hovered_in_scene) selectedNode = node_hovered_in_scene;
-    }
 
-
+    // Open context menu
+    if (open_context_menu || open_delete_only_context_menu)  {
+	if (node_hovered_in_list) selectedNode = node_hovered_in_list;
+        if (node_hovered_in_scene) selectedNode = node_hovered_in_scene;
+	ImGui::PushID(selectedNode);
+	if (open_delete_only_context_menu) ImGui::OpenPopup("delete_only_context_menu");
+	else if (open_context_menu) ImGui::OpenPopup("context_menu");
+	ImGui::PopID();
+    }
     // Draw context menu
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8,8));
+    ImGui::PushID(selectedNode);
     if (ImGui::BeginPopup("delete_only_context_menu"))  {
         Node* node = selectedNode;
         if (node)   {
@@ -703,6 +715,7 @@ void NodeGraphEditor::render()
         }
         ImGui::EndPopup();
     }
+    ImGui::PopID();
     ImGui::PopStyleVar();
 
 
@@ -1354,6 +1367,7 @@ void TestNodeGraphEditor()  {
         // This adds entries to the "add node" context menu
         nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,NULL,-1); // last 2 args can be used to add only a subset of nodes (or to sort their order inside the context menu)
         nge.show_style_editor = true;
+        nge.show_node_copy_paste_buttons = true;
     }
     nge.render();
 }

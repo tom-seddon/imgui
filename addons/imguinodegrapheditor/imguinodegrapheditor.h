@@ -197,7 +197,7 @@ class Node
     mutable bool isOpen;
     int typeID;
 
-    Node() {}
+    Node() : Pos(0,0),Size(0,0) {}
     void init(const char* name, const ImVec2& pos,const char* inputSlotNamesSeparatedBySemicolons=NULL,const char* outputSlotNamesSeparatedBySemicolons=NULL,int _nodeTypeID=0);
 
     ImVec2 GetInputSlotPos(int slot_no) const   { return ImVec2(Pos.x, Pos.y + Size.y * ((float)slot_no+1) / ((float)InputsCount+1)); }
@@ -321,6 +321,7 @@ struct NodeGraphEditor	{
     bool show_left_pane;
     bool show_top_pane;
     bool show_style_editor;
+    bool show_node_copy_paste_buttons;
     mutable void* user_ptr;
     static Style& GetStyle() {return style;}
     mutable ImGuiColorEditMode colorEditMode;
@@ -337,6 +338,7 @@ struct NodeGraphEditor	{
         show_left_pane = true;
         show_top_pane = true;
         show_style_editor = false;
+        show_node_copy_paste_buttons = false;
         pNodeTypeNames = NULL;
         numNodeTypeNames = 0;
         nodeFactoryFunctionPtr = NULL;

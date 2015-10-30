@@ -154,7 +154,11 @@ void InitGL()	// Mandatory
         fprintf(stderr,"Warning: \"./myimgui.style\" not present.\n");
     }
 #   endif //NO_IMGUISTYLESERIALIZER
-    //ImGui::GetIO().MouseDrawCursor = true;
+
+#if (defined(IMGUI_USE_GLFW_BINDING) && defined(IMGUI_GLFW_NO_NATIVE_CURSORS))
+    ImGui::GetIO().MouseDrawCursor = true;
+#endif // IMGUI_USE_GLFW_BINDING & IMGUI_GLFW_NO_NATIVE_CURSORS
+
     //ImGui::GetIO().FontAllowUserScaling = true;
 }
 void ResizeGL(int /*w*/,int /*h*/)	// Mandatory
