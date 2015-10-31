@@ -74,8 +74,20 @@ namespace ImGui	{
         RenderFieldDelegate renderFieldDelegate;
         typedef bool (*CopyFieldDelegate)(FieldInfo& fdst,const FieldInfo& fsrc);
         CopyFieldDelegate copyFieldDelegate;
-        // TODO: serialize/deserialize delegates
+
+//------WIP----------------------------------------------------------------------
+#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+        typedef bool (*SerializeFieldDelegate)(ImGuiHelper::Serializer& s,const FieldInfo& src);
+        SerializeFieldDelegate serializeFieldDelegate;
+#       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+        typedef bool (*DeserializeFieldDelegate)(FieldInfo& dst,FieldType ft,int numArrayElements,const void* pValue,const char* name);
+        DeserializeFieldDelegate deserializeFieldDelegate;
         // ------------------------------------------------------
+#       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#       endif //NO_IMGUIHELPER_SERIALIZATION
+//--------------------------------------------------------------------------------
 
     protected:
         FieldInfo() {}
@@ -103,11 +115,19 @@ namespace ImGui	{
             return (type==f.type &&
                     numArrayElements == f.numArrayElements);   // Warning: we can't use numArrayElements for other purposes when it's not used....
         }
-        bool copyFrom(const FieldInfo& f);
+        //bool copyFrom(const FieldInfo& f);
         bool copyPDataValueFrom(const FieldInfo& f);
+//------WIP----------------------------------------------------------------------
+#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+        bool serialize(ImGuiHelper::Serializer& s) const;
+#       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+        const char* deserialize(const ImGuiHelper::Deserializer& d,const char* start);
+#       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#       endif //NO_IMGUIHELPER_SERIALIZATION
+//--------------------------------------------------------------------------------
 
-        //void serialize() {}
-        //void deserialize() {}
         friend class FieldInfoVector;
         friend class Node;
     };
@@ -123,15 +143,52 @@ namespace ImGui	{
     FieldInfo& addFieldEnum(void* pdata,int numEnumElements,FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
     FieldInfo& addFieldBool(void* pdata,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
     FieldInfo& addFieldColor(void* pdata,bool useAlpha=true,const char* label=NULL,const char* tooltip=NULL,int precision=3,void* userData=NULL);
-    FieldInfo& addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,FieldInfo::CopyFieldDelegate copyFieldDelegate,void* userData);
+    FieldInfo& addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,FieldInfo::CopyFieldDelegate copyFieldDelegate,void* userData
+//------WIP----------------------------------------------------------------------
+#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+        ,FieldInfo::SerializeFieldDelegate serializeFieldDelegate=NULL,
+#       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+        FieldInfo::DeserializeFieldDelegate deserializeFieldDelegate=NULL
+#       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#       endif //NO_IMGUIHELPER_SERIALIZATION
+//--------------------------------------------------------------------------------
+    );
 
-    void copyValuesFrom(const FieldInfoVector& o)   {
+    void copyPDataValuesFrom(const FieldInfoVector& o)   {
         for (int i=0,isz=o.size()<size()?o.size():size();i<isz;i++) {
             const FieldInfo& of = o[i];
             FieldInfo& f = (*this)[i];
             f.copyPDataValueFrom(of);
         }
     }
+
+//------WIP----------------------------------------------------------------------
+#   if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#    ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+    bool serialize(ImGuiHelper::Serializer& s) const {
+        bool rt = true;
+        for (int i=0,isz=size();i<isz;i++) {
+            const FieldInfo& f = (*this)[i];
+            rt|=f.serialize(s);
+            // should I stop if rt is false ?
+        }
+        return rt;
+    }
+#   endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#   ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+    const char* deserialize(const ImGuiHelper::Deserializer& d,const char* start)   {
+        const char* pend = start;
+        for (int i=0,isz=size();i<isz;i++) {
+            FieldInfo& f = (*this)[i];
+            pend = f.deserialize(d,pend);
+        }
+        return pend;
+    }
+#   endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#   endif //NO_IMGUIHELPER_SERIALIZATION
+//--------------------------------------------------------------------------------
 
 private:
     template<typename T> inline static T GetRadiansToDegs() {
@@ -240,6 +297,7 @@ struct NodeGraphEditor	{
     bool inited;
     bool allowOnlyOneLinkPerInputSlot;  // multiple links can still be connected to single output slots
     bool avoidCircularLinkLoopsInOut;   // however multiple paths from a node to another are still allowed (only in-out circuits are prevented)
+    bool isAContextMenuOpen;            // to fix a bug
 
     // Node types here are supposed to be zero-based and contiguous
     const char** pNodeTypeNames; // NOT OWNED! -> Must point to a static reference
@@ -319,8 +377,9 @@ struct NodeGraphEditor	{
     bool show_grid;
     bool show_connection_names;
     bool show_left_pane;
+    bool show_style_editor;         // in the left_pane
+    bool show_load_save_buttons;    // in the left_pane
     bool show_top_pane;
-    bool show_style_editor;
     bool show_node_copy_paste_buttons;
     mutable void* user_ptr;
     static Style& GetStyle() {return style;}
@@ -338,12 +397,14 @@ struct NodeGraphEditor	{
         show_left_pane = true;
         show_top_pane = true;
         show_style_editor = false;
+        show_load_save_buttons = false;
         show_node_copy_paste_buttons = false;
         pNodeTypeNames = NULL;
         numNodeTypeNames = 0;
         nodeFactoryFunctionPtr = NULL;
         inited = init_in_ctr;
         colorEditMode = ImGuiColorEditMode_RGB;
+        isAContextMenuOpen = false;
     }
     virtual ~NodeGraphEditor() {
         clear();
@@ -355,6 +416,7 @@ struct NodeGraphEditor	{
                 linkCallback(link,LS_DELETED,*this);
             }
         }
+        links.clear();
         for (int i=nodes.size()-1;i>0;i--)  {
             Node*& node = nodes[i];
             if (node)   {
@@ -365,7 +427,6 @@ struct NodeGraphEditor	{
             }
         }
         nodes.clear();
-        links.clear();
         scrolling = ImVec2(0,0);
         if (sourceCopyNode) {
                 sourceCopyNode->~Node();              // ImVector does not call it
@@ -449,6 +510,17 @@ struct NodeGraphEditor	{
     void setLinkCallback(LinkCallback cb) {linkCallback=cb;}
     void setNodeEditedCallbackTimeThreshold(int seconds) {nodeEditedTimeThreshold=seconds;}
 
+//------WIP----------------------------------------------------------------------
+#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+        bool save(const char* filename);
+#       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+        bool load(const char* filename);
+#       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#       endif //NO_IMGUIHELPER_SERIALIZATION
+//--------------------------------------------------------------------------------
+
     protected:
 
     struct DragNode {
@@ -463,6 +535,13 @@ struct NodeGraphEditor	{
     void copyNode(Node* n);
 
     bool removeLinkAt(int link_idx);
+    inline int getNodeIndex(const Node* node) {
+        for (int i=0;i<nodes.size();i++)    {
+            const Node* n = nodes[i];
+            if (n==node) return i;
+        }
+        return -1;
+    }
     static Style style;
 };
 

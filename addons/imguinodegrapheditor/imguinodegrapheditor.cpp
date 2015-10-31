@@ -221,6 +221,28 @@ void NodeGraphEditor::render()
             }
             ImGui::Separator();
         }
+#if	(!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+	if (show_load_save_buttons) {
+	    ImGui::Spacing();
+	    ImGui::Separator();
+	    if (ImGui::CollapsingHeader("Serialization##serialization",NULL,false))   {
+		ImGui::Separator();
+		const char* saveName = "nodeGraphEditor.nge";
+#               ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+		if (ImGui::SmallButton("Save##saveGNE")) {
+		    save(saveName);
+		}
+#               endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#               ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+		if (ImGui::SmallButton("Load##loadGNE")) {
+		    load(saveName);
+		}
+#		endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+	    }
+	    ImGui::Separator();
+	}
+#       endif //NO_IMGUIHELPER_SERIALIZATION
+
         ImGui::EndChild();
 
 
@@ -632,24 +654,24 @@ void NodeGraphEditor::render()
         if (selectedNode==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
         deleteNode(selectedNode);
         selectedNode = node_hovered_in_list = node_hovered_in_scene = NULL;
-	open_delete_only_context_menu = false;	// just in case...
+        open_delete_only_context_menu = false;	// just in case...
     }
-    else if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() && getNumAvailableNodeTypes()>0 && nodeFactoryFunctionPtr)   {
-	if (ImGui::IsMouseClicked(1))   {   // Open context menu for adding nodes
-	    selectedNode = node_hovered_in_list = node_hovered_in_scene = NULL;
+    else if (!isAContextMenuOpen && !ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() && getNumAvailableNodeTypes()>0 && nodeFactoryFunctionPtr)   {
+        if (ImGui::IsMouseClicked(1))   {   // Open context menu for adding nodes
+            selectedNode = node_hovered_in_list = node_hovered_in_scene = NULL;
             open_context_menu = true;
-	    // TODO: we must close the "context_menu" popup here if it's already open. How to do it ?
+            // TODO: we must close the "context_menu" popup here if it's already open. How to do it ?
         }
     }
 
     // Open context menu
     if (open_context_menu || open_delete_only_context_menu)  {
-	if (node_hovered_in_list) selectedNode = node_hovered_in_list;
+        if (node_hovered_in_list) selectedNode = node_hovered_in_list;
         if (node_hovered_in_scene) selectedNode = node_hovered_in_scene;
-	ImGui::PushID(selectedNode);
-	if (open_delete_only_context_menu) ImGui::OpenPopup("delete_only_context_menu");
-	else if (open_context_menu) ImGui::OpenPopup("context_menu");
-	ImGui::PopID();
+        ImGui::PushID(selectedNode);
+        if (open_delete_only_context_menu) ImGui::OpenPopup("delete_only_context_menu");
+        else if (open_context_menu) ImGui::OpenPopup("context_menu");
+        ImGui::PopID();
     }
     // Draw context menu
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8,8));
@@ -660,13 +682,14 @@ void NodeGraphEditor::render()
             ImGui::Text("Node '%s'", node->Name);
             ImGui::Separator();
             if (ImGui::MenuItem("Delete", NULL, false, true)) {
-            if (node==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
-            if (node==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
+                if (node==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
+                if (node==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
                 //printf("Current nodes.size()=%d; Deleting node %s.\n",nodes.size(),node->Name);fflush(stdout);
-            deleteNode(node);
+                deleteNode(node);
             }
         }
         ImGui::EndPopup();
+        isAContextMenuOpen = true;
     }
     else if (ImGui::BeginPopup("context_menu"))  {
         Node* node = selectedNode;
@@ -675,7 +698,7 @@ void NodeGraphEditor::render()
             ImGui::Text("Node '%s'", node->Name);
             ImGui::Separator();
             //if (ImGui::MenuItem("Rename..", NULL, false, false)) {}
-	    if (ImGui::MenuItem("Copy", NULL, false, true)) copyNode(node);
+            if (ImGui::MenuItem("Copy", NULL, false, true)) copyNode(node);
             if (sourceCopyNode && sourceCopyNode->typeID==node->typeID) {
                 if (ImGui::MenuItem("Paste", NULL, false, true)) {
                     node_to_paste_from_copy_source = node;
@@ -697,9 +720,9 @@ void NodeGraphEditor::render()
             ImGui::Separator();
             if (nodeFactoryFunctionPtr) {
                 if (sourceCopyNode) {
-		    if (ImGui::MenuItem("Paste##cloneCopySource")) {
+                    if (ImGui::MenuItem("Paste##cloneCopySource")) {
                         Node* clonedNode = addNode(nodeFactoryFunctionPtr(sourceCopyNode->typeID,scene_pos));
-                        clonedNode->fields.copyValuesFrom(sourceCopyNode->fields);
+                        clonedNode->fields.copyPDataValuesFrom(sourceCopyNode->fields);
                     }
                     ImGui::Separator();
                 }
@@ -714,7 +737,9 @@ void NodeGraphEditor::render()
             //if (ImGui::MenuItem("Paste", NULL, false, false)) {}
         }
         ImGui::EndPopup();
+        isAContextMenuOpen = true;
     }
+    else isAContextMenuOpen = false;
     ImGui::PopID();
     ImGui::PopStyleVar();
 
@@ -734,7 +759,7 @@ void NodeGraphEditor::render()
     ImGui::EndChild();  // GraphNodeChildWindow
 
     if (node_to_paste_from_copy_source && sourceCopyNode && node_to_paste_from_copy_source->typeID==sourceCopyNode->typeID)
-        node_to_paste_from_copy_source->fields.copyValuesFrom(sourceCopyNode->fields);
+        node_to_paste_from_copy_source->fields.copyPDataValuesFrom(sourceCopyNode->fields);
     if (nodeCallback && node_to_fire_edit_callback) nodeCallback(node_to_fire_edit_callback,NS_EDITED,*this);
 
 
@@ -812,7 +837,7 @@ void NodeGraphEditor::copyNode(Node *n)	{
 	if (!nodeFactoryFunctionPtr) return;
 	sourceCopyNode = nodeFactoryFunctionPtr(n->typeID,ImVec2(0,0));
     }
-    sourceCopyNode->fields.copyValuesFrom(n->fields);
+    sourceCopyNode->fields.copyPDataValuesFrom(n->fields);
 }
 
 void NodeGraphEditor::getInputNodesForNodeAndSlot(const Node* node,int input_slot,ImVector<Node *> &returnValueOut, ImVector<int> *pOptionalReturnValueOutputSlotOut) const  {
@@ -924,6 +949,7 @@ void Node::init(const char *name, const ImVec2 &pos, const char *inputSlotNamesS
     isOpen = true;
 }
 
+/*
 bool FieldInfo::copyFrom(const FieldInfo &f) {
     if (!isCompatibleWith(f)) return false;
     void* myOldPdata = pdata;
@@ -931,6 +957,7 @@ bool FieldInfo::copyFrom(const FieldInfo &f) {
     pdata = myOldPdata;
     return copyPDataValueFrom(f);
 }
+*/
 bool FieldInfo::copyPDataValueFrom(const FieldInfo &f) {
     if (!isCompatibleWith(f) || (!pdata || !f.pdata)) return false;
     if (type==FT_CUSTOM)    {
@@ -964,6 +991,103 @@ bool FieldInfo::copyPDataValueFrom(const FieldInfo &f) {
     }
     return true;
 }
+#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+inline static ImGuiHelper::FieldType ToImGuiHelperFieldType(ImGui::FieldType ft) {
+    return ImGuiHelper::FieldType((int)ft);
+}
+inline static ImGui::FieldType ToNodeGraphEditorFieldType(ImGuiHelper::FieldType ft) {
+    return ImGui::FieldType((int)ft);
+}
+#ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+bool FieldInfo::serialize(ImGuiHelper::Serializer& s) const   {
+    const char* fieldName = label;
+    const ImGuiHelper::FieldType ft = ToImGuiHelperFieldType(this->type);
+    switch (ft) {
+    case FT_INT:
+    case FT_ENUM:
+	return s.save(ft,(const int*)pdata,fieldName,numArrayElements,precision);
+    case FT_BOOL: {
+        const int tmp = (*((bool*)pdata)) ? 1 : 0;
+	return s.save(ft,(const int*)&tmp,fieldName,numArrayElements,precision);
+    }
+    case FT_UNSIGNED:
+	return s.save((const unsigned*)pdata,fieldName,numArrayElements,precision);
+    case FT_DOUBLE:
+	return s.save((const double*)pdata,fieldName,numArrayElements,precision);
+    case FT_FLOAT:
+    case FT_COLOR:
+	return s.save(ft,(const float*)pdata,fieldName,numArrayElements,precision);
+    case FT_STRING: {
+        const char* txt = (const char*)pdata;
+        int len = (int) strlen(txt);
+        if (precision>0 && precision<len) len = precision;
+        return s.save((const char*)pdata,fieldName,len);
+    }
+    case FT_CUSTOM:    {
+        if (!serializeFieldDelegate) return false;
+        else return serializeFieldDelegate(s,*this);
+    }
+    default:
+        //IM_ASSERT(true); // copyPDataValueFrom(...) not defined for this type [we can probably just skip this]
+        return false;
+    }
+    return false;
+}
+#endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+static bool fieldInfoParseCallback(ImGuiHelper::FieldType ft,int numArrayElements,void* pValue,const char* name,void* userPtr)    {
+    FieldInfo& fi = *((FieldInfo*)(userPtr));
+    if (strcmp(fi.label,name)!=0) {
+        fprintf(stderr,"fieldInfoParseCallback Error: \"%s\"!=\"%s\"\n",fi.label,name);
+        return true;    // true = stop parsing
+    }
+    const FieldType type = ToNodeGraphEditorFieldType(ft);
+    switch (type) {
+    case FT_INT:
+    case FT_ENUM:
+    case FT_UNSIGNED:
+    case FT_FLOAT:
+    case FT_DOUBLE:
+    case FT_COLOR:
+    {
+        const int numElements = numArrayElements<=0 ? 1 : numArrayElements;
+        const size_t elemSize = ((type==FT_INT||type==FT_ENUM)?sizeof(int):
+                                                               type==FT_UNSIGNED?sizeof(unsigned):
+                                                                                 (type==FT_FLOAT || type==FT_COLOR)?sizeof(float):
+                                                                                                                    type==FT_DOUBLE?sizeof(double):
+                                                                                                                                    0);
+        memcpy(fi.pdata,pValue,numElements*elemSize);
+        break;
+    }
+        break;
+    case FT_BOOL: *((bool*)fi.pdata) = *((int*)pValue)!=0;
+        break;
+    case FT_STRING: {
+        const char* txt = (const char*)pValue;
+        int len = (int) strlen(txt);
+        if (fi.precision>0 && fi.precision<len) len = fi.precision;
+        char* dst = (char*) fi.pdata;
+        //memcpy(dst,pValue,len);
+        strncpy(dst,(const char*)pValue,len);
+        if (len>1) dst[len-1]='\0';
+    }
+        break;
+    case FT_CUSTOM:    {
+	if (fi.deserializeFieldDelegate) fi.deserializeFieldDelegate(fi,type,numArrayElements,pValue,name);
+        break;
+    }
+    default:
+        //IM_ASSERT(true); // copyPDataValueFrom(...) not defined for this type [we can probably just skip this]
+        //return false;
+        break;
+    }
+    return true;    // true = done parsing
+}
+const char* FieldInfo::deserialize(const ImGuiHelper::Deserializer& d,const char* start)    {
+    return d.parse(fieldInfoParseCallback,(void*)this,start);
+}
+#endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#endif //NO_IMGUIHELPER_SERIALIZATION
 FieldInfo &FieldInfoVector::addFieldInt(void *pdata, int numArrayElements, const char *label, const char *tooltip, int precision, int lowerLimit, int upperLimit, void *userData)   {
     IM_ASSERT(pdata && numArrayElements<=4);
     push_back(FieldInfo());
@@ -1027,7 +1151,18 @@ FieldInfo &FieldInfoVector::addFieldColor(void *pdata, bool useAlpha, const char
     f.userData = userData;
     return f;
 }
-FieldInfo &FieldInfoVector::addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,FieldInfo::CopyFieldDelegate copyFieldDelegate, void *userData)   {
+FieldInfo &FieldInfoVector::addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,FieldInfo::CopyFieldDelegate copyFieldDelegate, void *userData
+//------WIP----------------------------------------------------------------------
+#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+	,FieldInfo::SerializeFieldDelegate serializeFieldDelegate,
+#       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+	FieldInfo::DeserializeFieldDelegate deserializeFieldDelegate
+#       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#       endif //NO_IMGUIHELPER_SERIALIZATION
+//--------------------------------------------------------------------------------
+)   {
     IM_ASSERT(renderFieldDelegate);
     push_back(FieldInfo());
     FieldInfo& f = (*this)[size()-1];
@@ -1035,6 +1170,17 @@ FieldInfo &FieldInfoVector::addFieldCustom(FieldInfo::RenderFieldDelegate render
     f.renderFieldDelegate=renderFieldDelegate;
     f.copyFieldDelegate=copyFieldDelegate;
     f.userData = userData;
+//------WIP----------------------------------------------------------------------
+#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+    f.serializeFieldDelegate=serializeFieldDelegate;
+#       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+    f.deserializeFieldDelegate=deserializeFieldDelegate;
+#       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#       endif //NO_IMGUIHELPER_SERIALIZATION
+//--------------------------------------------------------------------------------
+
     return f;
 }
 bool FieldInfoVector::render()   {
@@ -1194,6 +1340,131 @@ bool FieldInfoVector::render()   {
     return nodeEdited;
 }
 
+//------WIP----------------------------------------------------------------------
+#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+bool NodeGraphEditor::save(const char* filename)    {
+    ImGuiHelper::Serializer s(filename);
+    if (!s.isValid()) return false;
+    const int numNodes = nodes.size();
+    const int numLinks = links.size();
+    int itmp;
+    //--------------------------------------------
+    s.save(&scrolling.x,"scrolling",2);
+    s.save(&numNodes,"num_nodes");
+    itmp = selectedNode ? getNodeIndex(selectedNode) : -1;s.save(&itmp,"selected_node_index");
+    s.save(&numLinks,"num_links");
+    for (int i=0;i<numNodes;i++)    {
+	const Node& n = (*nodes[i]);
+	s.save(&i,"node_index");
+	s.save(&n.typeID,"typeID");
+    s.save(&n.Pos.x,"Pos",2);
+    itmp = n.isOpen ? 1:0;s.save(ImGuiHelper::FT_BOOL,&itmp,"isOpen");
+    /* // These are fixed based on typeID
+	s.save(&n.InputCount,"InputsCount");
+	s.save(&n.OutputsCount,"OutputsCount");
+	s.save(Name,"Name");
+	for (int j=0;j<n.InputsCount;j++) s.save(InputNames[j],"InputName");
+	for (int j=0;j<n.OutputsCount;j++) s.save(OutputNames[j],"OutputName");
+	*/
+	itmp = n.fields.size();s.save(&itmp,"numFields");
+	n.fields.serialize(s);
+    }
+    for (int i=0;i<numLinks;i++)    {
+	const NodeLink& l = links[i];
+	s.save(&i,"link_index");
+	itmp = getNodeIndex(l.InputNode);
+	s.save(&itmp,"InputNode");
+	s.save(&l.InputSlot,"InputSlot");
+	itmp = getNodeIndex(l.OutputNode);
+	s.save(&itmp,"OutputNode");
+	s.save(&l.InputSlot,"OutputSlot");
+    }    
+    //--------------------------------------------
+    return true;
+}
+#       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+struct NodeGraphEditorParseCallback1Struct {
+    ImVec2 scrolling;
+    int numNodes,selectedNodeIndex,numLinks;
+    NodeGraphEditorParseCallback1Struct() : scrolling(0,0),numNodes(0),selectedNodeIndex(-1),numLinks(0) {}
+};
+static bool NodeGraphEditorParseCallback1(ImGuiHelper::FieldType ft,int numArrayElements,void* pValue,const char* name,void* userPtr)    {
+    NodeGraphEditorParseCallback1Struct* cbs = (NodeGraphEditorParseCallback1Struct*) userPtr;
+    if (strcmp(name,"scrolling")==0) cbs->scrolling = *((ImVec2*)pValue);
+    else if (strcmp(name,"num_nodes")==0) cbs->numNodes = *((int*)pValue);
+    else if (strcmp(name,"selected_node_index")==0) cbs->selectedNodeIndex = *((int*)pValue);
+    else if (strcmp(name,"num_links")==0) {cbs->numLinks = *((int*)pValue);return true;}
+    return false;
+}
+struct NodeGraphEditorParseCallback2Struct {
+    int curNodeIndex,typeID,numFields;bool isOpen;
+    ImVec2 Pos;
+    NodeGraphEditorParseCallback2Struct() : curNodeIndex(-1),typeID(-1),numFields(0),isOpen(false),Pos(0,0) {}
+};
+static bool NodeGraphEditorParseCallback2(ImGuiHelper::FieldType ft,int numArrayElements,void* pValue,const char* name,void* userPtr)    {
+    NodeGraphEditorParseCallback2Struct* cbs = (NodeGraphEditorParseCallback2Struct*) userPtr;
+    if (strcmp(name,"node_index")==0)   cbs->curNodeIndex = *((int*)pValue);
+    else if (strcmp(name,"typeID")==0)  cbs->typeID = *((int*)pValue);
+    else if (strcmp(name,"Pos")==0)     cbs->Pos = *((ImVec2*)pValue);
+    else if (strcmp(name,"isOpen")==0)  cbs->isOpen = (*((int*)pValue))?true:false;
+    else if (strcmp(name,"numFields")==0) {
+        cbs->numFields = *((int*)pValue);return true;
+    }
+    return false;
+}
+struct NodeGraphEditorParseCallback3Struct {
+    int link_index,node1_index,input_slot,node2_index,output_slot;
+    NodeGraphEditorParseCallback3Struct() : link_index(-1),node1_index(-1),input_slot(-1),node2_index(-1),output_slot(-1) {}
+};
+static bool NodeGraphEditorParseCallback3(ImGuiHelper::FieldType ft,int numArrayElements,void* pValue,const char* name,void* userPtr)    {
+    NodeGraphEditorParseCallback3Struct* cbl = (NodeGraphEditorParseCallback3Struct*) userPtr;
+    if (strcmp(name,"link_index")==0)   cbl->link_index = *((int*)pValue);
+    else if (strcmp(name,"InputNode")==0)  cbl->node1_index = *((int*)pValue);
+    else if (strcmp(name,"InputSlot")==0)  cbl->input_slot = *((int*)pValue);
+    else if (strcmp(name,"OutputNode")==0)  cbl->node2_index = *((int*)pValue);
+    else if (strcmp(name,"OutputSlot")==0)  {
+        cbl->output_slot = *((int*)pValue);return true;
+    }
+    return false;
+}
+bool NodeGraphEditor::load(const char* filename)    {
+    ImGuiHelper::Deserializer d(filename);
+    if (!d.isValid() || !nodeFactoryFunctionPtr) return false;
+    clear();
+    //--------------------------------------------
+    const char* amount = 0;
+    NodeGraphEditorParseCallback1Struct cbs;
+    amount = d.parse(NodeGraphEditorParseCallback1,(void*)&cbs,amount);
+    scrolling = cbs.scrolling;
+    for (int i=0;i<cbs.numNodes;i++)    {
+        NodeGraphEditorParseCallback2Struct cbn;
+        amount = d.parse(NodeGraphEditorParseCallback2,(void*)&cbn,amount);
+        // TODO: do some checks ok cbn
+        Node* n = nodeFactoryFunctionPtr(cbn.typeID,cbn.Pos);
+        IM_ASSERT(n->fields.size()==cbn.numFields); // optional check (to remove)
+        amount = n->fields.deserialize(d,amount);
+        nodes.push_back(n);
+    }
+    if (cbs.selectedNodeIndex>=0 && cbs.selectedNodeIndex<nodes.size()) selectedNode = nodes[cbs.selectedNodeIndex];
+    for (int i=0;i<cbs.numLinks;i++)    {
+        NodeGraphEditorParseCallback3Struct cbl;
+        amount = d.parse(NodeGraphEditorParseCallback3,(void*)&cbl,amount);
+        if (cbl.node1_index>=0 && cbl.node1_index<nodes.size() && cbl.input_slot>=0 &&
+                cbl.node2_index>=0 && cbl.node2_index<nodes.size() && cbl.output_slot>=0 &&
+                cbl.node1_index!=cbl.node2_index
+        ) addLink(nodes[cbl.node1_index],cbl.input_slot,nodes[cbl.node2_index],cbl.output_slot,true); // last arg check if link is already present before adding it
+    }
+
+    //--------------------------------------------
+    return true;
+    //--------------------------------------------
+    //return true;
+}
+#       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#       endif //NO_IMGUIHELPER_SERIALIZATION
+//--------------------------------------------------------------------------------
 
 #ifndef IMGUINODEGRAPHEDITOR_NOTESTDEMO
 enum MyNodeTypes {
@@ -1367,6 +1638,7 @@ void TestNodeGraphEditor()  {
         // This adds entries to the "add node" context menu
         nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,NULL,-1); // last 2 args can be used to add only a subset of nodes (or to sort their order inside the context menu)
         nge.show_style_editor = true;
+	nge.show_load_save_buttons = true;
         nge.show_node_copy_paste_buttons = true;
     }
     nge.render();
