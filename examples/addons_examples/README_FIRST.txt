@@ -138,6 +138,8 @@ Some notes:
 	em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  --preload-file myNumbersTexture.png --preload-file myimgui.style -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_SDL2_BINDING" -D"NO_IMGUIFILESYSTEM" -D"NO_IMGUISTYLESERIALIZER_SAVE_STYLE" -D"NO_IMGUIHELPER_SERIALIZATION" -s USE_SDL=2 -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
 	because we can simply use NO_IMGUISTYLESERIALIZER_SAVE_STYLE to allow file loading using --preload-file.
 	[We could have done something similiar (for the node graph editor) using -D"NO_IMGUIHELPER_SERIALIZATION_SAVE"]
+	UPDATE: I've just discovered that you can actually load and save files added with --preload-file. The only problem is that they
+	cant't be persisted when you close the browser.
 
 (*): To compile the first demo using the GLUT binding, please try:
 em++ -O2 -o html/main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  --preload-file myNumbersTexture.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_GLUT_BINDING" -D"NO_IMGUIFILESYSTEM" -D"NO_IMGUISTYLESERIALIZER" -D"NO_IMGUIHELPER_SERIALIZATION" -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
