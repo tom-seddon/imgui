@@ -64,30 +64,30 @@ bool NodeGraphEditor::Style::Save(const NodeGraphEditor::Style &style, const cha
     ImGuiHelper::Serializer s(filename);
     if (!s.isValid()) return false;
 
-    ImVec4 tmpColor = ImColor(style.color_background);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_background",4);
-    tmpColor = ImColor(style.color_grid);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_grid",4);
-    s.save(ImGuiHelper::FT_FLOAT,&style.grid_line_width,"grid_line_width");
-    s.save(ImGuiHelper::FT_FLOAT,&style.grid_size,"grid_size");
+    ImVec4 tmpColor = ImColor(style.color_background);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_background",4);
+    tmpColor = ImColor(style.color_grid);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_grid",4);
+    s.save(ImGui::FT_FLOAT,&style.grid_line_width,"grid_line_width");
+    s.save(ImGui::FT_FLOAT,&style.grid_size,"grid_size");
 
-    tmpColor = ImColor(style.color_node);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_node",4);
-    tmpColor = ImColor(style.color_node_frame);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_node_frame",4);
-    tmpColor = ImColor(style.color_node_selected);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_node_selected",4);
-    tmpColor = ImColor(style.color_node_hovered);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_node_hovered",4);
-    s.save(ImGuiHelper::FT_FLOAT,&style.node_rounding,"node_rounding");
-    s.save(ImGuiHelper::FT_FLOAT,&style.node_window_padding.x,"node_window_padding",2);
+    tmpColor = ImColor(style.color_node);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node",4);
+    tmpColor = ImColor(style.color_node_frame);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_frame",4);
+    tmpColor = ImColor(style.color_node_selected);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_selected",4);
+    tmpColor = ImColor(style.color_node_hovered);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_hovered",4);
+    s.save(ImGui::FT_FLOAT,&style.node_rounding,"node_rounding");
+    s.save(ImGui::FT_FLOAT,&style.node_window_padding.x,"node_window_padding",2);
 
-    tmpColor = ImColor(style.color_node_input_slots);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_node_input_slots",4);
-    tmpColor = ImColor(style.color_node_output_slots);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_node_output_slots",4);
-    s.save(ImGuiHelper::FT_FLOAT,&style.node_slots_radius,"node_slots_radius");
+    tmpColor = ImColor(style.color_node_input_slots);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_input_slots",4);
+    tmpColor = ImColor(style.color_node_output_slots);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_output_slots",4);
+    s.save(ImGui::FT_FLOAT,&style.node_slots_radius,"node_slots_radius");
 
-    tmpColor = ImColor(style.color_link);s.save(ImGuiHelper::FT_COLOR,&tmpColor.x,"color_link",4);
-    s.save(ImGuiHelper::FT_FLOAT,&style.link_line_width,"link_line_width");
-    s.save(ImGuiHelper::FT_FLOAT,&style.link_control_point_distance,"link_control_point_distance");
-    s.save(ImGuiHelper::FT_INT,&style.link_num_segments,"link_num_segments");
+    tmpColor = ImColor(style.color_link);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_link",4);
+    s.save(ImGui::FT_FLOAT,&style.link_line_width,"link_line_width");
+    s.save(ImGui::FT_FLOAT,&style.link_control_point_distance,"link_control_point_distance");
+    s.save(ImGui::FT_INT,&style.link_num_segments,"link_num_segments");
 
-    s.save(ImGuiHelper::FT_COLOR,&style.color_node_title.x,"color_node_title",4);
-    s.save(ImGuiHelper::FT_COLOR,&style.color_node_input_slots_names.x,"color_node_input_slots_names",4);
-    s.save(ImGuiHelper::FT_COLOR,&style.color_node_output_slots_names.x,"color_node_output_slots_names",4);
+    s.save(ImGui::FT_COLOR,&style.color_node_title.x,"color_node_title",4);
+    s.save(ImGui::FT_COLOR,&style.color_node_input_slots_names.x,"color_node_input_slots_names",4);
+    s.save(ImGui::FT_COLOR,&style.color_node_output_slots_names.x,"color_node_output_slots_names",4);
 
     return true;
 }
@@ -200,7 +200,7 @@ void NodeGraphEditor::render()
                 Style::Edit(this->style);
                 ImGui::Separator();
 #if             (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
-                const char* saveName = "nodeGraphEditor.nge.style";
+		const char* saveName = "nodeGraphEditor.nge.style";
 #               ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
                 if (ImGui::SmallButton("Save##saveGNEStyle")) {
                     Style::Save(this->style,saveName);
@@ -232,12 +232,17 @@ void NodeGraphEditor::render()
 		if (ImGui::SmallButton("Save##saveGNE")) {
 		    save(saveName);
 		}
+		ImGui::SameLine();
 #               endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #               ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
 		if (ImGui::SmallButton("Load##loadGNE")) {
 		    load(saveName);
 		}
+		ImGui::SameLine();
 #		endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+		if (ImGui::SmallButton("Clear##clearGNE")) {
+		    clear();
+		}
 	    }
 	    ImGui::Separator();
 	}
@@ -274,21 +279,18 @@ void NodeGraphEditor::render()
 
     ImGui::BeginChild("GraphNodeChildWindow", ImVec2(0,0), true);
 
-    const float& NODE_SLOT_RADIUS = style.node_slots_radius;
-    const float NODE_SLOT_RADIUS_SQUARED = (NODE_SLOT_RADIUS*NODE_SLOT_RADIUS);
-    const ImVec2& NODE_WINDOW_PADDING = style.node_window_padding;
-    const float MOUSE_DELTA_SQUARED = io.MouseDelta.x*io.MouseDelta.x+io.MouseDelta.y*io.MouseDelta.y;
-    const float MOUSE_DELTA_SQUARED_THRESHOLD = NODE_SLOT_RADIUS_SQUARED * 0.05f;    // We don't detect "mouse release" events while dragging links onto slots. Instead we check that our mouse delta is small enough. Otherwise we couldn't hover other slots while dragging links.
-
     // Create our child canvas
     if (show_top_pane)   {
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
         ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0,0));
 
         ImGui::Checkbox("Show connection names", &show_connection_names);
+	if (io.FontAllowUserScaling) {ImGui::SameLine(0,4);ImGui::Text("Use CTRL+MW to zoom.");}
         ImGui::SameLine(ImGui::GetWindowWidth()-120);
         ImGui::Checkbox("Show grid", &show_grid);
-        ImGui::TextWrapped("%s","Hold MMB to scroll. Double-click LMB on slots to remove their links.\n");
+	static const char* txts[2] = {"Hold MMB to scroll. Double-click LMB on slots to remove their links.",
+				      "Hold MMB to scroll. Double-click LMB on slots to remove their links. Use CTRL+MW to zoom."};
+	ImGui::TextWrapped("%s",io.FontAllowUserScaling ? txts[1] : txts[0]);
         ImGui::SameLine(ImGui::GetWindowWidth()-120);
         // Color Mode
         static const char* btnlbls[2]={"HSV##myColorBtnType","RGB##myColorBtnType"};
@@ -314,7 +316,28 @@ void NodeGraphEditor::render()
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.color_background);
     ImGui::BeginChild("scrolling_region", ImVec2(0,0), true, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoMove);
-    ImGui::PushItemWidth(120.0f);
+
+    // fixes zooming just a bit
+    bool isZooming = false;
+    const float currentFontWindowScale = ImGui::GetCurrentWindow()->FontWindowScale;
+    if (oldFontWindowScale==0.f) oldFontWindowScale = currentFontWindowScale;
+    else if (oldFontWindowScale!=currentFontWindowScale) {
+	isZooming = true;
+        for (int i=0,isz=nodes.size();i<isz;i++)    {
+            Node* node = nodes[i];
+	    node->Size = ImVec2(0,0);   // we must reset the size
+        }
+        oldFontWindowScale = currentFontWindowScale;
+    }
+
+    const float NODE_SLOT_RADIUS = style.node_slots_radius*currentFontWindowScale;
+    const float NODE_SLOT_RADIUS_SQUARED = (NODE_SLOT_RADIUS*NODE_SLOT_RADIUS);
+    const ImVec2& NODE_WINDOW_PADDING = style.node_window_padding;
+    const float MOUSE_DELTA_SQUARED = io.MouseDelta.x*io.MouseDelta.x+io.MouseDelta.y*io.MouseDelta.y;
+    const float MOUSE_DELTA_SQUARED_THRESHOLD = NODE_SLOT_RADIUS_SQUARED * 0.05f;    // We don't detect "mouse release" events while dragging links onto slots. Instead we check that our mouse delta is small enough. Otherwise we couldn't hover other slots while dragging links.
+
+
+    ImGui::PushItemWidth(120.0f*currentFontWindowScale);
 
     ImVec2 offset = ImGui::GetCursorScreenPos() - scrolling;
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
@@ -328,24 +351,29 @@ void NodeGraphEditor::render()
         const float& GRID_SZ = style.grid_size;
         ImVec2 win_pos = ImGui::GetCursorScreenPos();
         ImVec2 canvas_sz = ImGui::GetWindowSize();
-        for (float x = fmodf(offset2.x,GRID_SZ); x < canvas_sz.x; x += GRID_SZ)
-            draw_list->AddLine(ImVec2(x,0.0f)+win_pos, ImVec2(x,canvas_sz.y)+win_pos, GRID_COLOR,style.grid_line_width);
+	const float grid_Line_width = currentFontWindowScale * style.grid_line_width;
+	for (float x = fmodf(offset2.x,GRID_SZ); x < canvas_sz.x; x += GRID_SZ)
+	    draw_list->AddLine(ImVec2(x,0.0f)+win_pos, ImVec2(x,canvas_sz.y)+win_pos, GRID_COLOR,grid_Line_width);
         for (float y = fmodf(offset2.y,GRID_SZ); y < canvas_sz.y; y += GRID_SZ)
-            draw_list->AddLine(ImVec2(0.0f,y)+win_pos, ImVec2(canvas_sz.x,y)+win_pos, GRID_COLOR,style.grid_line_width);
+	    draw_list->AddLine(ImVec2(0.0f,y)+win_pos, ImVec2(canvas_sz.x,y)+win_pos, GRID_COLOR,grid_Line_width);
     }
 
 
     // Display links
     draw_list->ChannelsSetCurrent(0); // Background
-    const ImVec2 link_cp(style.link_control_point_distance,0);
-    for (int link_idx = 0; link_idx < links.Size; link_idx++)
+    const ImVec2 link_cp(style.link_control_point_distance * currentFontWindowScale,0);
+    const float link_line_width = style.link_line_width * currentFontWindowScale;
+    if (!isZooming) // Otherwise artifacts while scaling
     {
-        NodeLink& link = links[link_idx];
-        Node* node_inp = link.InputNode;
-        Node* node_out = link.OutputNode;
-        ImVec2 p1 = offset + node_inp->GetOutputSlotPos(link.InputSlot);
-        ImVec2 p2 = offset + node_out->GetInputSlotPos(link.OutputSlot);
-        draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2,style.color_link, style.link_line_width, style.link_num_segments);
+        for (int link_idx = 0; link_idx < links.Size; link_idx++)
+        {
+            NodeLink& link = links[link_idx];
+            Node* node_inp = link.InputNode;
+            Node* node_out = link.OutputNode;
+            ImVec2 p1 = offset + node_inp->GetOutputSlotPos(link.InputSlot,currentFontWindowScale);
+            ImVec2 p2 = offset + node_out->GetInputSlotPos(link.OutputSlot,currentFontWindowScale);
+	    draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2,style.color_link, link_line_width, style.link_num_segments);
+        }
     }
     // Display dragging link
     const bool cantDragAnything = isMouseDraggingForScrolling;
@@ -353,16 +381,17 @@ void NodeGraphEditor::render()
     bool isDragNodeValid = dragNode.isValid();
     if (isLMBDraggingForMakingLinks && isDragNodeValid)   {
         if (dragNode.inputSlotIdx!=-1)  {   // Dragging from the output slot of dragNode
-            ImVec2 p1 = offset + dragNode.node->GetOutputSlotPos(dragNode.inputSlotIdx);
+            ImVec2 p1 = offset + dragNode.node->GetOutputSlotPos(dragNode.inputSlotIdx,currentFontWindowScale);
             const ImVec2& p2 = io.MousePos;//offset + node_out->GetInputSlotPos(link.OutputSlot);
-            draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, style.link_line_width, style.link_num_segments);
+	    draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
         }
         else if (dragNode.outputSlotIdx!=-1)  {  // Dragging from the input slot of dragNode
             const ImVec2& p1 = io.MousePos;//
-            ImVec2 p2 = offset + dragNode.node->GetInputSlotPos(dragNode.outputSlotIdx);
-            draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, style.link_line_width, style.link_num_segments);
+            ImVec2 p2 = offset + dragNode.node->GetInputSlotPos(dragNode.outputSlotIdx,currentFontWindowScale);
+	    draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
         }
     }
+
 
     // Display nodes
     ImGui::PushStyleColor(ImGuiCol_Header,transparent);
@@ -380,7 +409,8 @@ void NodeGraphEditor::render()
     {
         Node* node = nodes[node_idx];
         ImGui::PushID((const void*) node);
-        ImVec2 node_rect_min = offset + node->Pos;
+        const ImVec2 nodePos = node->GetPos(currentFontWindowScale);
+        ImVec2 node_rect_min = offset + nodePos;
 
         // Display node contents first
         draw_list->ChannelsSetCurrent(1); // Foreground
@@ -405,7 +435,7 @@ void NodeGraphEditor::render()
         if (node->Size.x!=0)    {
             const bool canPaste = sourceCopyNode && sourceCopyNode->typeID==node->typeID;
             if (!node->isOpen) ImGui::SameLine();
-            else ImGui::SameLine(-scrolling.x+node->Pos.x+node->Size.x-textSizeButtonX-10
+            else ImGui::SameLine(-scrolling.x+nodePos.x+node->Size.x-textSizeButtonX-10
                                  -(show_node_copy_paste_buttons ?
                                        (
                                            (textSizeButtonCopy+2) +
@@ -500,12 +530,17 @@ void NodeGraphEditor::render()
         const bool mustDetectIfSlotIsHoveredForDragNDrop = !cantDragAnything && !isSomeNodeMoving && (!isDragNodeValid || isLMBDraggingForMakingLinks);
         ImGui::PushStyleColor(ImGuiCol_Text,style.color_node_input_slots_names);
         for (int slot_idx = 0; slot_idx < node->InputsCount; slot_idx++)    {
-            connectorScreenPos = offset + node->GetInputSlotPos(slot_idx);
+            connectorScreenPos = offset + node->GetInputSlotPos(slot_idx,currentFontWindowScale);
             draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, style.color_node_input_slots);
+            /*if ((style.color_node_input_slots >> 24) != 0)  {
+                const float a_max = IM_PI * 0.5f * 11.f/12.f;
+                draw_list->PathArcTo(connectorScreenPos, NODE_SLOT_RADIUS, IM_PI-a_max, IM_PI+a_max, 12);
+                draw_list->PathFill(style.color_node_input_slots);
+            }*/
             if (show_connection_names && node->InputNames[slot_idx][0]!='\0')   {
                 const char* name = node->InputNames[slot_idx];
                 if (name)   {
-                    ImGui::SetCursorScreenPos(offset + node->GetInputSlotPos(slot_idx)-ImVec2(NODE_SLOT_RADIUS,0)-ImGui::CalcTextSize(name));
+                    ImGui::SetCursorScreenPos(offset + node->GetInputSlotPos(slot_idx,currentFontWindowScale)-ImVec2(NODE_SLOT_RADIUS,0)-ImGui::CalcTextSize(name));
                     ImGui::Text("%s",name);
                 }
             }
@@ -569,12 +604,17 @@ void NodeGraphEditor::render()
         ImGui::PopStyleColor();
         ImGui::PushStyleColor(ImGuiCol_Text,style.color_node_output_slots_names);
         for (int slot_idx = 0; slot_idx < node->OutputsCount; slot_idx++)   {
-            connectorScreenPos = offset + node->GetOutputSlotPos(slot_idx);
-            draw_list->AddCircleFilled(offset + node->GetOutputSlotPos(slot_idx), NODE_SLOT_RADIUS, style.color_node_output_slots);
+            connectorScreenPos = offset + node->GetOutputSlotPos(slot_idx,currentFontWindowScale);
+            draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, style.color_node_output_slots);
+            /*if ((style.color_node_output_slots >> 24) != 0)  {
+                const float a_max = IM_PI * 0.5f * 11.f/12.f;
+                draw_list->PathArcTo(connectorScreenPos, NODE_SLOT_RADIUS, -a_max, a_max, 12);
+                draw_list->PathFill(style.color_node_output_slots);
+            }*/
             if (show_connection_names && node->OutputNames[slot_idx][0]!='\0')   {
                 const char* name = node->OutputNames[slot_idx];
                 if (name)   {
-                    ImGui::SetCursorScreenPos(offset + node->GetOutputSlotPos(slot_idx)+ImVec2(NODE_SLOT_RADIUS,0)-ImVec2(0,ImGui::CalcTextSize(name).y));
+                    ImGui::SetCursorScreenPos(offset + node->GetOutputSlotPos(slot_idx,currentFontWindowScale)+ImVec2(NODE_SLOT_RADIUS,0)-ImVec2(0,ImGui::CalcTextSize(name).y));
                     ImGui::Text("%s",name);
                 }
             }
@@ -824,6 +864,30 @@ bool NodeGraphEditor::hasLinks(Node *node) const    {
     }
     return false;
 }
+int NodeGraphEditor::getAllNodesOfType(int typeID, ImVector<Node *> *pNodesOut, bool clearNodesOutBeforeUsage)  {
+    if (pNodesOut && clearNodesOutBeforeUsage) pNodesOut->clear();
+    int cnt = 0;
+    for (int i=0,isz=nodes.size();i<isz;i++)    {
+        Node* n = nodes[i];
+        if (n->getType()==typeID) {
+            ++cnt;
+            if (pNodesOut) pNodesOut->push_back(n);
+        }
+    }
+    return cnt;
+}
+int NodeGraphEditor::getAllNodesOfType(int typeID, ImVector<const Node *> *pNodesOut, bool clearNodesOutBeforeUsage) const  {
+    if (pNodesOut && clearNodesOutBeforeUsage) pNodesOut->clear();
+    int cnt = 0;
+    for (int i=0,isz=nodes.size();i<isz;i++)    {
+        const Node* n = nodes[i];
+        if (n->getType()==typeID) {
+            ++cnt;
+            if (pNodesOut) pNodesOut->push_back(n);
+        }
+    }
+    return cnt;
+}
 
 void NodeGraphEditor::copyNode(Node *n)	{
     const bool mustDeleteSourceCopyNode = sourceCopyNode && (!n || n->typeID!=sourceCopyNode->typeID);
@@ -907,8 +971,12 @@ bool NodeGraphEditor::isNodeReachableFrom(const Node *node1, bool goBackward,con
     return false;
 }
 
-void Node::init(const char *name, const ImVec2 &pos, const char *inputSlotNamesSeparatedBySemicolons, const char *outputSlotNamesSeparatedBySemicolons, int _nodeTypeID) {
-    strncpy(Name, name, IMGUINODE_MAX_NAME_LENGTH); Name[IMGUINODE_MAX_NAME_LENGTH-1] = '\0'; Pos = pos;
+void Node::init(const char *name, const ImVec2 &pos, const char *inputSlotNamesSeparatedBySemicolons, const char *outputSlotNamesSeparatedBySemicolons, int _nodeTypeID/*,float currentWindowFontScale*/) {
+    /*if (currentWindowFontScale<0)   {
+        ImGuiWindow* window = ImGui::GetCurrentWindow();
+        currentWindowFontScale = window ? window->FontWindowScale  : 0.f;
+    }*/
+    strncpy(Name, name, IMGUINODE_MAX_NAME_LENGTH); Name[IMGUINODE_MAX_NAME_LENGTH-1] = '\0'; Pos = /*currentWindowFontScale==0.f?*/pos/*:pos/currentWindowFontScale*/;
     InputsCount = 0; OutputsCount = 0;
     const char *input_names = inputSlotNamesSeparatedBySemicolons, *output_names = outputSlotNamesSeparatedBySemicolons;
     const char *tmp = NULL,*tmp2 = NULL;int length;
@@ -992,23 +1060,16 @@ bool FieldInfo::copyPDataValueFrom(const FieldInfo &f) {
     return true;
 }
 #if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
-inline static ImGuiHelper::FieldType ToImGuiHelperFieldType(ImGui::FieldType ft) {
-    return ImGuiHelper::FieldType((int)ft);
-}
-inline static ImGui::FieldType ToNodeGraphEditorFieldType(ImGuiHelper::FieldType ft) {
-    return ImGui::FieldType((int)ft);
-}
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 bool FieldInfo::serialize(ImGuiHelper::Serializer& s) const   {
     const char* fieldName = label;
-    const ImGuiHelper::FieldType ft = ToImGuiHelperFieldType(this->type);
+    const ImGuiHelper::FieldType ft = this->type;
     switch (ft) {
     case FT_INT:
     case FT_ENUM:
 	return s.save(ft,(const int*)pdata,fieldName,numArrayElements,precision);
     case FT_BOOL: {
-        const int tmp = (*((bool*)pdata)) ? 1 : 0;
-	return s.save(ft,(const int*)&tmp,fieldName,numArrayElements,precision);
+	return s.save((const bool*)pdata,fieldName,numArrayElements);
     }
     case FT_UNSIGNED:
 	return s.save((const unsigned*)pdata,fieldName,numArrayElements,precision);
@@ -1041,7 +1102,7 @@ static bool fieldInfoParseCallback(ImGuiHelper::FieldType ft,int numArrayElement
         fprintf(stderr,"fieldInfoParseCallback Error: \"%s\"!=\"%s\"\n",fi.label,name);
         return true;    // true = stop parsing
     }
-    const FieldType type = ToNodeGraphEditorFieldType(ft);
+    const FieldType type = ft;
     switch (type) {
     case FT_INT:
     case FT_ENUM:
@@ -1049,18 +1110,18 @@ static bool fieldInfoParseCallback(ImGuiHelper::FieldType ft,int numArrayElement
     case FT_FLOAT:
     case FT_DOUBLE:
     case FT_COLOR:
+    case FT_BOOL:
     {
         const int numElements = numArrayElements<=0 ? 1 : numArrayElements;
         const size_t elemSize = ((type==FT_INT||type==FT_ENUM)?sizeof(int):
                                                                type==FT_UNSIGNED?sizeof(unsigned):
                                                                                  (type==FT_FLOAT || type==FT_COLOR)?sizeof(float):
                                                                                                                     type==FT_DOUBLE?sizeof(double):
-                                                                                                                                    0);
+																    type==FT_BOOL?sizeof(bool):
+																		  0);
         memcpy(fi.pdata,pValue,numElements*elemSize);
         break;
     }
-        break;
-    case FT_BOOL: *((bool*)fi.pdata) = *((int*)pValue)!=0;
         break;
     case FT_STRING: {
         const char* txt = (const char*)pValue;
@@ -1088,66 +1149,66 @@ const char* FieldInfo::deserialize(const ImGuiHelper::Deserializer& d,const char
 }
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #endif //NO_IMGUIHELPER_SERIALIZATION
-FieldInfo &FieldInfoVector::addFieldInt(void *pdata, int numArrayElements, const char *label, const char *tooltip, int precision, int lowerLimit, int upperLimit, void *userData)   {
+FieldInfo &FieldInfoVector::addField(int *pdata, int numArrayElements, const char *label, const char *tooltip, int precision, int lowerLimit, int upperLimit, void *userData)   {
     IM_ASSERT(pdata && numArrayElements<=4);
     push_back(FieldInfo());
     FieldInfo& f = (*this)[size()-1];
-    f.init(FT_INT,pdata,label,tooltip,precision,numArrayElements,(double)lowerLimit,(double)upperLimit);
+    f.init(FT_INT,(void*) pdata,label,tooltip,precision,numArrayElements,(double)lowerLimit,(double)upperLimit);
     f.userData = userData;
     return f;
 }
-FieldInfo &FieldInfoVector::addFieldUnsigned(void *pdata, int numArrayElements, const char *label, const char *tooltip, int precision, unsigned lowerLimit, unsigned upperLimit, void *userData)   {
+FieldInfo &FieldInfoVector::addField(unsigned *pdata, int numArrayElements, const char *label, const char *tooltip, int precision, unsigned lowerLimit, unsigned upperLimit, void *userData)   {
     IM_ASSERT(pdata && numArrayElements<=4);
     push_back(FieldInfo());
     FieldInfo& f = (*this)[size()-1];
-    f.init(FT_UNSIGNED,pdata,label,tooltip,precision,numArrayElements,(double)lowerLimit,(double)upperLimit);
+    f.init(FT_UNSIGNED,(void*) pdata,label,tooltip,precision,numArrayElements,(double)lowerLimit,(double)upperLimit);
     f.userData = userData;
     return f;
 }
-FieldInfo &FieldInfoVector::addFieldFloat(void *pdata, int numArrayElements, const char *label, const char *tooltip, int precision, float lowerLimit, float upperLimit, void *userData, bool needsRadiansToDegs)   {
+FieldInfo &FieldInfoVector::addField(float *pdata, int numArrayElements, const char *label, const char *tooltip, int precision, float lowerLimit, float upperLimit, void *userData, bool needsRadiansToDegs)   {
     IM_ASSERT(pdata && numArrayElements<=4);
     push_back(FieldInfo());
     FieldInfo& f = (*this)[size()-1];
-    f.init(FT_FLOAT,pdata,label,tooltip,precision,numArrayElements,(double)lowerLimit,(double)upperLimit,needsRadiansToDegs);
+    f.init(FT_FLOAT,(void*) pdata,label,tooltip,precision,numArrayElements,(double)lowerLimit,(double)upperLimit,needsRadiansToDegs);
     f.userData = userData;
     return f;
 }
-FieldInfo &FieldInfoVector::addFieldDouble(void *pdata, int numArrayElements, const char *label, const char *tooltip, int precision, double lowerLimit, double upperLimit, void *userData, bool needsRadiansToDegs)   {
+FieldInfo &FieldInfoVector::addField(double *pdata, int numArrayElements, const char *label, const char *tooltip, int precision, double lowerLimit, double upperLimit, void *userData, bool needsRadiansToDegs)   {
     IM_ASSERT(pdata && numArrayElements<=4);
     push_back(FieldInfo());
     FieldInfo& f = (*this)[size()-1];
-    f.init(FT_DOUBLE,pdata,label,tooltip,precision,numArrayElements,(double)lowerLimit,(double)upperLimit,needsRadiansToDegs);
+    f.init(FT_DOUBLE,(void*) pdata,label,tooltip,precision,numArrayElements,(double)lowerLimit,(double)upperLimit,needsRadiansToDegs);
     f.userData = userData;
     return f;
 }
-FieldInfo &FieldInfoVector::addFieldText(void *pdata, int textLength, const char *label, const char *tooltip, bool readOnly, bool multiline, void *userData)   {
+FieldInfo &FieldInfoVector::addField(char *pdata, int textLength, const char *label, const char *tooltip, bool readOnly, bool multiline, void *userData)   {
     IM_ASSERT(pdata);
     push_back(FieldInfo());
     FieldInfo& f = (*this)[size()-1];
-    f.init(FT_STRING,pdata,label,tooltip,textLength,readOnly?1:0,(double) (multiline?1:0),(double)0);
+    f.init(FT_STRING,(void*) pdata,label,tooltip,textLength,readOnly?1:0,(double) (multiline?1:0),(double)0);
     f.userData = userData;
     return f;
 }
-FieldInfo &FieldInfoVector::addFieldEnum(void *pdata, int numEnumElements, FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr, const char *label, const char *tooltip, void *userData)   {
+FieldInfo &FieldInfoVector::addFieldEnum(int *pdata, int numEnumElements, FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr, const char *label, const char *tooltip, void *userData)   {
     IM_ASSERT(pdata && numEnumElements>0 && textFromEnumFunctionPtr);
     push_back(FieldInfo());
     FieldInfo& f = (*this)[size()-1];
-    f.init(FT_ENUM,pdata,label,tooltip,0,0,0,1,false,numEnumElements,textFromEnumFunctionPtr,userData);
+    f.init(FT_ENUM,(void*) pdata,label,tooltip,0,0,0,1,false,numEnumElements,textFromEnumFunctionPtr,userData);
     return f;
 }
-FieldInfo &FieldInfoVector::addFieldBool(void *pdata, const char *label, const char *tooltip, void *userData)   {
+FieldInfo &FieldInfoVector::addField(bool *pdata, const char *label, const char *tooltip, void *userData)   {
     IM_ASSERT(pdata);
     push_back(FieldInfo());
     FieldInfo& f = (*this)[size()-1];
-    f.init(FT_BOOL,pdata,label,tooltip);
+    f.init(FT_BOOL,(void*) pdata,label,tooltip);
     f.userData = userData;
     return f;
 }
-FieldInfo &FieldInfoVector::addFieldColor(void *pdata, bool useAlpha, const char *label, const char *tooltip, int precision, void *userData)   {
+FieldInfo &FieldInfoVector::addFieldColor(float *pdata, bool useAlpha, const char *label, const char *tooltip, int precision, void *userData)   {
     IM_ASSERT(pdata);
     push_back(FieldInfo());
     FieldInfo& f = (*this)[size()-1];
-    f.init(FT_COLOR,pdata,label,tooltip,precision,useAlpha?4:3,0,1);
+    f.init(FT_COLOR,(void*) pdata,label,tooltip,precision,useAlpha?4:3,0,1);
     f.userData = userData;
     return f;
 }
@@ -1183,9 +1244,9 @@ FieldInfo &FieldInfoVector::addFieldCustom(FieldInfo::RenderFieldDelegate render
 
     return f;
 }
+bool NodeGraphEditor::UseSlidersInsteadOfDragControls = false;
 bool FieldInfoVector::render()   {
     static const int precisionStrSize = 16;static char precisionStr[precisionStrSize];int precisionLastCharIndex;
-    static const float dragSpeed = 1.f;
 
     bool nodeEdited = false;
     for (int i=0,isz=size();i<isz;i++)   {
@@ -1203,6 +1264,8 @@ bool FieldInfoVector::render()   {
             precisionLastCharIndex = 1;
         }
 
+        float dragSpeed = (float)(f.maxValue-f.minValue)/200.f;if (dragSpeed<=0) dragSpeed=1.f;
+
         bool changed = false;
         switch (f.type) {
         case FT_DOUBLE: {
@@ -1216,11 +1279,21 @@ bool FieldInfoVector::render()   {
             for (int vl=0;vl<f.numArrayElements;vl++) {
                 value[vl] = (float) ((*(pField+vl))*rtd);
             }
-            switch (f.numArrayElements)    {
-            case 2: changed = ImGui::DragFloat2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-            case 3: changed = ImGui::DragFloat3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-            case 4: changed = ImGui::DragFloat4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-            default: changed = ImGui::DragFloat(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            if (NodeGraphEditor::UseSlidersInsteadOfDragControls)   {
+                switch (f.numArrayElements)    {
+                case 2: changed = ImGui::SliderFloat2(label,value,minValue,maxValue,precisionStr);break;
+                case 3: changed = ImGui::SliderFloat3(label,value,minValue,maxValue,precisionStr);break;
+                case 4: changed = ImGui::SliderFloat4(label,value,minValue,maxValue,precisionStr);break;
+                default: changed = ImGui::SliderFloat(label,value,minValue,maxValue,precisionStr);break;
+                }
+            }
+            else {
+                switch (f.numArrayElements)    {
+                case 2: changed = ImGui::DragFloat2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                case 3: changed = ImGui::DragFloat3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                case 4: changed = ImGui::DragFloat4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                default: changed = ImGui::DragFloat(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                }
             }
             if (changed)    {
                 for (int vl=0;vl<f.numArrayElements;vl++) {
@@ -1241,12 +1314,21 @@ bool FieldInfoVector::render()   {
             for (int vl=0;vl<f.numArrayElements;vl++) {
                 value[vl] = (float) ((*(pField+vl))*rtd);
             }
-            bool changed = false;
-            switch (f.numArrayElements)    {
-            case 2: changed = ImGui::DragFloat2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-            case 3: changed = ImGui::DragFloat3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-            case 4: changed = ImGui::DragFloat4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-            default: changed = ImGui::DragFloat(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            if (NodeGraphEditor::UseSlidersInsteadOfDragControls)   {
+                switch (f.numArrayElements)    {
+                case 2: changed = ImGui::SliderFloat2(label,value,minValue,maxValue,precisionStr);break;
+                case 3: changed = ImGui::SliderFloat3(label,value,minValue,maxValue,precisionStr);break;
+                case 4: changed = ImGui::SliderFloat4(label,value,minValue,maxValue,precisionStr);break;
+                default: changed = ImGui::SliderFloat(label,value,minValue,maxValue,precisionStr);break;
+                }
+            }
+            else {
+                switch (f.numArrayElements)    {
+                case 2: changed = ImGui::DragFloat2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                case 3: changed = ImGui::DragFloat3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                case 4: changed = ImGui::DragFloat4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                default: changed = ImGui::DragFloat(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                }
             }
             if (changed)    {
                 for (int vl=0;vl<f.numArrayElements;vl++) {
@@ -1264,12 +1346,22 @@ bool FieldInfoVector::render()   {
             for (int vl=0;vl<f.numArrayElements;vl++) {
                 value[vl] = (int) *(pField+vl);
             }
-            bool changed = false;
-            switch (f.numArrayElements)    {
-            case 2: changed = ImGui::DragInt2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-            case 3: changed = ImGui::DragInt3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-            case 4: changed = ImGui::DragInt4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-            default: changed = ImGui::DragInt(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            if (NodeGraphEditor::UseSlidersInsteadOfDragControls)   {
+                switch (f.numArrayElements)    {
+                case 2: changed = ImGui::SliderInt2(label,value,minValue,maxValue,precisionStr);break;
+                case 3: changed = ImGui::SliderInt3(label,value,minValue,maxValue,precisionStr);break;
+                case 4: changed = ImGui::SliderInt4(label,value,minValue,maxValue,precisionStr);break;
+                default: changed = ImGui::SliderInt(label,value,minValue,maxValue,precisionStr);break;
+                }
+            }
+            else {
+                if (dragSpeed<1.f) dragSpeed = 1.f;
+                switch (f.numArrayElements)    {
+                case 2: changed = ImGui::DragInt2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                case 3: changed = ImGui::DragInt3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                case 4: changed = ImGui::DragInt4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                default: changed = ImGui::DragInt(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                }
             }
             if (changed)    {
                 for (int vl=0;vl<f.numArrayElements;vl++) {
@@ -1287,12 +1379,22 @@ bool FieldInfoVector::render()   {
             for (int vl=0;vl<f.numArrayElements;vl++) {
                 value[vl] = (int) *(pField+vl);
             }
-            bool changed = false;
-            switch (f.numArrayElements)    {
-            case 2: changed = ImGui::DragInt2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-            case 3: changed = ImGui::DragInt3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-            case 4: changed = ImGui::DragInt4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-            default: changed = ImGui::DragInt(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            if (NodeGraphEditor::UseSlidersInsteadOfDragControls)   {
+                switch (f.numArrayElements)    {
+                case 2: changed = ImGui::SliderInt2(label,value,minValue,maxValue,precisionStr);break;
+                case 3: changed = ImGui::SliderInt3(label,value,minValue,maxValue,precisionStr);break;
+                case 4: changed = ImGui::SliderInt4(label,value,minValue,maxValue,precisionStr);break;
+                default: changed = ImGui::SliderInt(label,value,minValue,maxValue,precisionStr);break;
+                }
+            }
+            else {
+                if (dragSpeed<1.f) dragSpeed = 1.f;
+                switch (f.numArrayElements)    {
+                case 2: changed = ImGui::DragInt2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                case 3: changed = ImGui::DragInt3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                case 4: changed = ImGui::DragInt4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                default: changed = ImGui::DragInt(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+                }
             }
             if (changed)    {
                 for (int vl=0;vl<f.numArrayElements;vl++) {
@@ -1314,8 +1416,10 @@ bool FieldInfoVector::render()   {
             char* txtField = (char*)  f.pdata;
             const bool readOnly = f.numArrayElements==1;
             const bool multiline = f.minValue==1;
-            if (!multiline) changed|=ImGui::InputText(label,txtField,f.precision,ImGuiInputTextFlags_EnterReturnsTrue || (readOnly ? ImGuiInputTextFlags_ReadOnly : 1));
-            else changed|=ImGui::InputTextMultiline(label,txtField,f.precision,ImVec2(0,0),ImGuiInputTextFlags_EnterReturnsTrue || (readOnly ? ImGuiInputTextFlags_ReadOnly : 1));
+	    //ImGui::Text("%s (%s-%s)",label,readOnly?"readOnly":"writable",multiline?"multiline":"single line");
+	    ImGui::Text("%s",label);
+	    if (!multiline) changed|=ImGui::InputText("##DummyLabelInputText",txtField,f.precision,ImGuiInputTextFlags_EnterReturnsTrue || (readOnly ? ImGuiInputTextFlags_ReadOnly : 1));
+	    else changed|=ImGui::InputTextMultiline("##DummyLabelInputText",txtField,f.precision,ImVec2(0,0),/*ImGuiInputTextFlags_EnterReturnsTrue ||*/ (readOnly ? ImGuiInputTextFlags_ReadOnly : 1));
         }
             break;
         case FT_COLOR:  {
@@ -1358,15 +1462,9 @@ bool NodeGraphEditor::save(const char* filename)    {
 	const Node& n = (*nodes[i]);
 	s.save(&i,"node_index");
 	s.save(&n.typeID,"typeID");
-    s.save(&n.Pos.x,"Pos",2);
-    itmp = n.isOpen ? 1:0;s.save(ImGuiHelper::FT_BOOL,&itmp,"isOpen");
-    /* // These are fixed based on typeID
-	s.save(&n.InputCount,"InputsCount");
-	s.save(&n.OutputsCount,"OutputsCount");
-	s.save(Name,"Name");
-	for (int j=0;j<n.InputsCount;j++) s.save(InputNames[j],"InputName");
-	for (int j=0;j<n.OutputsCount;j++) s.save(OutputNames[j],"OutputName");
-	*/
+	s.save(&n.userID,"userID");
+	s.save(&n.Pos.x,"Pos",2);
+	s.save(&n.isOpen,"isOpen");
 	itmp = n.fields.size();s.save(&itmp,"numFields");
 	n.fields.serialize(s);
     }
@@ -1378,7 +1476,7 @@ bool NodeGraphEditor::save(const char* filename)    {
 	s.save(&l.InputSlot,"InputSlot");
 	itmp = getNodeIndex(l.OutputNode);
 	s.save(&itmp,"OutputNode");
-	s.save(&l.InputSlot,"OutputSlot");
+	s.save(&l.OutputSlot,"OutputSlot");
     }    
     //--------------------------------------------
     return true;
@@ -1399,16 +1497,17 @@ static bool NodeGraphEditorParseCallback1(ImGuiHelper::FieldType ft,int numArray
     return false;
 }
 struct NodeGraphEditorParseCallback2Struct {
-    int curNodeIndex,typeID,numFields;bool isOpen;
+    int curNodeIndex,typeID,numFields,userID;bool isOpen;
     ImVec2 Pos;
-    NodeGraphEditorParseCallback2Struct() : curNodeIndex(-1),typeID(-1),numFields(0),isOpen(false),Pos(0,0) {}
+    NodeGraphEditorParseCallback2Struct() : curNodeIndex(-1),typeID(-1),numFields(0),userID(-1),isOpen(false),Pos(0,0) {}
 };
 static bool NodeGraphEditorParseCallback2(ImGuiHelper::FieldType ft,int numArrayElements,void* pValue,const char* name,void* userPtr)    {
     NodeGraphEditorParseCallback2Struct* cbs = (NodeGraphEditorParseCallback2Struct*) userPtr;
     if (strcmp(name,"node_index")==0)   cbs->curNodeIndex = *((int*)pValue);
     else if (strcmp(name,"typeID")==0)  cbs->typeID = *((int*)pValue);
+    else if (strcmp(name,"userID")==0)  cbs->userID = *((int*)pValue);
     else if (strcmp(name,"Pos")==0)     cbs->Pos = *((ImVec2*)pValue);
-    else if (strcmp(name,"isOpen")==0)  cbs->isOpen = (*((int*)pValue))?true:false;
+    else if (strcmp(name,"isOpen")==0)  cbs->isOpen = *((bool*)pValue);
     else if (strcmp(name,"numFields")==0) {
         cbs->numFields = *((int*)pValue);return true;
     }
@@ -1441,11 +1540,13 @@ bool NodeGraphEditor::load(const char* filename)    {
     for (int i=0;i<cbs.numNodes;i++)    {
         NodeGraphEditorParseCallback2Struct cbn;
         amount = d.parse(NodeGraphEditorParseCallback2,(void*)&cbn,amount);
-        // TODO: do some checks ok cbn
+        // TODO: do some checks on cbn
         Node* n = nodeFactoryFunctionPtr(cbn.typeID,cbn.Pos);
+        n->userID = cbn.userID;
+        n->isOpen = cbn.isOpen;
         IM_ASSERT(n->fields.size()==cbn.numFields); // optional check (to remove)
-        amount = n->fields.deserialize(d,amount);
-        nodes.push_back(n);
+        amount = n->fields.deserialize(d,amount);        
+        addNode(n);
     }
     if (cbs.selectedNodeIndex>=0 && cbs.selectedNodeIndex<nodes.size()) selectedNode = nodes[cbs.selectedNodeIndex];
     for (int i=0;i<cbs.numLinks;i++)    {
@@ -1470,10 +1571,11 @@ bool NodeGraphEditor::load(const char* filename)    {
 enum MyNodeTypes {
     MNT_COLOR_NODE = 0,
     MNT_COMBINE_NODE,
+    MNT_COMMENT_NODE,
     MNT_COMPLEX_NODE,
     MNT_COUNT
 };
-static const char* MyNodeTypeNames[MNT_COUNT] = {"Color","Combine","Complex"};  // used in the "add Node" menu (and optionally as node title names)
+static const char* MyNodeTypeNames[MNT_COUNT] = {"Color","Combine","Comment","Complex"};  // used in the "add Node" menu (and optionally as node title names)
 class ColorNode : public Node {
     protected:
     typedef Node Base;  //Base Class
@@ -1509,7 +1611,7 @@ class ColorNode : public Node {
         node->init("ColorNode",pos,"","r;g;b;a",TYPE);
 
         // 3) init fields ( this uses the node->fields variable; otherwise we should have overridden other virtual methods (to render and serialize) )
-        node->fields.addFieldColor((void*)&node->Color,true,"Color","color with alpha");
+	node->fields.addFieldColor(&node->Color.x,true,"Color","color with alpha");
 
         // 4) set (or load) field values
         node->Color = ImColor(255,255,0,255);
@@ -1546,7 +1648,7 @@ class CombineNode : public Node {
         node->init("CombineNode",pos,"in1;in2","out",TYPE);
 
         // 3) init fields ( this uses the node->fields variable; otherwise we should have overridden other virtual methods (to render and serialize) )
-        node->fields.addFieldFloat((void*)&node->fraction,1,"Fraction","Fraction of in1 that is mixed with in2",2,0,1);
+	node->fields.addField(&node->fraction,1,"Fraction","Fraction of in1 that is mixed with in2",2,0,1);
 
         // 4) set (or load) field values
         node->fraction = 0.5f;
@@ -1559,6 +1661,53 @@ class CombineNode : public Node {
     inline static const ThisClass* Cast(const Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
 
 
+};
+class CommentNode : public Node {
+    protected:
+    typedef Node Base;  //Base Class
+    typedef CommentNode ThisClass;
+    CommentNode() : Base() {}
+    static const int TYPE = MNT_COMMENT_NODE;
+
+    char comment[256];			    // field 1
+    char comment2[256];			    // field 2
+    char comment3[256];			    // field 3
+    bool flag;				    // field 4
+
+    virtual const char* getTooltip() const {return "CommentNode tooltip.";}
+    virtual const char* getInfo() const {return "CommentNode info.\n\nThis is supposed to display some info about this node.";}
+
+    public:
+
+    // create:
+    static ThisClass* Create(const ImVec2& pos) {
+	// 1) allocation
+	// MANDATORY (NodeGraphEditor::~NodeGraphEditor() will delete these with ImGui::MemFree(...))
+	// MANDATORY even with blank ctrs. Requires: #include <new>. Reason: ImVector does not call ctrs/dctrs on items.
+	ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));new (node) ThisClass();
+
+	// 2) main init
+	node->init("CommentNode",pos,"","",TYPE);
+
+	// 3) init fields ( this uses the node->fields variable; otherwise we should have overridden other virtual methods (to render and serialize) )
+	node->fields.addField(&node->comment[0],256,"Single Line","A single line editable field",false,false);
+	node->fields.addField(&node->comment2[0],256,"Multi Line","A multi line editable field",false,true);
+	node->fields.addField(&node->comment3[0],256,"Single Line","A multi line read-only field",true,true);
+	node->fields.addField(&node->flag,"Flag","A boolean field");
+
+	// 4) set (or load) field values
+	strcpy(node->comment,"Initial Text Line.");
+	strcpy(node->comment2,"Initial Text Multiline.");
+	static const char* tiger = "Tiger, tiger, burning bright\nIn the forests of the night,\nWhat immortal hand or eye\nCould frame thy fearful symmetry?";
+	strncpy(node->comment3,tiger,256);
+	node->flag = true;
+
+	return node;
+    }
+
+    // helper casts:
+    inline static ThisClass* Cast(Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
+    inline static const ThisClass* Cast(const Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
 };
 class ComplexNode : public Node {
     protected:
@@ -1597,8 +1746,8 @@ class ComplexNode : public Node {
         node->init("ComplexNode",pos,"in1;in2;in3","out1;out2",TYPE);
 
         // 3) init fields ( this uses the node->fields variable; otherwise we should have overridden other virtual methods (to render and serialize) )
-        node->fields.addFieldFloat((void*)&node->Value[0],3,"Angles","Three floats that are stored in radiant units internally",2,0,360,NULL,true);
-        node->fields.addFieldColor((void*)&node->Color,true,"Color","color with alpha");
+	node->fields.addField(&node->Value[0],3,"Angles","Three floats that are stored in radiant units internally",2,0,360,NULL,true);
+	node->fields.addFieldColor(&node->Color.x,true,"Color","color with alpha");
         node->fields.addFieldEnum(&node->enumIndex,3,&GetTextFromEnumIndex,"Fruit","Choose your favourite");
 
         // 4) set (or load) field values
@@ -1617,6 +1766,7 @@ static Node* MyNodeFactory(int nt,const ImVec2& pos) {
     switch (nt) {
     case MNT_COLOR_NODE: return ColorNode::Create(pos);
     case MNT_COMBINE_NODE: return CombineNode::Create(pos);
+    case MNT_COMMENT_NODE: return CommentNode::Create(pos);
     case MNT_COMPLEX_NODE: return ComplexNode::Create(pos);
     default:
     IM_ASSERT(true);    // Missing node type creation

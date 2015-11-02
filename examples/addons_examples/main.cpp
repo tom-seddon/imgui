@@ -159,7 +159,7 @@ void InitGL()	// Mandatory
     ImGui::GetIO().MouseDrawCursor = true;
 #endif // IMGUI_USE_GLFW_BINDING & IMGUI_GLFW_NO_NATIVE_CURSORS
 
-    //ImGui::GetIO().FontAllowUserScaling = true;
+    ImGui::GetIO().FontAllowUserScaling = true;
 }
 void ResizeGL(int /*w*/,int /*h*/)	// Mandatory
 {

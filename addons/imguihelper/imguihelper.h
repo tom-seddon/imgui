@@ -11,16 +11,7 @@ namespace ImGui {
 // Experimental: tested on Ubuntu only. Should work with urls, folders and files.
 bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS=false);
 
-}   // ImGui
-
-
-
-#ifndef NO_IMGUIHELPER_SERIALIZATION
-// These classed are supposed to be used internally
-#include <stdio.h> // FILE*. Why must I include this if only a FILE* appears in this header ?
-namespace ImGuiHelper {
-
-// IMPORTANT: the serialization/deserialization supports only 5 types: FT_INT,FT_UNSIGNED,FT_FLOAT,FT_DOUBLE and FT_STRING.
+// IMPORTANT: the serialization/deserialization supports only 6 types: FT_INT,FT_UNSIGNED,FT_FLOAT,FT_DOUBLE,FT_BOOL (from 1 to 4 components) and FT_STRING.
 // The other types are just "hints" to the user that must convert the values.
 enum FieldType {
     FT_INT=0,
@@ -30,11 +21,26 @@ enum FieldType {
     //--------------- End types that support 1 to 4 array components ----------
     FT_STRING,
     FT_ENUM,        // serialized/deserialized as FT_INT
-    FT_BOOL,        // serialized/deserialized as FT_INT
+    FT_BOOL,
     FT_COLOR,       // serialized/deserialized as FT_FLOAT
+    FT_CUSTOM,
     FT_COUNT
 };
 
+
+}   // ImGui
+
+#ifndef NO_IMGUIHELPER_SERIALIZATION
+#include <stdio.h> // FILE*. Why must I include this if only a FILE* appears in this header ?
+#endif //NO_IMGUIHELPER_SERIALIZATION
+
+// These classed are supposed to be used internally
+namespace ImGuiHelper {
+typedef ImGui::FieldType FieldType;
+
+// TODO: add callbacks to serialize/deserialize FT_CUSTOM fields.
+
+#ifndef NO_IMGUIHELPER_SERIALIZATION
 #ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
 class Deserializer {
     char* f_data;
@@ -74,14 +80,15 @@ class Serializer {
     bool save(FieldType ft, const float* pValue, const char* name, int numArrayElements=1,int prec=3);
     bool save(FieldType ft, const int* pValue, const char* name, int numArrayElements=1,int prec=-1);
     bool save(const float* pValue,const char* name,int numArrayElements=1,int prec=3)    {
-        return save(FT_FLOAT,pValue,name,numArrayElements,prec);
+        return save(ImGui::FT_FLOAT,pValue,name,numArrayElements,prec);
     }
     bool save(const int* pValue,const char* name,int numArrayElements=1,int prec=-1)  {
-        return save(FT_INT,pValue,name,numArrayElements,prec);
+        return save(ImGui::FT_INT,pValue,name,numArrayElements,prec);
     }
     bool save(const char* pValue,const char* name,int pValueSize=-1);
     bool save(const unsigned* pValue, const char* name, int numArrayElements=1,int prec=-1);
     bool save(const double* pValue, const char* name, int numArrayElements=1,int prec=-1);
+    bool save(const bool* pValue, const char* name, int numArrayElements=1);
 
 
 protected:
@@ -90,9 +97,9 @@ protected:
 
 };
 #endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#endif //NO_IMGUIHELPER_SERIALIZATION
 
 } // ImGuiHelper
-#endif //NO_IMGUIHELPER_SERIALIZATION
 
 
 #endif //IMGUIHELPER_H_

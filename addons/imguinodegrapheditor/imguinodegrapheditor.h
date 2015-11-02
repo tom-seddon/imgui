@@ -22,28 +22,16 @@
 
 // TODO:
 /*
--> Implement a copy/paste functionality for standard Nodes (i.e. nodes that use FieldInfo)
--> Load/Save NodeGraphEditor Style. DONE!
--> Serialization/Deserialization of the whole NodeGraphEditor + Nodes
--> Add/Adjust/Fix more FieldTypes
+-> DONE - Implement a copy/paste functionality for standard Nodes (i.e. nodes that use FieldInfo)
+-> DONE - Load/Save NodeGraphEditor Style.
+-> DONE - Serialization/Deserialization of the whole NodeGraphEditor + Nodes
+-> Add/Adjust/Fix more FieldTypes. TODO!
+-> Adjust zooming (CTRL + MW when ImGui::GetIO().FontAllowUserScaling = true;)
 */
 
 
 namespace ImGui	{
 
-// The meaning of all these support classes (FieldInfo & C) is to ease future serialization and copy/paste functionality... is it worthy?
-    enum FieldType {
-        FT_INT=0,
-        FT_UNSIGNED,
-        FT_FLOAT,
-        FT_DOUBLE,
-        //--------------- End types that support 1 to 4 array components ----------
-        FT_STRING,
-        FT_ENUM,        // like FT_INT, but the text is retrieved through HeaderData::textFromEnumFunctionPointer function ptr
-        FT_BOOL,
-        FT_COLOR,
-        FT_CUSTOM
-    };    
     class FieldInfo {
     protected:
 #       ifndef IMGUIFIELDINFO_MAX_LABEL_LENGTH
@@ -134,15 +122,15 @@ namespace ImGui	{
     class FieldInfoVector : public ImVector < FieldInfo >    {
     public:
     // Warning: returned reference might not stay valid for long in these methods
-    FieldInfo& addFieldInt(void* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=0,int lowerLimit=0,int upperLimit=100,void* userData=NULL);
-    FieldInfo& addFieldUnsigned(void* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=0,unsigned lowerLimit=0,unsigned upperLimit=100,void* userData=NULL);
-    FieldInfo& addFieldFloat(void* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,float lowerLimit=0,float upperLimit=1,void* userData=NULL,bool needsRadiansToDegs=false);
-    FieldInfo& addFieldDouble(void* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,double lowerLimit=0,double upperLimit=100,void* userData=NULL,bool needsRadiansToDegs=false);
-    FieldInfo& addFieldText(void* pdata,int textLength=0,const char* label=NULL,const char* tooltip=NULL,bool readOnly=false,bool multiline=false,void* userData=NULL);
+    FieldInfo& addField(int* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=0,int lowerLimit=0,int upperLimit=100,void* userData=NULL);
+    FieldInfo& addField(unsigned* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=0,unsigned lowerLimit=0,unsigned upperLimit=100,void* userData=NULL);
+    FieldInfo& addField(float* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,float lowerLimit=0,float upperLimit=1,void* userData=NULL,bool needsRadiansToDegs=false);
+    FieldInfo& addField(double* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,double lowerLimit=0,double upperLimit=100,void* userData=NULL,bool needsRadiansToDegs=false);
+    FieldInfo& addField(char* pdata,int textLength=0,const char* label=NULL,const char* tooltip=NULL,bool readOnly=false,bool multiline=false,void* userData=NULL);
 
-    FieldInfo& addFieldEnum(void* pdata,int numEnumElements,FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
-    FieldInfo& addFieldBool(void* pdata,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
-    FieldInfo& addFieldColor(void* pdata,bool useAlpha=true,const char* label=NULL,const char* tooltip=NULL,int precision=3,void* userData=NULL);
+    FieldInfo& addFieldEnum(int* pdata,int numEnumElements,FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
+    FieldInfo& addField(bool* pdata,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
+    FieldInfo& addFieldColor(float* pdata,bool useAlpha=true,const char* label=NULL,const char* tooltip=NULL,int precision=3,void* userData=NULL);
     FieldInfo& addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,FieldInfo::CopyFieldDelegate copyFieldDelegate,void* userData
 //------WIP----------------------------------------------------------------------
 #       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
@@ -255,10 +243,11 @@ class Node
     int typeID;
 
     Node() : Pos(0,0),Size(0,0) {}
-    void init(const char* name, const ImVec2& pos,const char* inputSlotNamesSeparatedBySemicolons=NULL,const char* outputSlotNamesSeparatedBySemicolons=NULL,int _nodeTypeID=0);
+    void init(const char* name, const ImVec2& pos,const char* inputSlotNamesSeparatedBySemicolons=NULL,const char* outputSlotNamesSeparatedBySemicolons=NULL,int _nodeTypeID=0/*,float currentWindowFontScale=-1.f*/);
 
-    ImVec2 GetInputSlotPos(int slot_no) const   { return ImVec2(Pos.x, Pos.y + Size.y * ((float)slot_no+1) / ((float)InputsCount+1)); }
-    ImVec2 GetOutputSlotPos(int slot_no) const  { return ImVec2(Pos.x + Size.x, Pos.y + Size.y * ((float)slot_no+1) / ((float)OutputsCount+1)); }
+    inline ImVec2 GetInputSlotPos(int slot_no,float currentFontWindowScale=1.f) const   { return ImVec2(Pos.x*currentFontWindowScale, Pos.y*currentFontWindowScale + Size.y * ((float)slot_no+1) / ((float)InputsCount+1)); }
+    inline ImVec2 GetOutputSlotPos(int slot_no,float currentFontWindowScale=1.f) const  { return ImVec2(Pos.x*currentFontWindowScale + Size.x, Pos.y*currentFontWindowScale + Size.y * ((float)slot_no+1) / ((float)OutputsCount+1)); }
+    inline const ImVec2 GetPos(float currentFontWindowScale=1.f) const {return ImVec2(Pos.x*currentFontWindowScale,Pos.y*currentFontWindowScale);}
 
     friend struct NodeLink;
     friend struct NodeGraphEditor;
@@ -298,6 +287,7 @@ struct NodeGraphEditor	{
     bool allowOnlyOneLinkPerInputSlot;  // multiple links can still be connected to single output slots
     bool avoidCircularLinkLoopsInOut;   // however multiple paths from a node to another are still allowed (only in-out circuits are prevented)
     bool isAContextMenuOpen;            // to fix a bug
+    float oldFontWindowScale;           // to fix zooming (CTRL+mouseWheel)
 
     // Node types here are supposed to be zero-based and contiguous
     const char** pNodeTypeNames; // NOT OWNED! -> Must point to a static reference
@@ -381,6 +371,7 @@ struct NodeGraphEditor	{
     bool show_load_save_buttons;    // in the left_pane
     bool show_top_pane;
     bool show_node_copy_paste_buttons;
+    static bool UseSlidersInsteadOfDragControls;
     mutable void* user_ptr;
     static Style& GetStyle() {return style;}
     mutable ImGuiColorEditMode colorEditMode;
@@ -405,6 +396,7 @@ struct NodeGraphEditor	{
         inited = init_in_ctr;
         colorEditMode = ImGuiColorEditMode_RGB;
         isAContextMenuOpen = false;
+        oldFontWindowScale = 0.f;
     }
     virtual ~NodeGraphEditor() {
         clear();
@@ -503,7 +495,8 @@ struct NodeGraphEditor	{
     bool isNodeReachableFrom(const Node *node1, int slot1, bool goBackward,const Node* nodeToFind,int* pOptionalNodeToFindSlotOut=NULL) const;
     bool isNodeReachableFrom(const Node *node1, bool goBackward,const Node* nodeToFind,int* pOptionalNode1SlotOut=NULL,int* pOptionalNodeToFindSlotOut=NULL) const;
     bool hasLinks(Node* node) const;
-
+    int getAllNodesOfType(int typeID,ImVector<Node*>* pNodesOut=NULL,bool clearNodesOutBeforeUsage=true);
+    int getAllNodesOfType(int typeID,ImVector<const Node*>* pNodesOut=NULL,bool clearNodesOutBeforeUsage=true) const;
 
     // It should be better not to add/delete node/links in the callbacks... (but all is untested here)
     void setNodeCallback(NodeCallback cb) {nodeCallback=cb;}
