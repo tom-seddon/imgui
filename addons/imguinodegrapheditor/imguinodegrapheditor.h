@@ -126,7 +126,7 @@ namespace ImGui	{
     FieldInfo& addField(unsigned* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=0,unsigned lowerLimit=0,unsigned upperLimit=100,void* userData=NULL);
     FieldInfo& addField(float* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,float lowerLimit=0,float upperLimit=1,void* userData=NULL,bool needsRadiansToDegs=false);
     FieldInfo& addField(double* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,double lowerLimit=0,double upperLimit=100,void* userData=NULL,bool needsRadiansToDegs=false);
-    FieldInfo& addField(char* pdata,int textLength=0,const char* label=NULL,const char* tooltip=NULL,bool readOnly=false,bool multiline=false,void* userData=NULL);
+    FieldInfo& addField(char* pdata, int textLength=0, const char* label=NULL, const char* tooltip=NULL, int flags=ImGuiInputTextFlags_EnterReturnsTrue, bool multiline=false,float optionalHeight=-1.f, void* userData=NULL);
 
     FieldInfo& addFieldEnum(int* pdata,int numEnumElements,FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
     FieldInfo& addField(bool* pdata,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
@@ -204,7 +204,6 @@ class Node
     inline int getType() const {return typeID;}
     inline int getNumInputSlots() const {return InputsCount;}
     inline int getNumOutputSlots() const {return OutputsCount;}
-    const ImVec2& getPosition() const {return Pos;}
     inline void setOpen(bool flag) {isOpen=flag;}
 
     protected:
@@ -241,8 +240,9 @@ class Node
     mutable float startEditingTime; // used for Node Editing Callbacks
     mutable bool isOpen;
     int typeID;
+    float baseWidthOverride;
 
-    Node() : Pos(0,0),Size(0,0) {}
+    Node() : Pos(0,0),Size(0,0),baseWidthOverride(-1) {}
     void init(const char* name, const ImVec2& pos,const char* inputSlotNamesSeparatedBySemicolons=NULL,const char* outputSlotNamesSeparatedBySemicolons=NULL,int _nodeTypeID=0/*,float currentWindowFontScale=-1.f*/);
 
     inline ImVec2 GetInputSlotPos(int slot_no,float currentFontWindowScale=1.f) const   { return ImVec2(Pos.x*currentFontWindowScale, Pos.y*currentFontWindowScale + Size.y * ((float)slot_no+1) / ((float)InputsCount+1)); }
@@ -375,6 +375,7 @@ struct NodeGraphEditor	{
     mutable void* user_ptr;
     static Style& GetStyle() {return style;}
     mutable ImGuiColorEditMode colorEditMode;
+    float nodesBaseWidth;
 
     NodeGraphEditor(bool show_grid_= true,bool show_connection_names_=true,bool _allowOnlyOneLinkPerInputSlot=true,bool _avoidCircularLinkLoopsInOut=true,bool init_in_ctr=false) {
         scrolling = ImVec2(0.0f, 0.0f);
@@ -397,6 +398,7 @@ struct NodeGraphEditor	{
         colorEditMode = ImGuiColorEditMode_RGB;
         isAContextMenuOpen = false;
         oldFontWindowScale = 0.f;
+        nodesBaseWidth = 120.f;
     }
     virtual ~NodeGraphEditor() {
         clear();
@@ -425,7 +427,8 @@ struct NodeGraphEditor	{
                 ImGui::MemFree(sourceCopyNode);       // items MUST be allocated by the user using ImGui::MemAlloc(...)
                 sourceCopyNode = NULL;
         }
-        selectedNode = dragNode.node = NULL;
+        selectedNode = dragNode.node = NULL;    
+        oldFontWindowScale = 0.f;
     }
 
     bool mustInit() const {return !inited;}

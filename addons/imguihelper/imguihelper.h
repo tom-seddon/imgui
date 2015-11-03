@@ -11,19 +11,19 @@ namespace ImGui {
 // Experimental: tested on Ubuntu only. Should work with urls, folders and files.
 bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS=false);
 
-// IMPORTANT: the serialization/deserialization supports only 6 types: FT_INT,FT_UNSIGNED,FT_FLOAT,FT_DOUBLE,FT_BOOL (from 1 to 4 components) and FT_STRING.
-// The other types are just "hints" to the user that must convert the values.
+// IMPORTANT: FT_INT,FT_UNSIGNED,FT_FLOAT,FT_DOUBLE,FT_BOOL support from 1 to 4 components.
 enum FieldType {
     FT_INT=0,
     FT_UNSIGNED,
     FT_FLOAT,
     FT_DOUBLE,
     //--------------- End types that support 1 to 4 array components ----------
-    FT_STRING,
+    FT_STRING,      // an arbitrary-length string (or a char blob that can be used as custom type)
     FT_ENUM,        // serialized/deserialized as FT_INT
     FT_BOOL,
-    FT_COLOR,       // serialized/deserialized as FT_FLOAT
-    FT_CUSTOM,
+    FT_COLOR,       // serialized/deserialized as FT_FLOAT (with 3 or 4 components)
+    FT_TEXTLINE,    // a (series of) text line(s) (separated by '\n') that are fed one at a time in the Deserializer callback
+    FT_CUSTOM,      // a custom type that is served like FT_TEXTLINE (=one line at a time).
     FT_COUNT
 };
 
@@ -37,8 +37,6 @@ enum FieldType {
 // These classed are supposed to be used internally
 namespace ImGuiHelper {
 typedef ImGui::FieldType FieldType;
-
-// TODO: add callbacks to serialize/deserialize FT_CUSTOM fields.
 
 #ifndef NO_IMGUIHELPER_SERIALIZATION
 #ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
@@ -56,10 +54,16 @@ class Deserializer {
     bool isValid() const {return (f_data && f_size>0);}
 
     // returns whether to stop parsing or not
-    typedef bool (*ParseCallback)(FieldType ft,int numArrayElements,void* pValue,const char* name,void* userPtr);
+    typedef bool (*ParseCallback)(FieldType ft,int numArrayElements,void* pValue,const char* name,void* userPtr);   // (*)
     // returns a pointer to "next_line" if the callback has stopped parsing or NULL.
     // returned value can be refeed as optionalBufferStart
     const char *parse(ParseCallback cb,void* userPtr,const char* optionalBufferStart=NULL) const;
+
+    // (*)
+    /*
+    FT_CUSTOM and FT_TEXTLINE are served multiple times (one per text line) with numArrayElements that goes from 0 to numTextLines-1.
+    All the other field types are served once.
+    */
 
 protected:
     void operator=(const Deserializer&) {}
@@ -89,8 +93,11 @@ class Serializer {
     bool save(const unsigned* pValue, const char* name, int numArrayElements=1,int prec=-1);
     bool save(const double* pValue, const char* name, int numArrayElements=1,int prec=-1);
     bool save(const bool* pValue, const char* name, int numArrayElements=1);
+    bool saveTextLines(const char* pValue,const char* name); // Splits the string into N lines: each line is passed by the deserializer into a single element in the callback
 
-
+    // To serialize FT_CUSTOM:
+    bool saveCustomFieldTypeHeader(const char* name, int numTextLines=1); //e.g. for 4 lines "[CUSTOM-4:MyCustomFieldTypeName]\n". Then add 4 lines using getPointer() below.
+    FILE* getPointer() {return f;}  // remember to add an additional '\n' at the end of all the text lines
 protected:
     void operator=(const Serializer&) {}
     Serializer(const Serializer&) {}

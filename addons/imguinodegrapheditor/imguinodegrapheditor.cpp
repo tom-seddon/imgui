@@ -139,6 +139,9 @@ bool NodeGraphEditor::Style::Load(NodeGraphEditor::Style &style, const char *fil
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #endif //NO_IMGUIHELPER_SERIALIZATION
 
+static float CurrentNodeWidth=0.f;  // used internally
+static float BaseNodeWidth=0.f;  // used internally
+
 void NodeGraphEditor::render()
 {
     if (!inited) init();
@@ -318,14 +321,17 @@ void NodeGraphEditor::render()
     ImGui::BeginChild("scrolling_region", ImVec2(0,0), true, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoMove);
 
     // fixes zooming just a bit
-    bool isZooming = false;
+    bool nodesHaveZeroSize = false;
     const float currentFontWindowScale = ImGui::GetCurrentWindow()->FontWindowScale;
-    if (oldFontWindowScale==0.f) oldFontWindowScale = currentFontWindowScale;
+    if (oldFontWindowScale==0.f) {
+        oldFontWindowScale = currentFontWindowScale;
+        nodesHaveZeroSize = true;   // at start or after clear()
+    }
     else if (oldFontWindowScale!=currentFontWindowScale) {
-	isZooming = true;
+        nodesHaveZeroSize = true;
         for (int i=0,isz=nodes.size();i<isz;i++)    {
             Node* node = nodes[i];
-	    node->Size = ImVec2(0,0);   // we must reset the size
+            node->Size = ImVec2(0,0);   // we must reset the size
         }
         oldFontWindowScale = currentFontWindowScale;
     }
@@ -336,8 +342,8 @@ void NodeGraphEditor::render()
     const float MOUSE_DELTA_SQUARED = io.MouseDelta.x*io.MouseDelta.x+io.MouseDelta.y*io.MouseDelta.y;
     const float MOUSE_DELTA_SQUARED_THRESHOLD = NODE_SLOT_RADIUS_SQUARED * 0.05f;    // We don't detect "mouse release" events while dragging links onto slots. Instead we check that our mouse delta is small enough. Otherwise we couldn't hover other slots while dragging links.
 
-
-    ImGui::PushItemWidth(120.0f*currentFontWindowScale);
+    CurrentNodeWidth = BaseNodeWidth = nodesBaseWidth*currentFontWindowScale;
+    ImGui::PushItemWidth(CurrentNodeWidth);
 
     ImVec2 offset = ImGui::GetCursorScreenPos() - scrolling;
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
@@ -363,7 +369,7 @@ void NodeGraphEditor::render()
     draw_list->ChannelsSetCurrent(0); // Background
     const ImVec2 link_cp(style.link_control_point_distance * currentFontWindowScale,0);
     const float link_line_width = style.link_line_width * currentFontWindowScale;
-    if (!isZooming) // Otherwise artifacts while scaling
+    if (!nodesHaveZeroSize) // Otherwise artifacts while scaling
     {
         for (int link_idx = 0; link_idx < links.Size; link_idx++)
         {
@@ -408,6 +414,11 @@ void NodeGraphEditor::render()
     for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
     {
         Node* node = nodes[node_idx];
+	if (node->baseWidthOverride>0) {
+	    CurrentNodeWidth = node->baseWidthOverride*currentFontWindowScale;
+	    ImGui::PushItemWidth(CurrentNodeWidth);
+	}
+	else CurrentNodeWidth = BaseNodeWidth;
         ImGui::PushID((const void*) node);
         const ImVec2 nodePos = node->GetPos(currentFontWindowScale);
         ImVec2 node_rect_min = offset + nodePos;
@@ -683,6 +694,7 @@ void NodeGraphEditor::render()
 
         ImGui::SetCursorScreenPos(oldCursorScreenPos);
         ImGui::PopID();
+	if (node->baseWidthOverride>0) ImGui::PopItemWidth();
     }
     ImGui::PopStyleColor(3);
     draw_list->ChannelsMerge();
@@ -1074,10 +1086,10 @@ bool FieldInfo::serialize(ImGuiHelper::Serializer& s) const   {
     case FT_UNSIGNED:
 	return s.save((const unsigned*)pdata,fieldName,numArrayElements,precision);
     case FT_DOUBLE:
-	return s.save((const double*)pdata,fieldName,numArrayElements,precision);
+    return s.save((const double*)pdata,fieldName,numArrayElements,(precision>=0 && needsRadiansToDegs) ? (precision+3) : precision);
     case FT_FLOAT:
     case FT_COLOR:
-	return s.save(ft,(const float*)pdata,fieldName,numArrayElements,precision);
+    return s.save(ft,(const float*)pdata,fieldName,numArrayElements,(precision>=0 && needsRadiansToDegs) ? (precision+3) : precision);
     case FT_STRING: {
         const char* txt = (const char*)pdata;
         int len = (int) strlen(txt);
@@ -1181,11 +1193,11 @@ FieldInfo &FieldInfoVector::addField(double *pdata, int numArrayElements, const 
     f.userData = userData;
     return f;
 }
-FieldInfo &FieldInfoVector::addField(char *pdata, int textLength, const char *label, const char *tooltip, bool readOnly, bool multiline, void *userData)   {
+FieldInfo &FieldInfoVector::addField(char *pdata, int textLength, const char *label, const char *tooltip, int flags, bool multiline,float optionalHeight, void *userData)   {
     IM_ASSERT(pdata);
     push_back(FieldInfo());
     FieldInfo& f = (*this)[size()-1];
-    f.init(FT_STRING,(void*) pdata,label,tooltip,textLength,readOnly?1:0,(double) (multiline?1:0),(double)0);
+    f.init(FT_STRING,(void*) pdata,label,tooltip,textLength,flags,0.f,(float)optionalHeight,multiline);
     f.userData = userData;
     return f;
 }
@@ -1414,12 +1426,24 @@ bool FieldInfoVector::render()   {
             break;
         case FT_STRING: {
             char* txtField = (char*)  f.pdata;
-            const bool readOnly = f.numArrayElements==1;
-            const bool multiline = f.minValue==1;
-	    //ImGui::Text("%s (%s-%s)",label,readOnly?"readOnly":"writable",multiline?"multiline":"single line");
+            const int flags = f.numArrayElements;
+	    const float maxHeight =(float) (f.maxValue<0 ? 0 : f.maxValue);
+            const bool multiline = f.needsRadiansToDegs;
 	    ImGui::Text("%s",label);
-	    if (!multiline) changed|=ImGui::InputText("##DummyLabelInputText",txtField,f.precision,ImGuiInputTextFlags_EnterReturnsTrue || (readOnly ? ImGuiInputTextFlags_ReadOnly : 1));
-	    else changed|=ImGui::InputTextMultiline("##DummyLabelInputText",txtField,f.precision,ImVec2(0,0),/*ImGuiInputTextFlags_EnterReturnsTrue ||*/ (readOnly ? ImGuiInputTextFlags_ReadOnly : 1));
+	    const float width = CurrentNodeWidth;
+	    if (flags<0) {
+		//ImVec2 pos = ImGui::GetCursorScreenPos();
+		ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + width);
+		ImGui::Text(txtField, width);
+		//ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), 0xFF00FFFF);
+		ImGui::PopTextWrapPos();
+	    }
+	    else if (!multiline) {
+		ImGui::PushItemWidth(width);
+		changed|=ImGui::InputText("##DummyLabelInputText",txtField,f.precision,flags);
+		ImGui::PopItemWidth();
+	    }
+	    else changed|=ImGui::InputTextMultiline("##DummyLabelInputText",txtField,f.precision,ImVec2(width,maxHeight),flags);
         }
             break;
         case FT_COLOR:  {
@@ -1668,11 +1692,13 @@ class CommentNode : public Node {
     typedef CommentNode ThisClass;
     CommentNode() : Base() {}
     static const int TYPE = MNT_COMMENT_NODE;
+    static const int TextBufferSize = 128;
 
-    char comment[256];			    // field 1
-    char comment2[256];			    // field 2
-    char comment3[256];			    // field 3
-    bool flag;				    // field 4
+    char comment[TextBufferSize];			    // field 1
+    char comment2[TextBufferSize];			    // field 2
+    char comment3[TextBufferSize];			    // field 3
+    char comment4[TextBufferSize];			    // field 4
+    bool flag;                                  // field 5
 
     virtual const char* getTooltip() const {return "CommentNode tooltip.";}
     virtual const char* getInfo() const {return "CommentNode info.\n\nThis is supposed to display some info about this node.";}
@@ -1688,18 +1714,22 @@ class CommentNode : public Node {
 
 	// 2) main init
 	node->init("CommentNode",pos,"","",TYPE);
+	node->baseWidthOverride = 200.f;    // (optional) default base node width is 120.f;
+
 
 	// 3) init fields ( this uses the node->fields variable; otherwise we should have overridden other virtual methods (to render and serialize) )
-	node->fields.addField(&node->comment[0],256,"Single Line","A single line editable field",false,false);
-	node->fields.addField(&node->comment2[0],256,"Multi Line","A multi line editable field",false,true);
-	node->fields.addField(&node->comment3[0],256,"Single Line","A multi line read-only field",true,true);
+	node->fields.addField(&node->comment[0],TextBufferSize,"Single Line","A single line editable field",ImGuiInputTextFlags_EnterReturnsTrue,false);
+	node->fields.addField(&node->comment2[0],TextBufferSize,"Multi Line","A multi line editable field",ImGuiInputTextFlags_AllowTabInput,true,50);
+	node->fields.addField(&node->comment3[0],TextBufferSize,"Multi Line 2","A multi line read-only field",ImGuiInputTextFlags_ReadOnly,true,50);
+	node->fields.addField(&node->comment4[0],TextBufferSize,"Text Wrapped","A text wrapped field",-1);
 	node->fields.addField(&node->flag,"Flag","A boolean field");
 
 	// 4) set (or load) field values
 	strcpy(node->comment,"Initial Text Line.");
 	strcpy(node->comment2,"Initial Text Multiline.");
 	static const char* tiger = "Tiger, tiger, burning bright\nIn the forests of the night,\nWhat immortal hand or eye\nCould frame thy fearful symmetry?";
-	strncpy(node->comment3,tiger,256);
+	strncpy(node->comment3,tiger,TextBufferSize);
+	strncpy(node->comment4,"I hope this text gets wrapped gracefully. But I'm not sure about it...\0",TextBufferSize);
 	node->flag = true;
 
 	return node;

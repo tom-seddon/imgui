@@ -54,9 +54,9 @@ bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS)	{
 #include <stdio.h>  // FILE
 namespace ImGuiHelper   {
 
-static const char* FieldTypeNames[ImGui::FT_COUNT+1] = {"INT","UNSIGNED","FLOAT","DOUBLE","STRING","ENUM","BOOL","COLOR","CUSTOM","COUNT"};
-static const char* FieldTypeFormats[ImGui::FT_COUNT]={"%d","%u","%f","%f","%s","%d","%d","%f","%s"};
-static const char* FieldTypeFormatsWithCustomPrecision[ImGui::FT_COUNT]={"%.*d","%*u","%.*f","%.*f","%*s","%*d","%*d","%.*f","%*s"};
+static const char* FieldTypeNames[ImGui::FT_COUNT+1] = {"INT","UNSIGNED","FLOAT","DOUBLE","STRING","ENUM","BOOL","COLOR","TEXTLINE","CUSTOM","COUNT"};
+static const char* FieldTypeFormats[ImGui::FT_COUNT]={"%d","%u","%f","%f","%s","%d","%d","%f","%s","%s"};
+static const char* FieldTypeFormatsWithCustomPrecision[ImGui::FT_COUNT]={"%.*d","%*u","%.*f","%.*f","%*s","%*d","%*d","%.*f","%*s","%*s"};
 
 #ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
 void Deserializer::clear() {
@@ -116,6 +116,7 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
     char name[128];name[0]='\0';
     char typeName[32];char format[32]="";bool quitParsing = false;
     char charBuffer[sizeof(double)*10];void* voidBuffer = (void*) &charBuffer[0];
+    static char textBuffer[2050];
     const char* varName = NULL;int numArrayElements = 0;FieldType ft = ImGui::FT_COUNT;
     const char* buf_end = f_data + f_size-1;
     for (const char* line_start = optionalBufferStart ? optionalBufferStart : f_data; line_start < buf_end; )
@@ -134,7 +135,7 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
             const char* colonCh = strchr(name,':');
             const char* minusCh = strchr(name,'-');
             if (!colonCh) {
-                fprintf(stderr,"MemoryFile::parse(...) warning (skipping line with no semicolon). name: %s\n",name);  // dbg
+                fprintf(stderr,"ImGuiHelper::Deserializer::parse(...) warning (skipping line with no semicolon). name: %s\n",name);  // dbg
                 name[0]='\0';
             }
             else {
@@ -162,8 +163,9 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
                     }
                     varName = ++colonCh;
 
-                    if (ft==ImGui::FT_COUNT || numArrayElements<1 || (numArrayElements>4 && ft!=ImGui::FT_STRING))   {
-                        fprintf(stderr,"MemoryFile::parse(...) Error (wrong type detected): line:%s type:%d numArrayElements:%d varName:%s typeName:%s\n",name,(int)ft,numArrayElements,varName,typeName);
+                    const bool isTextOrCustomType = ft==ImGui::FT_STRING || ft==ImGui::FT_TEXTLINE  || ft==ImGui::FT_CUSTOM;
+                    if (ft==ImGui::FT_COUNT || numArrayElements<1 || (numArrayElements>4 && (!isTextOrCustomType)))   {
+                        fprintf(stderr,"ImGuiHelper::Deserializer::parse(...) Error (wrong type detected): line:%s type:%d numArrayElements:%d varName:%s typeName:%s\n",name,(int)ft,numArrayElements,varName,typeName);
                         varName=NULL;
                     }
                     else {
@@ -174,7 +176,6 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
                             //--------------------------------------------------------
                             for (int sp=0;sp<numArrayElements && line_end < buf_end;sp++) line_end++;
                             while (line_end < buf_end && *line_end != '\n' && *line_end != '\r') line_end++;
-                            static char textBuffer[2050];
                             textBuffer[0]=textBuffer[2049]='\0';
                             const int maxLen = numArrayElements>2049?2049:numArrayElements;
                             strncpy(textBuffer,line_start,maxLen+1);
@@ -184,7 +185,7 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
                             ft = ImGui::FT_COUNT;name[0]='\0';varName=NULL; // mandatory
 
                         }
-                        else {
+                        else if (!isTextOrCustomType) {
                             format[0]='\0';
                             for (int t=0;t<numArrayElements;t++) {
                                 if (t>0) strcat(format," ");
@@ -256,6 +257,27 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
                      (numArrayElements==4 && sscanf(line_start, format, &p[0],&p[1],&p[2],&p[3])==numArrayElements))
                      quitParsing = cb(ft,numArrayElements,voidBuffer,varName,userPtr);
                 else fprintf(stderr,"MemoryFile::parse(...) Error converting value:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
+            }
+            break;
+            case ImGui::FT_CUSTOM:
+            case ImGui::FT_TEXTLINE:
+            {
+                // A similiar code can be used to parse "numArrayElements" line of text
+                for (int i=0;i<numArrayElements;i++)    {
+                    textBuffer[0]=textBuffer[2049]='\0';
+                    const int maxLen = (line_end-line_start)>2049?2049:(line_end-line_start);
+                    if (maxLen<=0) break;
+                    strncpy(textBuffer,line_start,maxLen);
+                    quitParsing = cb(ft,i,(void*)textBuffer,varName,userPtr);
+
+                    //fprintf(stderr,"%d) \"%s\"\n",i,textBuffer);  // Dbg
+
+                    if (quitParsing) break;
+                    line_start = line_end+1;
+                    line_end = line_start;
+                    if (line_end == buf_end) break;
+                    while (line_end < buf_end && *line_end != '\n' && *line_end != '\r') line_end++;
+                }
             }
             break;
             default:
@@ -340,6 +362,39 @@ bool Serializer::save(const char* pValue,const char* name,int pValueSize)    {
     fprintf(f, ":%s]\n",name);
     // value
     fprintf(f,"%s\n\n",pValue);
+    return true;
+}
+bool Serializer::saveTextLines(const char* pValue,const char* name)   {
+    FieldType ft = ImGui::FT_TEXTLINE;
+    if (!f || ft==ImGui::FT_COUNT || !pValue || !name || name[0]=='\0') return false;
+    const char *tmp;const char *start = pValue;
+    int left = strlen(pValue);int numArrayElements =0;  // numLines
+    bool endsWithNewLine = pValue[left-1]=='\n';
+    while ((tmp=strchr(start, '\n'))) {
+        ++numArrayElements;
+        left-=tmp-start-1;
+        start = ++tmp;  // to skip '\n'
+    }
+    if (left>0) ++numArrayElements;
+    if (numArrayElements==0) return false;
+
+    // name
+    fprintf(f, "[%s",FieldTypeNames[ft]);
+    if (numArrayElements==0) numArrayElements=1;
+    if (numArrayElements>1) fprintf(f, "-%d",numArrayElements);
+    fprintf(f, ":%s]\n",name);
+    // value
+    fprintf(f,"%s",pValue);
+    if (!endsWithNewLine)  fprintf(f,"\n");
+    fprintf(f,"\n");
+    return true;
+}
+bool Serializer::saveCustomFieldTypeHeader(const char* name, int numTextLines) {
+    // name
+    fprintf(f, "[%s",FieldTypeNames[ImGui::FT_CUSTOM]);
+    if (numTextLines==0) numTextLines=1;
+    if (numTextLines>1) fprintf(f, "-%d",numTextLines);
+    fprintf(f, ":%s]\n",name);
     return true;
 }
 #endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
