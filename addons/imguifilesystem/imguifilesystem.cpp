@@ -2359,6 +2359,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
 }
 
 const char* Dialog::chooseFileDialog(bool dialogTriggerButton,const char* directory,const char* fileFilterExtensionString,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha) {
+    //internal->chosenPath[0]='\0';   // new
     if (dialogTriggerButton) {internal->rescan = true;internal->chosenPath[0]='\0';}
     if (dialogTriggerButton || (!internal->rescan && strlen(getChosenPath())==0)) {
         if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
@@ -2370,6 +2371,7 @@ const char* Dialog::chooseFileDialog(bool dialogTriggerButton,const char* direct
     return getChosenPath();
 }
 const char* Dialog::chooseFolderDialog(bool dialogTriggerButton,const char* directory,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha)  {
+    //internal->chosenPath[0]='\0';   // new
     if (dialogTriggerButton) {internal->rescan = true;internal->chosenPath[0]='\0';}
     if (dialogTriggerButton || (!internal->rescan && strlen(getChosenPath())==0)) {
         if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
@@ -2381,6 +2383,7 @@ const char* Dialog::chooseFolderDialog(bool dialogTriggerButton,const char* dire
     return getChosenPath();
 }
 const char* Dialog::saveFileDialog(bool dialogTriggerButton,const char* directory,const char* startingFileNameEntry,const char* fileFilterExtensionString,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha)    {
+    //internal->chosenPath[0]='\0';   // new
     if (dialogTriggerButton) {internal->rescan = true;internal->chosenPath[0]='\0';}
     if (dialogTriggerButton || (!internal->rescan && strlen(getChosenPath())==0)) {
         if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)

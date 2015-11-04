@@ -179,6 +179,7 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
                             textBuffer[0]=textBuffer[2049]='\0';
                             const int maxLen = numArrayElements>2049?2049:numArrayElements;
                             strncpy(textBuffer,line_start,maxLen+1);
+                            textBuffer[maxLen+1]='\0';
                             quitParsing = cb(ft,numArrayElements,(void*)textBuffer,varName,userPtr);
                             //else fprintf(stderr,"MemoryFile::parse(...) Error converting value:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
                             //--------------------------------------------------------

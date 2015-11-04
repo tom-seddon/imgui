@@ -139,8 +139,6 @@ bool NodeGraphEditor::Style::Load(NodeGraphEditor::Style &style, const char *fil
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #endif //NO_IMGUIHELPER_SERIALIZATION
 
-static float CurrentNodeWidth=0.f;  // used internally
-static float BaseNodeWidth=0.f;  // used internally
 
 void NodeGraphEditor::render()
 {
@@ -342,8 +340,9 @@ void NodeGraphEditor::render()
     const float MOUSE_DELTA_SQUARED = io.MouseDelta.x*io.MouseDelta.x+io.MouseDelta.y*io.MouseDelta.y;
     const float MOUSE_DELTA_SQUARED_THRESHOLD = NODE_SLOT_RADIUS_SQUARED * 0.05f;    // We don't detect "mouse release" events while dragging links onto slots. Instead we check that our mouse delta is small enough. Otherwise we couldn't hover other slots while dragging links.
 
-    CurrentNodeWidth = BaseNodeWidth = nodesBaseWidth*currentFontWindowScale;
-    ImGui::PushItemWidth(CurrentNodeWidth);
+    const float baseNodeWidth = nodesBaseWidth*currentFontWindowScale;
+    float currentNodeWidth = baseNodeWidth;
+    ImGui::PushItemWidth(currentNodeWidth);
 
     ImVec2 offset = ImGui::GetCursorScreenPos() - scrolling;
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
@@ -415,10 +414,10 @@ void NodeGraphEditor::render()
     {
         Node* node = nodes[node_idx];
 	if (node->baseWidthOverride>0) {
-	    CurrentNodeWidth = node->baseWidthOverride*currentFontWindowScale;
-	    ImGui::PushItemWidth(CurrentNodeWidth);
+	    currentNodeWidth = node->baseWidthOverride*currentFontWindowScale;
+	    ImGui::PushItemWidth(currentNodeWidth);
 	}
-	else CurrentNodeWidth = BaseNodeWidth;
+	else currentNodeWidth = baseNodeWidth;
         ImGui::PushID((const void*) node);
         const ImVec2 nodePos = node->GetPos(currentFontWindowScale);
         ImVec2 node_rect_min = offset + nodePos;
@@ -443,13 +442,14 @@ void NodeGraphEditor::render()
         }
         ImGui::PopStyleColor();
         // BUTTONS ========================================================
-        if (node->Size.x!=0)    {
-            const bool canPaste = sourceCopyNode && sourceCopyNode->typeID==node->typeID;
-            if (!node->isOpen) ImGui::SameLine();
+	const bool canPaste = sourceCopyNode && sourceCopyNode->typeID==node->typeID;
+	const bool canCopy = node->canBeCopied();
+	if (node->Size.x!=0)    {
+	    if (!node->isOpen) ImGui::SameLine();
             else ImGui::SameLine(-scrolling.x+nodePos.x+node->Size.x-textSizeButtonX-10
                                  -(show_node_copy_paste_buttons ?
                                        (
-                                           (textSizeButtonCopy+2) +
+					   (canCopy?(textSizeButtonCopy+2):0) +
                                            (canPaste?(textSizeButtonPaste+2):0)
                                         )
                                   : 0)
@@ -471,12 +471,14 @@ void NodeGraphEditor::render()
                     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
                     ImGui::SameLine(0);
                 }
-                if (ImGui::SmallButton(btnNames[1])) {
-                    node_hovered_in_scene = selectedNode = node;
-                    copyNode(node);
-                }
-                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
-                ImGui::SameLine(0);
+		if (canCopy)	{
+		    if (ImGui::SmallButton(btnNames[1])) {
+			node_hovered_in_scene = selectedNode = node;
+			copyNode(node);
+		    }
+		    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
+		    ImGui::SameLine(0);
+		}
             }
             if (ImGui::SmallButton(btnNames[2])) {
                 node_hovered_in_scene = selectedNode = node;
@@ -493,21 +495,21 @@ void NodeGraphEditor::render()
         if (node->isOpen)
         {
             // this code goes into a virtual method==============================
-            nodeInEditMode|=node->render();
+	    nodeInEditMode|=node->render(currentNodeWidth);
             //===================================================================
             isLMBDraggingForMakingLinks&=!nodeInEditMode;   // Don't create links while dragging the mouse to edit node values
         }
         ImGui::EndGroup();
         if (nodeInEditMode) node->startEditingTime = -1.f;
         else if (node->startEditingTime!=0.f) {
-            if (nodeCallback)   {
+	    //if (nodeCallback)   {
                 if (node->startEditingTime<0) node->startEditingTime = ImGui::GetTime();
                 else if (ImGui::GetTime()-node->startEditingTime>nodeEditedTimeThreshold) {
                     node->startEditingTime = 0.f;
                     node_to_fire_edit_callback = node;
                 }
-            }
-            else node->startEditingTime = 0.f;
+	    //}
+	    //else node->startEditingTime = 0.f;
         }
 
         // Save the size of what we have emitted and whether any of the widgets are being used
@@ -750,7 +752,7 @@ void NodeGraphEditor::render()
             ImGui::Text("Node '%s'", node->Name);
             ImGui::Separator();
             //if (ImGui::MenuItem("Rename..", NULL, false, false)) {}
-            if (ImGui::MenuItem("Copy", NULL, false, true)) copyNode(node);
+	    if (node->canBeCopied() && ImGui::MenuItem("Copy", NULL, false, true)) copyNode(node);
             if (sourceCopyNode && sourceCopyNode->typeID==node->typeID) {
                 if (ImGui::MenuItem("Paste", NULL, false, true)) {
                     node_to_paste_from_copy_source = node;
@@ -771,10 +773,11 @@ void NodeGraphEditor::render()
             ImGui::Text("%s","Add Node Menu");
             ImGui::Separator();
             if (nodeFactoryFunctionPtr) {
-                if (sourceCopyNode) {
+		if (sourceCopyNode && sourceCopyNode->canBeCopied()) {
                     if (ImGui::MenuItem("Paste##cloneCopySource")) {
                         Node* clonedNode = addNode(nodeFactoryFunctionPtr(sourceCopyNode->typeID,scene_pos));
                         clonedNode->fields.copyPDataValuesFrom(sourceCopyNode->fields);
+			clonedNode->onCopied();
                     }
                     ImGui::Separator();
                 }
@@ -810,9 +813,15 @@ void NodeGraphEditor::render()
 
     ImGui::EndChild();  // GraphNodeChildWindow
 
-    if (node_to_paste_from_copy_source && sourceCopyNode && node_to_paste_from_copy_source->typeID==sourceCopyNode->typeID)
+    if (node_to_paste_from_copy_source && sourceCopyNode && node_to_paste_from_copy_source->typeID==sourceCopyNode->typeID) {
         node_to_paste_from_copy_source->fields.copyPDataValuesFrom(sourceCopyNode->fields);
-    if (nodeCallback && node_to_fire_edit_callback) nodeCallback(node_to_fire_edit_callback,NS_EDITED,*this);
+	node_to_paste_from_copy_source->onCopied();
+    }
+
+    if (node_to_fire_edit_callback) {
+	node_to_fire_edit_callback->onEdited();
+	if (nodeCallback) nodeCallback(node_to_fire_edit_callback,NS_EDITED,*this);
+    }
 
 
 }
@@ -914,6 +923,7 @@ void NodeGraphEditor::copyNode(Node *n)	{
 	sourceCopyNode = nodeFactoryFunctionPtr(n->typeID,ImVec2(0,0));
     }
     sourceCopyNode->fields.copyPDataValuesFrom(n->fields);
+    //sourceCopyNode->onCopied();   // Nope: sourceCopyNode is just owned for storage
 }
 
 void NodeGraphEditor::getInputNodesForNodeAndSlot(const Node* node,int input_slot,ImVector<Node *> &returnValueOut, ImVector<int> *pOptionalReturnValueOutputSlotOut) const  {
@@ -1063,6 +1073,8 @@ bool FieldInfo::copyPDataValueFrom(const FieldInfo &f) {
         break;
     case FT_BOOL: *((bool*)pdata) = *((bool*)f.pdata);
         break;
+    case FT_TEXTLINE: memcpy(pdata,f.pdata,precision < f.precision ? precision : f.precision);
+	break;
     case FT_STRING: memcpy(pdata,f.pdata,precision < f.precision ? precision : f.precision);
         break;
     default:
@@ -1074,12 +1086,12 @@ bool FieldInfo::copyPDataValueFrom(const FieldInfo &f) {
 #if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 bool FieldInfo::serialize(ImGuiHelper::Serializer& s) const   {
-    const char* fieldName = label;
-    const ImGuiHelper::FieldType ft = this->type;
-    switch (ft) {
+    const char* fieldName = label;    
+    const int ft = this->type;
+    switch (type) {
     case FT_INT:
     case FT_ENUM:
-	return s.save(ft,(const int*)pdata,fieldName,numArrayElements,precision);
+	return s.save((ImGui::FieldType) ft,(const int*)pdata,fieldName,numArrayElements,precision);
     case FT_BOOL: {
 	return s.save((const bool*)pdata,fieldName,numArrayElements);
     }
@@ -1089,17 +1101,24 @@ bool FieldInfo::serialize(ImGuiHelper::Serializer& s) const   {
     return s.save((const double*)pdata,fieldName,numArrayElements,(precision>=0 && needsRadiansToDegs) ? (precision+3) : precision);
     case FT_FLOAT:
     case FT_COLOR:
-    return s.save(ft,(const float*)pdata,fieldName,numArrayElements,(precision>=0 && needsRadiansToDegs) ? (precision+3) : precision);
+    return s.save((ImGui::FieldType) ft,(const float*)pdata,fieldName,numArrayElements,(precision>=0 && needsRadiansToDegs) ? (precision+3) : precision);
     case FT_STRING: {
-        const char* txt = (const char*)pdata;
-        int len = (int) strlen(txt);
-        if (precision>0 && precision<len) len = precision;
-        return s.save((const char*)pdata,fieldName,len);
+	//const char* txt = (const char*)pdata;
+	/*int len = (int) strlen(txt);
+	if (precision>0 && precision<len) len = precision;*/
+	//return s.save((const char*)pdata,fieldName,precision);
     }
-    case FT_CUSTOM:    {
+    return s.save((const char*)pdata,fieldName,precision);
+    case FT_TEXTLINE: {
+	//const char* txt = (const char*)pdata;
+	//int len = (int) strlen(txt);
+	//if (precision>0 && precision<len) len = precision;
+	//return s.saveTextLines((const char*)pdata,fieldName);
+    }
+    return s.saveTextLines((const char*)pdata,fieldName);
+    case FT_CUSTOM:
         if (!serializeFieldDelegate) return false;
-        else return serializeFieldDelegate(s,*this);
-    }
+	return serializeFieldDelegate(s,*this);
     default:
         //IM_ASSERT(true); // copyPDataValueFrom(...) not defined for this type [we can probably just skip this]
         return false;
@@ -1136,19 +1155,44 @@ static bool fieldInfoParseCallback(ImGuiHelper::FieldType ft,int numArrayElement
     }
         break;
     case FT_STRING: {
-        const char* txt = (const char*)pValue;
+
+	const char* txt = (const char*)pValue;
         int len = (int) strlen(txt);
-        if (fi.precision>0 && fi.precision<len) len = fi.precision;
+	if (strcmp(name,"Image Path:")==0)
+	    fprintf(stderr,"name(%d)=\"%s\"\ntxt(%d)=\"%s\"\n",(int)strlen(name),name,len,txt);
+
+	if (fi.precision>0 && fi.precision<len) len = fi.precision;
+
         char* dst = (char*) fi.pdata;
         //memcpy(dst,pValue,len);
         strncpy(dst,(const char*)pValue,len);
         if (len>1) dst[len-1]='\0';
+
+	//strcpy((char*) fi.pdata,(const char*)pValue);
     }
         break;
+    case FT_TEXTLINE: {
+	/*
+	// Actually there can be many lines with different "numArrayElements", but here we assume a single line
+	const char* txt = (const char*)pValue;
+	int len = (int) strlen(txt);
+	//if (strcmp(name,"imagePath")==0)
+	fprintf(stderr,"name(%d)=\"%s\"\ntxt(%d)=\"%s\"\n",(int)strlen(name),name,len,txt);
+
+	if (fi.precision>0 && fi.precision<len) len = fi.precision;
+	fprintf(stderr,"name(%d)=\"%s\"\ntxt(%d)=\"%s\"\n",(int)strlen(name),name,len,txt);
+	char* dst = (char*) fi.pdata;
+	//memcpy(dst,pValue,len);
+	strncpy(dst,(const char*)pValue,len);
+	if (len>1) dst[len-1]='\0';
+	*/
+	strcpy((char*) fi.pdata,(const char*)pValue);
+    }
+	break;
     case FT_CUSTOM:    {
-	if (fi.deserializeFieldDelegate) fi.deserializeFieldDelegate(fi,type,numArrayElements,pValue,name);
-        break;
+	if (fi.deserializeFieldDelegate) fi.deserializeFieldDelegate(fi,type,numArrayElements,pValue,name);        
     }
+	break;
     default:
         //IM_ASSERT(true); // copyPDataValueFrom(...) not defined for this type [we can probably just skip this]
         //return false;
@@ -1156,8 +1200,11 @@ static bool fieldInfoParseCallback(ImGuiHelper::FieldType ft,int numArrayElement
     }
     return true;    // true = done parsing
 }
+
 const char* FieldInfo::deserialize(const ImGuiHelper::Deserializer& d,const char* start)    {
-    return d.parse(fieldInfoParseCallback,(void*)this,start);
+    if (type<ImGui::FT_COUNT) return d.parse(fieldInfoParseCallback,(void*)this,start);
+    IM_ASSERT(true);	// Parse Custom type
+    return start;
 }
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #endif //NO_IMGUIHELPER_SERIALIZATION
@@ -1193,11 +1240,11 @@ FieldInfo &FieldInfoVector::addField(double *pdata, int numArrayElements, const 
     f.userData = userData;
     return f;
 }
-FieldInfo &FieldInfoVector::addField(char *pdata, int textLength, const char *label, const char *tooltip, int flags, bool multiline,float optionalHeight, void *userData)   {
+FieldInfo &FieldInfoVector::addField(char *pdata, int textLength, const char *label, const char *tooltip, int flags, bool multiline,float optionalHeight, void *userData,bool isSingleEditWithBrowseButton)   {
     IM_ASSERT(pdata);
     push_back(FieldInfo());
     FieldInfo& f = (*this)[size()-1];
-    f.init(FT_STRING,(void*) pdata,label,tooltip,textLength,flags,0.f,(float)optionalHeight,multiline);
+    f.init(/*multiline ?*/ FT_STRING/* : FT_TEXTLINE*/,(void*) pdata,label,tooltip,textLength,flags,isSingleEditWithBrowseButton ? -500 : 0,(double)optionalHeight,multiline);
     f.userData = userData;
     return f;
 }
@@ -1257,7 +1304,7 @@ FieldInfo &FieldInfoVector::addFieldCustom(FieldInfo::RenderFieldDelegate render
     return f;
 }
 bool NodeGraphEditor::UseSlidersInsteadOfDragControls = false;
-bool FieldInfoVector::render()   {
+bool FieldInfoVector::render(float nodeWidth)   {
     static const int precisionStrSize = 16;static char precisionStr[precisionStrSize];int precisionLastCharIndex;
 
     bool nodeEdited = false;
@@ -1278,7 +1325,7 @@ bool FieldInfoVector::render()   {
 
         float dragSpeed = (float)(f.maxValue-f.minValue)/200.f;if (dragSpeed<=0) dragSpeed=1.f;
 
-        bool changed = false;
+	bool changed = false;int widgetIndex = 0;bool skipTooltip = false;
         switch (f.type) {
         case FT_DOUBLE: {
             precisionStr[precisionLastCharIndex]='f';
@@ -1430,7 +1477,7 @@ bool FieldInfoVector::render()   {
 	    const float maxHeight =(float) (f.maxValue<0 ? 0 : f.maxValue);
             const bool multiline = f.needsRadiansToDegs;
 	    ImGui::Text("%s",label);
-	    const float width = CurrentNodeWidth;
+	    float width = nodeWidth;
 	    if (flags<0) {
 		//ImVec2 pos = ImGui::GetCursorScreenPos();
 		ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + width);
@@ -1439,9 +1486,27 @@ bool FieldInfoVector::render()   {
 		ImGui::PopTextWrapPos();
 	    }
 	    else if (!multiline) {
+		const bool addBrowseButton = (f.minValue==-500);
+		float browseBtnWidth = 0;
+		if (addBrowseButton) {
+		    browseBtnWidth = ImGui::CalcTextSize("...").x + 10;
+		    if (width-browseBtnWidth>0) width-=browseBtnWidth;
+		}
 		ImGui::PushItemWidth(width);
 		changed|=ImGui::InputText("##DummyLabelInputText",txtField,f.precision,flags);
 		ImGui::PopItemWidth();
+		if (addBrowseButton)	{
+		    if (/*f.tooltip &&*/ f.tooltip[0]!='\0' && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",f.tooltip);
+		    skipTooltip = true;
+		    ImGui::SameLine(0,4);
+		    ImGui::PushItemWidth(browseBtnWidth);
+		    if (ImGui::Button("...##DummyLabelInputTextBrowseButton")) {
+			changed = true;
+			widgetIndex = 1;
+		    }
+		    ImGui::PopItemWidth();
+		    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Browse");
+		}
 	    }
 	    else changed|=ImGui::InputTextMultiline("##DummyLabelInputText",txtField,f.precision,ImVec2(width,maxHeight),flags);
         }
@@ -1459,10 +1524,11 @@ bool FieldInfoVector::render()   {
             IM_ASSERT(true);    // should never happen
             break;
         }
-        if (f.type!=FT_CUSTOM)  {
+	if (!skipTooltip && f.type!=FT_CUSTOM)  {
             if (/*f.tooltip &&*/ f.tooltip[0]!='\0' && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",f.tooltip);
         }
         nodeEdited|=changed;
+	if (changed && f.editedFieldDelegate) f.editedFieldDelegate(f,widgetIndex);
         ImGui::PopID();
     }
     return nodeEdited;
@@ -1581,7 +1647,10 @@ bool NodeGraphEditor::load(const char* filename)    {
                 cbl.node1_index!=cbl.node2_index
         ) addLink(nodes[cbl.node1_index],cbl.input_slot,nodes[cbl.node2_index],cbl.output_slot,true); // last arg check if link is already present before adding it
     }
-
+    // Fire node->onLoad() events-----------------
+    for (int i=0,isz=nodes.size();i<isz;i++) {
+	nodes[i]->onLoaded();
+    }
     //--------------------------------------------
     return true;
     //--------------------------------------------
@@ -1591,15 +1660,36 @@ bool NodeGraphEditor::load(const char* filename)    {
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 //--------------------------------------------------------------------------------
 
+}   // namespace ImGui
+
+
+
+
+
 #ifndef IMGUINODEGRAPHEDITOR_NOTESTDEMO
+
+#ifndef NO_IMGUIFILESYSTEM
+#include "../imguifilesystem/imguifilesystem.h"
+#endif //NO_IMGUIFILESYSTEM
+
+namespace ImGui	{
+
 enum MyNodeTypes {
     MNT_COLOR_NODE = 0,
     MNT_COMBINE_NODE,
     MNT_COMMENT_NODE,
     MNT_COMPLEX_NODE,
+#   ifdef IMGUI_USE_AUTO_BINDING
+    MNT_TEXTURE_NODE,
+#   endif
     MNT_COUNT
 };
-static const char* MyNodeTypeNames[MNT_COUNT] = {"Color","Combine","Comment","Complex"};  // used in the "add Node" menu (and optionally as node title names)
+// used in the "add Node" menu (and optionally as node title names)
+static const char* MyNodeTypeNames[MNT_COUNT] = {"Color","Combine","Comment","Complex"
+#						ifdef IMGUI_USE_AUTO_BINDING
+						 ,"Texture"
+#						endif
+						};
 class ColorNode : public Node {
     protected:
     typedef Node Base;  //Base Class
@@ -1718,10 +1808,10 @@ class CommentNode : public Node {
 
 
 	// 3) init fields ( this uses the node->fields variable; otherwise we should have overridden other virtual methods (to render and serialize) )
-	node->fields.addField(&node->comment[0],TextBufferSize,"Single Line","A single line editable field",ImGuiInputTextFlags_EnterReturnsTrue,false);
-	node->fields.addField(&node->comment2[0],TextBufferSize,"Multi Line","A multi line editable field",ImGuiInputTextFlags_AllowTabInput,true,50);
-	node->fields.addField(&node->comment3[0],TextBufferSize,"Multi Line 2","A multi line read-only field",ImGuiInputTextFlags_ReadOnly,true,50);
-	node->fields.addField(&node->comment4[0],TextBufferSize,"Text Wrapped","A text wrapped field",-1);
+	node->fields.addFieldTextEdit(		&node->comment[0],TextBufferSize,"Single Line","A single line editable field",ImGuiInputTextFlags_EnterReturnsTrue);
+	node->fields.addFieldTextEditMultiline(&node->comment2[0],TextBufferSize,"Multi Line","A multi line editable field",ImGuiInputTextFlags_AllowTabInput,50);
+	node->fields.addFieldTextEditMultiline(&node->comment3[0],TextBufferSize,"Multi Line 2","A multi line read-only field",ImGuiInputTextFlags_ReadOnly,50);
+	node->fields.addFieldTextWrapped(      &node->comment4[0],TextBufferSize,"Text Wrapped ReadOnly","A text wrapped field");
 	node->fields.addField(&node->flag,"Flag","A boolean field");
 
 	// 4) set (or load) field values
@@ -1729,7 +1819,8 @@ class CommentNode : public Node {
 	strcpy(node->comment2,"Initial Text Multiline.");
 	static const char* tiger = "Tiger, tiger, burning bright\nIn the forests of the night,\nWhat immortal hand or eye\nCould frame thy fearful symmetry?";
 	strncpy(node->comment3,tiger,TextBufferSize);
-	strncpy(node->comment4,"I hope this text gets wrapped gracefully. But I'm not sure about it...\0",TextBufferSize);
+	static const char* txtWrapped = "I hope this text gets wrapped gracefully. But I'm not sure about it.";
+	strncpy(node->comment4,txtWrapped,TextBufferSize);
 	node->flag = true;
 
 	return node;
@@ -1792,12 +1883,137 @@ class ComplexNode : public Node {
     inline static ThisClass* Cast(Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
     inline static const ThisClass* Cast(const Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
 };
+#ifdef IMGUI_USE_AUTO_BINDING
+class TextureNode : public Node {
+    protected:
+    typedef Node Base;  //Base Class
+    typedef TextureNode ThisClass;
+    TextureNode() : Base() {}
+    virtual ~TextureNode() {if (textureID) {glDeleteTextures(1,&textureID);textureID=0;}}
+    static const int TYPE = MNT_TEXTURE_NODE;
+    static const int TextBufferSize =
+#   ifndef NO_IMGUIFILESYSTEM
+    PATH_MAX;
+#   else
+    2049;
+#   endif
+
+    GLuint textureID;
+    char imagePath[TextBufferSize];				// field 1
+    char lastValidImagePath[TextBufferSize];			// The path for which "textureID" was created
+    bool startBrowseDialogNextFrame;
+
+    virtual const char* getTooltip() const {return "TextureNode tooltip.";}
+    virtual const char* getInfo() const {return "TextureNode info.\n\nThis is supposed to display some info about this node.";}
+
+    public:
+
+    // create:
+    static ThisClass* Create(const ImVec2& pos) {
+	// 1) allocation
+	// MANDATORY (NodeGraphEditor::~NodeGraphEditor() will delete these with ImGui::MemFree(...))
+	// MANDATORY even with blank ctrs. Requires: #include <new>. Reason: ImVector does not call ctrs/dctrs on items.
+	ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));new (node) ThisClass();
+
+	// 2) main init
+	node->init("TextureNode",pos,"","r;g;b;a",TYPE);
+	node->baseWidthOverride = 150.f;    // (optional) default base node width is 120.f;
+
+
+	// 3) init fields ( this uses the node->fields variable; otherwise we should have overridden other virtual methods (to render and serialize) )
+	FieldInfo* f=NULL;
+#	ifndef NO_IMGUIFILESYSTEM
+	f=&node->fields.addFieldTextEditAndBrowseButton(&node->imagePath[0],TextBufferSize,"Image Path:","A valid image path: press RETURN to validate or browse manually.",ImGuiInputTextFlags_EnterReturnsTrue,(void*) node);
+#	else	//NO_IMGUIFILESYSTEM
+	f=&node->fields.addFieldTextEdit(&node->imagePath[0],TextBufferSize,"Image Path:","A valid image path: press RETURN to validate or browse manually.",ImGuiInputTextFlags_EnterReturnsTrue,(void*) node);
+#	endif //NO_IMGUIFILESYSTEM
+	f->editedFieldDelegate = &ThisClass::StaticEditFieldCallback;
+	node->startBrowseDialogNextFrame = false;
+
+	// 4) set (or load) field values
+	node->textureID = 0;
+	node->imagePath[0] = node->lastValidImagePath[0] = '\0';
+
+	return node;
+    }
+
+    // helper casts:
+    inline static ThisClass* Cast(Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
+    inline static const ThisClass* Cast(const Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
+
+    protected:
+    bool render(float nodeWidth)   {
+	const bool changed = Base::render(nodeWidth);
+// TO FIX and re-enable:
+/*#	ifndef NO_IMGUIFILESYSTEM
+	static ImGuiFs::Dialog dlg;
+	const char* filePath = dlg.chooseFileDialog(startBrowseDialogNextFrame,"",".jpg;.jpeg;.png;.gif;.tga;.bmp");
+	if (strlen(filePath)>0) {
+	    // BROKEN: fires every frame! TOFIX
+	    fprintf(stderr,"Browsed..: %s\n",filePath);
+	    strcpy(imagePath,filePath);
+	    processPath(imagePath);
+	}
+#	endif //NO_IMGUIFILESYSTEM*/
+	startBrowseDialogNextFrame = false;
+	//----------------------------------------------------
+	// draw textureID:
+	ImGui::Image(reinterpret_cast<void*>(textureID),ImVec2(nodeWidth,nodeWidth));
+	//----------------------------------------------------
+	return changed;
+    }
+
+    void processPath(const char* filePath)  {
+	if (!filePath || strcmp(filePath,lastValidImagePath)==0) return;
+	if (!ValidateImagePath(filePath)) return;
+	if (textureID) {glDeleteTextures(1,&textureID);textureID=0;}
+	textureID = ImImpl_LoadTexture(filePath);
+	if (textureID) strcpy(lastValidImagePath,filePath);
+    }
+
+    // When the node is loaded from file or copied, only the text field (="imagePath") is copied, so we must recreate "textureID":
+    void onCopied() {
+	processPath(imagePath);
+    }
+    void onLoaded() {
+	fprintf(stderr,"TextureNode::onLoaded(...): \"%s\" \"%s\" \"%u\"\n",imagePath,lastValidImagePath,textureID);
+	processPath(imagePath);
+    }
+
+    //bool canBeCopied() const {return false;}	// Just for testing... TO REMOVE!
+
+    void onEditField(FieldInfo& /*f*/,int widgetIndex) {
+	//fprintf(stderr,"TextureNode::onEditField(\"%s\",%i);\n",f.label,widgetIndex);
+	if (widgetIndex==1)	    startBrowseDialogNextFrame = true;
+	else if (widgetIndex==0)    processPath(imagePath);
+    }
+
+    static void StaticEditFieldCallback(FieldInfo& f,int widgetIndex) {
+	reinterpret_cast<ThisClass*>(f.userData)->onEditField(f,widgetIndex);
+    }
+
+    static bool ValidateImagePath(const char* path) {
+	if (!path || strlen(path)==0) return false;
+
+	// TODO: check ext
+
+	FILE* f = fopen(path,"rb");
+	if (f) {fclose(f);f=NULL;return true;}
+
+	return false;
+    }
+
+};
+#endif //IMGUI_USE_AUTO_BINDING
 static Node* MyNodeFactory(int nt,const ImVec2& pos) {
     switch (nt) {
     case MNT_COLOR_NODE: return ColorNode::Create(pos);
     case MNT_COMBINE_NODE: return CombineNode::Create(pos);
     case MNT_COMMENT_NODE: return CommentNode::Create(pos);
     case MNT_COMPLEX_NODE: return ComplexNode::Create(pos);
+#   ifdef IMGUI_USE_AUTO_BINDING
+    case MNT_TEXTURE_NODE: return TextureNode::Create(pos);
+#   endif //IMGUI_USE_AUTO_BINDING
     default:
     IM_ASSERT(true);    // Missing node type creation
     return NULL;
@@ -1808,23 +2024,25 @@ void TestNodeGraphEditor()  {
     static ImGui::NodeGraphEditor nge;
     if (nge.mustInit())	{
         nge.init(); // So nge.mustInit() returns false next time [currently it's optional, since render() calls it anyway]
-        // Optional: starting nodes and links (TODO: load from file):-----------
-        ImGui::Node* colorNode = nge.addNode(ImGui::ColorNode::Create(ImVec2(40,50)));
-        ImGui::Node* complexNode = nge.addNode(ImGui::ComplexNode::Create(ImVec2(40,150)));
-        ImGui::Node* combineNode = nge.addNode(ImGui::CombineNode::Create(ImVec2(300,80))); // optionally use e.g.: ImGui::CombineNode::Cast(combineNode)->fraction = 0.8f;
+	// This adds entries to the "add node" context menu
+	nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,NULL,-1); // last 2 args can be used to add only a subset of nodes (or to sort their order inside the context menu)
+
+	// Optional: starting nodes and links (TODO: load from file):-----------
+	ImGui::Node* colorNode = nge.addNode(MNT_COLOR_NODE,ImVec2(40,50));
+	ImGui::Node* complexNode =  nge.addNode(MNT_COMPLEX_NODE,ImVec2(40,150));
+	ImGui::Node* combineNode =  nge.addNode(MNT_COMBINE_NODE,ImVec2(300,80)); // optionally use e.g.: ImGui::CombineNode::Cast(combineNode)->fraction = 0.8f;
         nge.addLink(colorNode, 0, combineNode, 0);
         nge.addLink(complexNode, 1, combineNode, 1);
         //----------------------------------------------------------------------
-        // This adds entries to the "add node" context menu
-        nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,NULL,-1); // last 2 args can be used to add only a subset of nodes (or to sort their order inside the context menu)
-        nge.show_style_editor = true;
-	nge.show_load_save_buttons = true;
-        nge.show_node_copy_paste_buttons = true;
+	nge.show_style_editor = true;
+	nge.show_load_save_buttons = true;        
     }
     nge.render();
 }
+
+}	//nmespace ImGui
+
 #endif //IMGUINODEGRAPHEDITOR_NOTESTDEMO
 
 
-}	//nmespace ImGui
 
