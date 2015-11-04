@@ -259,10 +259,11 @@ void DrawGL()	// Mandatory
             ImGui::Text("Please choose a file: ");ImGui::SameLine();
             const bool browseButtonPressed = ImGui::Button("...");
             static ImGuiFs::Dialog fsInstance;
-            fsInstance.chooseFileDialog(browseButtonPressed,startingFolder,optionalFileExtensionFilterString);
-            if (strlen(fsInstance.getChosenPath())>0) {
-                ImGui::Text("Chosen file: \"%s\"",fsInstance.getChosenPath());
+            const char* chosenPath = fsInstance.chooseFileDialog(browseButtonPressed,startingFolder,optionalFileExtensionFilterString);
+            if (strlen(chosenPath)>0) {
+                // A path (chosenPath) has been chosen right now. However we can retrieve it later using: fsInstance.getChosenPath()
             }
+            if (strlen(fsInstance.getChosenPath())>0) ImGui::Text("Chosen path: \"%s\"",fsInstance.getChosenPath());
 
             //------------------------------------------------------------------------------------------
             // 2 - ChooseFolderDialogButton setup:
@@ -270,10 +271,11 @@ void DrawGL()	// Mandatory
             ImGui::Text("Please choose a folder: ");ImGui::SameLine();
             const bool browseButtonPressed2 = ImGui::Button("...##2");
             static ImGuiFs::Dialog fsInstance2;
-            fsInstance2.chooseFolderDialog(browseButtonPressed2,fsInstance2.getLastDirectory());
-            if (strlen(fsInstance2.getChosenPath())>0) {
-                ImGui::Text("Chosen folder: \"%s\"",fsInstance2.getChosenPath());
+            const char* chosenFolder = fsInstance2.chooseFolderDialog(browseButtonPressed2,fsInstance2.getLastDirectory());
+            if (strlen(chosenFolder)>0) {
+                // A path (chosenFolder) has been chosen right now. However we can retrieve it later using: fsInstance2.getChosenPath()
             }
+            if (strlen(fsInstance2.getChosenPath())>0) ImGui::Text("Chosen folder: \"%s\"",fsInstance2.getChosenPath());
 
             //------------------------------------------------------------------------------------------
             // 3 - SaveFileDialogButton setup:
@@ -281,10 +283,13 @@ void DrawGL()	// Mandatory
             ImGui::Text("Please pretend to save the dummy file 'myFilename.png' to: ");ImGui::SameLine();
             const bool browseButtonPressed3 = ImGui::Button("...##3");
             static ImGuiFs::Dialog fsInstance3;
-            fsInstance3.saveFileDialog(browseButtonPressed3,"/usr/include","myFilename.png",".jpg;.jpeg;.png;.tiff;.bmp;.gif;.txt;.zip");//optionalFileExtensionFilterString);
-            if (strlen(fsInstance3.getChosenPath())>0) {
-                ImGui::Text("Chosen save path: \"%s\"",fsInstance3.getChosenPath());
+            const char* savePath = fsInstance3.saveFileDialog(browseButtonPressed3,"/usr/include","myFilename.png",".jpg;.jpeg;.png;.tiff;.bmp;.gif;.txt;.zip");//optionalFileExtensionFilterString);
+            if (strlen(savePath)>0) {
+                // A path (savePath) has been chosen right now. However we can retrieve it later using: fsInstance3.getChosenPath()
             }
+            if (strlen(fsInstance3.getChosenPath())>0) ImGui::Text("Chosen save path: \"%s\"",fsInstance3.getChosenPath());
+
+
 #           else //NO_IMGUIFILESYSTEM
             ImGui::Text("%s","Excluded from this build.\n");
 #           endif //NO_IMGUIFILESYSTEM

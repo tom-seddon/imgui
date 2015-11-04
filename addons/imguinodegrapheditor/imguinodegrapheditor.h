@@ -42,7 +42,7 @@ namespace ImGui	{
 #       endif //IMGUIFIELDINFO_MAX_TOOLTIP_LENGTH
 
     public:
-        FieldType type;
+        int type;                   // usually one of the ImGui::FieldTypes in imguihelper.h
         void* pdata;                // ptr to a variable of type "type" (or to an array of "types")
         char label[IMGUIFIELDINFO_MAX_LABEL_LENGTH];
         char tooltip[IMGUIFIELDINFO_MAX_TOOLTIP_LENGTH];
@@ -57,6 +57,8 @@ namespace ImGui	{
         typedef bool (*TextFromEnumDelegate)(void*, int, const char**); // userData is the first param
         TextFromEnumDelegate  textFromEnumFunctionPointer;  // used only when type==FT_ENUM, otherwise set it to NULL. The method is used to convert an int to a char*.
         void* userData;          // passed to textFromEnumFunctionPointer when type==FT_ENUM (useful if you want to share the same TextFromEnumDelegate for multiple enums). Otherwise set it to NULL or use it as you like.
+        typedef void (*EditedFieldDelegate)(FieldInfo& field,int widgetIndex);  // widgetIndex is always zero
+        EditedFieldDelegate editedFieldDelegate;
         // used only for FT_CUSTOM
         typedef bool (*RenderFieldDelegate)(FieldInfo& field);
         RenderFieldDelegate renderFieldDelegate;
@@ -70,7 +72,7 @@ namespace ImGui	{
         SerializeFieldDelegate serializeFieldDelegate;
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-        typedef bool (*DeserializeFieldDelegate)(FieldInfo& dst,FieldType ft,int numArrayElements,const void* pValue,const char* name);
+        typedef bool (*DeserializeFieldDelegate)(FieldInfo& dst,int ft,int numArrayElements,const void* pValue,const char* name);
         DeserializeFieldDelegate deserializeFieldDelegate;
         // ------------------------------------------------------
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
@@ -79,10 +81,10 @@ namespace ImGui	{
 
     protected:
         FieldInfo() {}
-        void init (FieldType _type=FT_INT,void* _pdata=NULL,const char* _label=NULL,const char* _tooltip=NULL,
+        void init (int _type=FT_INT,void* _pdata=NULL,const char* _label=NULL,const char* _tooltip=NULL,
                    int _precision=0,int _numArrayElements=0,double _lowerLimit=0,double _upperLimit=1,bool _needsRadiansToDegs=false,
                    int _numEnumElements=0,TextFromEnumDelegate _textFromEnumFunctionPointer=NULL,void* _userData=NULL,
-                   RenderFieldDelegate _renderFieldDelegate=NULL)
+                   RenderFieldDelegate _renderFieldDelegate=NULL,EditedFieldDelegate _editedFieldDelegate=NULL)
         {
             label[0]='\0';if (_label) {strncpy(label,_label,IMGUIFIELDINFO_MAX_LABEL_LENGTH);label[IMGUIFIELDINFO_MAX_LABEL_LENGTH-1]='\0';}
             tooltip[0]='\0';if (_tooltip) {strncpy(tooltip,_tooltip,IMGUIFIELDINFO_MAX_TOOLTIP_LENGTH);tooltip[IMGUIFIELDINFO_MAX_TOOLTIP_LENGTH-1]='\0';}
@@ -97,6 +99,7 @@ namespace ImGui	{
             textFromEnumFunctionPointer = _textFromEnumFunctionPointer;
             userData = _userData;
             renderFieldDelegate = _renderFieldDelegate;
+            editedFieldDelegate = _editedFieldDelegate;
         }
 
         inline bool isCompatibleWith(const FieldInfo& f) const {
@@ -126,11 +129,23 @@ namespace ImGui	{
     FieldInfo& addField(unsigned* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=0,unsigned lowerLimit=0,unsigned upperLimit=100,void* userData=NULL);
     FieldInfo& addField(float* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,float lowerLimit=0,float upperLimit=1,void* userData=NULL,bool needsRadiansToDegs=false);
     FieldInfo& addField(double* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,double lowerLimit=0,double upperLimit=100,void* userData=NULL,bool needsRadiansToDegs=false);
-    FieldInfo& addField(char* pdata, int textLength=0, const char* label=NULL, const char* tooltip=NULL, int flags=ImGuiInputTextFlags_EnterReturnsTrue, bool multiline=false,float optionalHeight=-1.f, void* userData=NULL);
 
     FieldInfo& addFieldEnum(int* pdata,int numEnumElements,FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
     FieldInfo& addField(bool* pdata,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
     FieldInfo& addFieldColor(float* pdata,bool useAlpha=true,const char* label=NULL,const char* tooltip=NULL,int precision=3,void* userData=NULL);
+    FieldInfo& addFieldTextEdit(char* pdata, int textLength=0, const char* label=NULL, const char* tooltip=NULL, int flags=ImGuiInputTextFlags_EnterReturnsTrue, void* userData=NULL) {
+        return addField(pdata,textLength,label,tooltip,flags,false,-1.f,userData);
+    }
+    FieldInfo& addFieldTextEditMultiline(char* pdata, int textLength=0, const char* label=NULL, const char* tooltip=NULL, int flags=ImGuiInputTextFlags_EnterReturnsTrue, float optionalHeight=-1.f, void* userData=NULL) {
+        return addField(pdata,textLength,label,tooltip,flags,true,optionalHeight,userData);
+    }
+    FieldInfo& addFieldTextWrapped(char* pdata, int textLength=0, const char* label=NULL, const char* tooltip=NULL,void* userData=NULL) {
+        return addField(pdata,textLength,label,tooltip,-1,true,-1.f,userData);
+    }
+    FieldInfo& addFieldTextEditAndBrowseButton(char* pdata, int textLength=0, const char* label=NULL, const char* tooltip=NULL, int flags=ImGuiInputTextFlags_EnterReturnsTrue,void* userData=NULL) {
+        return addField(pdata,textLength,label,tooltip,flags,false,-1.f,userData,true);
+    }
+
     FieldInfo& addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,FieldInfo::CopyFieldDelegate copyFieldDelegate,void* userData
 //------WIP----------------------------------------------------------------------
 #       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
@@ -178,6 +193,10 @@ namespace ImGui	{
 #   endif //NO_IMGUIHELPER_SERIALIZATION
 //--------------------------------------------------------------------------------
 
+protected:
+    FieldInfo& addField(char* pdata, int textLength=0, const char* label=NULL, const char* tooltip=NULL, int flags=ImGuiInputTextFlags_EnterReturnsTrue, bool multiline=false,float optionalHeight=-1.f, void* userData=NULL,bool isSingleEditWithBrowseButton=false);
+
+
 private:
     template<typename T> inline static T GetRadiansToDegs() {
         static T factor = T(180)/(3.1415926535897932384626433832795029);
@@ -189,7 +208,7 @@ private:
     }
 
 protected:
-    bool render();
+    bool render(float nodeWidth);
     friend class Node;
 };
 //--------------------------------------------------------------------------------------------
@@ -209,13 +228,16 @@ class Node
     protected:
     FieldInfoVector fields; // I guess you can just skip these at all and implement virtual methods... but it was supposed to be useful...
     // virtual methods
-    virtual bool render() // should return "true" if the node has been edited and its values modified (to fire "edited callbacks")
+    virtual bool render(float nodeWidth) // should return "true" if the node has been edited and its values modified (to fire "edited callbacks")
     {
-        return fields.render();
+        return fields.render(nodeWidth);
     }
     virtual const char* getTooltip() const {return NULL;}
     virtual const char* getInfo() const {return NULL;}
-
+    virtual void onEdited() {}  // called (a few seconds) after the node has been edited
+    virtual void onCopied() {}  // called after the node fileds has been copied from another node
+    virtual void onLoaded() {}  // called after the node has been loaded (=deserialized from file)
+    virtual bool canBeCopied() const {return true;}
 
     // some constants
 #   ifndef IMGUINODE_MAX_NAME_LENGTH
@@ -390,7 +412,7 @@ struct NodeGraphEditor	{
         show_top_pane = true;
         show_style_editor = false;
         show_load_save_buttons = false;
-        show_node_copy_paste_buttons = false;
+        show_node_copy_paste_buttons = true;
         pNodeTypeNames = NULL;
         numNodeTypeNames = 0;
         nodeFactoryFunctionPtr = NULL;
@@ -440,13 +462,9 @@ struct NodeGraphEditor	{
     void registerNodeTypes(const char* nodeTypeNames[],int numNodeTypeNames,NodeFactoryDelegate _nodeFactoryFunctionPtr,const int* pOptionalNodeTypesToUse=NULL,int numNodeTypesToUse=-1);
     inline int getNumAvailableNodeTypes() const {return availableNodeTypes.size();}
 
-    // BEST PRACTICE: always call this method like: Node* node = addNode(ExampleNode::Create(...));
-    Node* addNode(Node* justCreatedNode)	{
-        if (justCreatedNode) {
-            nodes.push_back(justCreatedNode);
-            if (nodeCallback) nodeCallback(nodes[nodes.size()-1],NS_ADDED,*this);
-        }
-        return justCreatedNode;
+    Node* addNode(int nodeType,const ImVec2& Pos=ImVec2(0,0))  {
+        if (!nodeFactoryFunctionPtr) return NULL;
+        return addNode(nodeFactoryFunctionPtr(nodeType,Pos));
     }
     bool deleteNode(Node* node) {
         if (node == selectedNode)  selectedNode = NULL;
@@ -528,8 +546,15 @@ struct NodeGraphEditor	{
     };
     DragNode dragNode;
 
+    // BEST PRACTICE: always call this method like: Node* node = addNode(ExampleNode::Create(...));
+    Node* addNode(Node* justCreatedNode)	{
+        if (justCreatedNode) {
+            nodes.push_back(justCreatedNode);
+            if (nodeCallback) nodeCallback(nodes[nodes.size()-1],NS_ADDED,*this);
+        }
+        return justCreatedNode;
+    }
     void copyNode(Node* n);
-
     bool removeLinkAt(int link_idx);
     inline int getNodeIndex(const Node* node) {
         for (int i=0;i<nodes.size();i++)    {

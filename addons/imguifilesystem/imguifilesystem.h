@@ -17,12 +17,15 @@
 
 // USAGE EXAMPLE:
 /*
-#include "imguifilesystem.h"                            // imguifilesystem.cpp must be compiled
+#include "imguifilesystem.h"                                                    // imguifilesystem.cpp must be compiled
 
 // Inside a ImGui window:
-const bool browseButtonPressed = ImGui::Button("...");  // we need a trigger boolean variable
-static ImGuiFs::Dialog dlg;                             // one per dialog (and must be static)
-dlg.chooseFileDialog(browseButtonPressed);              // see other dialog types and the full list of arguments for advanced usage
+const bool browseButtonPressed = ImGui::Button("...");                          // we need a trigger boolean variable
+static ImGuiFs::Dialog dlg;                                                     // one per dialog (and must be static)
+const char* chosenPath = dlg.chooseFileDialog(browseButtonPressed);             // see other dialog types and the full list of arguments for advanced usage
+if (strlen(chosenPath)>0) {
+    // A path (chosenPath) has been chosen RIGHT NOW. However we can retrieve it later more comfortably using: dlg.getChosenPath()
+}
 if (strlen(dlg.getChosenPath())>0) {
     ImGui::Text("Chosen file: \"%s\"",dlg.getChosenPath());
 }
@@ -64,6 +67,7 @@ x> Never tested on a real Windows OS and on MacOS.
 //#define IMGUIFS_NO_EXTRA_METHODS    // optional, but it makes this header heavier... TODO: see if I can extract PATH_MAX and FILENAME_MAX with minimal overhead
 #ifndef IMGUIFS_NO_EXTRA_METHODS
 #include "dirent_portable.h"    // just for PATH_MAX
+#include <limits.h>             // on some systems PATH_MAX is here
 #include <stdio.h>              // just for FILENAME_MAX
 #endif //IMGUIFS_NO_EXTRA_METHODS
 
@@ -92,7 +96,7 @@ struct Dialog {
     const char* chooseFolderDialog(bool dialogTriggerButton,const char* directory=NULL,const char* windowTitle=NULL,const ImVec2& windowSize=ImVec2(-1,-1),const ImVec2& windowPos=ImVec2(-1,-1),const float windowAlpha=0.875f);
     const char* saveFileDialog(bool dialogTriggerButton,const char* directory=NULL,const char* startingFileNameEntry=NULL,const char* fileFilterExtensionString=NULL,const char* windowTitle=NULL,const ImVec2& windowSize=ImVec2(-1,-1),const ImVec2& windowPos=ImVec2(-1,-1),const float windowAlpha=0.875f);
 
-    // gets the chosen path (internally stored). It's valid (its strlen()>0) only when the user performs a valid selection.
+    // gets the chosen path (internally stored). It's valid (its strlen()>0) after the user performs a valid selection, until the user performs an invalid selection (e.g. closes the dialog with the close button).
     const char* getChosenPath() const;
     // returns the last directory browsed by the user using this class (internally stored). Can be passed as "directory" parameter in the methods above to reuse last used directory.
     const char* getLastDirectory() const;

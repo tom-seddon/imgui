@@ -6,6 +6,12 @@
 #ifndef IMGUI_USER_ADDONS_H_
 #define IMGUI_USER_ADDONS_H_
 
+#undef IMGUI_USE_AUTO_BINDING
+#if (defined(IMGUI_USE_GLUT_BINDING) || defined(IMGUI_USE_SDL2_BINDING) || defined(IMGUI_USE_GLFW_BINDING) || defined(IMGUI_USE_WINAPI_BINDING))
+#	define IMGUI_USE_AUTO_BINDING
+# 	include "./imguibindings/imguibindings.h"
+#endif //IMGUI_USE_AUTO_BINDING
+
 #ifndef NO_IMGUIHELPER
 #include "./imguihelper/imguihelper.h"
 #endif //NO_IMGUIHELPER
@@ -33,12 +39,6 @@
 #ifndef NO_IMGUIGRAPHEDITOR
 #include "./imguinodegrapheditor/imguinodegrapheditor.h"
 #endif //NO_IMGUIGRAPHEDITOR
-
-#undef IMGUI_USE_AUTO_BINDING
-#if (defined(IMGUI_USE_GLUT_BINDING) || defined(IMGUI_USE_SDL2_BINDING) || defined(IMGUI_USE_GLFW_BINDING) || defined(IMGUI_USE_WINAPI_BINDING))
-#	define IMGUI_USE_AUTO_BINDING
-# 	include "./imguibindings/imguibindings.h"
-#endif //IMGUI_USE_AUTO_BINDING
 
 #endif //IMGUI_USER_ADDONS_H_
 

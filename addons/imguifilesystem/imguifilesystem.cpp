@@ -31,6 +31,7 @@
 #endif //#ifdef _WIN32
 
 #include "dirent_portable.h"
+#include <limits.h>             // on some systems PATH_MAX is here
 #include <sys/stat.h>
 #include <ctype.h>  // tolower,...
 #include <string.h> // strcmp
@@ -1369,7 +1370,7 @@ public:
         }
     }
     bool switchTo(const FolderInfo& fi) {
-        if (!fi.currentFolder || strlen(fi.currentFolder)==0) return false;
+        if (/*!fi.currentFolder ||*/ strlen(fi.currentFolder)==0) return false;
         if (currentInfoIndex>=0) {
             const FolderInfo& lastInfo = info[currentInfoIndex];
             if (lastInfo.isEqual(fi)) return false;
@@ -2359,15 +2360,18 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
 }
 
 const char* Dialog::chooseFileDialog(bool dialogTriggerButton,const char* directory,const char* fileFilterExtensionString,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha) {
-    if (dialogTriggerButton) {internal->rescan = true;internal->chosenPath[0]='\0';}
+    if (dialogTriggerButton)    {internal->rescan = true;internal->chosenPath[0]='\0';}
     if (dialogTriggerButton || (!internal->rescan && strlen(getChosenPath())==0)) {
         if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,false,false,"",fileFilterExtensionString,windowTitle,windowSize,windowPos,windowAlpha);
 #       ifdef IMGUI_USE_MINIZIP
         if (cp[0]!='\0') internal->unz.close();
 #       endif // IMGUI_USE_MINIZIP
+        //if (cp[0]!='\0') fprintf(stderr,"%d\n",(int)internal->open);
+        return cp;
     }
-    return getChosenPath();
+    //return getChosenPath();
+    return "";
 }
 const char* Dialog::chooseFolderDialog(bool dialogTriggerButton,const char* directory,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha)  {
     if (dialogTriggerButton) {internal->rescan = true;internal->chosenPath[0]='\0';}
@@ -2377,8 +2381,10 @@ const char* Dialog::chooseFolderDialog(bool dialogTriggerButton,const char* dire
 #       ifdef IMGUI_USE_MINIZIP
         if (cp[0]!='\0') internal->unz.close();
 #       endif // IMGUI_USE_MINIZIP
+        return cp;
     }
-    return getChosenPath();
+    //return getChosenPath();
+    return "";
 }
 const char* Dialog::saveFileDialog(bool dialogTriggerButton,const char* directory,const char* startingFileNameEntry,const char* fileFilterExtensionString,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha)    {
     if (dialogTriggerButton) {internal->rescan = true;internal->chosenPath[0]='\0';}
@@ -2388,8 +2394,10 @@ const char* Dialog::saveFileDialog(bool dialogTriggerButton,const char* director
 #       ifdef IMGUI_USE_MINIZIP
         if (cp[0]!='\0') internal->unz.close();
 #       endif // IMGUI_USE_MINIZIP
+        return cp;
     }
-    return getChosenPath();
+    //return getChosenPath();
+    return "";
 }
 
 

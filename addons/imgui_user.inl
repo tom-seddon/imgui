@@ -6,6 +6,25 @@
 #ifndef IMGUI_USER_ADDONS_INL_
 #define IMGUI_USER_ADDONS_INL_
 
+#ifdef IMGUI_USE_AUTO_BINDING	// defined in imgui_user.h
+#	ifdef __EMSCRIPTEN__
+#	include <emscripten.h>		// wip: doesn't work by itself (ATM I'm currently preparing it for use with IMGUI_USE_SDL2_BINDING only)
+#	endif //__EMSCRIPTEN__
+#	ifdef IMGUI_USE_GLUT_BINDING
+#		include "./imguibindings/ImImpl_Binding_Glut.h"
+#	elif IMGUI_USE_SDL2_BINDING
+#		include "./imguibindings/ImImpl_Binding_SDL2.h"
+#	elif IMGUI_USE_GLFW_BINDING
+#		include "./imguibindings/ImImpl_Binding_Glfw3.h"
+#	elif (defined(_WIN32) || defined(IMGUI_USE_WINAPI_BINDING))
+#		include "./imguibindings/ImImpl_Binding_WinAPI.h"
+#	else // IMGUI_USE_SOME_BINDING
+#		include "./imguibindings/ImImpl_Binding_Glfw3.h"
+#	endif // IMGUI_USE_SOME_BINDING
+#	include "./imguibindings/imguibindings.cpp"
+#endif //IMGUI_USE_AUTO_BINDING
+
+
 #ifdef IMGUI_USE_MINIZIP	// requires linking to library -lZlib
 //extern "C" {
 #include "./imguifilesystem/minizip/ioapi.c"
@@ -42,23 +61,6 @@
 #include "./imguinodegrapheditor/imguinodegrapheditor.cpp"
 #endif //NO_IMGUIGRAPHEDITOR
 
-#ifdef IMGUI_USE_AUTO_BINDING	// defined in imgui_user.h
-#	ifdef __EMSCRIPTEN__
-#	include <emscripten.h>		// wip: doesn't work by itself (ATM I'm currently preparing it for use with IMGUI_USE_SDL2_BINDING only)
-#	endif //__EMSCRIPTEN__
-#	ifdef IMGUI_USE_GLUT_BINDING
-#		include "./imguibindings/ImImpl_Binding_Glut.h"
-#	elif IMGUI_USE_SDL2_BINDING
-#		include "./imguibindings/ImImpl_Binding_SDL2.h"
-#	elif IMGUI_USE_GLFW_BINDING
-#		include "./imguibindings/ImImpl_Binding_Glfw3.h"
-#	elif (defined(_WIN32) || defined(IMGUI_USE_WINAPI_BINDING))
-#		include "./imguibindings/ImImpl_Binding_WinAPI.h"
-#	else // IMGUI_USE_SOME_BINDING
-#		include "./imguibindings/ImImpl_Binding_Glfw3.h"
-#	endif // IMGUI_USE_SOME_BINDING
-#	include "./imguibindings/imguibindings.cpp"
-#endif //IMGUI_USE_AUTO_BINDING
 
 #endif //IMGUI_USER_ADDONS_INL_
 
