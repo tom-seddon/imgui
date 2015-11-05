@@ -1127,19 +1127,9 @@ bool FieldInfo::serialize(ImGuiHelper::Serializer& s) const   {
     case FT_FLOAT:
     case FT_COLOR:
     return s.save((ImGui::FieldType) ft,(const float*)pdata,fieldName,numArrayElements,(precision>=0 && needsRadiansToDegs) ? (precision+3) : precision);
-    case FT_STRING: {
-	//const char* txt = (const char*)pdata;
-	/*int len = (int) strlen(txt);
-	if (precision>0 && precision<len) len = precision;*/
-	//return s.save((const char*)pdata,fieldName,precision);
-    }
+    case FT_STRING:
     return s.save((const char*)pdata,fieldName,precision);
-    case FT_TEXTLINE: {
-	//const char* txt = (const char*)pdata;
-	//int len = (int) strlen(txt);
-	//if (precision>0 && precision<len) len = precision;
-	//return s.saveTextLines((const char*)pdata,fieldName);
-    }
+    case FT_TEXTLINE:
     return s.saveTextLines((const char*)pdata,fieldName);
     case FT_CUSTOM:
         if (!serializeFieldDelegate) return false;
@@ -1180,21 +1170,21 @@ static bool fieldInfoParseCallback(ImGuiHelper::FieldType ft,int numArrayElement
     }
         break;
     case FT_STRING: {
-	const char* txt = (const char*)pValue;
+        const char* txt = (const char*)pValue;
         int len = (int) strlen(txt);
-	if (fi.precision>0 && fi.precision<len) len = fi.precision;
+        if (fi.precision>0 && fi.precision<len+1) len = fi.precision-1;
         char* dst = (char*) fi.pdata;
-	strncpy(dst,(const char*)pValue,len);
-	if (len>0) dst[len-1]='\0';
+        strncpy(dst,(const char*)pValue,len+1);
+        dst[len]='\0';
     }
         break;
-    case FT_TEXTLINE: {
-	const char* txt = (const char*)pValue;
-	int len = (int) strlen(txt);
-	if (fi.precision>0 && fi.precision<len) len = fi.precision;
-	char* dst = (char*) fi.pdata;
-	strncpy(dst,(const char*)pValue,len);
-	if (len>0) dst[len-1]='\0';
+    case FT_TEXTLINE: { // This is called more than once for multiple lines, but we just use a single line here
+        const char* txt = (const char*)pValue;
+        int len = (int) strlen(txt);
+        if (fi.precision>0 && fi.precision<len+1) len = fi.precision-1;
+        char* dst = (char*) fi.pdata;
+        strncpy(dst,(const char*)pValue,len+1);
+        dst[len]='\0';
     }
 	break;
     case FT_CUSTOM:    {

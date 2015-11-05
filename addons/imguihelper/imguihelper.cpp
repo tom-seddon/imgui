@@ -164,7 +164,7 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
                     varName = ++colonCh;
 
                     const bool isTextOrCustomType = ft==ImGui::FT_STRING || ft==ImGui::FT_TEXTLINE  || ft==ImGui::FT_CUSTOM;
-                    if (ft==ImGui::FT_COUNT || numArrayElements<1 || (numArrayElements>4 && (!isTextOrCustomType)))   {
+                    if (ft==ImGui::FT_COUNT || numArrayElements<1 || (numArrayElements>4 && !isTextOrCustomType))   {
                         fprintf(stderr,"ImGuiHelper::Deserializer::parse(...) Error (wrong type detected): line:%s type:%d numArrayElements:%d varName:%s typeName:%s\n",name,(int)ft,numArrayElements,varName,typeName);
                         varName=NULL;
                     }
@@ -172,18 +172,21 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
 
                         if (ft==ImGui::FT_STRING && varName && varName[0]!='\0')  {
                             //Process soon here, as the string can be multiline
-                            line_start = line_end+1;
+                            line_start = ++line_end;
                             //--------------------------------------------------------
-                            for (int sp=0;sp<numArrayElements && line_end < buf_end;sp++) line_end++;
-                            while (line_end < buf_end && *line_end != '\n' && *line_end != '\r') line_end++;
+                            int cnt = 0;
+                            while (line_end < buf_end && cnt++ < numArrayElements-1) ++line_end;
                             textBuffer[0]=textBuffer[2049]='\0';
-                            const int maxLen = numArrayElements>2049?2049:numArrayElements;
+                            const int maxLen = cnt>2049?2049:cnt;
                             strncpy(textBuffer,line_start,maxLen+1);
-                            textBuffer[maxLen+1]='\0';
+                            textBuffer[maxLen]='\0';
                             quitParsing = cb(ft,numArrayElements,(void*)textBuffer,varName,userPtr);
-                            //else fprintf(stderr,"MemoryFile::parse(...) Error converting value:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
+                            //fprintf(stderr,"Deserializer::parse(...) value:\"%s\" to type:%d numArrayElements:%d varName:%s maxLen:%d\n",textBuffer,(int)ft,numArrayElements,varName,maxLen);  // dbg
+
+
+                            //else fprintf(stderr,"Deserializer::parse(...) Error converting value:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
                             //--------------------------------------------------------
-                            ft = ImGui::FT_COUNT;name[0]='\0';varName=NULL; // mandatory
+                            ft = ImGui::FT_COUNT;name[0]='\0';varName=NULL; // mandatory                            
 
                         }
                         else if (!isTextOrCustomType) {
@@ -193,7 +196,7 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
                                 strcat(format,FieldTypeFormats[ft]);
                             }
                             // DBG:
-                            //fprintf(stderr,"MemoryFile::parse(...) DBG: line:%s type:%d numArrayElements:%d varName:%s format:%s\n",name,(int)ft,numArrayElements,varName,format);  // dbg
+                            //fprintf(stderr,"Deserializer::parse(...) DBG: line:%s type:%d numArrayElements:%d varName:%s format:%s\n",name,(int)ft,numArrayElements,varName,format);  // dbg
                         }
                     }
                 }
@@ -211,7 +214,7 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
                      (numArrayElements==3 && sscanf(line_start, format, &p[0],&p[1],&p[2])==numArrayElements) ||
                      (numArrayElements==4 && sscanf(line_start, format, &p[0],&p[1],&p[2],&p[3])==numArrayElements))
                      quitParsing = cb(ft,numArrayElements,voidBuffer,varName,userPtr);
-                else fprintf(stderr,"MemoryFile::parse(...) Error converting value:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
+                else fprintf(stderr,"Deserializer::parse(...) Error converting value:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
             }
             break;
             case ImGui::FT_DOUBLE:  {
@@ -221,7 +224,7 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
                      (numArrayElements==3 && sscanf(line_start, format, &p[0],&p[1],&p[2])==numArrayElements) ||
                      (numArrayElements==4 && sscanf(line_start, format, &p[0],&p[1],&p[2],&p[3])==numArrayElements))
                      quitParsing = cb(ft,numArrayElements,voidBuffer,varName,userPtr);
-                else fprintf(stderr,"MemoryFile::parse(...) Error converting value:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
+                else fprintf(stderr,"Deserializer::parse(...) Error converting value:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
             }
             break;
             case ImGui::FT_INT:
@@ -233,7 +236,7 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
                      (numArrayElements==3 && sscanf(line_start, format, &p[0],&p[1],&p[2])==numArrayElements) ||
                      (numArrayElements==4 && sscanf(line_start, format, &p[0],&p[1],&p[2],&p[3])==numArrayElements))
                      quitParsing = cb(ft,numArrayElements,voidBuffer,varName,userPtr);
-                else fprintf(stderr,"MemoryFile::parse(...) Error converting value:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
+                else fprintf(stderr,"Deserializer::parse(...) Error converting value:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
             }
             break;
             case ImGui::FT_BOOL:
@@ -247,7 +250,7 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
                      for (int i=0;i<numArrayElements;i++) p[i] = tmp[i];
                      quitParsing = cb(ft,numArrayElements,voidBuffer,varName,userPtr);quitParsing = cb(ft,numArrayElements,voidBuffer,varName,userPtr);
                 }
-                else fprintf(stderr,"MemoryFile::parse(...) Error converting value:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
+                else fprintf(stderr,"Deserializer::parse(...) Error converting value:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
             }
             break;
             case ImGui::FT_UNSIGNED:  {
@@ -257,7 +260,7 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
                      (numArrayElements==3 && sscanf(line_start, format, &p[0],&p[1],&p[2])==numArrayElements) ||
                      (numArrayElements==4 && sscanf(line_start, format, &p[0],&p[1],&p[2],&p[3])==numArrayElements))
                      quitParsing = cb(ft,numArrayElements,voidBuffer,varName,userPtr);
-                else fprintf(stderr,"MemoryFile::parse(...) Error converting value:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
+                else fprintf(stderr,"Deserializer::parse(...) Error converting value:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
             }
             break;
             case ImGui::FT_CUSTOM:
@@ -268,7 +271,7 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
                     textBuffer[0]=textBuffer[2049]='\0';
                     const int maxLen = (line_end-line_start)>2049?2049:(line_end-line_start);
                     if (maxLen<=0) break;
-                    strncpy(textBuffer,line_start,maxLen);
+                    strncpy(textBuffer,line_start,maxLen+1);textBuffer[maxLen]='\0';
                     quitParsing = cb(ft,i,(void*)textBuffer,varName,userPtr);
 
                     //fprintf(stderr,"%d) \"%s\"\n",i,textBuffer);  // Dbg
@@ -282,7 +285,7 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
             }
             break;
             default:
-            fprintf(stderr,"MemoryFile::parse(...) Warning missing value type:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
+            fprintf(stderr,"Deserializer::parse(...) Warning missing value type:\"%s\" to type:%d numArrayElements:%d varName:%s\n",line_start,(int)ft,numArrayElements,varName);  // dbg
             break;
             }
             //---------------------------------------------------------------------------------
@@ -353,7 +356,7 @@ bool Serializer::save(const char* pValue,const char* name,int pValueSize)    {
     int numArrayElements = pValueSize;
     if (!f || ft==ImGui::FT_COUNT || !pValue || !name || name[0]=='\0') return false;
     numArrayElements = pValueSize;
-    pValueSize=(int)strlen(pValue);if (numArrayElements>pValueSize) numArrayElements=pValueSize;
+    pValueSize=(int)strlen(pValue);if (numArrayElements>pValueSize || numArrayElements<=0) numArrayElements=pValueSize;
     if (numArrayElements<0) numArrayElements=0;
 
     // name

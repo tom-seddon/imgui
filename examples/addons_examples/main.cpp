@@ -160,6 +160,40 @@ void InitGL()	// Mandatory
 #endif // IMGUI_USE_GLFW_BINDING & IMGUI_GLFW_NO_NATIVE_CURSORS
 
     ImGui::GetIO().FontAllowUserScaling = true;
+
+
+//#define TEST_SERIALIZER // development only: but I definitely need to perform some tests...
+#ifdef TEST_SERIALIZER
+struct Parser {
+static bool ParseCallback(ImGui::FieldType ft,int numArrayElements,void* pValue,const char* name,void* userPtr)    {
+    switch (ft) {
+    case ImGui::FT_STRING:  {
+        const char* txt = (const char*) pValue;     // we can just use strlen(txt) and copy it with strcpy/strncpy...
+        fprintf(stderr,"[FT_STRING-%d:%s]: \"%s\" (%d)\n",numArrayElements,name,txt,(int)strlen((const char*) pValue));
+    }
+    break;
+    case ImGui::FT_TEXTLINE:    {   // Called once per line
+        const char* txt = (const char*) pValue;     // we can just use strlen(txt) and copy it with strcpy/strncpy...
+        fprintf(stderr,"[FT_TEXTLINE-%d:%s]: \"%s\" (%d)\n",numArrayElements,name,txt,(int)strlen((const char*) pValue));
+    }
+    break;
+    }
+    return false;
+}
+};
+
+const char* fileName = "myTest.conf";
+{
+    ImGuiHelper::Serializer s(fileName);
+    s.save("This is a string that can be\nshort or long.","MyString");
+    s.saveTextLines("This is a string that can be\nshort or long.","MyStringTextLines");
+}
+{
+    ImGuiHelper::Deserializer d(fileName);
+    const char* offset;
+    offset = d.parse(&Parser::ParseCallback,NULL,offset);
+}
+#endif //TEST_SERIALIZER
 }
 void ResizeGL(int /*w*/,int /*h*/)	// Mandatory
 {
