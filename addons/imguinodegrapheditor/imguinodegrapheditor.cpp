@@ -993,46 +993,71 @@ bool NodeGraphEditor::isNodeReachableFrom(const Node *node1, bool goBackward,con
     return false;
 }
 
+
+bool NodeGraphEditor::overrideNodeName(Node* n,const char *newName)    {
+    if (!n || !newName) return false;
+    n->mustOverrideName = true;
+    strncpy(n->Name,newName,IMGUINODE_MAX_NAME_LENGTH);n->Name[IMGUINODE_MAX_NAME_LENGTH-1]='\0';
+    return true;
+}
+template < int IMGUINODE_MAX_SLOTS > inline static int ProcessSlotNamesSeparatedBySemicolons(const char* slotNamesSeparatedBySemicolons,char Names[IMGUINODE_MAX_SLOTS][IMGUINODE_MAX_SLOT_NAME_LENGTH]) {
+    int Count = 0;
+    const char *tmp = slotNamesSeparatedBySemicolons,*tmp2 = NULL;int length;
+    if (tmp && strlen(tmp)>0)    {
+        while ((tmp2=strchr(tmp,(int)';')) && Count<IMGUINODE_MAX_SLOTS)    {
+            length = (int) (tmp2-tmp);if (length>=IMGUINODE_MAX_SLOT_NAME_LENGTH) length=IMGUINODE_MAX_SLOT_NAME_LENGTH-1;
+            strncpy(Names[Count],tmp, length);
+            Names[Count][length] = '\0';
+            ++Count;tmp = ++tmp2;
+        }
+        if (tmp && Count<IMGUINODE_MAX_SLOTS)    {
+            length = (int) strlen(tmp);if (length>=IMGUINODE_MAX_SLOT_NAME_LENGTH) length=IMGUINODE_MAX_SLOT_NAME_LENGTH-1;
+            strncpy(Names[Count],tmp, length);
+            Names[Count][length] = '\0';
+            ++Count;
+        }
+    }
+    return Count;
+}
+bool NodeGraphEditor::overrideNodeInputSlots(Node* n,const char *slotNamesSeparatedBySemicolons)   {
+    if (!n || !slotNamesSeparatedBySemicolons) return false;
+    n->mustOverrideInputSlots = true;
+    const int OldInputSlots = n->InputsCount;
+    n->InputsCount = ProcessSlotNamesSeparatedBySemicolons<IMGUINODE_MAX_INPUT_SLOTS>(slotNamesSeparatedBySemicolons,n->InputNames);
+    for (int i=n->InputsCount;i<OldInputSlots;i++) {
+        for (int j=0,jsz=links.size();j<jsz;j++)  {
+            NodeLink& l = links[j];
+            if (l.OutputNode==n && l.OutputSlot==i)  {
+                if (removeLinkAt(j)) --j;
+            }
+        }
+    }
+    return true;
+}
+bool NodeGraphEditor::overrideNodeOutputSlots(Node* n,const char *slotNamesSeparatedBySemicolons)  {
+    if (!n || !slotNamesSeparatedBySemicolons) return false;
+    n->mustOverrideOutputSlots = true;
+    const int OldOutputSlots = n->OutputsCount;
+    n->OutputsCount = ProcessSlotNamesSeparatedBySemicolons<IMGUINODE_MAX_OUTPUT_SLOTS>(slotNamesSeparatedBySemicolons,n->OutputNames);
+    for (int i=n->OutputsCount;i<OldOutputSlots;i++) {
+        for (int j=0,jsz=links.size();j<jsz;j++)  {
+            NodeLink& l = links[j];
+            if (l.InputNode==n && l.InputSlot==i)  {
+                if (removeLinkAt(j)) --j;
+            }
+        }
+    }
+    return true;
+}
+
 void Node::init(const char *name, const ImVec2 &pos, const char *inputSlotNamesSeparatedBySemicolons, const char *outputSlotNamesSeparatedBySemicolons, int _nodeTypeID/*,float currentWindowFontScale*/) {
     /*if (currentWindowFontScale<0)   {
         ImGuiWindow* window = ImGui::GetCurrentWindow();
         currentWindowFontScale = window ? window->FontWindowScale  : 0.f;
     }*/
     strncpy(Name, name, IMGUINODE_MAX_NAME_LENGTH); Name[IMGUINODE_MAX_NAME_LENGTH-1] = '\0'; Pos = /*currentWindowFontScale==0.f?*/pos/*:pos/currentWindowFontScale*/;
-    InputsCount = 0; OutputsCount = 0;
-    const char *input_names = inputSlotNamesSeparatedBySemicolons, *output_names = outputSlotNamesSeparatedBySemicolons;
-    const char *tmp = NULL,*tmp2 = NULL;int length;
-
-    tmp = input_names;tmp2 = NULL;
-    if (tmp && strlen(tmp)>0)    {
-        while ((tmp2=strchr(tmp,(int)';')) && InputsCount<IMGUINODE_MAX_INPUT_SLOTS)    {
-            length = (int) (tmp2-tmp);if (length>IMGUINODE_MAX_SLOT_NAME_LENGTH) length=IMGUINODE_MAX_SLOT_NAME_LENGTH;
-            strncpy(InputNames[InputsCount],tmp, length);
-            InputNames[InputsCount][length] = '\0';
-            ++InputsCount;tmp = ++tmp2;
-        }
-        if (tmp && InputsCount<IMGUINODE_MAX_INPUT_SLOTS)    {
-            length = (int) strlen(tmp);if (length>IMGUINODE_MAX_SLOT_NAME_LENGTH) length=IMGUINODE_MAX_SLOT_NAME_LENGTH;
-            strncpy(InputNames[InputsCount],tmp, length);
-            InputNames[InputsCount][length] = '\0';
-            ++InputsCount;
-        }
-    }
-    tmp = output_names;tmp2 = NULL;
-    if (tmp && strlen(tmp)>0)    {
-        while ((tmp2=strchr(tmp,(int)';')) && OutputsCount<IMGUINODE_MAX_OUTPUT_SLOTS)    {
-            length = (int) (tmp2-tmp);if (length>IMGUINODE_MAX_SLOT_NAME_LENGTH) length=IMGUINODE_MAX_SLOT_NAME_LENGTH;
-            strncpy(OutputNames[OutputsCount],tmp, length);
-            OutputNames[OutputsCount][length] = '\0';
-            ++OutputsCount;tmp = ++tmp2;
-        }
-        if (tmp && OutputsCount<IMGUINODE_MAX_OUTPUT_SLOTS)    {
-            length = (int) strlen(tmp);if (length>IMGUINODE_MAX_SLOT_NAME_LENGTH) length=IMGUINODE_MAX_SLOT_NAME_LENGTH;
-            strncpy(OutputNames[OutputsCount],tmp, length);
-            OutputNames[OutputsCount][length] = '\0';
-            ++OutputsCount;
-        }
-    }
+    InputsCount = ProcessSlotNamesSeparatedBySemicolons<IMGUINODE_MAX_INPUT_SLOTS>(inputSlotNamesSeparatedBySemicolons,InputNames);
+    OutputsCount = ProcessSlotNamesSeparatedBySemicolons<IMGUINODE_MAX_OUTPUT_SLOTS>(outputSlotNamesSeparatedBySemicolons,OutputNames);
     typeID = _nodeTypeID;
     user_ptr = NULL;userID=-1;
     startEditingTime = 0;
@@ -1287,234 +1312,236 @@ FieldInfo &FieldInfoVector::addFieldCustom(FieldInfo::RenderFieldDelegate render
     return f;
 }
 bool NodeGraphEditor::UseSlidersInsteadOfDragControls = false;
-bool FieldInfoVector::render(float nodeWidth)   {
+template<typename T> inline static T GetRadiansToDegs() {
+    static T factor = T(180)/(3.1415926535897932384626433832795029);
+    return factor;
+}
+template<typename T> inline static T GetDegsToRadians() {
+    static T factor = T(3.1415926535897932384626433832795029)/T(180);
+    return factor;
+}
+bool FieldInfo::render(int nodeWidth)   {
+    FieldInfo& f = *this;
+    ImGui::PushID((const void*) &f);
     static const int precisionStrSize = 16;static char precisionStr[precisionStrSize];int precisionLastCharIndex;
+    const char* label = (/*f.label &&*/ f.label[0]!='\0') ? &f.label[0] : "##DummyLabel";
+    if (f.precision>0) {
+        strcpy(precisionStr,"%.");
+        snprintf(&precisionStr[2], precisionStrSize-2,"%ds",f.precision);
+        precisionLastCharIndex = strlen(precisionStr)-1;
+    }
+    else {
+        strcpy(precisionStr,"%s");
+        precisionLastCharIndex = 1;
+    }
 
-    bool nodeEdited = false;
-    for (int i=0,isz=size();i<isz;i++)   {
-        FieldInfo& f = (*this)[i];
-        ImGui::PushID((const void*) &f);
+    float dragSpeed = (float)(f.maxValue-f.minValue)/200.f;if (dragSpeed<=0) dragSpeed=1.f;
 
-        const char* label = (/*f.label &&*/ f.label[0]!='\0') ? &f.label[0] : "##DummyLabel";
-        if (f.precision>0) {
-            strcpy(precisionStr,"%.");
-            snprintf(&precisionStr[2], precisionStrSize-2,"%ds",f.precision);
-            precisionLastCharIndex = strlen(precisionStr)-1;
+    bool changed = false;int widgetIndex = 0;bool skipTooltip = false;
+    switch (f.type) {
+    case FT_DOUBLE: {
+        precisionStr[precisionLastCharIndex]='f';
+        const float minValue = (float) f.minValue;
+        const float maxValue = (float) f.maxValue;
+        const double rtd = f.needsRadiansToDegs ? GetRadiansToDegs<double>() : 1.f;
+        const double dtr = f.needsRadiansToDegs ? GetDegsToRadians<double>() : 1.f;
+        double* pField = (double*)f.pdata;
+        float value[4] = {0,0,0,0};
+        for (int vl=0;vl<f.numArrayElements;vl++) {
+            value[vl] = (float) ((*(pField+vl))*rtd);
+        }
+        if (NodeGraphEditor::UseSlidersInsteadOfDragControls)   {
+            switch (f.numArrayElements)    {
+            case 2: changed = ImGui::SliderFloat2(label,value,minValue,maxValue,precisionStr);break;
+            case 3: changed = ImGui::SliderFloat3(label,value,minValue,maxValue,precisionStr);break;
+            case 4: changed = ImGui::SliderFloat4(label,value,minValue,maxValue,precisionStr);break;
+            default: changed = ImGui::SliderFloat(label,value,minValue,maxValue,precisionStr);break;
+            }
         }
         else {
-            strcpy(precisionStr,"%s");
-            precisionLastCharIndex = 1;
+            switch (f.numArrayElements)    {
+            case 2: changed = ImGui::DragFloat2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            case 3: changed = ImGui::DragFloat3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            case 4: changed = ImGui::DragFloat4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            default: changed = ImGui::DragFloat(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            }
+        }
+        if (changed)    {
+            for (int vl=0;vl<f.numArrayElements;vl++) {
+                *(pField+vl) = (double) value[vl] * dtr;
+            }
         }
 
-        float dragSpeed = (float)(f.maxValue-f.minValue)/200.f;if (dragSpeed<=0) dragSpeed=1.f;
-
-	bool changed = false;int widgetIndex = 0;bool skipTooltip = false;
-        switch (f.type) {
-        case FT_DOUBLE: {
-            precisionStr[precisionLastCharIndex]='f';
-            const float minValue = (float) f.minValue;
-            const float maxValue = (float) f.maxValue;
-            const double rtd = f.needsRadiansToDegs ? GetRadiansToDegs<double>() : 1.f;
-            const double dtr = f.needsRadiansToDegs ? GetDegsToRadians<double>() : 1.f;
-            double* pField = (double*)f.pdata;
-            float value[4] = {0,0,0,0};
-            for (int vl=0;vl<f.numArrayElements;vl++) {
-                value[vl] = (float) ((*(pField+vl))*rtd);
-            }
-            if (NodeGraphEditor::UseSlidersInsteadOfDragControls)   {
-                switch (f.numArrayElements)    {
-                case 2: changed = ImGui::SliderFloat2(label,value,minValue,maxValue,precisionStr);break;
-                case 3: changed = ImGui::SliderFloat3(label,value,minValue,maxValue,precisionStr);break;
-                case 4: changed = ImGui::SliderFloat4(label,value,minValue,maxValue,precisionStr);break;
-                default: changed = ImGui::SliderFloat(label,value,minValue,maxValue,precisionStr);break;
-                }
-            }
-            else {
-                switch (f.numArrayElements)    {
-                case 2: changed = ImGui::DragFloat2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                case 3: changed = ImGui::DragFloat3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                case 4: changed = ImGui::DragFloat4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                default: changed = ImGui::DragFloat(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                }
-            }
-            if (changed)    {
-                for (int vl=0;vl<f.numArrayElements;vl++) {
-                    *(pField+vl) = (double) value[vl] * dtr;
-                }
-            }
-
-        }
-            break;
-        case FT_FLOAT: {
-            precisionStr[precisionLastCharIndex]='f';
-            const float minValue = (float) f.minValue;
-            const float maxValue = (float) f.maxValue;
-            const float rtd = f.needsRadiansToDegs ? GetRadiansToDegs<float>() : 1.f;
-            const float dtr = f.needsRadiansToDegs ? GetDegsToRadians<float>() : 1.f;
-            float* pField = (float*)f.pdata;
-            float value[4] = {0,0,0,0};
-            for (int vl=0;vl<f.numArrayElements;vl++) {
-                value[vl] = (float) ((*(pField+vl))*rtd);
-            }
-            if (NodeGraphEditor::UseSlidersInsteadOfDragControls)   {
-                switch (f.numArrayElements)    {
-                case 2: changed = ImGui::SliderFloat2(label,value,minValue,maxValue,precisionStr);break;
-                case 3: changed = ImGui::SliderFloat3(label,value,minValue,maxValue,precisionStr);break;
-                case 4: changed = ImGui::SliderFloat4(label,value,minValue,maxValue,precisionStr);break;
-                default: changed = ImGui::SliderFloat(label,value,minValue,maxValue,precisionStr);break;
-                }
-            }
-            else {
-                switch (f.numArrayElements)    {
-                case 2: changed = ImGui::DragFloat2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                case 3: changed = ImGui::DragFloat3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                case 4: changed = ImGui::DragFloat4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                default: changed = ImGui::DragFloat(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                }
-            }
-            if (changed)    {
-                for (int vl=0;vl<f.numArrayElements;vl++) {
-                    *(pField+vl) = (float) value[vl]*dtr;
-                }
-            }
-        }
-            break;
-        case FT_UNSIGNED: {
-            //precisionStr[precisionLastCharIndex]='d';
-            const int minValue = (int) f.minValue;
-            const int maxValue = (int) f.maxValue;
-            unsigned* pField = (unsigned*) f.pdata;
-            int value[4] = {0,0,0,0};
-            for (int vl=0;vl<f.numArrayElements;vl++) {
-                value[vl] = (int) *(pField+vl);
-            }
-            if (NodeGraphEditor::UseSlidersInsteadOfDragControls)   {
-                switch (f.numArrayElements)    {
-                case 2: changed = ImGui::SliderInt2(label,value,minValue,maxValue,precisionStr);break;
-                case 3: changed = ImGui::SliderInt3(label,value,minValue,maxValue,precisionStr);break;
-                case 4: changed = ImGui::SliderInt4(label,value,minValue,maxValue,precisionStr);break;
-                default: changed = ImGui::SliderInt(label,value,minValue,maxValue,precisionStr);break;
-                }
-            }
-            else {
-                if (dragSpeed<1.f) dragSpeed = 1.f;
-                switch (f.numArrayElements)    {
-                case 2: changed = ImGui::DragInt2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                case 3: changed = ImGui::DragInt3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                case 4: changed = ImGui::DragInt4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                default: changed = ImGui::DragInt(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                }
-            }
-            if (changed)    {
-                for (int vl=0;vl<f.numArrayElements;vl++) {
-                    *(pField+vl) = (unsigned) value[vl];
-                }
-            }
-        }
-            break;
-        case FT_INT: {
-            //precisionStr[precisionLastCharIndex]='d';
-            const int minValue = (int) f.minValue;
-            const int maxValue = (int) f.maxValue;
-            int* pField = (int*) f.pdata;
-            int value[4] = {0,0,0,0};
-            for (int vl=0;vl<f.numArrayElements;vl++) {
-                value[vl] = (int) *(pField+vl);
-            }
-            if (NodeGraphEditor::UseSlidersInsteadOfDragControls)   {
-                switch (f.numArrayElements)    {
-                case 2: changed = ImGui::SliderInt2(label,value,minValue,maxValue,precisionStr);break;
-                case 3: changed = ImGui::SliderInt3(label,value,minValue,maxValue,precisionStr);break;
-                case 4: changed = ImGui::SliderInt4(label,value,minValue,maxValue,precisionStr);break;
-                default: changed = ImGui::SliderInt(label,value,minValue,maxValue,precisionStr);break;
-                }
-            }
-            else {
-                if (dragSpeed<1.f) dragSpeed = 1.f;
-                switch (f.numArrayElements)    {
-                case 2: changed = ImGui::DragInt2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                case 3: changed = ImGui::DragInt3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                case 4: changed = ImGui::DragInt4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                default: changed = ImGui::DragInt(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
-                }
-            }
-            if (changed)    {
-                for (int vl=0;vl<f.numArrayElements;vl++) {
-                    *(pField+vl) = (int) value[vl];
-                }
-            }
-        }
-            break;
-        case FT_BOOL:   {
-            bool * boolPtr = (bool*) f.pdata;
-            changed|=ImGui::Checkbox(label,boolPtr);
-        }
-            break;
-        case FT_ENUM: {
-            changed|=ImGui::Combo(label,(int*) f.pdata,f.textFromEnumFunctionPointer,f.userData,f.numEnumElements);
-        }
-            break;
-        case FT_STRING: {
-            char* txtField = (char*)  f.pdata;
-            const int flags = f.numArrayElements;
-	    const float maxHeight =(float) (f.maxValue<0 ? 0 : f.maxValue);
-            const bool multiline = f.needsRadiansToDegs;
-	    ImGui::Text("%s",label);
-	    float width = nodeWidth;
-	    if (flags<0) {
-		//ImVec2 pos = ImGui::GetCursorScreenPos();
-		ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + width);
-		ImGui::Text(txtField, width);
-		//ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), 0xFF00FFFF);
-		ImGui::PopTextWrapPos();
-	    }
-	    else if (!multiline) {
-		const bool addBrowseButton = (f.minValue==-500);
-		float browseBtnWidth = 0;
-		if (addBrowseButton) {
-		    browseBtnWidth = ImGui::CalcTextSize("...").x + 10;
-		    if (width-browseBtnWidth>0) width-=browseBtnWidth;
-		}
-		ImGui::PushItemWidth(width);
-		changed|=ImGui::InputText("##DummyLabelInputText",txtField,f.precision,flags);
-		ImGui::PopItemWidth();
-		if (addBrowseButton)	{
-		    if (/*f.tooltip &&*/ f.tooltip[0]!='\0' && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",f.tooltip);
-		    skipTooltip = true;
-		    ImGui::SameLine(0,4);
-		    ImGui::PushItemWidth(browseBtnWidth);
-		    if (ImGui::Button("...##DummyLabelInputTextBrowseButton")) {
-			changed = true;
-			widgetIndex = 1;
-		    }
-		    ImGui::PopItemWidth();
-		    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Browse");
-		}
-	    }
-	    else changed|=ImGui::InputTextMultiline("##DummyLabelInputText",txtField,f.precision,ImVec2(width,maxHeight),flags);
-        }
-            break;
-        case FT_COLOR:  {
-            float* pColor = (float*) f.pdata;
-            if (f.numArrayElements==3) changed|=ImGui::ColorEdit3(label,pColor);
-            else changed|=ImGui::ColorEdit4(label,pColor);
-        }
-        case FT_CUSTOM: {
-            if (f.renderFieldDelegate) changed = f.renderFieldDelegate(f);
-        }
-            break;
-        default:
-            IM_ASSERT(true);    // should never happen
-            break;
-        }
-	if (!skipTooltip && f.type!=FT_CUSTOM)  {
-            if (/*f.tooltip &&*/ f.tooltip[0]!='\0' && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",f.tooltip);
-        }
-        nodeEdited|=changed;
-	if (changed && f.editedFieldDelegate) f.editedFieldDelegate(f,widgetIndex);
-        ImGui::PopID();
     }
-    return nodeEdited;
+        break;
+    case FT_FLOAT: {
+        precisionStr[precisionLastCharIndex]='f';
+        const float minValue = (float) f.minValue;
+        const float maxValue = (float) f.maxValue;
+        const float rtd = f.needsRadiansToDegs ? GetRadiansToDegs<float>() : 1.f;
+        const float dtr = f.needsRadiansToDegs ? GetDegsToRadians<float>() : 1.f;
+        float* pField = (float*)f.pdata;
+        float value[4] = {0,0,0,0};
+        for (int vl=0;vl<f.numArrayElements;vl++) {
+            value[vl] = (float) ((*(pField+vl))*rtd);
+        }
+        if (NodeGraphEditor::UseSlidersInsteadOfDragControls)   {
+            switch (f.numArrayElements)    {
+            case 2: changed = ImGui::SliderFloat2(label,value,minValue,maxValue,precisionStr);break;
+            case 3: changed = ImGui::SliderFloat3(label,value,minValue,maxValue,precisionStr);break;
+            case 4: changed = ImGui::SliderFloat4(label,value,minValue,maxValue,precisionStr);break;
+            default: changed = ImGui::SliderFloat(label,value,minValue,maxValue,precisionStr);break;
+            }
+        }
+        else {
+            switch (f.numArrayElements)    {
+            case 2: changed = ImGui::DragFloat2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            case 3: changed = ImGui::DragFloat3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            case 4: changed = ImGui::DragFloat4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            default: changed = ImGui::DragFloat(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            }
+        }
+        if (changed)    {
+            for (int vl=0;vl<f.numArrayElements;vl++) {
+                *(pField+vl) = (float) value[vl]*dtr;
+            }
+        }
+    }
+        break;
+    case FT_UNSIGNED: {
+        //precisionStr[precisionLastCharIndex]='d';
+        const int minValue = (int) f.minValue;
+        const int maxValue = (int) f.maxValue;
+        unsigned* pField = (unsigned*) f.pdata;
+        int value[4] = {0,0,0,0};
+        for (int vl=0;vl<f.numArrayElements;vl++) {
+            value[vl] = (int) *(pField+vl);
+        }
+        if (NodeGraphEditor::UseSlidersInsteadOfDragControls)   {
+            switch (f.numArrayElements)    {
+            case 2: changed = ImGui::SliderInt2(label,value,minValue,maxValue,precisionStr);break;
+            case 3: changed = ImGui::SliderInt3(label,value,minValue,maxValue,precisionStr);break;
+            case 4: changed = ImGui::SliderInt4(label,value,minValue,maxValue,precisionStr);break;
+            default: changed = ImGui::SliderInt(label,value,minValue,maxValue,precisionStr);break;
+            }
+        }
+        else {
+            if (dragSpeed<1.f) dragSpeed = 1.f;
+            switch (f.numArrayElements)    {
+            case 2: changed = ImGui::DragInt2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            case 3: changed = ImGui::DragInt3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            case 4: changed = ImGui::DragInt4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            default: changed = ImGui::DragInt(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            }
+        }
+        if (changed)    {
+            for (int vl=0;vl<f.numArrayElements;vl++) {
+                *(pField+vl) = (unsigned) value[vl];
+            }
+        }
+    }
+        break;
+    case FT_INT: {
+        //precisionStr[precisionLastCharIndex]='d';
+        const int minValue = (int) f.minValue;
+        const int maxValue = (int) f.maxValue;
+        int* pField = (int*) f.pdata;
+        int value[4] = {0,0,0,0};
+        for (int vl=0;vl<f.numArrayElements;vl++) {
+            value[vl] = (int) *(pField+vl);
+        }
+        if (NodeGraphEditor::UseSlidersInsteadOfDragControls)   {
+            switch (f.numArrayElements)    {
+            case 2: changed = ImGui::SliderInt2(label,value,minValue,maxValue,precisionStr);break;
+            case 3: changed = ImGui::SliderInt3(label,value,minValue,maxValue,precisionStr);break;
+            case 4: changed = ImGui::SliderInt4(label,value,minValue,maxValue,precisionStr);break;
+            default: changed = ImGui::SliderInt(label,value,minValue,maxValue,precisionStr);break;
+            }
+        }
+        else {
+            if (dragSpeed<1.f) dragSpeed = 1.f;
+            switch (f.numArrayElements)    {
+            case 2: changed = ImGui::DragInt2(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            case 3: changed = ImGui::DragInt3(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            case 4: changed = ImGui::DragInt4(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            default: changed = ImGui::DragInt(label,value,dragSpeed,minValue,maxValue,precisionStr);break;
+            }
+        }
+        if (changed)    {
+            for (int vl=0;vl<f.numArrayElements;vl++) {
+                *(pField+vl) = (int) value[vl];
+            }
+        }
+    }
+        break;
+    case FT_BOOL:   {
+        bool * boolPtr = (bool*) f.pdata;
+        changed|=ImGui::Checkbox(label,boolPtr);
+    }
+        break;
+    case FT_ENUM: {
+        changed|=ImGui::Combo(label,(int*) f.pdata,f.textFromEnumFunctionPointer,f.userData,f.numEnumElements);
+    }
+        break;
+    case FT_STRING: {
+        char* txtField = (char*)  f.pdata;
+        const int flags = f.numArrayElements;
+        const float maxHeight =(float) (f.maxValue<0 ? 0 : f.maxValue);
+        const bool multiline = f.needsRadiansToDegs;
+        ImGui::Text("%s",label);
+        float width = nodeWidth;
+        if (flags<0) {
+            //ImVec2 pos = ImGui::GetCursorScreenPos();
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + width);
+            ImGui::Text(txtField, width);
+            //ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), 0xFF00FFFF);
+            ImGui::PopTextWrapPos();
+        }
+        else if (!multiline) {
+            const bool addBrowseButton = (f.minValue==-500);
+            float browseBtnWidth = 0;
+            if (addBrowseButton) {
+                browseBtnWidth = ImGui::CalcTextSize("...").x + 10;
+                if (width-browseBtnWidth>0) width-=browseBtnWidth;
+            }
+            ImGui::PushItemWidth(width);
+            changed|=ImGui::InputText("##DummyLabelInputText",txtField,f.precision,flags);
+            ImGui::PopItemWidth();
+            if (addBrowseButton)	{
+                if (/*f.tooltip &&*/ f.tooltip[0]!='\0' && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",f.tooltip);
+                skipTooltip = true;
+                ImGui::SameLine(0,4);
+                ImGui::PushItemWidth(browseBtnWidth);
+                if (ImGui::Button("...##DummyLabelInputTextBrowseButton")) {
+                    changed = true;
+                    widgetIndex = 1;
+                }
+                ImGui::PopItemWidth();
+                //if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Browse");
+            }
+        }
+        else changed|=ImGui::InputTextMultiline("##DummyLabelInputText",txtField,f.precision,ImVec2(width,maxHeight),flags);
+    }
+        break;
+    case FT_COLOR:  {
+        float* pColor = (float*) f.pdata;
+        if (f.numArrayElements==3) changed|=ImGui::ColorEdit3(label,pColor);
+        else changed|=ImGui::ColorEdit4(label,pColor);
+    }
+    case FT_CUSTOM: {
+        if (f.renderFieldDelegate) changed = f.renderFieldDelegate(f);
+    }
+        break;
+    default:
+        IM_ASSERT(true);    // should never happen
+        break;
+    }
+    if (!skipTooltip && f.type!=FT_CUSTOM)  {
+        if (/*f.tooltip &&*/ f.tooltip[0]!='\0' && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",f.tooltip);
+    }
+    if (changed && f.editedFieldDelegate) f.editedFieldDelegate(f,widgetIndex);
+    ImGui::PopID();
+    return changed;
 }
 
 //------WIP----------------------------------------------------------------------
@@ -1526,6 +1553,7 @@ bool NodeGraphEditor::save(const char* filename)    {
     const int numNodes = nodes.size();
     const int numLinks = links.size();
     int itmp;
+    char ovrBuffer[((IMGUINODE_MAX_INPUT_SLOTS>IMGUINODE_MAX_OUTPUT_SLOTS?IMGUINODE_MAX_INPUT_SLOTS:IMGUINODE_MAX_OUTPUT_SLOTS)+1)*IMGUINODE_MAX_SLOT_NAME_LENGTH*200];
     //--------------------------------------------
     s.save(&scrolling.x,"scrolling",2);
     s.save(&numNodes,"num_nodes");
@@ -1538,6 +1566,23 @@ bool NodeGraphEditor::save(const char* filename)    {
 	s.save(&n.userID,"userID");
 	s.save(&n.Pos.x,"Pos",2);
 	s.save(&n.isOpen,"isOpen");
+    if (n.mustOverrideName) s.save(n.Name,"OvrName");
+    if (n.mustOverrideInputSlots)   {
+        ovrBuffer[0]='\0';
+        for (int st=0;st<n.InputsCount;st++) {
+            if (st>0) strcat(ovrBuffer,";");
+            strcat(ovrBuffer,&n.InputNames[st][0]);
+        }
+        s.save(ovrBuffer,"OvrInputSlots");
+    }
+    if (n.mustOverrideOutputSlots)   {
+        ovrBuffer[0]='\0';
+        for (int st=0;st<n.OutputsCount;st++) {
+            if (st>0) strcat(ovrBuffer,";");
+            strcat(ovrBuffer,&n.OutputNames[st][0]);
+        }
+        s.save(ovrBuffer,"OvrOutputSlots");
+    }
 	itmp = n.fields.size();s.save(&itmp,"numFields");
 	n.fields.serialize(s);
     }
@@ -1572,7 +1617,12 @@ static bool NodeGraphEditorParseCallback1(ImGuiHelper::FieldType ft,int numArray
 struct NodeGraphEditorParseCallback2Struct {
     int curNodeIndex,typeID,numFields,userID;bool isOpen;
     ImVec2 Pos;
-    NodeGraphEditorParseCallback2Struct() : curNodeIndex(-1),typeID(-1),numFields(0),userID(-1),isOpen(false),Pos(0,0) {}
+    bool mustOvrName,mustOvrInput,mustOvrOutput;
+    char ovrName[IMGUINODE_MAX_NAME_LENGTH];
+    char ovrInput[(IMGUINODE_MAX_INPUT_SLOTS+1)*IMGUINODE_MAX_SLOT_NAME_LENGTH*200];
+    char ovrOutput[(IMGUINODE_MAX_OUTPUT_SLOTS+1)*IMGUINODE_MAX_SLOT_NAME_LENGTH*200];
+    NodeGraphEditorParseCallback2Struct() : curNodeIndex(-1),typeID(-1),numFields(0),userID(-1),isOpen(false),Pos(0,0),
+    mustOvrName(false),mustOvrInput(false),mustOvrOutput(false) {ovrName[0]='\0';ovrInput[0]='\0';ovrOutput[0]='\0';}
 };
 static bool NodeGraphEditorParseCallback2(ImGuiHelper::FieldType ft,int numArrayElements,void* pValue,const char* name,void* userPtr)    {
     NodeGraphEditorParseCallback2Struct* cbs = (NodeGraphEditorParseCallback2Struct*) userPtr;
@@ -1581,6 +1631,24 @@ static bool NodeGraphEditorParseCallback2(ImGuiHelper::FieldType ft,int numArray
     else if (strcmp(name,"userID")==0)  cbs->userID = *((int*)pValue);
     else if (strcmp(name,"Pos")==0)     cbs->Pos = *((ImVec2*)pValue);
     else if (strcmp(name,"isOpen")==0)  cbs->isOpen = *((bool*)pValue);
+    else if (strcmp(name,"OvrName")==0) {
+        cbs->mustOvrName = true;
+        int maxLen = numArrayElements > IMGUINODE_MAX_NAME_LENGTH ? IMGUINODE_MAX_NAME_LENGTH : numArrayElements;
+        strncpy(cbs->ovrName,(const char*)pValue,maxLen);
+        cbs->ovrName[IMGUINODE_MAX_NAME_LENGTH-1]='\0';
+    }
+    else if (strcmp(name,"OvrInputSlots")==0) {
+        cbs->mustOvrInput = true;
+        int maxLen = numArrayElements > (int) sizeof(cbs->ovrInput) ? (int) sizeof(cbs->ovrInput) : numArrayElements;
+        strncpy(cbs->ovrInput,(const char*)pValue,maxLen);
+        cbs->ovrInput[sizeof(cbs->ovrInput)-1]='\0';
+    }
+    else if (strcmp(name,"OvrOutputSlots")==0) {
+        cbs->mustOvrOutput = true;
+        int maxLen = numArrayElements > (int) sizeof(cbs->ovrOutput) ? (int) sizeof(cbs->ovrOutput) : numArrayElements;
+        strncpy(cbs->ovrOutput,(const char*)pValue,maxLen);
+        cbs->ovrOutput[sizeof(cbs->ovrOutput)-1]='\0';
+    }
     else if (strcmp(name,"numFields")==0) {
         cbs->numFields = *((int*)pValue);return true;
     }
@@ -1617,6 +1685,9 @@ bool NodeGraphEditor::load(const char* filename)    {
         Node* n = nodeFactoryFunctionPtr(cbn.typeID,cbn.Pos);
         n->userID = cbn.userID;
         n->isOpen = cbn.isOpen;
+        if (cbn.mustOvrName)    overrideNodeName(n,cbn.ovrName);
+        if (cbn.mustOvrInput)   overrideNodeInputSlots(n,cbn.ovrInput);
+        if (cbn.mustOvrOutput)  overrideNodeInputSlots(n,cbn.ovrOutput);
         IM_ASSERT(n->fields.size()==cbn.numFields); // optional check (to remove)
         amount = n->fields.deserialize(d,amount);        
         addNode(n);
@@ -1882,8 +1953,8 @@ class TextureNode : public Node {
 #   endif
 
     GLuint textureID;
-    char imagePath[TextBufferSize];				// field 1
-    char lastValidImagePath[TextBufferSize];			// The path for which "textureID" was created
+    char imagePath[TextBufferSize];				// field 1 (= the only one that is copied/serialized/handled by the Node)
+    char lastValidImagePath[TextBufferSize];    // The path for which "textureID" was created
     bool startBrowseDialogNextFrame;
 #   ifndef NO_IMGUIFILESYSTEM
     ImGuiFs::Dialog dlg;
@@ -1894,7 +1965,7 @@ class TextureNode : public Node {
 
     public:
 
-    // create:
+    // create (main method of this class):
     static ThisClass* Create(const ImVec2& pos) {
 	// 1) allocation
 	// MANDATORY (NodeGraphEditor::~NodeGraphEditor() will delete these with ImGui::MemFree(...))
@@ -1905,7 +1976,6 @@ class TextureNode : public Node {
 	node->init("TextureNode",pos,"","r;g;b;a",TYPE);
 	node->baseWidthOverride = 150.f;    // (optional) default base node width is 120.f;
 
-
 	// 3) init fields ( this uses the node->fields variable; otherwise we should have overridden other virtual methods (to render and serialize) )
 	FieldInfo* f=NULL;
 #	ifndef NO_IMGUIFILESYSTEM
@@ -1913,7 +1983,7 @@ class TextureNode : public Node {
 #	else	//NO_IMGUIFILESYSTEM
 	f=&node->fields.addFieldTextEdit(&node->imagePath[0],TextBufferSize,"Image Path:","A valid image path: press RETURN to validate or browse manually.",ImGuiInputTextFlags_EnterReturnsTrue,(void*) node);
 #	endif //NO_IMGUIFILESYSTEM
-	f->editedFieldDelegate = &ThisClass::StaticEditFieldCallback;
+    f->editedFieldDelegate = &ThisClass::StaticEditFieldCallback;   // we set an "edited callback" to this node field. It is fired soon (as opposed to other "outer" edited callbacks), but we have chosen: ImGuiInputTextFlags_EnterReturnsTrue.
 	node->startBrowseDialogNextFrame = false;
 
 	// 4) set (or load) field values
@@ -1947,42 +2017,40 @@ class TextureNode : public Node {
     }
 
     void processPath(const char* filePath)  {
-	if (!filePath || strcmp(filePath,lastValidImagePath)==0) return;
-	if (!ValidateImagePath(filePath)) return;
-	if (textureID) {glDeleteTextures(1,&textureID);textureID=0;}
-	textureID = ImImpl_LoadTexture(filePath);
-	if (textureID) strcpy(lastValidImagePath,filePath);
+        if (!filePath || strcmp(filePath,lastValidImagePath)==0) return;
+        if (!ValidateImagePath(filePath)) return;
+        if (textureID) {glDeleteTextures(1,&textureID);textureID=0;}
+        textureID = ImImpl_LoadTexture(filePath);
+        if (textureID) strcpy(lastValidImagePath,filePath);
     }
 
-    // When the node is loaded from file or copied, only the text field (="imagePath") is copied, so we must recreate "textureID":
+    // When the node is loaded from file or copied from another node, only the text field (="imagePath") is copied, so we must recreate "textureID":
     void onCopied() {
-	processPath(imagePath);
+        processPath(imagePath);
     }
     void onLoaded() {
-	processPath(imagePath);
+        processPath(imagePath);
     }
-
     //bool canBeCopied() const {return false;}	// Just for testing... TO REMOVE!
 
     void onEditField(FieldInfo& /*f*/,int widgetIndex) {
-	//fprintf(stderr,"TextureNode::onEditField(\"%s\",%i);\n",f.label,widgetIndex);
-	if (widgetIndex==1)	    startBrowseDialogNextFrame = true;
-	else if (widgetIndex==0)    processPath(imagePath);
+        //fprintf(stderr,"TextureNode::onEditField(\"%s\",%i);\n",f.label,widgetIndex);
+        if (widgetIndex==1)         startBrowseDialogNextFrame = true;  // browsing button pressed
+        else if (widgetIndex==0)    processPath(imagePath);             // text edited (= "return" pressed in out case)
     }
-
     static void StaticEditFieldCallback(FieldInfo& f,int widgetIndex) {
-	reinterpret_cast<ThisClass*>(f.userData)->onEditField(f,widgetIndex);
+        reinterpret_cast<ThisClass*>(f.userData)->onEditField(f,widgetIndex);
     }
 
     static bool ValidateImagePath(const char* path) {
-	if (!path || strlen(path)==0) return false;
+        if (!path || strlen(path)==0) return false;
 
-	// TODO: check ext
+        // TODO: check extension
 
-	FILE* f = fopen(path,"rb");
-	if (f) {fclose(f);f=NULL;return true;}
+        FILE* f = fopen(path,"rb");
+        if (f) {fclose(f);f=NULL;return true;}
 
-	return false;
+        return false;
     }
 
 };
@@ -2006,18 +2074,25 @@ void TestNodeGraphEditor()  {
     static ImGui::NodeGraphEditor nge;
     if (nge.mustInit())	{
         nge.init(); // So nge.mustInit() returns false next time [currently it's optional, since render() calls it anyway]
-	// This adds entries to the "add node" context menu
-	nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,NULL,-1); // last 2 args can be used to add only a subset of nodes (or to sort their order inside the context menu)
+        // This adds entries to the "add node" context menu
+        nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,NULL,-1); // last 2 args can be used to add only a subset of nodes (or to sort their order inside the context menu)
 
-	// Optional: starting nodes and links (TODO: load from file):-----------
-	ImGui::Node* colorNode = nge.addNode(MNT_COLOR_NODE,ImVec2(40,50));
-	ImGui::Node* complexNode =  nge.addNode(MNT_COMPLEX_NODE,ImVec2(40,150));
-	ImGui::Node* combineNode =  nge.addNode(MNT_COMBINE_NODE,ImVec2(300,80)); // optionally use e.g.: ImGui::CombineNode::Cast(combineNode)->fraction = 0.8f;
+        // Optional: starting nodes and links (TODO: load from file instead):-----------
+        ImGui::Node* colorNode = nge.addNode(MNT_COLOR_NODE,ImVec2(40,50));
+        ImGui::Node* complexNode =  nge.addNode(MNT_COMPLEX_NODE,ImVec2(40,150));
+        ImGui::Node* combineNode =  nge.addNode(MNT_COMBINE_NODE,ImVec2(300,80)); // optionally use e.g.: ImGui::CombineNode::Cast(combineNode)->fraction = 0.8f;
+        //nge.overrideNodeName(combineNode,"CombineNodeCustomName");  // Test only (to remove)
+        //nge.overrideNodeInputSlots(combineNode,"in1;in2;in3;in4");  // Test only (to remove)
         nge.addLink(colorNode, 0, combineNode, 0);
         nge.addLink(complexNode, 1, combineNode, 1);
-        //----------------------------------------------------------------------
-	nge.show_style_editor = true;
-	nge.show_load_save_buttons = true;        
+        //-------------------------------------------------------------------------------
+        //nge.load("nodeGraphEditor.nge");
+        //-------------------------------------------------------------------------------
+        nge.show_style_editor = true;
+        nge.show_load_save_buttons = true;
+        // optional load the style (for all the editors: better call it in InitGL()):
+        //NodeGraphEditor::Style::Load(NodeGraphEditor::GetStyle(),"nodeGraphEditor.style");
+        //--------------------------------------------------------------------------------
     }
     nge.render();
 }

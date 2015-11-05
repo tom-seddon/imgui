@@ -78,6 +78,7 @@ namespace ImGui	{
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 //--------------------------------------------------------------------------------
+        bool render(int nodeWidth);
 
     protected:
         FieldInfo() {}
@@ -195,20 +196,6 @@ namespace ImGui	{
 
 protected:
     FieldInfo& addField(char* pdata, int textLength=0, const char* label=NULL, const char* tooltip=NULL, int flags=ImGuiInputTextFlags_EnterReturnsTrue, bool multiline=false,float optionalHeight=-1.f, void* userData=NULL,bool isSingleEditWithBrowseButton=false);
-
-
-private:
-    template<typename T> inline static T GetRadiansToDegs() {
-        static T factor = T(180)/(3.1415926535897932384626433832795029);
-        return factor;
-    }
-    template<typename T> inline static T GetDegsToRadians() {
-        static T factor = T(3.1415926535897932384626433832795029)/T(180);
-        return factor;
-    }
-
-protected:
-    bool render(float nodeWidth);
     friend class Node;
 };
 //--------------------------------------------------------------------------------------------
@@ -230,7 +217,12 @@ class Node
     // virtual methods
     virtual bool render(float nodeWidth) // should return "true" if the node has been edited and its values modified (to fire "edited callbacks")
     {
-        return fields.render(nodeWidth);
+        bool nodeEdited = false;
+        for (int i=0,isz=fields.size();i<isz;i++)   {
+            FieldInfo& f = fields[i];
+            nodeEdited|=f.render(nodeWidth);
+        }
+        return nodeEdited;
     }
     virtual const char* getTooltip() const {return NULL;}
     virtual const char* getInfo() const {return NULL;}
@@ -254,17 +246,18 @@ class Node
 #   endif //IMGUINODE_MAX_SLOT_NAME_LENGTH
     // ---------------
 
-    char    Name[IMGUINODE_MAX_NAME_LENGTH];
     ImVec2  Pos, Size;
+    char    Name[IMGUINODE_MAX_NAME_LENGTH];
     int     InputsCount, OutputsCount;
-    char   InputNames[IMGUINODE_MAX_INPUT_SLOTS][IMGUINODE_MAX_SLOT_NAME_LENGTH];
-    char   OutputNames[IMGUINODE_MAX_OUTPUT_SLOTS][IMGUINODE_MAX_SLOT_NAME_LENGTH];
+    char    InputNames[IMGUINODE_MAX_INPUT_SLOTS][IMGUINODE_MAX_SLOT_NAME_LENGTH];
+    char    OutputNames[IMGUINODE_MAX_OUTPUT_SLOTS][IMGUINODE_MAX_SLOT_NAME_LENGTH];
     mutable float startEditingTime; // used for Node Editing Callbacks
     mutable bool isOpen;
     int typeID;
     float baseWidthOverride;
+    bool mustOverrideName,mustOverrideInputSlots,mustOverrideOutputSlots;
 
-    Node() : Pos(0,0),Size(0,0),baseWidthOverride(-1) {}
+    Node() : Pos(0,0),Size(0,0),baseWidthOverride(-1),mustOverrideName(false),mustOverrideInputSlots(false),mustOverrideOutputSlots(false) {}
     void init(const char* name, const ImVec2& pos,const char* inputSlotNamesSeparatedBySemicolons=NULL,const char* outputSlotNamesSeparatedBySemicolons=NULL,int _nodeTypeID=0/*,float currentWindowFontScale=-1.f*/);
 
     inline ImVec2 GetInputSlotPos(int slot_no,float currentFontWindowScale=1.f) const   { return ImVec2(Pos.x*currentFontWindowScale, Pos.y*currentFontWindowScale + Size.y * ((float)slot_no+1) / ((float)InputsCount+1)); }
@@ -534,6 +527,12 @@ struct NodeGraphEditor	{
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 //--------------------------------------------------------------------------------
+
+    // I suggest we don not use these 3; however we can:
+    bool overrideNodeName(Node* node,const char* newName);
+    bool overrideNodeInputSlots(Node* node,const char* slotNamesSeparatedBySemicolons);
+    bool overrideNodeOutputSlots(Node* node,const char* slotNamesSeparatedBySemicolons);
+
 
     protected:
 
