@@ -194,8 +194,18 @@ public:
     static void GetAbsolutePath(const char *path, char *rv)  {
         rv[0]='\0';
 #   ifndef _WIN32
-        if (!path || strlen(path)==0) realpath("./", rv);
-        else realpath(path, rv);
+        if (!path || strlen(path)==0) {
+            realpath("./", rv);
+            if (!rv || strlen(rv)==0) strcpy(rv,"/");
+        }
+        else {
+            realpath(path, rv);
+            if (!rv || strlen(rv)==0) {
+                if (path[0]=='.') strcpy(rv,&path[1]);
+                else strcpy(rv,path);
+            }
+        }
+        //printf("GetAbsolutePath(\"%s\",\"%s\");\n",path,rv);fflush(stdout);
 #   else //_WIN32
         static const int bufferSize = PATH_MAX+1;   // 4097 is good (PATH_MAX should be in <limits.h>, or something like that)
         static wchar_t buffer[bufferSize];

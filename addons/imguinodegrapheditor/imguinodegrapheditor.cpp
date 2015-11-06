@@ -1991,7 +1991,7 @@ class TextureNode : public Node {
     bool render(float nodeWidth)   {
 	const bool changed = Base::render(nodeWidth);
 #	ifndef NO_IMGUIFILESYSTEM
-	const char* filePath = dlg.chooseFileDialog(startBrowseDialogNextFrame,"",".jpg;.jpeg;.png;.gif;.tga;.bmp");
+	const char* filePath = dlg.chooseFileDialog(startBrowseDialogNextFrame,dlg.getLastDirectory(),".jpg;.jpeg;.png;.gif;.tga;.bmp");
 	if (strlen(filePath)>0) {
 	    //fprintf(stderr,"Browsed..: %s\n",filePath);
 	    strcpy(imagePath,filePath);
