@@ -716,57 +716,7 @@ public:
         else cellDataOut.customText = NULL;
     }
 
-    bool sort(size_t column) {
-        if ((int)column>=headers.size()) return false;
-        Header& h = headers[column];
-        HeaderData::Sorting& hds = h.hd.sorting;
-        if (!hds.sortable) return false;
-
-        // void qsort( void *ptr, size_t count, size_t size,int (*comp)(const void *, const void *) );
-        bool& sortingOrder = hds.sortingAscending;
-        ItemBase::SortingHelper sorter((int)column,sortingOrder,&hds.sortableElementsOfPossibleArray[0]);   // This IS actually used!
-        typedef int (*CompareDelegate)(const void *, const void *);
-        CompareDelegate compareFunction = NULL;
-
-        switch (h.hd.type.headerType)  {
-        case HT_BOOL:
-            compareFunction = ItemBase::SortingHelper::Compare_HT_BOOL;
-            break;
-        case HT_CUSTOM:
-            compareFunction = ItemBase::SortingHelper::Compare_HT_CUSTOM;
-            break;
-        case HT_INT:
-        case HT_ENUM:
-            compareFunction = ItemBase::SortingHelper::Compare<int>;
-            break;
-        case HT_UNSIGNED:
-            compareFunction = ItemBase::SortingHelper::Compare<unsigned>;
-            break;
-        case HT_FLOAT:
-        case HT_COLOR:
-            compareFunction = ItemBase::SortingHelper::Compare<float>;
-            break;
-        case HT_DOUBLE:
-            compareFunction = ItemBase::SortingHelper::Compare<double>;
-            break;
-        case HT_STRING:
-            compareFunction = ItemBase::SortingHelper::Compare<char*>;
-            break;
-        case HT_ICON:
-            compareFunction = ItemBase::SortingHelper::Compare_HT_ICON;
-            break;
-        default:
-            return false;
-        }
-        if (!compareFunction) return false;
-
-        qsort((void *) &items[0],items.size(),sizeof(ItemBase*),compareFunction);
-        sortingOrder = !sortingOrder;   // next time it sorts backwards
-
-        updateSelectedRow(); // rows get shuffled after sorting: the visible selection is still correct (the boolean flag ItemBase::selected is stored in our row-item),
-                             // but the 'selectedRow' field is not updated and must be adjusted
-        return true;
-    }
+    bool sort(size_t column);
 
     size_t getNumColumns() const {return headers.size();}
     size_t getNumRows() const {return items.size();}

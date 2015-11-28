@@ -531,9 +531,9 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         }
 
         // Setup drawing context
-        window->DC.ColumnsStartX = 0.0f + window->WindowPadding.x - window->Scroll.x;
+        window->DC.IndentX = 0.0f + window->WindowPadding.x - window->Scroll.x;
         window->DC.ColumnsOffsetX = 0.0f;
-        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.ColumnsStartX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding.y - window->Scroll.y);
+        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.IndentX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding.y - window->Scroll.y);
         window->DC.CursorPos = window->DC.CursorStartPos;
         window->DC.CursorPosPrevLine = window->DC.CursorPos;
         window->DC.CursorMaxPos = window->DC.CursorStartPos;
@@ -555,8 +555,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->DC.ColorEditMode = ImGuiColorEditMode_UserSelect;
         window->DC.ColumnsCurrent = 0;
         window->DC.ColumnsCount = 1;
-        window->DC.ColumnsStartPos = window->DC.CursorPos;
-        window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY = window->DC.ColumnsStartPos.y;
+        window->DC.ColumnsStartPosY = window->DC.CursorPos.y;
+        window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY = window->DC.ColumnsStartPosY;
         window->DC.TreeDepth = 0;
         window->DC.StateStorage = &window->StateStorage;
         window->DC.GroupStack.resize(0);
