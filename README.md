@@ -3,11 +3,11 @@ ImGui
 [![Build Status](https://travis-ci.org/ocornut/imgui.svg?branch=master)](https://travis-ci.org/ocornut/imgui)
 [![Coverity Status](https://scan.coverity.com/projects/4720/badge.svg)](https://scan.coverity.com/projects/4720)
 
-(This library is free but I need your support to sustain its development - there's lots of desirable new features and maintenance to do. If you work for a company using ImGui or have the means to do so, please consider financial support)
+(This library is free and will stay free, but needs your support to sustain its development. There are lots of desirable new features and maintenance to do. If you work for a company using ImGui or have the means to do so, please consider financial support)
 
 [![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui) [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5Q73FPZ9C526U)
 
-ImGui is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is portable, renderer agnostic and self-contained (no external dependencies). It is based on an "immediate mode" graphical user interface paradigm which enables you to build user interfaces with ease.
+ImGui is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is fast, portable, renderer agnostic and self-contained (no external dependencies).
 
 ImGui is designed to enable fast iteration and empower programmers to create content creation tools and visualization/debug tools (as opposed to UI for the average end-user). It favors simplicity and productivity toward this goal, and thus lacks certain features normally found in more high-level libraries.
 
@@ -31,11 +31,9 @@ Your code passes mouse/keyboard inputs and settings to ImGui (see example applic
 
 ![screenshot of sample code alongside its output with ImGui](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/code_sample_01.png)
 
-ImGui outputs vertex buffers and simple command-lists that you can render in your application. Because it doesn't know or touch graphics state directly, you can call ImGui commands anywhere in your code (e.g. in the middle of a running algorithm, or in the middle of your own rendering process). Refer to the sample applications in the examples/ folder for instructions on how to integrate ImGui with your existing codebase. 
+ImGui outputs vertex buffers and simple command-lists that you can render in your application. The number of draw calls and state changes is typically very small. Because it doesn't know or touch graphics state directly, you can call ImGui commands anywhere in your code (e.g. in the middle of a running algorithm, or in the middle of your own rendering process). Refer to the sample applications in the examples/ folder for instructions on how to integrate ImGui with your existing codebase. 
 
-ImGui allows you create elaborate tools as well as very short-lived ones. On the extreme side of short-liveness: using the Edit&Continue feature of modern compilers you can add a few widgets to tweaks variables while your application is running, and remove the code a minute later! ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, etc. 
-
-Some of the features supported in some way by ImGui: window management (ordering, moving, resizing, collapsing, persistent settings), button, slider, dragging value, checkbox, radio button, text input (with selection, clipboard support, and standard keyboard controls), multiline text input, filtering text input, tree nodes, collapsing header, word-wrapping, utf-8 text, images, selectable items, vertical and horizontal scrolling, sub-window with independant scrolling/clipping, ttf font loading, basic styling, logging any ui output into text data (clipboard/tty/file), hovering, tooltips, popup windows, modal windows, menu bars, menu items, context menus, combo boxes, list box, plotting lines and histograms, resizable columns, keyboard tabbing, dragging, simple drawing api (anti-aliased, with stroking, convex fill), and low-level primitives to create custom widgets.
+ImGui allows you create elaborate tools as well as very short-lived ones. On the extreme side of short-liveness: using the Edit&Continue feature of modern compilers you can add a few widgets to tweaks variables while your application is running, and remove the code a minute later! ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, etc.  
 
 Demo
 ----
@@ -81,22 +79,24 @@ Frequently Asked Question (FAQ)
 
 <b>Where is the documentation?</b>
 
-- The documentation is at the top of imgui.cpp + effectively imgui.h.
+- The documentation is at the top of imgui.cpp + effectively imgui.h. 
 - Example code is in imgui_demo.cpp and particularly the ImGui::ShowTestWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. 
 - Standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder. 
-- It obviously needs better documentation! Consider helping or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
+- We obviously needs better documentation! Consider contributing or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
+
+<b>How do I update to a newer version of ImGui?</b>
+<br><b>Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)</b>
+<br><b>I integrated ImGui in my engine and the text or lines are blurry..</b>
+<br><b>I integrated ImGui in my engine and some elements are disappearing when I move windows around..</b>
+<br><b>How can I load a different font than the default?</b>
+<br><b>How can I load multiple fonts?</b>
+<br><b>How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?</b>
+
+See the FAQ in imgui.cpp for answers.
 
 <b>How do you use ImGui on a platform that may not have a mouse or keyboard?</b>
 
 I recommend using [Synergy](http://synergy-project.org) ([sources](https://github.com/synergy/synergy)). In particular, the _src/micro/uSynergy.c_ file contains a small client that you can use on any platform to connect to your host PC. You can seamlessly use your PC input devices from a video game console or a tablet. ImGui allows to increase the hit box of widgets (via the _TouchPadding_ setting) to accommodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse to allow optimising for screen real-estate.
-
-<b>I integrated ImGui in my engine and the text or lines are blurry..</b>
-
-In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f). Also make sure your orthographic projection matrix and io.DisplaySize matches your actual framebuffer dimension.
-
-<b>I integrated ImGui in my engine and some elements are disappearing when I move windows around..</b>
-
-Most likely you are mishandling the clipping rectangles in your render function. Rectangles provided by ImGui are defined as (x1,y1,x2,y2) and NOT as (x1,y1,width,height).
 
 <b>Can you create elaborate/serious tools with ImGui?</b>
 
@@ -133,7 +133,7 @@ Donate
 
 [![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui) [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5Q73FPZ9C526U)
 
-I'm currently an independant developer and your contributions are very meaningful to me. I have setup an [**ImGui Patreon page**](http://www.patreon.com/imgui) if you want to donate and enable me to spend more time improving the library. If your company uses ImGui please consider making a contribution. One-off donations are also greatly appreciated (PayPal link above). I am also available for hire to work on or with ImGui. Thanks!
+I'm currently an independent developer and your contributions are useful. I have setup an [**ImGui Patreon page**](http://www.patreon.com/imgui) if you want to donate and enable me to spend more time improving the library. If your company uses ImGui please consider making a contribution. One-off donations are also greatly appreciated. I am available for hire to work on or with ImGui. Thanks!
 
 Credits
 -------

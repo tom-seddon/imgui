@@ -98,7 +98,7 @@ void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawData* draw_data)
             {
                 glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
                 glScissor((int)pcmd->ClipRect.x, (int)(fb_height - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
-                glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, GL_UNSIGNED_SHORT, idx_buffer_offset);
+                glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer_offset);
             }
             idx_buffer_offset += pcmd->ElemCount;
         }
@@ -262,6 +262,32 @@ bool ImGui_ImplGlfwGL3_CreateDeviceObjects()
     return true;
 }
 
+void    ImGui_ImplGlfwGL3_InvalidateDeviceObjects()
+{
+    if (g_VaoHandle) glDeleteVertexArrays(1, &g_VaoHandle);
+    if (g_VboHandle) glDeleteBuffers(1, &g_VboHandle);
+    if (g_ElementsHandle) glDeleteBuffers(1, &g_ElementsHandle);
+    g_VaoHandle = g_VboHandle = g_ElementsHandle = 0;
+
+    glDetachShader(g_ShaderHandle, g_VertHandle);
+    glDeleteShader(g_VertHandle);
+    g_VertHandle = 0;
+
+    glDetachShader(g_ShaderHandle, g_FragHandle);
+    glDeleteShader(g_FragHandle);
+    g_FragHandle = 0;
+
+    glDeleteProgram(g_ShaderHandle);
+    g_ShaderHandle = 0;
+
+    if (g_FontTexture)
+    {
+        glDeleteTextures(1, &g_FontTexture);
+        ImGui::GetIO().Fonts->TexID = 0;
+        g_FontTexture = 0;
+    }
+}
+
 bool    ImGui_ImplGlfwGL3_Init(GLFWwindow* window, bool install_callbacks)
 {
     g_Window = window;
@@ -307,28 +333,7 @@ bool    ImGui_ImplGlfwGL3_Init(GLFWwindow* window, bool install_callbacks)
 
 void ImGui_ImplGlfwGL3_Shutdown()
 {
-    if (g_VaoHandle) glDeleteVertexArrays(1, &g_VaoHandle);
-    if (g_VboHandle) glDeleteBuffers(1, &g_VboHandle);
-    if (g_ElementsHandle) glDeleteBuffers(1, &g_ElementsHandle);
-    g_VaoHandle = g_VboHandle = g_ElementsHandle = 0;
-
-    glDetachShader(g_ShaderHandle, g_VertHandle);
-    glDeleteShader(g_VertHandle);
-    g_VertHandle = 0;
-
-    glDetachShader(g_ShaderHandle, g_FragHandle);
-    glDeleteShader(g_FragHandle);
-    g_FragHandle = 0;
-
-    glDeleteProgram(g_ShaderHandle);
-    g_ShaderHandle = 0;
-
-    if (g_FontTexture)
-    {
-        glDeleteTextures(1, &g_FontTexture);
-        ImGui::GetIO().Fonts->TexID = 0;
-        g_FontTexture = 0;
-    }
+    ImGui_ImplGlfwGL3_InvalidateDeviceObjects();
     ImGui::Shutdown();
 }
 

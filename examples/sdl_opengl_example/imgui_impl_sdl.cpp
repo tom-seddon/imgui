@@ -74,7 +74,7 @@ void ImGui_ImplSdl_RenderDrawLists(ImDrawData* draw_data)
             {
                 glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
                 glScissor((int)pcmd->ClipRect.x, (int)(fb_height - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
-                glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, GL_UNSIGNED_SHORT, idx_buffer);
+                glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer);
             }
             idx_buffer += pcmd->ElemCount;
         }
@@ -242,7 +242,7 @@ void ImGui_ImplSdl_NewFrame(SDL_Window *window)
     g_Time = current_time;
 
     // Setup inputs
-    // (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
+    // (we already got mouse wheel, keyboard keys & characters from SDL_PollEvent())
     int mx, my;
     Uint32 mouseMask = SDL_GetMouseState(&mx, &my);
     if (SDL_GetWindowFlags(window) & SDL_WINDOW_MOUSE_FOCUS)
