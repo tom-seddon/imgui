@@ -229,24 +229,43 @@ static void GlutDrawGL()    {
 
     DrawGL();
 
+    static const int numFramesDelay = 12;
+    static int curFramesDelay = -1;
     if (!gImGuiPaused)	{
-        bool imguiNeedsInputNow = ImGui::IsMouseHoveringAnyWindow() | ImGui::IsAnyItemActive();
+        gImGuiWereOutsideImGui = !ImGui::IsMouseHoveringAnyWindow() && !ImGui::IsAnyItemActive();
+        const bool imguiNeedsInputNow = !gImGuiWereOutsideImGui && (io.WantTextInput || io.MouseDelta.x!=0 || io.MouseDelta.y!=0 || io.MouseWheel!=0);// || io.MouseDownOwned[0] || io.MouseDownOwned[1] || io.MouseDownOwned[2]);
         if (gImGuiCapturesInput != imguiNeedsInputNow) {
             gImGuiCapturesInput = imguiNeedsInputNow;
             //fprintf(stderr,"gImGuiCapturesInput=%s\n",gImGuiCapturesInput?"true":"false");
+            if (gImGuiDynamicFPSInsideImGui) {
+                if (!gImGuiCapturesInput && !gImGuiWereOutsideImGui) curFramesDelay = 0;
+                else curFramesDelay = -1;
+            }
         }
+        if (gImGuiWereOutsideImGui) curFramesDelay = -1;
 
         // Rendering
+#       ifdef IMGUIBINDINGS_RESTORE_GL_STATE
+        GLint oldViewport[4];glGetIntegerv(GL_VIEWPORT, oldViewport);
+#       endif //IMGUIBINDINGS_RESTORE_GL_STATE
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
         ImGui::Render();
+#       ifdef IMGUIBINDINGS_RESTORE_GL_STATE
+        glViewport(oldViewport[0], oldViewport[1], (GLsizei)oldViewport[2], (GLsizei)oldViewport[3])
+#       endif //IMGUIBINDINGS_RESTORE_GL_STATE
     }
+    else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
     glutSwapBuffers();
     if (!gImGuiPaused)	for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
 
-    if (gImGuiInverseFPSClamp==0) WaitFor(500);
-    // If needed we must wait (gImGuiInverseFPSClamp-deltaTime) seconds (=> honestly I shouldn't add the * 2.0f factor at the end, but ImGui tells me the wrong FPS otherwise... why? <=)
-    else if (gImGuiInverseFPSClamp>0 && deltaTime < gImGuiInverseFPSClamp)  WaitFor((unsigned int) ((gImGuiInverseFPSClamp-deltaTime)*1000.f * 2.0f) );
+    if (curFramesDelay>=0 && ++curFramesDelay>numFramesDelay) WaitFor(200);     // 200 = 5 FPS - frame rate when ImGui is inactive
+    else {
+        const float& inverseFPSClamp = gImGuiWereOutsideImGui ? gImGuiInverseFPSClampOutsideImGui : gImGuiInverseFPSClampInsideImGui;
+        if (inverseFPSClamp==0.f) WaitFor(500);
+        // If needed we must wait (gImGuiInverseFPSClamp-deltaTime) seconds (=> honestly I shouldn't add the * 2.0f factor at the end, but ImGui tells me the wrong FPS otherwise... why? <=)
+        else if (inverseFPSClamp>0 && deltaTime < inverseFPSClamp)  WaitFor((unsigned int) ((inverseFPSClamp-deltaTime)*1000.f * 2.0f) );
+    }
 
 }
 static void GlutIdle(void)  {
@@ -423,8 +442,10 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
     InitImGui(pOptionalInitParams);
     ImGuiIO& io = ImGui::GetIO();        
 
-    gImGuiInverseFPSClamp = pOptionalInitParams ? ((pOptionalInitParams->gFpsClamp!=0) ? (1.0f/pOptionalInitParams->gFpsClamp) : 1.0f) : -1.0f;
-    
+    gImGuiInverseFPSClampInsideImGui = pOptionalInitParams ? ((pOptionalInitParams->gFpsClampInsideImGui!=0) ? (1.0f/pOptionalInitParams->gFpsClampInsideImGui) : 1.0f) : -1.0f;
+    gImGuiInverseFPSClampOutsideImGui = pOptionalInitParams ? ((pOptionalInitParams->gFpsClampOutsideImGui!=0) ? (1.0f/pOptionalInitParams->gFpsClampOutsideImGui) : 1.0f) : -1.0f;
+    gImGuiDynamicFPSInsideImGui = pOptionalInitParams ? pOptionalInitParams->gFpsDynamicInsideImGui : false;
+
     InitGL();
     ResizeGL((int)io.DisplaySize.x,(int)io.DisplaySize.y);
 	

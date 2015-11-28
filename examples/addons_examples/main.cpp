@@ -3,6 +3,9 @@
 #include <time.h>   // very common plain c header file used only by DateChooser
 #endif //NO_IMGUIDATECHOOSER
 
+#ifdef IMGUISCINTILLA_ACTIVATED
+#include <addons/imguiscintilla/imguiscintilla.h>
+#endif //IMGUISCINTILLA_ACTIVATED
 
 // Helper stuff we'll use later ----------------------------------------------------
 GLuint myImageTextureId2 = 0;
@@ -144,23 +147,28 @@ inline void MyTestListView() {
 
 }
 #endif //NO_IMGUILISTVIEW
+
+// These are only needed if you need to modify them at runtime (almost never).
+// Otherwise you can set them directly in "main" (see at the botton of this file).
+extern bool gImGuiDynamicFPSInsideImGui;
+extern float gImGuiInverseFPSClampInsideImGui;
+extern float gImGuiInverseFPSClampOutsideImGui;
 //------------------------------------------------------------------------------------
 
 void InitGL()	// Mandatory
 {
     if (!myImageTextureId2) myImageTextureId2 = ImImpl_LoadTexture("./myNumbersTexture.png");
+
+//  Optional: loads a style
 #   if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_LOAD_STYLE))
     if (!ImGui::LoadStyle("./myimgui.style",ImGui::GetStyle()))   {
         fprintf(stderr,"Warning: \"./myimgui.style\" not present.\n");
     }
 #   endif //NO_IMGUISTYLESERIALIZER
 
-#if (defined(IMGUI_USE_GLFW_BINDING) && defined(IMGUI_GLFW_NO_NATIVE_CURSORS))
-    ImGui::GetIO().MouseDrawCursor = true;
-#endif // IMGUI_USE_GLFW_BINDING & IMGUI_GLFW_NO_NATIVE_CURSORS
 
+//  Optional CTRL + MW to zoom
     ImGui::GetIO().FontAllowUserScaling = true;
-
 
 //#define TEST_SERIALIZER // development only: but I definitely need to perform some tests...
 #ifdef TEST_SERIALIZER
@@ -216,6 +224,7 @@ void DrawGL()	// Mandatory
         static bool show_another_window = false;
         static bool show_node_graph_editor_window = false;
         static bool show_splitter_test_window = false;
+        static bool show_scintilla_test_window = false;
 
         // 1. Show a simple window
         {
@@ -227,9 +236,7 @@ void DrawGL()	// Mandatory
             static bool open = true;
             ImGui::Begin("Debug ", &open, ImVec2(450,300));  // Try using 10 FPS and replacing the title with "Debug"...
 
-            static float f;
-            ImGui::Text("Hello, world!");
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+            ImGui::Text("\n");ImGui::Separator();ImGui::Text("Test Windows");ImGui::Separator();
 #           if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_SAVE_STYLE))
             show_test_window ^= ImGui::Button("Test Window");
 #           endif //NO_IMGUISTYLESERIALIZER
@@ -240,8 +247,14 @@ void DrawGL()	// Mandatory
             show_node_graph_editor_window ^= ImGui::Button("Another Window With NodeGraphEditor");
 #           endif //NO_IMGUINODEGRAPHEDITOR
             show_splitter_test_window ^= ImGui::Button("Show splitter test window");
+#           ifdef IMGUISCINTILLA_ACTIVATED
+            show_scintilla_test_window ^= ImGui::Button("A Scintilla window");
+#           endif //IMGUISCINTILLA_ACTIVATED
 
             // Calculate and show framerate
+            ImGui::Text("\n");ImGui::Separator();ImGui::Text("Frame rate options");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","It might be necessary to move the mouse \"outside\" and \"inside\" ImGui for these options to update properly.");
+            ImGui::Separator();
             static float ms_per_frame[120] = { 0 };
             static int ms_per_frame_idx = 0;
             static float ms_per_frame_accum = 0.0f;
@@ -251,6 +264,24 @@ void DrawGL()	// Mandatory
             ms_per_frame_idx = (ms_per_frame_idx + 1) % 120;
             const float ms_per_frame_avg = ms_per_frame_accum / 120;
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", ms_per_frame_avg, 1000.0f / ms_per_frame_avg);
+            bool clampFPSOutsideImGui = gImGuiInverseFPSClampOutsideImGui > 0;
+            ImGui::Checkbox("Clamp FPS when \"outside\" ImGui.",&clampFPSOutsideImGui);
+            if (clampFPSOutsideImGui)    {
+                if (gImGuiInverseFPSClampOutsideImGui<=0) gImGuiInverseFPSClampOutsideImGui = 1.f/60.f;
+                float FPS = 1.f/gImGuiInverseFPSClampOutsideImGui;
+                if (ImGui::SliderFloat("FPS when \"outside\" ImGui",&FPS,5.f,60.f,"%.2f")) gImGuiInverseFPSClampOutsideImGui = 1.f/FPS;
+            }
+            else gImGuiInverseFPSClampOutsideImGui = -1.f;
+            bool clampFPSInsideImGui = gImGuiInverseFPSClampInsideImGui > 0;
+            ImGui::Checkbox("Clamp FPS when \"inside\" ImGui.",&clampFPSInsideImGui);
+            if (clampFPSInsideImGui)    {
+                if (gImGuiInverseFPSClampInsideImGui<=0) gImGuiInverseFPSClampInsideImGui = 1.f/60.f;
+                float FPS = 1.f/gImGuiInverseFPSClampInsideImGui;
+                if (ImGui::SliderFloat("FPS when \"inside\" ImGui",&FPS,5.f,60.f,"%.2f")) gImGuiInverseFPSClampInsideImGui = 1.f/FPS;
+            }
+            else gImGuiInverseFPSClampInsideImGui = -1.f;
+            ImGui::Checkbox("Use dynamic FPS when \"inside\" ImGui.",&gImGuiDynamicFPSInsideImGui);
+
 
             // imguistyleserializer test
             ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguistyleserializer");ImGui::Separator();
@@ -354,7 +385,7 @@ void DrawGL()	// Mandatory
             ImGui::Text("%s","Excluded from this build.\n");
 #           endif      //NO_IMGUIDATECHOOSER
 
-            // imguivariouscontrols            
+            // imguivariouscontrols
             ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguivariouscontrols");ImGui::Separator();
 #           ifndef NO_IMGUIVARIOUSCONTROLS
             // ProgressBar Test:
@@ -366,6 +397,12 @@ void DrawGL()	// Mandatory
             openColorChooser|=ImGui::ColorButton(chosenColor);
             //if (openColorChooser) chosenColor.z=0.f;
             if (ImGui::ColorChooser(&openColorChooser,&chosenColor)) {
+                // choice OK here
+            }
+            // ColorComboTest:
+            static ImVec4 chosenColor2(1,1,1,1);
+            if (ImGui::ColorCombo("MyColorCombo",&chosenColor2))
+            {
                 // choice OK here
             }
             // PopupMenuSimple Test:
@@ -413,6 +450,17 @@ void DrawGL()	// Mandatory
             static bool trigger = false;
             trigger|=ImGui::Button("Press me for a menu with images##PopupMenuWithImagesTest");
             /*const int selectedImageMenuEntry =*/ pm.render(trigger);   // -1 = none
+
+
+            // Based on the code from: https://github.com/Roflraging
+            ImGui::Spacing();
+            ImGui::Text("InputTextMultiline with horizontal scrolling:");
+            static char buffer[1024] = "Code posted by Roflraging to the ImGui Issue Section (https://github.com/ocornut/imgui/issues/383).";
+            const float height = 60;
+            ImGui::PushID(buffer);
+            ImGui::InputTextMultilineWithHorizontalScrolling("", buffer, 1024, height);
+            ImGui::PopID();
+
 #           else //NO_IMGUIVARIOUSCONTROLS
             ImGui::Text("%s","Excluded from this build.\n");
 #           endif //NO_IMGUIVARIOUSCONTROLS
@@ -540,6 +588,15 @@ void DrawGL()	// Mandatory
 
             ImGui::End();
         }
+#       ifdef IMGUISCINTILLA_ACTIVATED
+        if (show_scintilla_test_window) {
+            if (ImGui::Begin("Example: Scintilla Editor", &show_scintilla_test_window,ImVec2(700,600))){
+                ScintillaEditor* sci = ImGuiScintilla("Scintilla Editor");  // However we sould destroy it in destroyGL() with ScintillaEditor::destroy(sci); AFAIK
+                //sci->setText("Buonasera");
+                ImGui::End();
+            }
+        }
+#       endif //IMGUISCINTILLA_ACTIVATED
 
         // imguitoolbar test 2: two global toolbars one at the top and one at the left
 #       ifndef NO_IMGUITOOLBAR
@@ -600,7 +657,7 @@ void DrawGL()	// Mandatory
 
 
 
-//#   define USE_ADVANCED_SETUP   // in-file definition (see below). For now it just adds custom fonts and clamps FPS to 10 (= jerky movements when moving windows).
+//#   define USE_ADVANCED_SETUP   // in-file definition (see below). For now it just adds custom fonts and different FPS settings (please read below).
 
 // Application code
 #ifndef IMGUI_USE_WINAPI_BINDING
@@ -647,9 +704,14 @@ int main(int argc, char** argv)
     &ttfMemory[0],sizeof(ttfMemory)/sizeof(ttfMemory[0]),               // optional custom font from memory (secondary custom font) WARNING (licensing problem): e.g. embedding a GPL font in your code can make your code GPL as well.
 
     fontSizeInPixels,
-    &ranges[0]
-    );
-    gImGuiInitParams.gFpsClamp = 10.0f;                                 // Optional Max allowed FPS (default -1 => unclamped). Useful for editors and to save GPU and CPU power.
+    &ranges[0],
+    NULL,                                                               // optional ImFontConfig* (useful for merging glyph to the default font, according to ImGui)
+    false                                                               // true = addDefaultImGuiFontAsFontZero
+    ); // If you need to add more than one TTF file, there's another ctr (TO TEST).
+    // Here are some optional tweaking of the desired FPS settings (they can be changed at runtime if necessary, but through some global values defined in imguibindinds.h)
+    gImGuiInitParams.gFpsClampInsideImGui = 30.0f;  // Optional Max allowed FPS (!=0, default -1 => unclamped). Useful for editors and to save GPU and CPU power.
+    gImGuiInitParams.gFpsDynamicInsideImGui = true; // If true when inside ImGui, the FPS is not constant (at gFpsClampInsideImGui), but goes from a very low minimum value to gFpsClampInsideImGui dynamically. Useful for editors and to save GPU and CPU power.
+    gImGuiInitParams.gFpsClampOutsideImGui = 10.f;  // Optional Max allowed FPS (!=0, default -1 => unclamped). Useful for setting a different FPS for your main rendering.
 
     ImImpl_Main(&gImGuiInitParams,argc,argv);
 #   endif //USE_ADVANCED_SETUP
@@ -701,7 +763,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
     fontSizeInPixels,
     &ranges[0]
     );
-    gImGuiInitParams.gFpsClamp = 10.0f;                                 // Optional Max allowed FPS (default -1 => unclamped). Useful for editors and to save GPU and CPU power.
+    gImGuiInitParams.gFpsClampInsideImGui = 30.0f;  // Optional Max allowed FPS (default -1 => unclamped). Useful for editors and to save GPU and CPU power.
+    gImGuiInitParams.gFpsDynamicInsideImGui = true; // If true when inside ImGui, the FPS is not constant (at gFpsClampInsideImGui), but goes from a very low minimum value to gFpsClampInsideImGui dynamically. Useful for editors and to save GPU and CPU power.
+    gImGuiInitParams.gFpsClampOutsideImGui = 10.f;  // Optional Max allowed FPS (default -1 => unclamped). Useful for setting a different FPS for your main rendering.
 
     ImImpl_WinMain(&gImGuiInitParams,hInstance,hPrevInstance,lpCmdLine,iCmdShow);
 #   endif //#   USE_ADVANCED_SETUP

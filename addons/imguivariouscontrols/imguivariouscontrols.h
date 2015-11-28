@@ -72,7 +72,6 @@ int PopupMenuSimple(PopupMenuSimpleParams& params,const char** pTotalEntries,int
 
 void TestPopupMenuSimple(const char* scrollUpEntryText="   ^   ",const char* scrollDownEntryText="   v   ");
 
-
 // Single column popup menu with icon support. It disappears when the mouse goes away. Never tested.
 // User is supposed to create a static instance of it, add entries once, and then call "render()".
 class PopupMenu {
@@ -223,9 +222,14 @@ bool isEmpty() const {return entries.size()==0;}
 
 };
 
-
+// Based on the code from: https://github.com/benoitjacquier/imgui
 bool ColorChooser(bool* open,ImVec4* pColorOut=NULL, bool supportsAlpha=true);
+// Based on the code from: https://github.com/benoitjacquier/imgui
+bool ColorCombo(const char* label,ImVec4 *pColorOut=NULL,bool supportsAlpha=false,float width=0.f,bool closeWhenMouseLeavesIt=true);
 
+
+// Based on the code from: https://github.com/Roflraging (see https://github.com/ocornut/imgui/issues/383)
+bool InputTextMultilineWithHorizontalScrolling(const char* label, char* buf, size_t buf_size, float height, ImGuiInputTextFlags flags = 0);
 
 } // namespace ImGui
 

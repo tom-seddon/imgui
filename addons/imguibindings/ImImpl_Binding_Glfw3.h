@@ -4,10 +4,33 @@
 
 #include "imguibindings.h"
 
+#if (GLFW_VERSION_MAJOR>=3 && GLFW_VERSION_MINOR>0)
+#define GLFW_HAS_MOUSE_CURSOR_SUPPORT
+#endif //GLFW_VERSION
+
+#if (defined(GLFW_HAS_MOUSE_CURSOR_SUPPORT) && defined(IMGUI_GLFW_NO_NATIVE_CURSORS))
+#undef IMGUI_GLFW_NO_NATIVE_CURSORS
+#warning IMGUI_GLFW_NO_NATIVE_CURSORS must be undefined globally, because your GLFW version is >= 3.1 and has embedded mouse cursor support.
+#endif //IMGUI_GLFW_NO_NATIVE_CURSORS
+
+#ifdef GLFW_HAS_MOUSE_CURSOR_SUPPORT
+    static const int glfwCursorIds[ImGuiMouseCursor_Count_+1] = {
+        GLFW_ARROW_CURSOR,
+        GLFW_IBEAM_CURSOR,
+        GLFW_HAND_CURSOR,      //SDL_SYSTEM_CURSOR_HAND,    // or SDL_SYSTEM_CURSOR_SIZEALL  //ImGuiMouseCursor_Move,                  // Unused by ImGui
+        GLFW_VRESIZE_CURSOR,       //ImGuiMouseCursor_ResizeNS,              // Unused by ImGui
+        GLFW_HRESIZE_CURSOR,       //ImGuiMouseCursor_ResizeEW,              // Unused by ImGui
+        GLFW_CROSSHAIR_CURSOR,     //ImGuiMouseCursor_ResizeNESW,
+        GLFW_CROSSHAIR_CURSOR,     //ImGuiMouseCursor_ResizeNWSE,          // Unused by ImGui
+        GLFW_ARROW_CURSOR         //,ImGuiMouseCursor_Arrow
+    };
+    static GLFWcursor* glfwCursors[ImGuiMouseCursor_Count_+1];
+
+#else //GLFW_HAS_MOUSE_CURSOR_SUPPORT
 #ifndef IMGUI_GLFW_NO_NATIVE_CURSORS
-#ifdef _WIN32
-#   define IMGUI_USE_WIN32_CURSORS     // Optional, but needs at window creation: wc.hCursor = LoadCursor( NULL, NULL); // Now the window class is inside glfw3... Not sure how I can access it...
-#   ifdef IMGUI_USE_WIN32_CURSORS
+#   ifdef _WIN32
+#       define IMGUI_USE_WIN32_CURSORS     // Optional, but needs at window creation: wc.hCursor = LoadCursor( NULL, NULL); // Now the window class is inside glfw3... Not sure how I can access it...
+#       ifdef IMGUI_USE_WIN32_CURSORS
     static const LPCTSTR win32CursorIds[ImGuiMouseCursor_Count_+1] = {
         IDC_ARROW,
         IDC_IBEAM,
@@ -19,17 +42,17 @@
         IDC_ARROW         //,ImGuiMouseCursor_Arrow
     };
     static HCURSOR win32Cursors[ImGuiMouseCursor_Count_+1];
-#   endif //IMGUI_USE_WIN32_CURSORS
-#else //_WIN32
-#   define IMGUI_USE_X11_CURSORS      // Optional (feel free to comment it out if you don't have X11)
-#   ifdef IMGUI_USE_X11_CURSORS
+#       endif //IMGUI_USE_WIN32_CURSORS
+#   else //_WIN32
+#       define IMGUI_USE_X11_CURSORS      // Optional (feel free to comment it out if you don't have X11)
+#       ifdef IMGUI_USE_X11_CURSORS
     // Before the inclusion of @ref glfw3native.h, you must define exactly one
     // window API macro and exactly one context API macro.
-#   define GLFW_EXPOSE_NATIVE_X11
-#   define GLFW_EXPOSE_NATIVE_GLX
-#   include <glfw3native.h>        // GLFWAPI Display* glfwGetX11Display(void); //GLFWAPI Window glfwGetX11Window(GLFWwindow* window);
-#   include <X11/cursorfont.h>
-// 52 (closed hand)   58 (hand with forefinger) 124 (spray)   86  (pencil)  150 (wait)
+#           define GLFW_EXPOSE_NATIVE_X11
+#           define GLFW_EXPOSE_NATIVE_GLX
+#           include <GLFW/glfw3native.h>        // GLFWAPI Display* glfwGetX11Display(void); //GLFWAPI Window glfwGetX11Window(GLFWwindow* window);
+#           include <X11/cursorfont.h>
+    // 52 (closed hand)   58 (hand with forefinger) 124 (spray)   86  (pencil)  150 (wait)
     static const unsigned int x11CursorIds[ImGuiMouseCursor_Count_+1] = {
         2,//SDL_SYSTEM_CURSOR_ARROW,
         152,//SDL_SYSTEM_CURSOR_IBEAM,
@@ -41,9 +64,10 @@
         2//SDL_SYSTEM_CURSOR_ARROW         //,ImGuiMouseCursor_Arrow
     };
     static Cursor x11Cursors[ImGuiMouseCursor_Count_+1];
-#   endif //IMGUI_USE_X11_CURSORS
-#endif //_WIN32
+#       endif //IMGUI_USE_X11_CURSORS
+#   endif //_WIN32
 #endif //IMGUI_GLFW_NO_NATIVE_CURSORS
+#endif //GLFW_HAS_MOUSE_CURSOR_SUPPORT
 
 
 
@@ -286,6 +310,7 @@ if (pOptionalInitParams && pOptionalInitParams->useOpenGLDebugContext) glfwWindo
 
         //OpenGL info
     {
+        printf("GLFW Version: %d.%d.%d\n",GLFW_VERSION_MAJOR,GLFW_VERSION_MINOR,GLFW_VERSION_REVISION);
         printf("GL Vendor: %s\n", glGetString( GL_VENDOR ));
         printf("GL Renderer : %s\n", glGetString( GL_RENDERER ));
         printf("GL Version (string) : %s\n",  glGetString( GL_VERSION ));
@@ -317,13 +342,16 @@ if (pOptionalInitParams && pOptionalInitParams->useOpenGLDebugContext) glfwWindo
 
 struct ImImplMainLoopFrameStruct {
 int done;
+#ifndef GLFW_HAS_MOUSE_CURSOR_SUPPORT
 #ifndef IMGUI_GLFW_NO_NATIVE_CURSORS
 #if (!defined(IMGUI_USE_WIN32_CURSORS) && defined(IMGUI_USE_X11_CURSORS))
 Display* x11Display;
 Window x11Window;
 #endif //IMGUI_USE_CURSORS
 #endif //IMGUI_GLFW_NO_NATIVE_CURSORS
+#endif //GLFW_HAS_MOUSE_CURSOR_SUPPORT
 };
+
 
 static void ImImplMainLoopFrame(void* userPtr)	{
     ImImplMainLoopFrameStruct& mainLoopFrameStruct = *((ImImplMainLoopFrameStruct*) userPtr);
@@ -344,18 +372,24 @@ static void ImImplMainLoopFrame(void* userPtr)	{
         if (!io.MouseDrawCursor) {
             if (oldCursor!=ImGui::GetMouseCursor()) {
                 oldCursor=ImGui::GetMouseCursor();
-#               ifndef IMGUI_GLFW_NO_NATIVE_CURSORS
-                // set the 'native' window cursor to "oldCursor" here (Hehe: glut and SDL2 can handle them automatically, glfw no!)
-#               ifdef IMGUI_USE_WIN32_CURSORS
-                SetCursor(win32Cursors[oldCursor]);           // If this does not work, it's bacause the native Window must be created with a NULL cursor (but how to tell glfw about it?)
-#               elif defined IMGUI_USE_X11_CURSORS
-                XDefineCursor(mainLoopFrameStruct.x11Display,mainLoopFrameStruct.x11Window,x11Cursors[oldCursor]);
-#               endif
-#               endif //IMGUI_GLFW_NO_NATIVE_CURSORS
+#               ifdef GLFW_HAS_MOUSE_CURSOR_SUPPORT
+                glfwSetCursor(window,glfwCursors[oldCursor]);
+#               else //GLFW_HAS_MOUSE_CURSOR_SUPPORT
+#                   ifndef IMGUI_GLFW_NO_NATIVE_CURSORS
+#                       ifdef IMGUI_USE_WIN32_CURSORS
+                            SetCursor(win32Cursors[oldCursor]);           // If this does not work, it's bacause the native Window must be created with a NULL cursor (but how to tell glfw about it?)
+#                       elif defined IMGUI_USE_X11_CURSORS
+                            XDefineCursor(mainLoopFrameStruct.x11Display,mainLoopFrameStruct.x11Window,x11Cursors[oldCursor]);
+#                       endif
+#                   endif //IMGUI_GLFW_NO_NATIVE_CURSORS
+#               endif //GLFW_HAS_MOUSE_CURSOR_SUPPORT
             }
         }
     }
-    if (gImGuiAppIsIconified || gImGuiInverseFPSClamp==0) {
+
+    static const int numFramesDelay = 12;
+    static int curFramesDelay = -1;
+    if (gImGuiAppIsIconified || (gImGuiWereOutsideImGui ? (gImGuiInverseFPSClampOutsideImGui==0) : (gImGuiInverseFPSClampInsideImGui==0))) {
         //fprintf(stderr,"glfwWaitEvents() Start %1.4f\n",glfwGetTime());
         glfwWaitEvents();
         //fprintf(stderr,"glfwWaitEvents() End %1.4f\n",glfwGetTime());
@@ -379,22 +413,41 @@ static void ImImplMainLoopFrame(void* userPtr)	{
 
     DrawGL();
 
+
     if (!gImGuiPaused)	{
-        bool imguiNeedsInputNow = ImGui::IsMouseHoveringAnyWindow() | ImGui::IsAnyItemActive();
+        gImGuiWereOutsideImGui = !ImGui::IsMouseHoveringAnyWindow() && !ImGui::IsAnyItemActive();
+        const bool imguiNeedsInputNow = !gImGuiWereOutsideImGui && (io.WantTextInput || io.MouseDelta.x!=0 || io.MouseDelta.y!=0 || io.MouseWheel!=0);// || io.MouseDownOwned[0] || io.MouseDownOwned[1] || io.MouseDownOwned[2]);
         if (gImGuiCapturesInput != imguiNeedsInputNow) {
             gImGuiCapturesInput = imguiNeedsInputNow;
-            //fprintf(stderr,"gImGuiCapturesInput=%s\n",gImGuiCapturesInput?"true":"false");
+             if (gImGuiDynamicFPSInsideImGui) {
+                if (!gImGuiCapturesInput && !gImGuiWereOutsideImGui) curFramesDelay = 0;
+                else curFramesDelay = -1;                
+            }            
         }
+        if (gImGuiWereOutsideImGui) curFramesDelay = -1;
+        //fprintf(stderr,"gImGuiCapturesInput=%s curFramesDelay=%d wereOutsideImGui=%s\n",gImGuiCapturesInput?"true":"false",curFramesDelay,wereOutsideImGui?"true":"false");
 
         // Rendering
+#       ifdef IMGUIBINDINGS_RESTORE_GL_STATE
+        GLint oldViewport[4];glGetIntegerv(GL_VIEWPORT, oldViewport);
+#       endif //IMGUIBINDINGS_RESTORE_GL_STATE
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
         ImGui::Render();
+#       ifdef IMGUIBINDINGS_RESTORE_GL_STATE
+        glViewport(oldViewport[0], oldViewport[1], (GLsizei)oldViewport[2], (GLsizei)oldViewport[3])
+#       endif //IMGUIBINDINGS_RESTORE_GL_STATE
     }
+    else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
     glfwSwapBuffers(window);
 
-    // If needed we must wait (inverseFPSClamp-deltaTime) seconds (=> honestly I shouldn't add the * 2.0f factor at the end, but ImGui tells me the wrong FPS otherwise... why? <=)
-    if (gImGuiInverseFPSClamp>0 && deltaTime < gImGuiInverseFPSClamp)  WaitFor((unsigned int) ((gImGuiInverseFPSClamp-deltaTime)*1000.f * 2.0f) );
+    if (curFramesDelay>=0 && ++curFramesDelay>numFramesDelay) WaitFor(200);     // 200 = 5 FPS - frame rate when ImGui is inactive
+    else {
+        const float& inverseFPSClamp = gImGuiWereOutsideImGui ? gImGuiInverseFPSClampOutsideImGui : gImGuiInverseFPSClampInsideImGui;
+        if (inverseFPSClamp==0.f) WaitFor(500);
+        // If needed we must wait (inverseFPSClamp-deltaTime) seconds (=> honestly I shouldn't add the * 2.0f factor at the end, but ImGui tells me the wrong FPS otherwise... why? <=)
+        else if (inverseFPSClamp>0 && deltaTime < inverseFPSClamp)  WaitFor((unsigned int) ((inverseFPSClamp-deltaTime)*1000.f * 2.0f) );
+    }
 
 #	ifdef __EMSCRIPTEN__
     if ((mainLoopFrameStruct.done=!glfwWindowShouldClose(window))==0) emscripten_cancel_main_loop();
@@ -411,31 +464,40 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
 
 ImImplMainLoopFrameStruct mainLoopFrameStruct;
     // New: create cursors-------------------------------------------
-#ifndef IMGUI_GLFW_NO_NATIVE_CURSORS
-#   ifdef IMGUI_USE_WIN32_CURSORS
-    for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
-        win32Cursors[i] = LoadCursor(NULL,(LPCTSTR) win32CursorIds[i]);
-        if (i==0) SetCursor(win32Cursors[i]);
-    }
-#   elif defined IMGUI_USE_X11_CURSORS
-    mainLoopFrameStruct.x11Display = glfwGetX11Display();
-    mainLoopFrameStruct.x11Window = glfwGetX11Window(window);
-    //XColor white;white.red=white.green=white.blue=255;
-    //XColor black;black.red=black.green=black.blue=0;
-    for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
-        x11Cursors[i] = XCreateFontCursor(mainLoopFrameStruct.x11Display,x11CursorIds[i]);
-        //XRecolorCursor(x11Display, x11Cursors[i], &white,&black);
-        if (i==0) XDefineCursor(mainLoopFrameStruct.x11Display,mainLoopFrameStruct.x11Window,x11Cursors[i]);
-    }
-#   endif
-#endif //IMGUI_GLFW_NO_NATIVE_CURSORS
+#ifdef GLFW_HAS_MOUSE_CURSOR_SUPPORT
+        for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
+            glfwCursors[i] = glfwCreateStandardCursor(glfwCursorIds[i]);
+            if (i==0) glfwSetCursor(window,glfwCursors[i]);
+        }
+#else //GLFW_HAS_MOUSE_CURSOR_SUPPORT
+#   ifndef IMGUI_GLFW_NO_NATIVE_CURSORS
+#       ifdef IMGUI_USE_WIN32_CURSORS
+        for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
+            win32Cursors[i] = LoadCursor(NULL,(LPCTSTR) win32CursorIds[i]);
+            if (i==0) SetCursor(win32Cursors[i]);
+        }
+#       elif defined IMGUI_USE_X11_CURSORS
+        mainLoopFrameStruct.x11Display = glfwGetX11Display();
+        mainLoopFrameStruct.x11Window = glfwGetX11Window(window);
+        //XColor white;white.red=white.green=white.blue=255;
+        //XColor black;black.red=black.green=black.blue=0;
+        for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
+            x11Cursors[i] = XCreateFontCursor(mainLoopFrameStruct.x11Display,x11CursorIds[i]);
+            //XRecolorCursor(x11Display, x11Cursors[i], &white,&black);
+            if (i==0) XDefineCursor(mainLoopFrameStruct.x11Display,mainLoopFrameStruct.x11Window,x11Cursors[i]);
+        }
+#       endif
+#   endif //IMGUI_GLFW_NO_NATIVE_CURSORS
+#endif //GLFW_HAS_MOUSE_CURSOR_SUPPORT
     //---------------------------------------------------------------
 
     InitGL();
  	ResizeGL(io.DisplaySize.x,io.DisplaySize.y);
 	
-    gImGuiInverseFPSClamp = pOptionalInitParams ? ((pOptionalInitParams->gFpsClamp!=0) ? (1.0f/pOptionalInitParams->gFpsClamp) : 1.0f) : -1.0f;
-	
+    gImGuiInverseFPSClampInsideImGui = pOptionalInitParams ? ((pOptionalInitParams->gFpsClampInsideImGui!=0) ? (1.0f/pOptionalInitParams->gFpsClampInsideImGui) : 1.0f) : -1.0f;
+    gImGuiInverseFPSClampOutsideImGui = pOptionalInitParams ? ((pOptionalInitParams->gFpsClampOutsideImGui!=0) ? (1.0f/pOptionalInitParams->gFpsClampOutsideImGui) : 1.0f) : -1.0f;
+    gImGuiDynamicFPSInsideImGui = pOptionalInitParams ? pOptionalInitParams->gFpsDynamicInsideImGui : false;
+
     mainLoopFrameStruct.done = 0;
 #	ifdef __EMSCRIPTEN__
     emscripten_set_main_loop_arg(ImImplMainLoopFrame,&mainLoopFrameStruct, 0, 1);
@@ -453,16 +515,22 @@ ImImplMainLoopFrameStruct mainLoopFrameStruct;
     DestroyImGuiBuffer();
 
     // New: delete cursors-------------------------------------------
-#ifndef IMGUI_GLFW_NO_NATIVE_CURSORS
-#   ifdef IMGUI_USE_WIN32_CURSORS
-    // Nothing to do
-#   elif defined IMGUI_USE_X11_CURSORS
-    XUndefineCursor(mainLoopFrameStruct.x11Display,mainLoopFrameStruct.x11Window);
+#   ifdef  GLFW_HAS_MOUSE_CURSOR_SUPPORT
     for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
-        XFreeCursor(mainLoopFrameStruct.x11Display,x11Cursors[i]);
+        glfwDestroyCursor(glfwCursors[i]);
     }
-#   endif
-#endif //IMGUI_GLFW_NO_NATIVE_CURSORS
+#   else   //GLFW_HAS_MOUSE_CURSOR_SUPPORT
+#       ifndef IMGUI_GLFW_NO_NATIVE_CURSORS
+#           ifdef IMGUI_USE_WIN32_CURSORS
+                // Nothing to do
+#           elif defined IMGUI_USE_X11_CURSORS
+                XUndefineCursor(mainLoopFrameStruct.x11Display,mainLoopFrameStruct.x11Window);
+                for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
+                    XFreeCursor(mainLoopFrameStruct.x11Display,x11Cursors[i]);
+                }
+#           endif
+#       endif //IMGUI_GLFW_NO_NATIVE_CURSORS
+#   endif //GLFW_HAS_MOUSE_CURSOR_SUPPORT
     //---------------------------------------------------------------
 
     glfwTerminate();

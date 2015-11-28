@@ -6,12 +6,22 @@
 #ifndef IMGUI_USER_ADDONS_H_
 #define IMGUI_USER_ADDONS_H_
 
+#ifdef IMGUI_USE_MINIZIP	// requires linking to library -lZlib
+#   ifndef IMGUI_USE_ZLIB
+#   define IMGUI_USE_ZLIB	// requires linking to library -lZlib
+#   endif //IMGUI_USE_ZLIB
+#endif //IMGUI_USE_MINIZIP
+
 #undef IMGUI_USE_AUTO_BINDING
 #if (defined(IMGUI_USE_GLUT_BINDING) || defined(IMGUI_USE_SDL2_BINDING) || defined(IMGUI_USE_GLFW_BINDING) || defined(IMGUI_USE_WINAPI_BINDING))
 #	define IMGUI_USE_AUTO_BINDING
 # 	include "./imguibindings/imguibindings.h"
 #endif //IMGUI_USE_AUTO_BINDING
 
+
+#ifndef NO_IMGUISTRING
+#include "./imguistring/imguistring.h"
+#endif //NO_IMGUISTRING
 #ifndef NO_IMGUIHELPER
 #include "./imguihelper/imguihelper.h"
 #endif //NO_IMGUIHELPER
@@ -36,6 +46,12 @@
 #ifndef NO_IMGUIDATECHOOSER
 #include "./imguidatechooser/imguidatechooser.h"
 #endif //NO_IMGUIDATECHOOSER
+#ifndef NO_IMGUICODEEDITOR
+#include "./imguicodeeditor/imguicodeeditor.h"
+#endif //NO_IMGUICODEEDITOR
+#ifdef IMGUISCINTILLA_ACTIVATED
+#include "./imguiscintilla/imguiscintilla.h"
+#endif //IMGUISCINTILLA_ACTIVATED
 #ifndef NO_IMGUIGRAPHEDITOR
 #include "./imguinodegrapheditor/imguinodegrapheditor.h"
 #endif //NO_IMGUIGRAPHEDITOR

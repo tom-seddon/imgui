@@ -45,8 +45,8 @@ namespace ImGuiFs {
 
 
 #ifdef IMGUIFS_NO_EXTRA_METHODS
-const int MAX_FILENAME_BYTES = FILENAME_MAX;
-const int MAX_PATH_BYTES = PATH_MAX;
+const int MAX_FILENAME_BYTES = FILENAME_MAX+1;
+const int MAX_PATH_BYTES = PATH_MAX+1;
 
 enum Sorting {
     SORT_ORDER_ALPHABETIC=0,
@@ -196,14 +196,18 @@ public:
 #   ifndef _WIN32
         if (!path || strlen(path)==0) {
             realpath("./", rv);
+#           ifdef __EMSCRIPTEN__        // v.1.35.7 needs it because of a bug in realpath failing on all the folders
             if (!rv || strlen(rv)==0) strcpy(rv,"/");
+#           endif //__EMSCRIPTEN__
         }
         else {
             realpath(path, rv);
+#           ifdef __EMSCRIPTEN__        // v.1.35.7 needs it because of a bug in realpath failing on all the folders
             if (!rv || strlen(rv)==0) {
                 if (path[0]=='.') strcpy(rv,&path[1]);
                 else strcpy(rv,path);
             }
+#           endif //__EMSCRIPTEN__
         }
         //printf("GetAbsolutePath(\"%s\",\"%s\");\n",path,rv);fflush(stdout);
 #   else //_WIN32

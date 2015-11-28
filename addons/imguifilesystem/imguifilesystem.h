@@ -74,8 +74,8 @@ x> Never tested on a real Windows OS and on MacOS.
 namespace ImGuiFs {
 
 #ifndef IMGUIFS_NO_EXTRA_METHODS
-const int MAX_FILENAME_BYTES = FILENAME_MAX;
-const int MAX_PATH_BYTES = PATH_MAX;
+const int MAX_FILENAME_BYTES = FILENAME_MAX+1;
+const int MAX_PATH_BYTES = PATH_MAX+1;
 #else //IMGUIFS_NO_EXTRA_METHODS
 extern const int MAX_FILENAME_BYTES;
 extern const int MAX_PATH_BYTES;

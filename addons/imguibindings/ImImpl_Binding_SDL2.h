@@ -181,137 +181,154 @@ static void ImImplMainLoopFrame(void* pDone)	{
     int& done = *((int*) pDone);
     SDL_Event event;
 
-        if (!gImGuiPaused) {
-            for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
+    if (!gImGuiPaused) {
+        for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
 
-            static ImGuiMouseCursor oldCursor = ImGuiMouseCursor_Arrow;
-            static bool oldMustHideCursor = io.MouseDrawCursor;
-            if (oldMustHideCursor!=io.MouseDrawCursor) {
-                SDL_ShowCursor(io.MouseDrawCursor?0:1);
-                oldMustHideCursor = io.MouseDrawCursor;
-                oldCursor = ImGuiMouseCursor_Count_;
-            }
-            if (!io.MouseDrawCursor) {
-                if (oldCursor!=ImGui::GetMouseCursor()) {
-                    oldCursor=ImGui::GetMouseCursor();
-                    SDL_SetCursor(sdlCursors[oldCursor]);
-                }
+        static ImGuiMouseCursor oldCursor = ImGuiMouseCursor_Arrow;
+        static bool oldMustHideCursor = io.MouseDrawCursor;
+        if (oldMustHideCursor!=io.MouseDrawCursor) {
+            SDL_ShowCursor(io.MouseDrawCursor?0:1);
+            oldMustHideCursor = io.MouseDrawCursor;
+            oldCursor = ImGuiMouseCursor_Count_;
+        }
+        if (!io.MouseDrawCursor) {
+            if (oldCursor!=ImGui::GetMouseCursor()) {
+                oldCursor=ImGui::GetMouseCursor();
+                SDL_SetCursor(sdlCursors[oldCursor]);
             }
         }
+    }
 
-        while (SDL_PollEvent(&event))
+    while (SDL_PollEvent(&event))
+    {
+        switch (event.type)
         {
-            switch (event.type)
+        case SDL_WINDOWEVENT: {
+            switch (event.window.event) {
+            case SDL_WINDOWEVENT_RESIZED:
             {
-            case SDL_WINDOWEVENT: {
-                switch (event.window.event) {
-                case SDL_WINDOWEVENT_RESIZED:
-                    {
-                    int width = event.window.data1;
-                    int height = event.window.data2;
-                    int fb_w, fb_h;
-                    fb_w = width;fb_h = height;
-                    mousePosScale.x = 1.f;//(float)fb_w / w;              // Some screens e.g. Retina display have framebuffer size != from window size, and mouse inputs are given in window/screen coordinates.
-                    mousePosScale.y = 1.f;//(float)fb_h / h;
-                    io.DisplaySize = ImVec2((float)fb_w, (float)fb_h);    // Display size, in pixels. For clamping windows positions.
+                int width = event.window.data1;
+                int height = event.window.data2;
+                int fb_w, fb_h;
+                fb_w = width;fb_h = height;
+                mousePosScale.x = 1.f;//(float)fb_w / w;              // Some screens e.g. Retina display have framebuffer size != from window size, and mouse inputs are given in window/screen coordinates.
+                mousePosScale.y = 1.f;//(float)fb_h / h;
+                io.DisplaySize = ImVec2((float)fb_w, (float)fb_h);    // Display size, in pixels. For clamping windows positions.
 
-                    ResizeGL(width,height);
-                    }
-                    break;
-                }
+                ResizeGL(width,height);
             }
                 break;
-            case SDL_KEYDOWN:
-            case SDL_KEYUP:
-            {
-                const SDL_Keymod mod = SDL_GetModState();
-                io.KeyCtrl = (mod & (KMOD_LCTRL|KMOD_RCTRL)) != 0;
-                io.KeyShift = (mod & (KMOD_LSHIFT|KMOD_RSHIFT)) != 0;
-                io.KeyAlt = (mod & (KMOD_LALT|KMOD_RALT)) != 0;
-
-                io.KeysDown[event.key.keysym.sym & ~SDLK_SCANCODE_MASK] = (event.type == SDL_KEYDOWN);
-
             }
-                break;
-            //case SDL_TEXTEDITING:   break;
-            case SDL_TEXTINPUT:
-            {
-                io.AddInputCharactersUTF8(event.text.text);
-            }
-                break;
-            case SDL_MOUSEBUTTONDOWN:        /**< Mouse button pressed */
-            case SDL_MOUSEBUTTONUP: {
-                SDL_Keymod mod = SDL_GetModState();
-                io.KeyCtrl = (mod & (KMOD_LCTRL|KMOD_RCTRL)) != 0;
-                io.KeyShift = (mod & (KMOD_LSHIFT|KMOD_RSHIFT)) != 0;
-                io.KeyAlt = (mod & (KMOD_LALT|KMOD_RALT)) != 0;
-                if (event.button.button>0 && event.button.button<6) {
-                    static const int evBtnMap[5]={0,2,1,3,4};
-                    io.MouseDown[ evBtnMap[event.button.button-1] ] = (event.button.type == SDL_MOUSEBUTTONDOWN);
-                    if (event.button.clicks==2 && event.button.type == SDL_MOUSEBUTTONDOWN) gImGuiBindingMouseDblClicked[evBtnMap[event.button.button-1]] = true;
-                    //else gImGuiBindingMouseDblClicked[event.button.button-1] = false;
-                }
-                //fprintf(stderr,"mousePressed[%d] = %s\n",event.button.button-1,(event.button.type == SDL_MOUSEBUTTONDOWN)?"true":"false");
-                }
-                break;
+        }
             break;
-            case SDL_MOUSEWHEEL:
-                // positive away from the user and negative toward the user
-                io.MouseWheel = (event.wheel.y != 0) ? event.wheel.y > 0 ? 1 : - 1 : 0;           // Mouse wheel: -1,0,+1
-                //fprintf(stderr,"io.MouseWheel = %d (%d,%d)\n",io.MouseWheel,event.wheel.x,event.wheel.y); // set correctly, but why it does not seem to work ?
-                break;
-            case SDL_MOUSEMOTION:
-                io.MousePos = ImVec2((float)event.motion.x * mousePosScale.x, (float)event.motion.y * mousePosScale.y);
-                //fprintf(stderr,"io.MousePos (%1.2f,%1.2f)\n",io.MousePos.x,io.MousePos.y);
-                break;
-            case SDL_QUIT:
-                done = 1;
+        case SDL_KEYDOWN:
+        case SDL_KEYUP:
+        {
+            const SDL_Keymod mod = SDL_GetModState();
+            io.KeyCtrl = (mod & (KMOD_LCTRL|KMOD_RCTRL)) != 0;
+            io.KeyShift = (mod & (KMOD_LSHIFT|KMOD_RSHIFT)) != 0;
+            io.KeyAlt = (mod & (KMOD_LALT|KMOD_RALT)) != 0;
+
+            io.KeysDown[event.key.keysym.sym & ~SDLK_SCANCODE_MASK] = (event.type == SDL_KEYDOWN);
+
+        }
+            break;
+            //case SDL_TEXTEDITING:   break;
+        case SDL_TEXTINPUT:
+        {
+            io.AddInputCharactersUTF8(event.text.text);
+        }
+            break;
+        case SDL_MOUSEBUTTONDOWN:        /**< Mouse button pressed */
+        case SDL_MOUSEBUTTONUP: {
+            SDL_Keymod mod = SDL_GetModState();
+            io.KeyCtrl = (mod & (KMOD_LCTRL|KMOD_RCTRL)) != 0;
+            io.KeyShift = (mod & (KMOD_LSHIFT|KMOD_RSHIFT)) != 0;
+            io.KeyAlt = (mod & (KMOD_LALT|KMOD_RALT)) != 0;
+            if (event.button.button>0 && event.button.button<6) {
+                static const int evBtnMap[5]={0,2,1,3,4};
+                io.MouseDown[ evBtnMap[event.button.button-1] ] = (event.button.type == SDL_MOUSEBUTTONDOWN);
+                if (event.button.clicks==2 && event.button.type == SDL_MOUSEBUTTONDOWN) gImGuiBindingMouseDblClicked[evBtnMap[event.button.button-1]] = true;
+                //else gImGuiBindingMouseDblClicked[event.button.button-1] = false;
+            }
+            //fprintf(stderr,"mousePressed[%d] = %s\n",event.button.button-1,(event.button.type == SDL_MOUSEBUTTONDOWN)?"true":"false");
+        }
+            break;
+        case SDL_MOUSEWHEEL:
+            // positive away from the user and negative toward the user
+            io.MouseWheel = (event.wheel.y != 0) ? event.wheel.y > 0 ? 1 : - 1 : 0;           // Mouse wheel: -1,0,+1
+            //fprintf(stderr,"io.MouseWheel = %d (%d,%d)\n",io.MouseWheel,event.wheel.x,event.wheel.y); // set correctly, but why it does not seem to work ?
+            break;
+        case SDL_MOUSEMOTION:
+            io.MousePos = ImVec2((float)event.motion.x * mousePosScale.x, (float)event.motion.y * mousePosScale.y);
+            //fprintf(stderr,"io.MousePos (%1.2f,%1.2f)\n",io.MousePos.x,io.MousePos.y);
+            break;
+        case SDL_QUIT:
+            done = 1;
 #				ifdef __EMSCRIPTEN__
-                emscripten_cancel_main_loop();
+            emscripten_cancel_main_loop();
 #				endif //
-                break;
-            default:
-                break;
+            break;
+        default:
+            break;
+        }
+    }
+
+    // Setup io.DeltaTime
+    static Uint32  time = SDL_GetTicks();
+    const Uint32  current_time =  SDL_GetTicks();
+    static float deltaTime = (float)(0.001*(double)(current_time - time));
+    deltaTime = (float)(0.001*(double)(current_time - time));
+    if (deltaTime<=0) deltaTime=1.0f/60.0f;
+    time = current_time;
+
+    if (!gImGuiPaused) {
+        io.DeltaTime = deltaTime;
+        ImGui::NewFrame();
+        for (size_t i = 0; i < 5; i++) {
+            io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
+        }
+    }
+
+
+    DrawGL();
+
+
+    static const int numFramesDelay = 12;
+    static int curFramesDelay = -1;
+    if (!gImGuiPaused)	{
+        gImGuiWereOutsideImGui = !ImGui::IsMouseHoveringAnyWindow() && !ImGui::IsAnyItemActive();
+        const bool imguiNeedsInputNow = !gImGuiWereOutsideImGui && (io.WantTextInput || io.MouseDelta.x!=0 || io.MouseDelta.y!=0 || io.MouseWheel!=0);// || io.MouseDownOwned[0] || io.MouseDownOwned[1] || io.MouseDownOwned[2]);
+        if (gImGuiCapturesInput != imguiNeedsInputNow) {
+            gImGuiCapturesInput = imguiNeedsInputNow;
+            //fprintf(stderr,"gImGuiCapturesInput=%s\n",gImGuiCapturesInput?"true":"false");
+            if (gImGuiDynamicFPSInsideImGui) {
+                if (!gImGuiCapturesInput && !gImGuiWereOutsideImGui) curFramesDelay = 0;
+                else curFramesDelay = -1;
             }
         }
+        if (gImGuiWereOutsideImGui) curFramesDelay = -1;
 
-        // Setup io.DeltaTime
-        static Uint32  time = SDL_GetTicks();
-        const Uint32  current_time =  SDL_GetTicks();
-        static float deltaTime = (float)(0.001*(double)(current_time - time));
-        deltaTime = (float)(0.001*(double)(current_time - time));
-        if (deltaTime<=0) deltaTime=1.0f/60.0f;
-        time = current_time;
+#       ifdef IMGUIBINDINGS_RESTORE_GL_STATE
+        GLint oldViewport[4];glGetIntegerv(GL_VIEWPORT, oldViewport);
+#       endif //IMGUIBINDINGS_RESTORE_GL_STATE
+        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+        ImGui::Render();
+#       ifdef IMGUIBINDINGS_RESTORE_GL_STATE
+        glViewport(oldViewport[0], oldViewport[1], (GLsizei)oldViewport[2], (GLsizei)oldViewport[3])
+#       endif //IMGUIBINDINGS_RESTORE_GL_STATE
+    }
+    else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
-        if (!gImGuiPaused) {
-            io.DeltaTime = deltaTime;
-            ImGui::NewFrame();
-            for (size_t i = 0; i < 5; i++) {
-                io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
-            }
-        }
+    SDL_GL_SwapWindow(window);
 
-
-        DrawGL();
-
-
-        if (!gImGuiPaused)	{
-            bool imguiNeedsInputNow = ImGui::IsMouseHoveringAnyWindow() | ImGui::IsAnyItemActive();
-            if (gImGuiCapturesInput != imguiNeedsInputNow) {
-                gImGuiCapturesInput = imguiNeedsInputNow;
-                //fprintf(stderr,"gImGuiCapturesInput=%s\n",gImGuiCapturesInput?"true":"false");
-            }
-
-            glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);            
-            ImGui::Render();
-        }
-
-        SDL_GL_SwapWindow(window);
-
-        if (gImGuiInverseFPSClamp==0.f) WaitFor(500);
+    if (curFramesDelay>=0 && ++curFramesDelay>numFramesDelay) WaitFor(200);     // 200 = 5 FPS - frame rate when ImGui is inactive
+    else {
+        const float& inverseFPSClamp = gImGuiWereOutsideImGui ? gImGuiInverseFPSClampOutsideImGui : gImGuiInverseFPSClampInsideImGui;
+        if (inverseFPSClamp==0.f) WaitFor(500);
         // If needed we must wait (gImGuiInverseFPSClamp-deltaTime) seconds (=> honestly I shouldn't add the * 2.0f factor at the end, but ImGui tells me the wrong FPS otherwise... why? <=)
-        else if (gImGuiInverseFPSClamp>0.f && deltaTime < gImGuiInverseFPSClamp)  WaitFor((unsigned int) ((gImGuiInverseFPSClamp-deltaTime)*1000.f * 2.0f) );
-
+        else if (inverseFPSClamp>0.f && deltaTime < inverseFPSClamp)  WaitFor((unsigned int) ((inverseFPSClamp-deltaTime)*1000.f * 2.0f) );
+    }
 }
 
 // Application code
@@ -330,8 +347,10 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
     InitGL();
     ResizeGL((int) io.DisplaySize.x,(int) io.DisplaySize.y);
 	
-    gImGuiInverseFPSClamp = pOptionalInitParams ? ((pOptionalInitParams->gFpsClamp!=0) ? (1.0f/pOptionalInitParams->gFpsClamp) : 1.0f) : -1.0f;
-	
+    gImGuiInverseFPSClampInsideImGui = pOptionalInitParams ? ((pOptionalInitParams->gFpsClampInsideImGui!=0) ? (1.0f/pOptionalInitParams->gFpsClampInsideImGui) : 1.0f) : -1.0f;
+    gImGuiInverseFPSClampOutsideImGui = pOptionalInitParams ? ((pOptionalInitParams->gFpsClampOutsideImGui!=0) ? (1.0f/pOptionalInitParams->gFpsClampOutsideImGui) : 1.0f) : -1.0f;
+    gImGuiDynamicFPSInsideImGui = pOptionalInitParams ? pOptionalInitParams->gFpsDynamicInsideImGui : false;
+
 	int done = 0;
 #	ifdef __EMSCRIPTEN__
     emscripten_set_main_loop_arg(ImImplMainLoopFrame,&done, 0, 1);

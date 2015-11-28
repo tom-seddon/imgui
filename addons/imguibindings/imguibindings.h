@@ -64,10 +64,13 @@
 //-------------------------------------------------------------------------------
 //# define GLFW_STATIC   //// Optional, depending on which glfw lib you want to use
 #   include <GLFW/glfw3.h>
+#   if (GLFW_VERSION_MAJOR<3)
+#       error GLFW_VERSION_MAJOR < 3 is not supported
+#   endif //GLFW_VERSION_MAJOR<3
 #   ifdef _WIN32
 #       define GLFW_EXPOSE_NATIVE_WIN32
 #       define GLFW_EXPOSE_NATIVE_WGL
-#       include <GLFW/glfw3native.h>
+#       include <GLFW/glfw3native.h>    // glfwGetWin32Window(...) used by ImImpl_ImeSetInputScreenPosFn(...)
 #   endif //_WIN32
 //-------------------------------------------------------------------------------
 #elif (defined(_WIN32) || defined(IMGUI_USE_WINAPI_BINDING))
@@ -102,20 +105,58 @@ extern void DestroyGL();
 
 // These variables can be declared extern and set at runtime-----------------------------------------------------
 extern bool gImGuiPaused;// = false;
-extern float gImGuiInverseFPSClamp;// = -1.0f;    // CAN'T BE 0. < 0 = No clamping.
+extern float gImGuiInverseFPSClampInsideImGui;// = -1.0f;    // CAN'T BE 0. < 0 = No clamping.
+extern float gImGuiInverseFPSClampOutsideImGui;// = -1.0f;    // CAN'T BE 0. < 0 = No clamping.
+extern bool gImGuiDynamicFPSInsideImGui;                   // Dynamic FPS inside ImGui: from 5 to gImGuiInverseFPSClampInsideImGui
 extern bool gImGuiCapturesInput;             // When false the input events can be directed somewhere else
+extern bool gImGuiWereOutsideImGui;
 extern bool gImGuiBindingMouseDblClicked[5];
 // --------------------------------------------------------------------------------------------------------------
 
 struct ImImpl_InitParams	{
+    friend struct FontData;
+    // Holds info for physic or memory file (used to load TTF)
+    struct FontData {
+        char filePath[2048];
+        const unsigned char* pMemoryData;
+        size_t memoryDataSize;
+        enum Compression {
+            COMP_NONE=0,
+            COMP_STB,
+            COMP_STBBASE85
+#if         (!defined(NO_IMGUIHELPER) && defined(IMGUI_USE_ZLIB))
+            ,COMP_GZ
+#           endif   //IMGUI_USE_ZLIB
+        };
+        Compression memoryDataCompression;
+        float sizeInPixels;//=15.0f,
+        const ImWchar* pGlyphRanges;
+        ImFontConfig fontConfig;
+        bool useFontConfig;
+
+        FontData(const unsigned char* _pMemoryData,size_t _memoryDataFile,Compression _memoryDataCompression=COMP_NONE,
+                 float _sizeInPixels=15.f,const ImWchar* pOptionalGlyphRanges=NULL,ImFontConfig* pOptionalFontConfig=NULL)
+        : pMemoryData(_pMemoryData) , memoryDataSize(_memoryDataFile), memoryDataCompression(_memoryDataCompression),
+        sizeInPixels(_sizeInPixels),pGlyphRanges(pOptionalGlyphRanges?pOptionalGlyphRanges:ImImpl_InitParams::GetGlyphRangesDefault())
+        ,useFontConfig(false)
+        {IM_ASSERT(pMemoryData);IM_ASSERT(_memoryDataFile);
+        IM_ASSERT(sizeInPixels>0);filePath[0]='\0';
+        if (pOptionalFontConfig) {useFontConfig=true;fontConfig=*pOptionalFontConfig;}}
+        FontData(const char* _filePath,float _sizeInPixels=15.f,const ImWchar* pOptionalGlyphRanges=NULL,ImFontConfig* pOptionalFontConfig=NULL)
+        : pMemoryData(NULL) , memoryDataSize(0),sizeInPixels(_sizeInPixels),pGlyphRanges(pOptionalGlyphRanges?pOptionalGlyphRanges:ImImpl_InitParams::GetGlyphRangesDefault())
+        ,useFontConfig(false)
+        {IM_ASSERT(_filePath && strlen(_filePath)>0);
+         const size_t len = strlen(_filePath);IM_ASSERT(len>0 && len<2047);
+         if (len<2047) strcpy(filePath,_filePath);IM_ASSERT(sizeInPixels>0);
+         if (pOptionalFontConfig) {useFontConfig=true;fontConfig=*pOptionalFontConfig;}}
+    };
 	ImVec2 gWindowSize;
 	char gWindowTitle[1024];
-    char gOptionalTTFFilePath[2048];
-    float gOptionalTTFFileFontSizeInPixels;
-    const ImWchar* gOptionalTTFFileGlyphRanges;
-    float gFpsClamp;	// <0 -> no clamp
-    const unsigned char* pOptionalReferenceToTTFFileInMemory;
-    size_t      pOptionalSizeOfTTFFileInMemory;
+    float gFpsClampInsideImGui;	// <0 -> no clamp
+    float gFpsClampOutsideImGui;	// <0 -> no clamp
+    bool gFpsDynamicInsideImGui;    // false
+    ImVector<FontData> fonts;
+    bool forceAddDefaultFontAsFirstFont;
     ImImpl_InitParams(
             int windowWidth=1270,
             int windowHeight=720,
@@ -124,13 +165,14 @@ struct ImImpl_InitParams	{
             const unsigned char*    _pOptionalReferenceToTTFFileInMemory=NULL,
             size_t                  _pOptionalSizeOfTTFFileInMemory=0,
             const float OptionalTTFFontSizeInPixels=15.0f,
-            const ImWchar* OptionalTTFGlyphRanges=NULL
+            const ImWchar* OptionalTTFGlyphRanges=NULL,
+            ImFontConfig* pFontConfig=NULL,
+            bool _forceAddDefaultFontAsFirstFont = false
     ) :
-    gOptionalTTFFileFontSizeInPixels(OptionalTTFFontSizeInPixels),
-    gOptionalTTFFileGlyphRanges(OptionalTTFGlyphRanges),
-    gFpsClamp(-1.0f),
-    pOptionalReferenceToTTFFileInMemory(_pOptionalReferenceToTTFFileInMemory),
-    pOptionalSizeOfTTFFileInMemory(_pOptionalSizeOfTTFFileInMemory)
+    gFpsClampInsideImGui(-1.0f),
+    gFpsClampOutsideImGui(-1.0f),
+    gFpsDynamicInsideImGui(false),
+    forceAddDefaultFontAsFirstFont(_forceAddDefaultFontAsFirstFont)
 	{
         gWindowSize.x = windowWidth<=0?1270:windowWidth;gWindowSize.y = windowHeight<=0?720:windowHeight;
 
@@ -145,18 +187,39 @@ struct ImImpl_InitParams	{
 		}
 		else strcat(gWindowTitle,"ImGui OpenGL Example");
 
-        gOptionalTTFFilePath[0]='\0';
-        if (OptionalTTFFilePath)	{
-            const size_t len = strlen(OptionalTTFFilePath);
-            if (len<2047) strcat(gOptionalTTFFilePath,OptionalTTFFilePath);
-        }
+        if (OptionalTTFFilePath && strlen(OptionalTTFFilePath)>0)
+            fonts.push_back(FontData(OptionalTTFFilePath,OptionalTTFFontSizeInPixels,OptionalTTFGlyphRanges,pFontConfig));
+        else if (_pOptionalReferenceToTTFFileInMemory && _pOptionalSizeOfTTFFileInMemory>0)
+            fonts.push_back(FontData(_pOptionalReferenceToTTFFileInMemory,_pOptionalSizeOfTTFFileInMemory,FontData::COMP_NONE,OptionalTTFFontSizeInPixels,OptionalTTFGlyphRanges,pFontConfig));
+	}
+    ImImpl_InitParams(
+            int windowWidth,
+            int windowHeight,
+            const char* windowTitle,
+            const ImVector<ImImpl_InitParams::FontData> & _fonts,
+            bool _forceAddDefaultFontAsFirstFont = false
+    ) :
+    gFpsClampInsideImGui(-1.0f),
+    gFpsClampOutsideImGui(-1.0f),
+    gFpsDynamicInsideImGui(false),
+    //fonts(_fonts),    // Hehe: this crashes the program on exit (I guess ImVector can't handle operator= correctly)
+    forceAddDefaultFontAsFirstFont(_forceAddDefaultFontAsFirstFont)
+    {
+        gWindowSize.x = windowWidth<=0?1270:windowWidth;gWindowSize.y = windowHeight<=0?720:windowHeight;
+        fonts.reserve(_fonts.size());for (int i=0,isz=_fonts.size();i<isz;i++) fonts.push_back(_fonts[i]);  // Manual workaround that works
 
-        if (OptionalTTFFilePath || (_pOptionalReferenceToTTFFileInMemory && _pOptionalSizeOfTTFFileInMemory>0) )    {
-            if (!gOptionalTTFFileGlyphRanges)   {
-                gOptionalTTFFileGlyphRanges = GetGlyphRangesDefault();
+        gWindowTitle[0]='\0';
+        if (windowTitle)	{
+            const size_t len = strlen(windowTitle);
+            if (len<1023) strcat(gWindowTitle,windowTitle);
+            else		  {
+                memcpy(gWindowTitle,windowTitle,1023);
+                gWindowTitle[1023]='\0';
             }
         }
-	}
+        else strcat(gWindowTitle,"ImGui OpenGL Example");
+    }
+
     private:
     // Retrieve list of range (2 int per range, values are inclusive)
     static const ImWchar*   GetGlyphRangesDefault()

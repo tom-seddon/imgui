@@ -2,15 +2,19 @@
 HOW TO COMPILE THE ADDON EXAMPLES:
 ===================================
 
-To compile these two examples (main.cpp and main2.cpp), no makefile is provided.
+To compile these two examples (main.cpp and main2.cpp), no makefile is present.
 
-Instead two project files are present:
-->	addons_examples.pro: A Qt Creator project file that can be used in Ubuntu only and must be edited to set the paths and the example to compile (handy for Linux and Mac users). This file can be tweaked to use the libraries of your choice (see below).
-->	addons_examples_mingw.cbp: A CodeBlocks project file that can be used to compile the first demo for Windows (to compile the second demo simply replace main.cpp with main2.cpp). This demo requires the glew library only to compile.
+Instead three project files are provided:
+->	addons_examples.pro: 				A Qt Creator project file that can be used in Ubuntu only and must be edited to set the paths and to choose the example to compile (handy for Linux and Mac users). This file can be tweaked to use the libraries of your choice (see below).
+->	addons_examples_mingw.cbp: 			A CodeBlocks project file that can be used to compile the first demo for Windows (to compile the second demo simply replace main.cpp with main2.cpp). This demo requires the glew library only to compile.
+->  addons_example_monodevelop.cproj:	A Monodevelop C++ project file that contains both main*.cpp files: however only one has its "Build Action" set to "compile" (this makes it easier to switch between them). It requires the two C++ packages "gl" and "sdl2": their absolute paths are hardcoded for Ubuntu Linux 64bit, but they can be easily reconfigured by the user.
 Even if you use another IDE, in case of compilation problems, it can still be useful to open these files with a text editor and see their content.
 
-You can test the two examples (without compiling them) in your web browser by clicking on the two .html files inside the html subfolder (although not all addons are active in this build).
+You can test the two examples (without compiling them) in your web browser by clicking on the two .html files inside the html subfolder (although not all the addons might be active in this build).
 If you want to compile the examples to .html, please read at the bottom of this page.
+
+UPDATE: There's a third demo named main3.cpp, but it's currently used to develop imguicodeeditor (see below).
+
 
 ====================================
 WHAT IS IMGUI ADDONS ?
@@ -36,46 +40,81 @@ Currently the extra imgui widgets that are available are:
 							-> ProgressBar.
 							-> PopupMenuSimple	(a fast, single column, scrollable, popup menu).
 							-> PopupMenu (a single column menu with image entries).
-							-> ColorChooser (based on the code from: https://github.com/benoitjacquier/imgui)
--> imguinodegrapheditor:	W.I.P. (based on the code posted by Omar, the creator of ImGui)
+							-> ColorChooser and ColorCombo (based on the code from: https://github.com/benoitjacquier/imgui. Thank you benoitjacquier!).
+							-> InputTextMultilineWithHorizontalScrolling (Roflraging posted it to the ImGui Issue Section here: https://github.com/ocornut/imgui/issues/383. Thank you Roflraging!).
+-> imguinodegrapheditor:	-> Based on the code posted by Omar, the creator of ImGui. It's still under developmement, but it should be already usable.
+-> imguicodeeditor (WIP, UNUSABLE)	this is an attempt to develop a code editor using ImGui only (without direct STL support).
+					However, developing such a control is a huge challange, and I'm not sure when and if it will eventually be functional.
+					In any case, if you need this kind of control, I suggest you try a more reliable solution, such as the Scintilla Editor,
+					that some user has successfully managed to integrate with ImGui (please see: https://github.com/ocornut/imgui/issues/108 and https://github.com/ocornut/imgui/issues/200).
+					The file main3.cpp is intended as a development playground for this control.
 
 And in addition:
--> imguistring:				a string class based on ImVector<char>. It does not support iterators, but has many methods that std::string has: thus it can be used to replace std::string in many algorithms.
--> imguihelper:				currently it has: ImGui::OpenWithDefaultApplication(...) that should work with urls, folders and files, and two serialization helper classes (mainly for internal usage, to provide serialization support to other addons) in a dedicated ImGuiHelper namespace.
+-> imguistring:				this addon file contains some classes that can be used to replace some STL equivalents (STL is not accepted inside ImGui code):
+							-> a string class based on ImVector<char>. It does not support iterators, but has many methods that std::string has: thus it can be used to replace std::string in many algorithms.
+							-> ImVectorExt<T>. An extended version of ImVector<T> that supports C++ classes as items. The version of ImVector<T> that comes with ImGui is not a suitable replacement to std::vector<T>, because it does not call constructors and destructors on items.
+-> imguihelper:				this addon file contains: 
+							-> ImGui::OpenWithDefaultApplication(...) that should work with urls, folders and files
+							-> two serialization helper classes (mainly for internal usage, to provide serialization support to other addons) in a dedicated ImGuiHelper namespace.
+							-> some Gz decompression helper methods, available if IMGUI_USE_ZLIB is defined at the project level (this definition requires linking to the zlib library).
 
-Tip: every single imgui "widget" addon listed above can be excluded by defining at the project level something like: NO_IMGUIFILESYSTEM, etc (and the first demo, main.cpp, should always compile).
+Tip: every single imgui "widget" addon listed above (and in some cases even some part of it) CAN BE EXCLUDED from the compilation by defining at the project level something like: NO_IMGUIFILESYSTEM, etc (and the first demo, main.cpp, should always compile).
+
 
 ===========================================
 HOW TO USE IMGUI ADDONS IN YOUR PROJECTS:
 ===========================================
 Basically to use and compile projects that use the imgui addon framework you can follow these steps:
 
-1 -> No ADDITIONAL .cpp file must be added to your project (i.e. DO NOT add any .cpp file inside the "addons" folder). Instead define at the project level: IMGUI_INCLUDE_IMGUI_USER_H and IMGUI_INCLUDE_IMGUI_USER_INL. This way the two files "imgui_user.h" and "imgui_user.inl" should include all the addons automatically.
+1 -> No ADDITIONAL .cpp file must be added to your project (i.e. DO NOT add any .cpp file inside the "addons" folder). 
+	 Instead define at the project level: IMGUI_INCLUDE_IMGUI_USER_H and IMGUI_INCLUDE_IMGUI_USER_INL. 
+	 This way the two files "imgui_user.h" and "imgui_user.inl" should include all the addons automatically.
+
 
 2 -> OPTIONALLY define ONE (and only one) of the following at the project level (typically when you're using ImGui in a new demo project):
 IMGUI_USE_GLUT_BINDING		# needs -lglut (or maybe -lGLUT)
 IMGUI_USE_SDL2_BINDING		# needs SDL2 libraries
 IMGUI_USE_GLFW_BINDING		# needs -lglfw (version3)
-IMGUI_USE_WINAPI_BINDING	# needs the windows API
+IMGUI_USE_WINAPI_BINDING	# needs the windows API	- Warning: this option might require glew (IMGUI_USE_GLEW) to include the opengl headers correctly (please read below)
 When one of these is defined, then in your main.cpp file (or somewhere else) you MUST define these 4 methods globally:
 void InitGL() {}
 void ResizeGL(int w,int h) {}
 void DrawGL() {}
 void DestroyGL() {}
 And then in our main function you can simply call a method (for example ImImpl_Main(NULL,argc,argv);) to have the automatic binding with the library you've chosen (see the code below or in the examples for further info).
+Optionally the main method allows the user to directly load ttf fonts (from files or embedded in the C++ code), and to specify various frame rate settings (that can be additionally accessed at runtime through some global variables).
+Another benefit of using a binding is that you can access some helper methods such as ImImpl_LoadTexture(...) and ImImpl_LoadTextureFromMemory(...);
+
 
 3 -> If you use a binding, OPTIONALLY some of these definitions might work at the project level (depending on the binding you choose):
-IMIMPL_SHADER_NONE # no shaders at all, and no vertex buffer object as well (minimal implementation).
-IMIMPL_SHADER_GL3  # shader uses openGL 3.3 (glsl #version 330)
-IMIMPL_SHADER_GLES # shader uses gles (and if IMIMPL_SHADER_GL3 is defined glsl #version 300 es)
-IMGUI_USE_GLEW     # inits the glew library (needs -lGLEW). This definition might be mandatory for IMGUI_USE_WINAPI_BINDING.
+IMIMPL_SHADER_NONE 				# no shaders at all, and no vertex buffer object as well (minimal implementation).
+IMIMPL_SHADER_GL3  				# shader uses openGL 3.3 (glsl #version 330)
+IMIMPL_SHADER_GLES 				# shader uses gles (and if IMIMPL_SHADER_GL3 is defined glsl #version 300 es)
+IMGUI_USE_GLEW     				# inits the glew library (needs -lGLEW). This definition might be mandatory for IMGUI_USE_WINAPI_BINDING. Tip: the glew library provides a static library alternative that can be used by defining GLEW_STATIC at the project level (see the glew docs for further info).
 
+IMGUIBINDINGS_RESTORE_GL_STATE			# restores the glViewport (and most of other GL state settings) after the call to ImGui::Render().
+						# It uses expensive glPop/Push(...) or glGet(...) calls that can be slow and/or deprecated in modern openGL (it's faster to tell openGL what to do than to retrieve something from it, unless the driver is smart enough to cache info or your're using a sofware openGL implementation).
+						# Without it the user must specify its own viewport at the beginning of DrawGL() (if it's different from full screen),
+						# and the openGL state is not fully restored, but it's just set to some "commonly used" values.
+
+
+4 -> OPTIONALLY you can use other definitions at the project level:
+IMGUI_USE_ZLIB					# requires the library zlib. It currently enables loading ttf.gz fonts (from file or embedded in C++ code) through the ImImpl_Main(...) method (only if you use one of the "bindings" above), 
+								# and two generic Gz decompression methods in imguihelper.
+DIRENT_USES_UTF8_CHARS			# affects imguifilesystem on Windows OS only. It should display UTF8 paths instead of Ascii paths. It's not defined by default because it lacks proper testing.
+IMGUI_USE_MINIZIP				# EXPERIMENTAL. requires the library zlib. It currently affects imguifilesystem only and allows browsing inside zip files (not recursively).
+								# Currently when it's enabled it's not possible to disable this feature, but if this is required by some user, we can implement/fix it.
+NO_ADDONNAMEHERE				# Addon exclusion definitions (e.g. NO_IMGUIFILESYSTEM). I've already addressed this topic above. They can be handy to speed up compilation and to resolve compilation problems.
+
+
+As you can see the only mandatory step is the first one.
 
 ----------------------------------------------------------------------------------------------------------------------------------
 SPARE SINGLE ADDON USAGE
 ---------------------------
 If you just want to add a single addon (a pair of addonName.h/.cpp files) to an existing project WITHOUT following the steps above, you can probably just include its header file,
-add the include folders: $IMGUI_HOME and $IMGUI_HOME/addons/addonName to your project (where $IMGUI_HOME is the path where imgui.h/.cpp are located) and compile the file $IMGUI_HOME/addons/addonName/addonName.cpp, where "addonName" is the name of the addon you want to use. Be warned that some addons might depend on others: e.g. imguipanelmanager depends on imguitoolbar: so you may need to include both addons.
+add the include folders: $IMGUI_HOME and $IMGUI_HOME/addons/addonName to your project (where $IMGUI_HOME is the path where imgui.h/.cpp are located) and compile the file $IMGUI_HOME/addons/addonName/addonName.cpp, where "addonName" is the name of the addon you want to use. 
+Be warned that some addons might depend on others: e.g. imguipanelmanager depends on imguitoolbar: so you may need to include both addons.
 
 However I'm not sure this approach works for all the addons, since some .cpp files need to be included after imgui.cpp to access its internals: recent imgui versions provide the file:
 imgui_internal.h, you may try including this at the top of the addonName.cpp file, but there's no guarantee it will work.
@@ -122,34 +161,31 @@ Follow these steps:
 1) Using a terminal (=command line), make sure you have a working emcc setup (try: emcc -v).
 2) Navigate (cd) to this folder.
 3) To compile the first example try:
-em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  --preload-file myNumbersTexture.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_SDL2_BINDING" -D"NO_IMGUIFILESYSTEM" -D"NO_IMGUISTYLESERIALIZER" -D"NO_IMGUIHELPER_SERIALIZATION" -s USE_SDL=2 -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
+em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  ../../imgui_demo.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_SDL2_BINDING" -s USE_SDL=2 -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
 4) To compile the second example try:
-em++ -O2 -o main2.html main2.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  --preload-file myNumbersTexture.png  --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_SDL2_BINDING" -D"NO_IMGUIFILESYSTEM" -s USE_SDL=2 -s LEGACY_GL_EMULATION=0 -lm -lGL
+em++ -O2 -o main2.html main2.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  --preload-file myNumbersTexture.png  --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_SDL2_BINDING" -s USE_SDL=2 -s LEGACY_GL_EMULATION=0 -lm -lGL
 
 Some notes:
 ->	As you can see we have used uses the SDL2 binding (-D"IMGUI_USE_SDL2_BINDING"). 
 	The GLFW3 and GLUT bindings are compatible with emscripten too [see (*) below]. 
 
-->	Also note that I used: -D"NO_IMGUIFILESYSTEM": this is because the filesystem is not accessible from the browser AFAIK (but I'm a very newbie here...).
-
-->	In addition: -D"NO_IMGUISTYLESERIALIZER" has been added to the first demo, because I don't know if it's possible to save a .style file;
-	and in a similiar way -D"NO_IMGUIHELPER_SERIALIZATION" has been defined (it provides serialization support to other addons, such as the node graph editor).
-	However I bet we can simply load an existing style in InitGL() from a .style file (named myimgui.style and placed in this folder) this way: 
-	em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  --preload-file myNumbersTexture.png --preload-file myimgui.style -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_SDL2_BINDING" -D"NO_IMGUIFILESYSTEM" -D"NO_IMGUISTYLESERIALIZER_SAVE_STYLE" -D"NO_IMGUIHELPER_SERIALIZATION" -s USE_SDL=2 -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
-	because we can simply use NO_IMGUISTYLESERIALIZER_SAVE_STYLE to allow file loading using --preload-file.
-	[We could have done something similiar (for the node graph editor) using -D"NO_IMGUIHELPER_SERIALIZATION_SAVE"]
-	UPDATE: I've just discovered that you can actually load and save files added with --preload-file. The only problem is that they
-	cant't be persisted when you close the browser.
+->	When you pass files (or folders) to em++ using --preload-file, you can actually load the file and save it to it at runtime, but any modification is lost when you exit the program.
+	I'm pretty new to emscripten and I don't know if there's some easy workaround to persist file changes when you close the browser.
+	Note: Files passed with --preload-file are copied and grouped together in a blob with the .data extension next to the .html file.
 
 (*): To compile the first demo using the GLUT binding, please try:
-em++ -O2 -o html/main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  --preload-file myNumbersTexture.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_GLUT_BINDING" -D"NO_IMGUIFILESYSTEM" -D"NO_IMGUISTYLESERIALIZER" -D"NO_IMGUIHELPER_SERIALIZATION" -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
+em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_GLUT_BINDING" -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
 	To compile it using GLFW3 try: 
-em++ -O2 -o html/main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  --preload-file myNumbersTexture.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_GLFW_BINDING" -D"IMGUI_GLFW_NO_NATIVE_CURSORS" -D"NO_IMGUIFILESYSTEM" -D"NO_IMGUISTYLESERIALIZER" -D"NO_IMGUIHELPER_SERIALIZATION" -s USE_GLFW=3 -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
-	As you can see, due to the lack of cursor support inside the glfw library, in the cpp code we had to use header file <glfwnative.h>, that is missing in emscripten.
+em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png  -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_GLFW_BINDING" -D"IMGUI_GLFW_NO_NATIVE_CURSORS" -s USE_GLFW=3 -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
+	As you can see, due to the lack of cursor support inside the glfw library, in the cpp code we had to use header file <GLFW/glfwnative.h>, that seems to be missing in emscripten.
 	Thus native cursors have been disabled with: -D"IMGUI_GLFW_NO_NATIVE_CURSORS" (in InitGL() we can use: ImGui::GetIO().MouseDrawCursor = true; to use ImGui cursors instead).
+	UPDATE: Mouse cursor support has been added to GLFW version 3.1. 
+	-D"IMGUI_GLFW_NO_NATIVE_CURSORS" is DEPRECATED for GLFW versions >= 3.1.
+	If your version of GLFW is >=3.1 you should NOT define -D"IMGUI_GLFW_NO_NATIVE_CURSORS" and the code should compile without problems; otherwise you will probably face a missing file <GLFW/glfwnative.h>,
+	and you should compile with -D"IMGUI_GLFW_NO_NATIVE_CURSORS" again.
 
-In short I suggest you use the SDL2 binding when building with the emscripten compiler, because you can use native cursors (that are missing from GLFW3), and unicode support (that is missing from GLUT).
-
+In short I suggest you use the SDL2 binding when building with the emscripten compiler, because you can use native cursors (that are missing from GLFW < 3.1), and unicode support (that is missing from GLUT).
+GLFW can be a possible alternative only for version 3.1 or above.
 
 
 

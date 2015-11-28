@@ -3,11 +3,14 @@ CONFIG -= qt
 CONFIG += link_pkgconfig
 TARGET = imgui_addons_examples
 DESTDIR = ./
+#CONFIG += link_pkgconfig
+#PKGCONFIG += ogg dbus-1
 
 # START USER EDITABLE AREA -----------------------------------------------------------------------
 
 # When commented out, main.cpp is built, otherwise main2.cpp is built
 #CONFIG+= use_main2
+#CONFIG+= use_main3  # dev only
 
 # Only one of these must be active:
 CONFIG+= use_glfw3
@@ -20,7 +23,7 @@ CONFIG+= use_glfw3
 IMGUI_BASE_PATH=../..
 
 # Experimental, needs zlib (here we link to -lz, some might have -lzip)
-#CONFIG+= imguifilesystem_supports_zip_files
+CONFIG+= imguifilesystem_supports_zip_files
 
 # These are optional definitions that nobody will ever use (all undefined by default):
 #DEFINES+=IMIMPL_SHADER_NONE			    # no shaders at all, and no vertex buffer object as well (minimal implementation).
@@ -31,7 +34,9 @@ DEFINES+=IMIMPL_SHADER_GL3                         # shader uses openGL 3.3 (gls
 # Experimental:
 #DEFINES+=IMIMPL_FORCE_DEBUG_CONTEXT  # To remove! Implemented only in glfw3
 
+#DEFINES+= IMGUI_WIP	    # to remove (dev only)
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
+
 
 
 DEFINES+= IMGUI_INCLUDE_IMGUI_USER_H IMGUI_INCLUDE_IMGUI_USER_INL # mandatory for loading addons
@@ -40,7 +45,8 @@ INCLUDEPATH+= 	$$IMGUI_BASE_PATH				\
 		$$STB_BASE_PATH
 
 
-HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"				\
+HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
+	   $$IMGUI_BASE_PATH"/addons/imgui_user.h"				    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/ImImpl_RenderDrawLists.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/ImImpl_Binding_Glfw3.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/ImImpl_Binding_Glut.h"	    \
@@ -58,28 +64,41 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"				\
 	   $$IMGUI_BASE_PATH"/addons/imguipanelmanager/imguipanelmanager.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguistyleserializer/imguistyleserializer.h"   \
 	   $$IMGUI_BASE_PATH"/addons/imguidatechooser/imguidatechooser.h"	    \
-	   $$IMGUI_BASE_PATH"/addons/imguinodegrapheditor/imguinodegrapheditor.h" \
-    ../../addons/imgui_user.h
+	   $$IMGUI_BASE_PATH"/addons/imguinodegrapheditor/imguinodegrapheditor.h"   \
+	   $$IMGUI_BASE_PATH"/addons/imguicodeeditor/imguicodeeditor.h"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguicodeeditor/utf8helper.h"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguiscintilla/imguiscintilla.h"
 
 SOURCES+=  $$IMGUI_BASE_PATH"/imgui.cpp" \
 	   $$IMGUI_BASE_PATH"/imgui_draw.cpp" \
 	   $$IMGUI_BASE_PATH"/imgui_demo.cpp" \ #\ # optional: for ImGui::ShowTestWindow()
-    ../../addons/imgui_user.inl
 
+use_main3 {
+SOURCES+=main3.cpp
+TARGET = imgui_addons_example3
+DEFINES+=NO_IMGUISTYLESERIALIZER NO_IMGUIDATECHOOSER NO_IMGUILISTVIEW NO_IMGUIGRAPHEDITOR NO_IMGUITOOLBAR NO_IMGUIPANELMANAGER
+}  #use_main3
+!use_main3 {
 use_main2 {
 SOURCES+=main2.cpp
 TARGET = imgui_addons_example2
-}
+} #use_main2
 !use_main2 {
 SOURCES+=main.cpp
 TARGET = imgui_addons_example1
-}
+} #!use_main2
+} #!use_main3
+
 imguifilesystem_supports_zip_files {
 DEFINES+=IMGUI_USE_MINIZIP
 LIBS+=-lz
 }
 
-OTHER_FILES+= 	   $$IMGUI_BASE_PATH"/addons/imguifilesystem/imguifilesystem.cpp"   \
+
+
+
+OTHER_FILES+= $$IMGUI_BASE_PATH"/addons/imgui_user.inl"				    \
+	   $$IMGUI_BASE_PATH"/addons/imguifilesystem/imguifilesystem.cpp"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguilistview/imguilistview.cpp"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguitoolbar/imguitoolbar.cpp"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguivariousbindings/imguivariousbindings.cpp" \
@@ -91,7 +110,10 @@ OTHER_FILES+= 	   $$IMGUI_BASE_PATH"/addons/imguifilesystem/imguifilesystem.cpp"
 	   $$IMGUI_BASE_PATH"/addons/imguivariouscontrols/imguivariouscontrols.cpp" \
 	   $$IMGUI_BASE_PATH"/addons/imguihelper/imguihelper.cpp"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguistring/imguistring.cpp"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguinodegrapheditor/imguinodegrapheditor.cpp"
+	   $$IMGUI_BASE_PATH"/addons/imguinodegrapheditor/imguinodegrapheditor.cpp" \
+	   $$IMGUI_BASE_PATH"/addons/imguicodeeditor/imguicodeeditor.cpp"	    \
+	   $$IMGUI_BASE_PATH"/addons/imguiscintilla/imguiscintilla.cpp"		    \
+	   README_FIRST.txt
 
 
 
@@ -140,7 +162,4 @@ LIBS+= -L"/usr/i686-w64-mingw32/lib" \
 LIBS+= -lopengl32 -luser32 -lkernel32 -static-libgcc -static-libstdc++
 QT_CXXFLAGS+=--std=c++0x
 }
-
-
-
 

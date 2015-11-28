@@ -15,9 +15,6 @@ if (!ImGui::LoadStyle("./myimgui.style",ImGui::GetStyle()))   {
 if (!myImageTextureId) myImageTextureId = ImImpl_LoadTexture("./Tile8x8.png");
 if (!myImageTextureId2) myImageTextureId2 = ImImpl_LoadTexture("./myNumbersTexture.png");
 
-#if (defined(IMGUI_USE_GLFW_BINDING) && defined(IMGUI_GLFW_NO_NATIVE_CURSORS))
-    ImGui::GetIO().MouseDrawCursor = true;
-#endif // IMGUI_USE_GLFW_BINDING & IMGUI_GLFW_NO_NATIVE_CURSORS
 }
 
 static ImGui::PanelManager mgr;

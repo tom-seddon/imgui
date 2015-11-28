@@ -3,8 +3,11 @@
 
 // These variables can be declared extern and set at runtime-----------------------------------------------------
 bool gImGuiPaused = false;
-float gImGuiInverseFPSClamp = -1.0f;    // CAN'T BE 0. < 0 = No clamping.
+bool gImGuiDynamicFPSInsideImGui = false;                      // Well, almost...
+float gImGuiInverseFPSClampInsideImGui = -1.0f;    // CAN'T BE 0. < 0 = No clamping.
+float gImGuiInverseFPSClampOutsideImGui = -1.0f;   // CAN'T BE 0. < 0 = No clamping.
 bool gImGuiCapturesInput = false;
+bool gImGuiWereOutsideImGui = true;
 bool gImGuiBindingMouseDblClicked[5]={false,false,false,false,false};
 // --------------------------------------------------------------------------------------------------------------
 
@@ -48,178 +51,103 @@ static ImImpl_PrivateParams gImImplPrivateParams;
 #include "stb_image.h"
 #endif //STBI_INCLUDE_STB_IMAGE_H
 
-//#define IMIMPL_USES_STB_COMPRESSED_TTF_IN_MEMORY
-#ifdef IMIMPL_USES_STB_COMPRESSED_TTF_IN_MEMORY
-static unsigned char *stb__barrier;static unsigned char *stb__barrier2;
-static unsigned char *stb__barrier3;static unsigned char *stb__barrier4;
-static unsigned char *stb__dout;
-struct StbDecompressor {
-static unsigned int stb_decompress_length(unsigned char *input)
-{
-    return (input[8] << 24) + (input[9] << 16) + (input[10] << 8) + input[11];
-}
-static void stb__match(unsigned char *data, unsigned int length)
-{
-    // INVERSE of memmove... write each byte before copying the next...
-    assert (stb__dout + length <= stb__barrier);
-    if (stb__dout + length > stb__barrier) { stb__dout += length; return; }
-    if (data < stb__barrier4) { stb__dout = stb__barrier+1; return; }
-    while (length--) *stb__dout++ = *data++;
-}
 
-static void stb__lit(unsigned char *data, unsigned int length)
-{
-    assert (stb__dout + length <= stb__barrier);
-    if (stb__dout + length > stb__barrier) { stb__dout += length; return; }
-    if (data < stb__barrier2) { stb__dout = stb__barrier+1; return; }
-    memcpy(stb__dout, data, length);
-    stb__dout += length;
-}
-
-#define stb__in2(x)   ((i[x] << 8) + i[(x)+1])
-#define stb__in3(x)   ((i[x] << 16) + stb__in2((x)+1))
-#define stb__in4(x)   ((i[x] << 24) + stb__in3((x)+1))
-
-static unsigned char *stb_decompress_token(unsigned char *i)
-{
-    if (*i >= 0x20) { // use fewer if's for cases that expand small
-        if (*i >= 0x80)       stb__match(stb__dout-i[1]-1, i[0] - 0x80 + 1), i += 2;
-        else if (*i >= 0x40)  stb__match(stb__dout-(stb__in2(0) - 0x4000 + 1), i[2]+1), i += 3;
-        else /* *i >= 0x20 */ stb__lit(i+1, i[0] - 0x20 + 1), i += 1 + (i[0] - 0x20 + 1);
-    } else { // more ifs for cases that expand large, since overhead is amortized
-        if (*i >= 0x18)       stb__match(stb__dout-(stb__in3(0) - 0x180000 + 1), i[3]+1), i += 4;
-        else if (*i >= 0x10)  stb__match(stb__dout-(stb__in3(0) - 0x100000 + 1), stb__in2(3)+1), i += 5;
-        else if (*i >= 0x08)  stb__lit(i+2, stb__in2(0) - 0x0800 + 1), i += 2 + (stb__in2(0) - 0x0800 + 1);
-        else if (*i == 0x07)  stb__lit(i+3, stb__in2(1) + 1), i += 3 + (stb__in2(1) + 1);
-        else if (*i == 0x06)  stb__match(stb__dout-(stb__in3(1)+1), i[4]+1), i += 5;
-        else if (*i == 0x04)  stb__match(stb__dout-(stb__in3(1)+1), stb__in2(4)+1), i += 6;
-    }
-    return i;
-}
-
-static unsigned int stb_adler32(unsigned int adler32, unsigned char *buffer, unsigned int buflen)
-{
-    const unsigned long ADLER_MOD = 65521;
-    unsigned long s1 = adler32 & 0xffff, s2 = adler32 >> 16;
-    unsigned long blocklen, i;
-
-    blocklen = buflen % 5552;
-    while (buflen) {
-        for (i=0; i + 7 < blocklen; i += 8) {
-            s1 += buffer[0], s2 += s1;
-            s1 += buffer[1], s2 += s1;
-            s1 += buffer[2], s2 += s1;
-            s1 += buffer[3], s2 += s1;
-            s1 += buffer[4], s2 += s1;
-            s1 += buffer[5], s2 += s1;
-            s1 += buffer[6], s2 += s1;
-            s1 += buffer[7], s2 += s1;
-
-            buffer += 8;
-        }
-
-        for (; i < blocklen; ++i)
-            s1 += *buffer++, s2 += s1;
-
-        s1 %= ADLER_MOD, s2 %= ADLER_MOD;
-        buflen -= blocklen;
-        blocklen = 5552;
-    }
-    return (s2 << 16) + s1;
-}
-
-static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsigned int length)
-{
-    unsigned int olen;
-    if (stb__in4(0) != 0x57bC0000) return 0;
-    if (stb__in4(4) != 0)          return 0; // error! stream is > 4GB
-    olen = stb_decompress_length(i);
-    stb__barrier2 = i;
-    stb__barrier3 = i+length;
-    stb__barrier = output + olen;
-    stb__barrier4 = output;
-    i += 16;
-
-    stb__dout = output;
-    while (1) {
-        unsigned char *old_i = i;
-        i = stb_decompress_token(i);
-        if (i == old_i) {
-            if (*i == 0x05 && i[1] == 0xfa) {
-                assert(stb__dout == output + olen);
-                if (stb__dout != output + olen) return 0;
-                if (stb_adler32(1, output, olen) != (unsigned int) stb__in4(2))
-                    return 0;
-                return olen;
-            } else {
-                assert(0); /* NOTREACHED */
-                return 0;
-            }
-        }
-        assert(stb__dout <= output + olen);
-        if (stb__dout > output + olen)
-            return 0;
-    }
-}
-};
-#endif //IMIMPL_USES_STB_COMPRESSED_TTF_IN_MEMORY
 
 void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
-    const char* OptionalTTFFilePath=NULL;
-    if (pOptionalInitParams && pOptionalInitParams->gOptionalTTFFilePath[0]!='\0') OptionalTTFFilePath = (const char*) &pOptionalInitParams->gOptionalTTFFilePath[0];
+//TODO:
+/*
+// According to Omar, it's possible to tweak the default font params this way:
+static const ImWchar ranges[] = { 0x020, 0x00FF, 0x20AC, 0x20AC, 0 }; // Basic Latin + Latin Supplement + Euro
+ImFont* font = AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, 13.0f, &font_cfg, ranges);
+// well actually: GetDefaultCompressedFontDataTTFBase85() is in imgui_draw.cpp, and ttf_compressed_base85 is not accessible AFAIK
+*/
 
     ImGuiIO& io = ImGui::GetIO();
     DestroyImGuiFontTexture();	// reentrant
 
-    ImFont* my_font = NULL; // must be freed at the end of the program ??? I'm not doing it!
-    if (OptionalTTFFilePath) {
-        my_font = io.Fonts->AddFontFromFileTTF(OptionalTTFFilePath,pOptionalInitParams->gOptionalTTFFileFontSizeInPixels,NULL,pOptionalInitParams->gOptionalTTFFileGlyphRanges);
-        if (!my_font) fprintf(stderr,"Error loading: \"%s\"\n",OptionalTTFFilePath);
-    }
-    if (!my_font && pOptionalInitParams && pOptionalInitParams->pOptionalReferenceToTTFFileInMemory && pOptionalInitParams->pOptionalSizeOfTTFFileInMemory>0)   {
-        char* tempBuffer = NULL;size_t tempBufferSize=0;
-        const bool cloneBuffer = true;//false;//true;  //usable when IMIMPL_USES_STB_COMPRESSED_TTF_IN_MEMORY is NOT defined
-#       ifdef  IMIMPL_USES_STB_COMPRESSED_TTF_IN_MEMORY
-        const bool decompress = true;
-        if (decompress) {
-            // Decompress
-            const size_t buf_decompressed_size = StbDecompressor::stb_decompress_length((unsigned char*)pOptionalInitParams->pOptionalReferenceToTTFFileInMemory);
-            unsigned char* buf_decompressed = (unsigned char *)ImGui::MemAlloc(buf_decompressed_size);
-            StbDecompressor::stb_decompress(buf_decompressed, (unsigned char*)pOptionalInitParams->pOptionalReferenceToTTFFileInMemory, pOptionalInitParams->gOptionalTTFFileFontSizeInPixels);
+    if (pOptionalInitParams)    {
+        const ImImpl_InitParams& P = *pOptionalInitParams;
+        if (P.forceAddDefaultFontAsFirstFont) io.Fonts->AddFontDefault();
 
-            my_font = io.Fonts->AddFontFromMemoryTTF((void*)buf_decompressed,buf_decompressed_size,pOptionalInitParams->gOptionalTTFFileFontSizeInPixels,pOptionalInitParams->gOptionalTTFFileGlyphRanges,0);
-        }
-        else {
-            if (!cloneBuffer) my_font = io.Fonts->AddFontFromMemoryTTF((void*)pOptionalInitParams->pOptionalReferenceToTTFFileInMemory,pOptionalInitParams->pOptionalSizeOfTTFFileInMemory,pOptionalInitParams->gOptionalTTFFileFontSizeInPixels,pOptionalInitParams->gOptionalTTFFileGlyphRanges,0);
-            else {
-                tempBufferSize = pOptionalInitParams->pOptionalSizeOfTTFFileInMemory;
-                tempBuffer = (char*)ImGui::MemAlloc(tempBufferSize);
-                memcpy(tempBuffer,(void*)pOptionalInitParams->pOptionalReferenceToTTFFileInMemory,tempBufferSize);
-
-                my_font = io.Fonts->AddFontFromMemoryTTF(tempBuffer,tempBufferSize,pOptionalInitParams->gOptionalTTFFileFontSizeInPixels,pOptionalInitParams->gOptionalTTFFileGlyphRanges,0);
+        for (int i=0,isz=(int)P.fonts.size();i<isz;i++)   {
+            const ImImpl_InitParams::FontData& fd = P.fonts[i];
+            ImFont* my_font = NULL;
+            const bool hasValidPath = strlen(fd.filePath)>0;
+            const bool hasValidMemory = fd.pMemoryData && fd.memoryDataSize>0;
+            //if (i==0 && !P.forceAddDefaultFontAsFirstFont && (hasValidPath || hasValidMemory) && fd.useFontConfig && fd.fontConfig.MergeMode) io.Fonts->AddFontDefault();
+            if (hasValidPath)  {
+#if         (!defined(NO_IMGUIHELPER) && defined(IMGUI_USE_ZLIB))
+                bool isTtfGz = false;
+                char* ttfGzExt = strrchr((char*) fd.filePath,'.');
+                if (ttfGzExt && (strcmp(ttfGzExt,".gz")==0 || strcmp(ttfGzExt,".GZ")==0))   {
+                    ImVector<char> buffVec;
+                    if (ImGui::GzDecompressFromFile((const char*)fd.filePath,buffVec) && buffVec.size()>0)  {
+                        // Actually the only thing I can do with a vector is to allocate, copy and let ImGui delete it:
+                        char* tempBuffer = NULL;void* bufferToFeedImGui = NULL;
+                        tempBuffer = (char*)ImGui::MemAlloc(buffVec.size());
+                        memcpy(tempBuffer,(void*)&buffVec[0],buffVec.size());
+                        bufferToFeedImGui = tempBuffer;
+                        ImImpl_InitParams::FontData fd2 = fd;fd2.fontConfig.FontDataOwnedByAtlas=true;
+                        my_font = io.Fonts->AddFontFromMemoryTTF(bufferToFeedImGui,buffVec.size(),fd.sizeInPixels,fd.useFontConfig?&fd2.fontConfig:NULL,fd.pGlyphRanges);
+                        if (!my_font) {ImGui::MemFree(tempBuffer);tempBuffer=NULL;bufferToFeedImGui=NULL;}
+                    }
+                    isTtfGz = my_font!=NULL;
+                }
+                if (!isTtfGz) my_font = io.Fonts->AddFontFromFileTTF(fd.filePath,fd.sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
+#           else   //IMGUI_USE_ZLIB
+                my_font = io.Fonts->AddFontFromFileTTF(fd.filePath,fd.sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
+#           endif   //IMGUI_USE_ZLIB
             }
+            else if (hasValidMemory)  {
+                // Sometimes ImGui tries to delete the memory we have passed it: should this happen, we should try something like:
+                bool mustCloneMemoryBufferBecauseImGuiDeletesIt = (fd.memoryDataCompression==ImImpl_InitParams::FontData::COMP_NONE && fd.useFontConfig) ? fd.fontConfig.FontDataOwnedByAtlas : true;//false;//true;
+#if             (!defined(NO_IMGUIHELPER) && defined(IMGUI_USE_ZLIB))
+                if (fd.memoryDataCompression==ImImpl_InitParams::FontData::COMP_GZ) mustCloneMemoryBufferBecauseImGuiDeletesIt = false;
+#               endif
+                char* tempBuffer = NULL;void* bufferToFeedImGui = NULL;
+                if (!mustCloneMemoryBufferBecauseImGuiDeletesIt) bufferToFeedImGui = (void*) fd.pMemoryData;
+                else {
+                    tempBuffer = (char*)ImGui::MemAlloc(fd.memoryDataSize);
+                    memcpy(tempBuffer,(void*)fd.pMemoryData,fd.memoryDataSize);
+                    bufferToFeedImGui = tempBuffer;
+                }
+                switch (fd.memoryDataCompression)   {
+                case ImImpl_InitParams::FontData::COMP_NONE:
+                    my_font = io.Fonts->AddFontFromMemoryTTF(bufferToFeedImGui,fd.memoryDataSize,fd.sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
+                    break;
+                case ImImpl_InitParams::FontData::COMP_STB:
+                    my_font = io.Fonts->AddFontFromMemoryCompressedTTF(bufferToFeedImGui,fd.memoryDataSize,fd.sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
+                    break;
+                case ImImpl_InitParams::FontData::COMP_STBBASE85:
+                    my_font = io.Fonts->AddFontFromMemoryCompressedBase85TTF((const char*)bufferToFeedImGui,fd.sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
+                    break;
+#if             (!defined(NO_IMGUIHELPER) && defined(IMGUI_USE_ZLIB))
+                case ImImpl_InitParams::FontData::COMP_GZ:  {
+                    ImVector<char> buffVec;
+                    if (ImGui::GzDecompressFromMemory((const char*)fd.pMemoryData,fd.memoryDataSize,buffVec) && buffVec.size()>0)  {
+                        // Actually the only thing I can do with a vector is to allocate, copy and let ImGui delete it:
+                        tempBuffer = (char*)ImGui::MemAlloc(buffVec.size());
+                        memcpy(tempBuffer,(void*)&buffVec[0],buffVec.size());
+                        bufferToFeedImGui = tempBuffer;
+                        ImImpl_InitParams::FontData fd2 = fd;fd2.fontConfig.FontDataOwnedByAtlas=true;
+                        my_font = io.Fonts->AddFontFromMemoryTTF(bufferToFeedImGui,buffVec.size(),fd.sizeInPixels,fd.useFontConfig?&fd2.fontConfig:NULL,fd.pGlyphRanges);
+                        if (!my_font) {ImGui::MemFree(tempBuffer);tempBuffer=NULL;bufferToFeedImGui=NULL;}
+                    }
+                    }
+                    break;
+#               endif   //IMGUI_USE_ZLIB
+                default:
+                    IM_ASSERT(true);    //Unsupported font compression
+                    break;
+                }
+            }
+
+            if (!my_font)   fprintf(stderr,"An error occurred while trying to load font %d\n",i);
         }
-#       undef IMIMPL_USES_STB_COMPRESSED_TTF_IN_MEMORY
-#       else //IMIMPL_USES_STB_COMPRESSED_TTF_IN_MEMORY
-        if (!cloneBuffer) my_font = io.Fonts->AddFontFromMemoryTTF((void*)pOptionalInitParams->pOptionalReferenceToTTFFileInMemory,pOptionalInitParams->pOptionalSizeOfTTFFileInMemory,pOptionalInitParams->gOptionalTTFFileFontSizeInPixels,NULL,pOptionalInitParams->gOptionalTTFFileGlyphRanges);
-        else {
-            tempBufferSize = pOptionalInitParams->pOptionalSizeOfTTFFileInMemory;
-            tempBuffer = (char*)ImGui::MemAlloc(tempBufferSize);
-            memcpy(tempBuffer,(void*)pOptionalInitParams->pOptionalReferenceToTTFFileInMemory,tempBufferSize);
 
-            my_font = io.Fonts->AddFontFromMemoryTTF(tempBuffer,tempBufferSize,pOptionalInitParams->gOptionalTTFFileFontSizeInPixels,NULL,pOptionalInitParams->gOptionalTTFFileGlyphRanges);
-        }
-#       endif //IMIMPL_USES_STB_COMPRESSED_TTF_IN_MEMORY
-        if (!my_font) fprintf(stderr,"Error loading ttf file from memory\n");
-        //else fprintf(stderr,"Loaded ttf file from memory\n");
+        if (!P.forceAddDefaultFontAsFirstFont && P.fonts.size()==0) io.Fonts->AddFontDefault();
     }
-
-    if (!my_font) {
-        my_font = io.Fonts->AddFontDefault();
-        //if (!pOptionalInitParams) my_font = io.Fonts->AddFontDefault();//
-        //else my_font = io.Fonts->AddFontDefault(pOptionalInitParams->gOptionalTTFFileFontSizeInPixels,pOptionalInitParams->gOptionalTTFFileGlyphRanges);
-    }
-
+    else io.Fonts->AddFontDefault();
 
     // Load font texture
     unsigned char* pixels;
@@ -236,7 +164,15 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
 
     // Store our identifier
     io.Fonts->TexID = (void *)(intptr_t)gImImplPrivateParams.fontTex;
+
+    // Cleanup (don't clear the input data if you want to append new fonts later)
+    io.Fonts->ClearInputData();
+    io.Fonts->ClearTexData();
+
     //fprintf(stderr,"Loaded font texture\n");
+#   if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_FONT_METHODS))
+    ImGui::InitPushFontOverload();  // Allows us to use ImGui::PushFont(fontIndex). Can be called in InitGL() instead and the system is self-inited on the first call to ImGui::PushFont(), but better stay on the safe side.
+#   endif //NO_IMGUIHELPER
 
 }
 
@@ -605,6 +541,11 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
 {
 #ifndef IMIMPL_SHADER_NONE
     // Setup render state: alpha-blending enabled, no face culling (or GL_FRONT face culling), no depth testing, scissor enabled
+    GLint last_texture=0;
+#   ifdef IMGUIBINDINGS_RESTORE_GL_STATE
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
+    glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT /*| GL_DEPTH_BUFFER_BIT*/);
+#   endif //IMGUIBINDINGS_RESTORE_GL_STATE
     //glEnable(GL_ALPHA_TEST);glAlphaFunc(GL_GREATER,0.5f);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -693,12 +634,18 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     glDisable(GL_SCISSOR_TEST);
     glCullFace(GL_BACK);
     glDisable(GL_BLEND);
+#   ifdef IMGUIBINDINGS_RESTORE_GL_STATE
+    glPopAttrib();
+    glBindTexture(GL_TEXTURE_2D,last_texture);
+#   endif //IMGUIBINDINGS_RESTORE_GL_STATE
 #else //IMIMPL_SHADER_NONE
     // We are using the OpenGL fixed pipeline to make the example code simpler to read!
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers.
-    GLint last_texture;
+    GLint last_texture=0;
+#   ifdef IMGUIBINDINGS_RESTORE_GL_STATE
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
+#   endif //IMGUIBINDINGS_RESTORE_GL_STATE
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_CULL_FACE);
@@ -757,12 +704,14 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     glDisableClientState(GL_COLOR_ARRAY);
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
-    glBindTexture(GL_TEXTURE_2D, last_texture);
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
+#   ifdef IMGUIBINDINGS_RESTORE_GL_STATE
     glPopAttrib();
+    glBindTexture(GL_TEXTURE_2D, last_texture);
+#   endif //IMGUIBINDINGS_RESTORE_GL_STATE
 #endif //IMIMPL_SHADER_NONE
 }
 

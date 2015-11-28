@@ -33,6 +33,9 @@
 //}
 #endif //IMGUI_USE_MINIZIP
 
+#ifndef NO_IMGUISTRING
+#include "./imguistring/imguistring.cpp"
+#endif //NO_IMGUISTRING
 #ifndef NO_IMGUIHELPER
 #include "./imguihelper/imguihelper.cpp"
 #endif //NO_IMGUIHELPER
@@ -57,6 +60,12 @@
 #ifndef NO_IMGUIDATECHOOSER
 #include "./imguidatechooser/imguidatechooser.cpp"
 #endif //NO_IMGUIDATECHOOSER
+#ifndef NO_IMGUICODEEDITOR
+#include "./imguicodeeditor/imguicodeeditor.cpp"
+#endif //NO_IMGUICODEEDITOR
+#ifdef IMGUISCINTILLA_ACTIVATED
+#include "./imguiscintilla/imguiscintilla.cpp"
+#endif //IMGUISCINTILLA_ACTIVATED
 #ifndef NO_IMGUIGRAPHEDITOR
 #include "./imguinodegrapheditor/imguinodegrapheditor.cpp"
 #endif //NO_IMGUIGRAPHEDITOR

@@ -7,6 +7,10 @@
 #include <unistd.h>
 #endif //_WIN32
 
+#ifndef NO_IMGUIHELPER_FONTMETHODS
+static ImVector<ImFont*> gImGuiFonts;
+#endif // NO_IMGUIHELPER_FONTMETHODS
+
 
 
 namespace ImGui {
@@ -47,7 +51,55 @@ bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS)	{
 #       endif //_WIN32
 }
 
+#ifndef NO_IMGUIHELPER_FONT_METHODS
+void InitPushFontOverload() {
+    ImGuiIO& io = ImGui::GetIO();
+    gImGuiFonts.clear();
+    gImGuiFonts.reserve(io.Fonts->Fonts.size());
+    for (int i=0,isz=io.Fonts->Fonts.size();i<isz;i++) gImGuiFonts.push_back(io.Fonts->Fonts[i]);
+}
+const ImFont *GetFont(int fntIndex) {
+    if (gImGuiFonts.size()!=ImGui::GetIO().Fonts->Fonts.size()) InitPushFontOverload();
+    return (fntIndex>=0 && fntIndex<gImGuiFonts.size()) ? gImGuiFonts[fntIndex] : NULL;
+}
+void PushFont(int fntIndex)    {
+    if (gImGuiFonts.size()!=ImGui::GetIO().Fonts->Fonts.size()) InitPushFontOverload();
+    IM_ASSERT(gImGuiFonts.size()==ImGui::GetIO().Fonts->Fonts.size() && fntIndex>=0 && fntIndex<gImGuiFonts.size());
+    ImGui::PushFont(gImGuiFonts[fntIndex]);
+}
+void TextColoredV(int fntIndex, const ImVec4 &col, const char *fmt, va_list args) {
+    ImGui::PushFont(fntIndex);
+    ImGui::TextColoredV(col,fmt, args);
+    ImGui::PopFont();
+}
+void TextColored(int fntIndex, const ImVec4 &col, const char *fmt,...)  {
+    va_list args;
+    va_start(args, fmt);
+    TextColoredV(fntIndex,col, fmt, args);
+    va_end(args);
+}
+void TextV(int fntIndex, const char *fmt, va_list args) {
+    if (ImGui::GetCurrentWindow()->SkipItems) return;
+
+    ImGuiState& g = *GImGui;
+    const char* text_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
+    ImGui::PushFont(fntIndex);
+    TextUnformatted(g.TempBuffer, text_end);
+    ImGui::PopFont();
+}
+void Text(int fntIndex, const char *fmt,...)    {
+    va_list args;
+    va_start(args, fmt);
+    TextV(fntIndex,fmt, args);
+    va_end(args);
+}
+
+
+#endif //NO_IMGUIHELPER_FONT_METHODS
+
+
 } // namespace Imgui
+
 
 
 #ifndef NO_IMGUIHELPER_SERIALIZATION
@@ -407,5 +459,75 @@ bool Serializer::saveCustomFieldTypeHeader(const char* name, int numTextLines) {
 #endif //NO_IMGUIHELPER_SERIALIZATION
 
 
+#ifdef IMGUI_USE_ZLIB	// requires linking to library -lZlib
+#include <zlib.h>
+
+namespace ImGui {
+
+bool GzDecompressFromFile(const char* filePath,ImVector<char>& rv,bool clearRvBeforeUsage)   {
+if (clearRvBeforeUsage) rv.clear();
+ImVector<char> f_data;
+//----------------------------------------------------
+    if (!filePath) return false;
+    FILE* f;
+    if ((f = fopen(filePath, "rb")) == NULL) return false;
+    if (fseek(f, 0, SEEK_END))  {
+        fclose(f);
+        return false;
+    }
+    const long f_size_signed = ftell(f);
+    if (f_size_signed == -1)    {
+        fclose(f);
+        return false;
+    }
+    size_t f_size = (size_t)f_size_signed;
+    if (fseek(f, 0, SEEK_SET))  {
+        fclose(f);
+        return false;
+    }
+    f_data.resize(f_size);
+    const size_t f_size_read = fread(&f_data[0], 1, f_size, f);
+    fclose(f);
+    if (f_size_read == 0 || f_size_read!=f_size)    return false;
+//----------------------------------------------------
+return GzDecompressFromMemory(&f_data[0],f_data.size(),rv,clearRvBeforeUsage);
+//----------------------------------------------------
+}
+bool GzDecompressFromMemory(const char* memoryBuffer,int memoryBufferSize,ImVector<char>& rv,bool clearRvBeforeUsage)    {
+if (clearRvBeforeUsage) rv.clear();
+const int startRv = rv.size();
+
+  if (memoryBufferSize == 0  || !memoryBuffer) return false;
+  rv.resize(memoryBufferSize);  // we start using the compressed length
+
+  z_stream myZStream;
+  myZStream.next_in = (Bytef *) memoryBuffer;
+  myZStream.avail_in = memoryBufferSize;
+  myZStream.total_out = 0;
+  myZStream.zalloc = Z_NULL;
+  myZStream.zfree = Z_NULL;
+
+  if (inflateInit2(&myZStream, (16+MAX_WBITS)) != Z_OK) return false;
+
+  bool done = false;  int err = Z_OK;
+  while (!done) {
+    if (myZStream.total_out >= (uLong)(rv.size()-startRv)) rv.resize(rv.size()+memoryBufferSize);    // not enough space: we add the full memoryBufferSize each step
+
+    myZStream.next_out = (Bytef *) (&rv[startRv] + myZStream.total_out);
+    myZStream.avail_out = rv.size() - startRv - myZStream.total_out;
+
+    if ((err = inflate (&myZStream, Z_SYNC_FLUSH))==Z_STREAM_END) done = true;
+    else if (err != Z_OK)  break;
+  }
+
+  if ((err=inflateEnd(&myZStream))!= Z_OK) return false;
+
+  if (done) rv.resize(startRv+myZStream.total_out);
+
+  return done;
+
+}
 
 
+} // namespace ImGui
+#endif //IMGUI_USE_ZLIB
