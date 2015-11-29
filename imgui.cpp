@@ -2,7 +2,7 @@
 // Main code & documentation
 
 // See ImGui::ShowTestWindow() in imgui_demo.cpp for demo code.
-// Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
+// Newcomers, read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
 // Releases change-log at https://github.com/ocornut/imgui/releases
 // Developed by Omar Cornut and every direct or indirect contributors to the GitHub.
@@ -76,18 +76,20 @@
  - read the FAQ below this section!
  - your code creates the UI, if your code doesn't run the UI is gone! == very dynamic UI, no construction/destructions steps, less data retention on your side, no state duplication, less sync, less bugs.
  - call and read ImGui::ShowTestWindow() for demo code demonstrating most features.
- - see examples/ folder for standalone sample applications. e.g. examples/opengl_example/
+ - see examples/ folder for standalone sample applications. Prefer reading examples/opengl_example/ first at it is the simplest.
  - customization: PushStyleColor()/PushStyleVar() or the style editor to tweak the look of the interface (e.g. if you want a more compact UI or a different color scheme).
 
  - getting started:
-   - initialisation: call ImGui::GetIO() to retrieve the ImGuiIO structure and fill the 'Settings' data.
+   - init: call ImGui::GetIO() to retrieve the ImGuiIO structure and fill the fields marked 'Settings'.
+   - init: call io.Fonts->GetTexDataAsRGBA32(...) and load the font texture pixels into graphics memory.
    - every frame:
-      1/ in your mainloop or right after you got your keyboard/mouse info, call ImGui::GetIO() and fill the 'Input' data, then call ImGui::NewFrame().
-      2/ use any ImGui function you want between NewFrame() and Render()
-      3/ ImGui::Render() to render all the accumulated command-lists. it will call your RenderDrawListFn handler that you set in the IO structure.
+      1/ in your mainloop or right after you got your keyboard/mouse info, call ImGui::GetIO() and fill the fields marked 'Input'
+      2/ call ImGui::NewFrame().
+      3/ use any ImGui function you want between NewFrame() and Render()
+      4/ call ImGui::Render() to render all the accumulated command-lists. it will call your RenderDrawListFn handler that you set in the IO structure.
    - all rendering information are stored into command-lists until ImGui::Render() is called.
    - ImGui never touches or know about your GPU state. the only function that knows about GPU is the RenderDrawListFn handler that you must provide.
-   - effectively it means you can create widgets at any time in your code, regardless of "update" vs "render" considerations.
+   - effectively it means you can create widgets at any time in your code, regardless of considerations of being in "update" vs "render" phases.
    - refer to the examples applications in the examples/ folder for instruction on how to setup your code.
    - a typical application skeleton may be:
 
@@ -100,32 +102,34 @@
         // TODO: Fill others settings of the io structure
 
         // Load texture atlas
+        // There is a default font so you don't need to care about choosing a font yet
         unsigned char* pixels;
-        int width, height, bytes_per_pixels;
-        io.Fonts->GetTexDataAsRGBA32(pixels, &width, &height, &bytes_per_pixels);
-        // TODO: copy texture to graphics memory.
-        // TODO: store your texture pointer/identifier in 'io.Fonts->TexID'
+        int width, height;
+        io.Fonts->GetTexDataAsRGBA32(pixels, &width, &height);
+        // TODO: At this points you've got a texture pointed to by 'pixels' and you need to upload that your your graphic system 
+        // TODO: Store your texture pointer/identifier (whatever your engine uses) in 'io.Fonts->TexID'
 
         // Application main loop
         while (true)
         {
-            // 1) get low-level input
-            // e.g. on Win32, GetKeyboardState(), or poll your events, etc.
-
-            // 2) TODO: fill all fields of IO structure and call NewFrame
+            // 1) get low-level inputs (e.g. on Win32, GetKeyboardState(), or poll your events, etc.)
+            // TODO: fill all fields of IO structure and call NewFrame
             ImGuiIO& io = ImGui::GetIO();
             io.DeltaTime = 1.0f/60.0f;
             io.MousePos = mouse_pos;
             io.MouseDown[0] = mouse_button_0;
+            io.MouseDown[1] = mouse_button_1;
             io.KeysDown[i] = ...
+
+            // 2) call NewFrame(), after this point you can use ImGui::* functions anytime
             ImGui::NewFrame();
 
-            // 3) most of your application code here - you can use any of ImGui::* functions at any point in the frame
+            // 3) most of your application code here
             ImGui::Begin("My window");
             ImGui::Text("Hello, world.");
             ImGui::End();
-            GameUpdate();
-            GameRender();
+            MyGameUpdate(); // may use ImGui functions
+            MyGameRender(); // may use ImGui functions
 
             // 4) render & swap video buffers
             ImGui::Render();
@@ -410,6 +414,8 @@
  - window: get size/pos helpers given names (see discussion in #249)
  - window: a collapsed window can be stuck behind the main menu bar?
  - window: detect extra End() call that pop the "Debug" window out and assert at call site instead of later.
+ - window/tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
+ - draw-list: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
 !- scrolling: allow immediately effective change of scroll if we haven't appended items yet
  - splitter: formalize the splitter idiom into an official api (we want to handle n-way split)
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc.
@@ -437,6 +443,8 @@
  - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills) (#125)
  - columns: columns header to act as button (~sort op) and allow resize/reorder (#125)
  - columns: user specify columns size (#125)
+ - columns: flag to add horizontal separator above/below?
+ - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)
  - combo: sparse combo boxes (via function call?)
  - combo: contents should extends to fit label if combo widget is small
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
@@ -8718,6 +8726,7 @@ void ImGui::NextColumn()
         window->DC.ColumnsCellMaxY = ImMax(window->DC.ColumnsCellMaxY, window->DC.CursorPos.y);
         if (++window->DC.ColumnsCurrent < window->DC.ColumnsCount)
         {
+            // Columns 1+ cancel out IndentX
             window->DC.ColumnsOffsetX = ImGui::GetColumnOffset(window->DC.ColumnsCurrent) - window->DC.IndentX + g.Style.ItemSpacing.x;
             window->DrawList->ChannelsSetCurrent(window->DC.ColumnsCurrent);
         }
@@ -8734,7 +8743,7 @@ void ImGui::NextColumn()
         window->DC.CurrentLineTextBaseOffset = 0.0f;
 
         PushColumnClipRect();
-        ImGui::PushItemWidth(ImGui::GetColumnWidth() * 0.65f);  // FIXME
+        ImGui::PushItemWidth(ImGui::GetColumnWidth() * 0.65f);  // FIXME: Move on columns setup
     }
 }
 
@@ -8779,33 +8788,24 @@ float ImGui::GetColumnOffset(int column_index)
             return GetDraggedColumnOffset(column_index);
     }
 
-    // Read from cache
     IM_ASSERT(column_index < window->DC.ColumnsData.Size);
     const float t = window->DC.ColumnsData[column_index].OffsetNorm;
-
-    const float content_region_width = window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x;
-    const float min_x = window->DC.IndentX;
-    const float max_x = content_region_width - window->Scroll.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0.0f : window->ScrollbarSizes.x);// - window->WindowPadding().x;
-    const float x = min_x + t * (max_x - min_x);
-    return (float)(int)x;
+    const float x_offset = window->DC.ColumnsMinX + t * (window->DC.ColumnsMaxX - window->DC.ColumnsMinX);
+    return (float)(int)x_offset;
 }
 
 void ImGui::SetColumnOffset(int column_index, float offset)
 {
-    ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (column_index < 0)
         column_index = window->DC.ColumnsCurrent;
 
     IM_ASSERT(column_index < window->DC.ColumnsData.Size);
-    const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
-
-    const float content_region_width = window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x;
-    const float min_x = window->DC.IndentX;
-    const float max_x = content_region_width - window->Scroll.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
-    const float t = (offset - min_x) / (max_x - min_x);
-    window->DC.StateStorage->SetFloat(column_id, t);
+    const float t = (offset - window->DC.ColumnsMinX) / (window->DC.ColumnsMaxX - window->DC.ColumnsMinX);
     window->DC.ColumnsData[column_index].OffsetNorm = t;
+
+    const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
+    window->DC.StateStorage->SetFloat(column_id, t);
 }
 
 float ImGui::GetColumnWidth(int column_index)
@@ -8891,6 +8891,10 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
     window->DC.ColumnsCurrent = 0;
     window->DC.ColumnsCount = columns_count;
     window->DC.ColumnsShowBorders = border;
+
+    const float content_region_width = window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x;
+    window->DC.ColumnsMinX = window->DC.IndentX; // Lock our horizontal range
+    window->DC.ColumnsMaxX = content_region_width - window->Scroll.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
     window->DC.ColumnsStartPosY = window->DC.CursorPos.y;
     window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY = window->DC.CursorPos.y;
     window->DC.ColumnsOffsetX = 0.0f;
