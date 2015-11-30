@@ -54,14 +54,6 @@ static ImImpl_PrivateParams gImImplPrivateParams;
 
 
 void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
-//TODO:
-/*
-// According to Omar, it's possible to tweak the default font params this way:
-static const ImWchar ranges[] = { 0x020, 0x00FF, 0x20AC, 0x20AC, 0 }; // Basic Latin + Latin Supplement + Euro
-ImFont* font = AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, 13.0f, &font_cfg, ranges);
-// well actually: GetDefaultCompressedFontDataTTFBase85() is in imgui_draw.cpp, and ttf_compressed_base85 is not accessible AFAIK
-*/
-
     ImGuiIO& io = ImGui::GetIO();
     DestroyImGuiFontTexture();	// reentrant
 
@@ -165,9 +157,11 @@ ImFont* font = AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, 13.0f
     // Store our identifier
     io.Fonts->TexID = (void *)(intptr_t)gImImplPrivateParams.fontTex;
 
-    // Cleanup (don't clear the input data if you want to append new fonts later)
+#   ifdef IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON
+    // Cleanup (don't clear the input data if you want to append new fonts later)    
     io.Fonts->ClearInputData();
     io.Fonts->ClearTexData();
+#   endif //IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON
 
     //fprintf(stderr,"Loaded font texture\n");
 #   if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_FONT_METHODS))
@@ -178,6 +172,12 @@ ImFont* font = AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, 13.0f
 
 void DestroyImGuiFontTexture()	{
     if (gImImplPrivateParams.fontTex)	{
+#       ifndef IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON
+        ImGuiIO& io = ImGui::GetIO();
+        // Cleanup (don't clear the input data if you want to append new fonts later)
+        if (io.Fonts) io.Fonts->ClearInputData();
+        if (io.Fonts) io.Fonts->ClearTexData();
+#       endif //IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON
         glDeleteTextures( 1, &gImImplPrivateParams.fontTex );
         gImImplPrivateParams.fontTex = 0;
     }

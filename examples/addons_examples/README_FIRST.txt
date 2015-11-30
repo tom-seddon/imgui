@@ -23,7 +23,7 @@ It's a collection of "extra imgui widgets" together with an automatic way of "bi
 
 It supports openGL only (==> DIRECTX IS NOT SUPPORTED <==).
 
-ImGui Addons does NOT modify the ImGui library itself in any way (i.e. imgui.cpp, imgui_draw.cpp and imgui_demo.cpp are untouched); it just adds:
+"ImGui Addons" does NOT modify the ImGui library itself in any way (i.e. imgui.cpp, imgui_draw.cpp and imgui_demo.cpp are untouched); it just adds:
 -> the "addons" subfolder.
 -> the two files "imgui_user.h" and "imgui_user.inl" (in the base ImGui folder).
 
@@ -96,6 +96,10 @@ IMGUIBINDINGS_RESTORE_GL_STATE			# restores the glViewport (and most of other GL
 						# It uses expensive glPop/Push(...) or glGet(...) calls that can be slow and/or deprecated in modern openGL (it's faster to tell openGL what to do than to retrieve something from it, unless the driver is smart enough to cache info or your're using a sofware openGL implementation).
 						# Without it the user must specify its own viewport at the beginning of DrawGL() (if it's different from full screen),
 						# and the openGL state is not fully restored, but it's just set to some "commonly used" values.
+
+IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON:		# when defined ImGui::GetIO()->Fonts->ClearInputData() and ImGui::GetIO()->Fonts->ClearTexData() are called as soon as possible saving some memory (and allowing you to append new fonts later (e.g. in InitGL())).
+						# it used to be the default, but future ImGui dynamic atlas support will require input data anyway.
+						# The input data is cleaned up before the delation of the font texture when IMGUI_BINDING_CLEAR_INPUT_DATA_SOON is not defined.
 
 
 4 -> OPTIONALLY you can use other definitions at the project level:

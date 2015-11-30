@@ -28,7 +28,6 @@
 #error imguistring is required for imguicodeeditor to work
 #endif //NO_IMGUISTRING
 
-
 // STATE: NOT USABLE
 // TODO/ROADMAP:
 /*
@@ -53,6 +52,8 @@ I'm really thinking that the CodeEditor has about 70% probability of being abort
 https://github.com/ocornut/imgui/issues/108
 https://github.com/ocornut/imgui/issues/200
 */
+
+ #include "imhashmap.h" // TODO: move to .cpp
 
 
 namespace ImGuiCe {

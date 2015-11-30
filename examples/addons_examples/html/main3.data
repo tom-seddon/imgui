@@ -1,74 +1,3 @@
-using System.IO.Text;
-
-class WriteTextFile
-{
-    static void Main()
-    {
-
-        // These examples assume a "C:\Users\Public\TestFolder" folder on your machine.
-        // You can modify the path if necessary.
-
-
-        // Example #1: Write an array of strings to a file.
-        // Create a string array that consists of three lines.
-        string[] lines = { "First line", "Second line", "Third line" };
-        // WriteAllLines creates a file, writes a collection of strings to the file,
-        // and then closes the file.  You do NOT need to call Flush() or Close().
-        System.IO.File.WriteAllLines(@"C:\Users\Public\TestFolder\WriteLines.txt", lines);
-
-
-        // Example #2: Write one string to a text file.
-        string text = "A class is the most powerful data type in C#. Like a structure, " +
-                       "a class defines the data and behavior of the data type. ";
-        // WriteAllText creates a file, writes the specified string to the file,
-        // and then closes the file.    You do NOT need to call Flush() or Close().
-        System.IO.File.WriteAllText(@"C:\Users\Public\TestFolder\WriteText.txt", text);
-
-        // Example #3: Write only some strings in an array to a file.
-        // The using statement automatically flushes AND CLOSES the stream and calls 
-        // IDisposable.Dispose on the stream object.
-        // NOTE: do not use FileStream for text files because it writes bytes, but StreamWriter
-        // encodes the output as text.
-        using (System.IO.StreamWriter file = 
-            new System.IO.StreamWriter(@"C:\Users\Public\TestFolder\WriteLines2.txt"))
-        {
-            foreach (string line in lines)
-            {
-                // If the line doesn't contain the word 'Second', write the line to the file.
-                if (!line.Contains("Second"))
-                {
-                    file.WriteLine(line);
-                }
-            }
-        }
-
-        // Example #4: Append new text to an existing file.
-        // The using statement automatically flushes AND CLOSES the stream and calls 
-        // IDisposable.Dispose on the stream object.
-        using (System.IO.StreamWriter file = 
-            new System.IO.StreamWriter(@"C:\Users\Public\TestFolder\WriteLines2.txt", true))
-        {
-            file.WriteLine("Fourth line");
-        }
-    }
-}
- //Output (to WriteLines.txt):
- //   First line
- //   Second line
- //   Third line
-
- //Output (to WriteText.txt):
- //   A class is the most powerful data type in C#. Like a structure, a class defines the data and behavior of the data type.
-
- //Output to WriteLines2.txt after Example #3:
- //   First line
- //   Third line
-
- //Output to WriteLines2.txt after Example #4:
- //   First line
- //   Third line
- //   Fourth line
-
 /*
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -352,136 +281,32 @@ private:
 
 
 #endif //IMGUICODEEDITOR_H_
--- Opens a file in read
-file = io.open("test.lua", "r")
-
--- sets the default input file as test.lua
-io.input(file)
-
--- prints the first line of the file
-print(io.read())
-
--- closes the open file
-io.close(file)
-
--- Opens a file in append mode
-file = io.open("test.lua", "a")
-
--- sets the default output file as test.lua
-io.output(file)
-
--- appends a word test to the last line of the file
-io.write("-- End of the test.lua file")
-
--- closes the open file
-io.close(file)
-
-/* Creation of a simple Windows API program */
-
-#include <windows.h>
-
-
-void WinMainCRTStartup()
-{
-STARTUPINFO info;
-info.dwFlags = 0;
-GetStartupInfo(&info);
-int iCmdShow=info.dwFlags&STARTF_USESHOWWINDOW?info.wShowWindow:SW_SHOWDEFAULT;
-int x=WinMain(GetModuleHandle(NULL),NULL,NULL,iCmdShow);
-ExitProcess(x);
-}
-
-
-/*  Declare Windows procedure  */
-LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
-
-/*  Make the class name into a global variable  */
-char szClassName[ ] = "WindowsApp";
-
-
-int WINAPI
-WinMain (HINSTANCE hThisInstance,
-         HINSTANCE hPrevInstance,
-         LPSTR lpszArgument,
-         int nFunsterStil)
-
-{
-    HWND hwnd;               /* This is the handle for our window */
-    MSG messages;            /* Here messages to the application are saved */
-    WNDCLASSEX wincl;        /* Data structure for the windowclass */
-
-    /* The Window structure */
-    wincl.hInstance = hThisInstance;
-    wincl.lpszClassName = szClassName;
-    wincl.lpfnWndProc = WindowProcedure;      /* This function is called by windows */
-    wincl.style = CS_DBLCLKS;                 /* Catch double-clicks */
-    wincl.cbSize = sizeof (WNDCLASSEX);
-
-    /* Use default icon and mouse-pointer */
-    wincl.hIcon = LoadIcon (hThisInstance,MAKEINTRESOURCE(100));//, IDI_APPLICATION);
-    wincl.hIconSm = LoadIcon (hThisInstance,MAKEINTRESOURCE(100));//, IDI_APPLICATION);
-    wincl.hCursor = LoadCursor (NULL, IDC_ARROW);
-    wincl.lpszMenuName = NULL;                 /* No menu */
-    wincl.cbClsExtra = 0;                      /* No extra bytes after the window class */
-    wincl.cbWndExtra = 0;                      /* structure or the window instance */
-    /* Use Windows's default color as the background of the window */
-    wincl.hbrBackground = (HBRUSH) COLOR_BACKGROUND;
-
-    /* Register the window class, and if it fails quit the program */
-    if (!RegisterClassEx (&wincl))
-        return 0;
-
-    /* The class is registered, let's create the program*/
-    hwnd = CreateWindowEx (
-           0,                   /* Extended possibilites for variation */
-           szClassName,         /* Classname */
-           "Windows App",       /* Title Text */
-           WS_OVERLAPPEDWINDOW, /* default window */
-           CW_USEDEFAULT,       /* Windows decides the position */
-           CW_USEDEFAULT,       /* where the window ends up on the screen */
-           544,                 /* The programs width */
-           375,                 /* and height in pixels */
-           HWND_DESKTOP,        /* The window is a child-window to desktop */
-           NULL,                /* No menu */
-           hThisInstance,       /* Program Instance handler */
-           NULL                 /* No Window Creation data */
-           );
-
-    /* Make the window visible on the screen */
-    ShowWindow (hwnd, nFunsterStil);
-
-    /* Run the message loop. It will run until GetMessage() returns 0 */
-    while (GetMessage (&messages, NULL, 0, 0))
-    {
-        /* Translate virtual-key messages into character messages */
-        TranslateMessage(&messages);
-        /* Send message to WindowProcedure */
-        DispatchMessage(&messages);
-    }
-
-    /* The program return-value is 0 - The value that PostQuitMessage() gave */
-    return messages.wParam;
-}
-
-
-/*  This function is called by the Windows function DispatchMessage()  */
-
-LRESULT CALLBACK
-WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    switch (message)                  /* handle the messages */
-    {
-        case WM_DESTROY:
-            PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
-            break;
-        default:                      /* for messages that we don't deal with */
-            return DefWindowProc (hwnd, message, wParam, lParam);
-    }
-
-    return 0;
-}
-
-/* Creation of a simple Windows API program */
+7z¼¯' 2}Œ›Ù      #       ?9$( :œÉV‹NújP±ôİS±J‚h[Î}‰ÙPDVÀ…šä—3X’{Œ ¾ÆÇ!¼ ¢Cî<òæfhjÃïŸ'Â¸bøİC®ìã¾Ad>¤¹qà4–åÉ»)ÿI=â'š\›5êi´x´/[ß§}¿a‡o´zÄGÙ‰ˆó_×áSYƒhg<LŸóÈ•hË¿² Ì¦„3”°bº¡•'~Xb„údŸµO¸¿à"	V§ñé8Ú§êh#„G¸Œ¡’%·8ÂMË-Ïo¡M©²İeÛéü/¡ÿè7íö¬±¿3Pòh¡tLh'±Æ;@ªC|èöªry®´qxä˜,Â‡j°7´Ì×w÷£Ï‰BšOU¾å3à`"—gDßÄÊëˆ[
+×Ì¤ŸìC%Ä£×hm‹ªŒNK‰¢ƒ' ìÃª´(¸3h'Ò ¸ o×eu¯¡fÚ[ü3LlpÓŒ{ÛëC¾Køt,²=€4ÁSİ!lÍYŞÓ_Èbéx ‚å½Áóílæ-°|³‘t~®:ª¾µ”à_NÄñZ`rï›a(ìñ.Ğ“N ß8Ïõ¨h €Ã»…AW\1í’òE"”ŞŠgöÄšDGæNaWì˜u8WRÔ·Ì³cV§q6 b„@È‰Ù¢“¦¾Ñ{æ´ƒr¡¿s2–äã·â^¼/ü1aëùU,ª3¡Ä@Jë,á– Z¦j{†±<šÈvûUi-}hn&EåÃJ•g¡›Ö9İ¥m@IU_û˜Z>4óøşOş*7!^ähiW5ÆWÿ»Mè4„}ğY­l¦V²‡‹?•v”\ÌÄ0!ºï7ëŸï’rLJ±íHİG7ÕéY9‡îy'+Ïú«v	ûğç
+œ:ÀÎ>´jXËªóºx1å>=×İ:ú/÷×_R˜¡„q‰A¿E:ÿ‚
+;”&DÀyÆÜ$Sö¹`Ü_Oûî®2Æ9È¬ùœé¨š¥¿,+òø|c"ƒ1ÇŸ¡‡‚rDW€M5éÓª«a[xA"§‚>vö¬P‹iÉAu×å´ïxcÖ\zĞ)¸âíRã½øsëªâÀÙP¾İGWÅ(Sx¬MÚµ£}üÓlJ/pÍ#Ø]ÏÃ`y&Ù½$³çÓTÓ)»½-B°›`CÇBè¢ª­×™2k]Z¾²6Nlf6ß®zÒøTÍÙ-À9Òªò¾#†5O0ìHÎäP·Ã€ØŠˆšEø3×)4ßNµCó¤êëŠ“Ûé1)~°QZ`¬ÚÊ†	_üŞ‡vHîÒE£ O ôö—ef3³* öÿrÌih§Ä»KBMz:C¹»|lÍ5¤È˜éŸ±¨-‹YH$ÈyŸÖÏ®’ŒÌP¡ŠÇ«ò¶Ş{L¦§éædÃP°èƒd ŞÊ9i	+n]Ó€]}Ñ6ıf!<ºâ¯ü™…†·Qğã:bŠş`Å6wÖ•°ETŠPÛµ®ÌÓåüfPI›»ÁA;kI¼«ÍXºr%Ü\¸/˜.åÕÊgp†ï€üˆÖÕwV=ae¬îtÄõBß•7J”!Yš#ªAzASxyêàÇğ$•ûv ¿jºß)A1ängm’ÚšƒyÄÔÎIÜ"£|ó kXn‘y0B@qWñ­@‰›5ñYfîy×}·ùïáØ›kLãØL9FØêyŸ~î]È[qÍØu1ı¸iŸ­%—Ñ°+rœ‰Ÿ\…šs`Å)T+°ü¯àiÌP?=WoÙ-é‰uVRŸA­–9*’bmàK­&;~o¿ñ¨CBÿOYp+ˆXçÊ¦ª¿WœElnæ}M}U;8Í;â6Ø“˜ÉÚÜ) $„VVê…9\ùâ ZŞçHj'÷¶´üx$‘Uf–D²ëxQ³òûºğOc¾K½®¨ŸÚ&DÍ¿=:«QL˜xñİ2PØâŒ¢$sÙÿtş{›´˜ÚbŠ© EÔ:Ú8kàMÃ³H“Ó líˆù´ã—=¬&lÆ<0õ{Ÿ%oã©ƒv¾>9vM¯<‹öœàuQ=h0=Åçpû}u­NÿÿÄ5Ãô˜©bÁ8StÄ(B;ßcÄ©¿•UéSÖ¶¢ƒ°”•f5_`¯U¯+OFkã9?ğ@Éäey09›ßd6ÖcÿBï(‡­;ÜûI;o×´!“%÷Quåw¼~œ%ŒH=Ù•‘Cø"Kk	»ëß}ªÂS3€§ÑE“lÕaı<†Í5¸cô®-{ˆeúTW`ı0ğ`š¢»{¨bÆ5¡¡ıSvz|	!É„p‘¯#É¡¬ÌŠÛû’Ü&\°”šÒş<´¬Fœ2c>®µ÷wî½Øİ*&ú-±N‚÷¦aàâœß~¶G?bãÎ+Á:ÚŸùƒˆz™]5#Ìpû÷"}µPÔy_˜û üAŠèƒö$}÷di·7ñ(ø?ÜÆ­îi<ÏıQıÒO–¥ªˆ8[.B¬Á,Ë^ •GRbFãyÅr£Q-î†„«ˆñzMMÊ0‚HÓt¢	x%½×N‘^N*®¢tm8Şä ÔğyØ²/«º)´~2æw^ï7§¹íH–_!&p§‡²óµ¾ğ0Ÿ€Â£e¨rÄºÔDµ€ªµõÂu#ç¶6#âvvÃ9{Pê¬»àk4¢W¤Oë•ø~–+İ“rY…@J,qãô~Ğ«Ó*­xS}å4ÄÕ'Î·(ÎZ'Óß#8¨oJîšZ5â½,ÄTşÄö†l'ÔØbĞx
+Gî¸Ù±<K–>¸ÜP½†`¦L²ğ—÷@dŠ3.X÷¾M¡ŒÉâ}j“6Â¥$ÌÚ>-™æafj2…Zwâh?S»jxhkŸDëïöòP ÇN`gê„‰JPq\Vnë€r› şq‡«å·]Ô#ŞsáO!hS³m[3"¦à§fş«Õ1"£C’BKã²÷^”¢ËÕaº¶M"óÖwÂ“Ø­=Ø
+`­@~®hºz¥¦JJ´D|UmZ&i¡È·©××B
+÷^­3ãæ;Ç;²„5j°Óİ•5o
+_sØøÚ4³6ÉY¢œàøÄSï›ÕĞÚ0,}£¡¼%è&_‘\ŸzÙO7&ÇôQ=7Â7Ø› z&¥(ÑÂ¶TNc–2ÏÃô+2ftßQı@	‹#|ÌPªÅSií­gC:$r0HŞd#¦`’’Ä®ŠxµAzphÌF û.Ò?ü#Ôæº;Z"+êcyòCèØCL*–‘M­.Dí½˜vñZŒcŸ372ƒı†sBšvøí“çOñ´§{'ô«l	`?@á¸ld†
+ØææÚÚ^1¿©nŞµv]ëäô(ŠÓöÒ´ÃS[CáÏI|­ÉÎJD¦ûwÒÏáó}…3³`9W¦ÔˆƒÇp:l>Â3ˆ@€ ¹nOA‡²Ó±z—vêV¤D›£\xÿLv*?mNº^IºÅèTg_&…Nº>(kjºÉ¶˜œ%ùPu'v×)‡´½ƒqë~›&Öd­àxf.ÌXßKC }¤!,õar`X´Iï÷Ö÷ŞS›ĞåŠö8“å*o¬ZËÈĞ/Áj&ésJ÷üÁå‹`x9ä;r=ä«”ãÅ wh`„á]Ò¤NáV «@¨@ùG-Ø‹5Ú¹•(\üšİâ?ÊWTõ.É‡÷‚Ê•P}ôåÎú-Ùú½©p´—ëá¶®ËLê½ f°@¤ÀKzß€}b}ŸOw\¾G¿>`X`úr;™çÍBo/+Ä¢<”±ciQ‚\¬ÕÇWã]´ÁÑ¬	=ŞA¬÷’X÷)˜a¹îGŸ¹|üŒâ!›C=Û¢,®«ÇÍ”Œ"km¶½ûDR!²}dm±ÆºWˆÌ}Ûr6Í&'-‡ _ò§Ÿg8ñ”¨•@3 >ôKegÖ€%1
+¡»ç?4o5îQümL°lò4Q°•'–*	Åc}¢z‹VPÃ(AwŞfş(î&MÆ„µŸeË¤Ì¯+us¾X4¥÷¼µ8ÒV$-\:(÷†¥ÂDTdÛeâxá¯×%V¨— Áqšj:_M·D‹‘…ˆ7Ìã^gŞiyUfS®„ ‹<š»æe3¼ÇİtèÈÕ ®1 6^Ü+“ZeÅì~##ÿ~Şæq[EÌ¶’\3«„iãE,‚nÌ×XĞx¹Â©@	D~Ü1oÚŸµ_˜şA¤\J@³Òù¿jİG:»-3ı`PÜÈĞI=µåÌJÆ«soÀykõ”ø•`i´‰0[ç><q@3Ìz©Psät¯!|äæ.\ºĞ¶Y'¦·‚Ê~‚Ë•sÖ]Û½Â'§ ¼P4U$“ñgˆN;İ÷L¡ÁÙ¢ëlÓb!¿zozş)¡âòÒHEó”s@5á˜ ù?/Èø$3 ŠÃÛóU4o«gblâ§P ÑìÊ±í.­NÁx:6ø…Ğ§MËPÂ6ÛÙŒƒ	a‹ıToùÓ‡·ßK#éH'˜v}ÿ3Ã©ü§üøèüG,×™ñiÏ™v®ş¦P0á©\MsğOæ¢¦$[Æ/{œQÒŸ`ŞãêÂÜwóùMÁO¥»ß'g¥6íÃ›“Ç6FeÌ£’Êí5'Äp»ZÕœ½ŞEÄ4ÜX'óœ=ümpjw`G—V‚ä®w#şy»2Ûuâ¶J©ùo¡PTwú8vú"HJ„î&
+_áê¢•îg?ù\ô–É¨“îgEíø.  Ô,!úì&Õ	í¨QÄ„!ÌÍïÈ.-„,Ö›Áÿ©†ãƒ™p°í/ oj‘¬=*À:ì.ôõœ¨œFñ÷sÚŸàÖX$IA>›q‹íí&¢%:ôèpñË×CUú•Vúö„p$Wå²;»,'ˆÎÊ(ÓgAáëºåà]óäãI*QÿQ¿¸€zÿ6©ş€¥šL¼£Û SWÍWŸÏã{8éØG §”[°€F™È×ršÎ™Ñj:€Ä+¯×êÔPæóBå<ùFm”Vú²1«–En¬ÜnÀX•çYzÈ˜à,ûÃL¢êÎÕ³	·`Ó
+'Â]†É³Dß·3ELpà×äf‚îş\³AÔêX'ésŸeå[\Âİ¾ØuÍmf=Ã7eÉ<Úgº¦^©¢Ã¥AÏW½²§ÓÁí½j¹"«ÏüîÕÌljlæ¦ÇÈ 7c–ën.F1á¶·²h'<“
+tP;|dGşÄJ¤˜±Ì»FğÛJğØJiïÆûJÁXù®2šš?‹÷‘®ßB…xb5‡%¡Ög5Ô\ä}!—Ö]#¬Û¤›†4
+êåzz]xe¾®¬©÷±dÛ0¿|ÛC`÷`½Rù.áºd–Ó¸I Doà?Lô‹Í¾O¶%6&%UåÓCBöBÊ!ó[=a ¶d!©Ã,Œñ·×eYkèujâ·ŠN#şª§wYw”ªéƒm¹n€"\İƒÃ;5­Wd›w&Ö¾ÖW  Î[„ÌÄ‰V¶OÁ¼9“ïT¤U©AW”ïÍIüuqÁsß|lû3J=oá­a—ú 
+¯şN(Cf_…ÿÒğæ
+Õ@XWx…`…&!?À=èLa§ÜŠl@¯ö?
+s‹Õ¶=ZÍ¿9ƒ-~iÄåegvùƒôÂĞñû•e¥*Ğ£ÿãøH¥ãì-Ï,ƒÓ¬íYıû.úIJŸ¯=+µb¤w(â©ß2¹åƒñV#y9<n"9:Ãå=£¤ÆÃ‰ƒ‹íèòíT#11ø‚N)‘ü²Ğ}c_pèï›‡=¿êqà	sx«,(ÇğœÎÔ+ÕŸNPM1ÌĞo@p/[VtÍº™bãŠ|XÎD
+—hşó“):È §úËTq˜£¡™¦Pµ”u1:•Åáj@Õ8„„ Ó<i)_ô=¬”Â'¥X»kòCÓ (¿¼ÅÚ¯Q‹C®ğVâB>,Âªe¶Ç[®6cşcz êh¦PŞ=%Ó#;Ë#–XwÉ'8¡m@³@LPÍÃ:s/G-µ
+¥_¿ÑƒJá=å+8&)ÉW¤Ü¨İ/ÉŞüx¡ü­ˆÒA`ºëŞ®Íãµ¾æ
+@%K„$C gš§Fêtš)WA011ué=Óæã±ïRëõ
+#‚T^‰{™ÙÓ>:dD¡é¥/j?€2{Ìú>Åİ3î*Ë¡7aµ,U*%`` 
+©şVT,-©„ØÅÈ»şÍ½‰»'1¾on¹c‰c5i™C'Ş¨†¾4,C0ŸQ¢}ÈtgÙØ1•
+º ¬—E­O¿_—5‘À*d	/wÔE*$jAeóÖ^øœ'9•) Ò¦k%BŠH4Èş‡ÁVZ·°‚øh/['Á71Fòè*`ïå¢nÈ¿”š^ĞŸwf1O«6È†;Æœà1êñpéoqó_z+‰¬h^Â#‰õá³°
+Õ¢ö™sbİ•(ØšPÈÎbÚğ åÓG½gwQ÷Ö<YK™·…!h_ö‹Í¨õ‡‰MÙZh.“kàÜM»æ™ÀÅL\Ã¼ÔÁXyæ«ŠˆÌ?í6—s;—•ÎˆÆÖ¬ÀµÿØPèQ:,åš¤íE|&¥ûwøËĞ1LİĞyêŒ¾MÍ”i$ç&zTzMÁòóqÂå# [)ZÔ…äŸœt>—­Që(«óA­˜§# “ˆ  3®Ö
+@´×$Óş³~1â–›°öz8¤éƒÙd1}™\CÊ7}@ëªjçºÜDÖªd(‚Ç‡Iåx2Î×{Ôx'º=~ë]²’mºÜs@qQ 2H«]ªØyİ¯mA”T¨.¬.U´‚ ¡/i2áøêÔ.É‹Mè*”¾_ïÎ…·÷>Z9y«P=¸L   ”?	€š  #]   €¹
+k:  /* Creation of a simple Windows API program */
 
 #include <windows.h>
 

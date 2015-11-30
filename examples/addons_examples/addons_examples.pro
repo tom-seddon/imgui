@@ -10,7 +10,7 @@ DESTDIR = ./
 
 # When commented out, main.cpp is built, otherwise main2.cpp is built
 #CONFIG+= use_main2
-#CONFIG+= use_main3  # dev only
+CONFIG+= use_main3  # dev only
 
 # Only one of these must be active:
 CONFIG+= use_glfw3
