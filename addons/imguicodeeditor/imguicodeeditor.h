@@ -269,11 +269,12 @@ public:
     ImHashMapChar   shTypePunctuationMap;
 private:
     static bool StaticInited;
-    void RenderTextLineWrappedWithSH(ImVec2 &pos, const char *text, const char *text_end, float wrap_width = 0.f, bool skipLineCommentProcessing=false);
+    void RenderTextLineWrappedWithSH(ImVec2 &pos, const char *text, const char *text_end, bool skipLineCommentProcessing=false);
     void TextLineUnformattedWithSH(const char *text, const char *text_end);
     void TextLineWithSHV(const char *fmt, va_list args);
     void TextLineWithSH(const char *fmt...);
 
+    float CalcTextWidth(const char* text,const char* text_end=NULL,int* pNumUTF8CharsOut=NULL);
 
 };
 

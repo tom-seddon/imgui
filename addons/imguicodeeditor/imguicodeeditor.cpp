@@ -342,7 +342,7 @@ void CodeEditor::TextLineUnformattedWithSH(const char* text, const char* text_en
         if (!ImGui::ItemAdd(bb, NULL))  return;
 
         // Render (we don't hide text after ## in this end-user function)
-        RenderTextLineWrappedWithSH(bb.Min, text_begin, text_end, wrap_width);
+        RenderTextLineWrappedWithSH(bb.Min, text_begin, text_end);
     }
 }
 void CodeEditor::TextLineWithSHV(const char* fmt, va_list args) {
@@ -357,6 +357,30 @@ void CodeEditor::TextLineWithSH(const char* fmt, ...)   {
     va_start(args, fmt);
     TextLineWithSHV(fmt, args);
     va_end(args);
+}
+
+float CodeEditor::CalcTextWidth(const char *text, const char *text_end, int *pNumUTF8CharsOut)
+{
+    return ImGui::CalcTextSize(text,text_end).x;
+    /*
+    ImGuiState& g = *GImGui;
+    ImFont* font = g.Font;
+    const float font_size = g.FontSize;
+    //const float font_size = g.FontImFonts[0]->FontSize;
+    const float font_scale = font_size / font->FontSize;
+
+    const unsigned numUTF8Chars = UTF8Helper::CountUTF8Chars(text,text_end);
+    if (pNumUTF8CharsOut) *pNumUTF8CharsOut = (int) numUTF8Chars;
+    float text_width = numUTF8Chars * font_size;
+
+    // Cancel out character spacing for the last character of a line (it is baked into glyph->XAdvance field)
+    const float character_spacing_x = 1.0f * font_scale;
+    if (text_width > 0.0f) text_width -= character_spacing_x;
+
+    //static unsigned init = 0;if (init++%100==0) {fprintf(stderr,"\"%.*s\" text_width=%1.2f font_size=%1.2f font_scale=%1.2f \n",(int)(text_end-text),text,text_width,font_size,font_scale);}
+
+    return text_width;
+    */
 }
 
 
@@ -1431,6 +1455,8 @@ inline static ImString TrimSpacesAndTabs(const ImString& sIn)    {
 }
 
 void CodeEditor::ParseTextForFolding(bool forceAllSegmentsFoldedOrNot, bool foldingStateToForce) {
+    // Naive algorithm: TODO: rewrite to handle "//" and strings correctly
+
     if (!enableTextFolding || lines.size()==0) return;
     FoldingStringVector* pFoldingStrings = GetGlobalFoldingStringVectorForLanguage(lang);
     if (!pFoldingStrings || pFoldingStrings->size()==0) return;
@@ -1789,7 +1815,7 @@ void CodeEditor::render()   {
     }
 
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.color_background);  // The line below is just to set the bg color....
-    ImGui::BeginChild("CodeEditorChild", ImVec2(0,0), true, ImGuiWindowFlags_NoMove);
+    ImGui::BeginChild("CodeEditorChild", ImVec2(0,0), true, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_HorizontalScrollbar);
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
 
@@ -1802,7 +1828,7 @@ void CodeEditor::render()   {
     ImGui::CalcListClipping(lines.size(),lineHeight, &lineStart, &lineEnd);
     // Ensure that lineStart is not hidden
     while (lineStart<lines.size()-1 && lineStart>0 && (lines[lineStart]->isHidden() || (lines[lineStart]->canFoldingBeMergedWithLineAbove() && lines[lineStart]->isFolded()))) {
-        if (io.MouseWheel>=0) {--lineStart;--lineEnd;}
+        if (io.MouseWheel>=0) {--lineStart;/*--lineEnd;*/}
         else {++lineStart;++lineEnd;}
     }
     if (scrollToLine>=0) {
@@ -1820,17 +1846,17 @@ void CodeEditor::render()   {
     int precision =  0;
     if (showLineNumbers)    { // No time for a better approach
         ImGui::PushFont(const_cast<ImFont*>(ImFonts[style.font_line_numbers]));
-        if (lineEnd<9)          {precision=1;lineNumberSize=ImGui::CalcTextSize("9").x;}
-        else if (lineEnd<99)    {precision=2;lineNumberSize=ImGui::CalcTextSize("99").x;}
-        else if (lineEnd<999)   {precision=3;lineNumberSize=ImGui::CalcTextSize("999").x;}
-        else if (lineEnd<9999)  {precision=4;lineNumberSize=ImGui::CalcTextSize("9999").x;}
-        else if (lineEnd<99999) {precision=5;lineNumberSize=ImGui::CalcTextSize("99999").x;}
-        else if (lineEnd<999999){precision=6;lineNumberSize=ImGui::CalcTextSize("999999").x;}
-        else                    {precision=7;lineNumberSize=ImGui::CalcTextSize("9999999").x;}
+        if (lineEnd<9)          {precision=1;lineNumberSize=CalcTextWidth("9");}
+        else if (lineEnd<99)    {precision=2;lineNumberSize=CalcTextWidth("99");}
+        else if (lineEnd<999)   {precision=3;lineNumberSize=CalcTextWidth("999");}
+        else if (lineEnd<9999)  {precision=4;lineNumberSize=CalcTextWidth("9999");}
+        else if (lineEnd<99999) {precision=5;lineNumberSize=CalcTextWidth("99999");}
+        else if (lineEnd<999999){precision=6;lineNumberSize=CalcTextWidth("999999");}
+        else                    {precision=7;lineNumberSize=CalcTextWidth("9999999");}
         ImGui::PopFont();
     }
     ImGui::PushFont(const_cast<ImFont*>(ImFonts[FONT_STYLE_NORMAL]));
-    const float sizeFoldingMarks = ImGui::CalcTextSize("   ").x;    // Wrong, but no time to fix it
+    const float sizeFoldingMarks = CalcTextWidth("   ");    // Wrong, but no time to fix it
     const ImVec2 startCursorPosIconMargin(ImGui::GetCursorPosX(),ImGui::GetCursorPosY() + (lineStart * lineHeight));
     const ImVec2 startCursorPosLineNumbers(startCursorPosIconMargin.x + (showIconMargin ? btnSize.x : 0.f),startCursorPosIconMargin.y);
     const ImVec2 startCursorPosFoldingMarks(startCursorPosLineNumbers.x + (enableTextFolding ? lineNumberSize : 0.f),startCursorPosLineNumbers.y);
@@ -1850,13 +1876,10 @@ void CodeEditor::render()   {
             if (i==scrollToLine) ImGui::SetScrollPosHere();
             Line* line = lines[i];
             if (line->isHidden()) {
+                //fprintf(stderr,"line %d is hidden\n",line->lineNumber+1); // This seems to happen on "//endregion" lines only
                 ++lineEnd;
                 continue;
             }
-	    /*if (line->text.size()==0) {
-		ImGui::Text("%s",line->text.c_str());
-	    }*/
-
 
             if (mustSkipNextVisibleLine) mustSkipNextVisibleLine = false;
             else visibleLines.push_back(line);
@@ -1864,14 +1887,14 @@ void CodeEditor::render()   {
             // ImGui::PushID(line);// ImGui::PopID();
             //if (line->isFoldable()) {fprintf(stderr,"Line[%d] is foldable\n",line->lineNumber);}
 
-	    if (line->isFoldable()) {
-		const int startOffset = (line->isFoldingEnd() && line->foldingStartLine->isFolded()) ? (line->foldingEndOffset+line->foldingStartLine->foldingStartTag->end.size()) : 0;
-		if (line->isFolded()) {
+            if (line->isFoldable()) {
+                const int startOffset = (line->isFoldingEnd() && line->foldingStartLine->isFolded()) ? (line->foldingEndOffset+line->foldingStartLine->foldingStartTag->end.size()) : 0;
+                if (line->isFolded()) {
                     // start line of a folded region
 
                     // draw sh text before the folding point
-		    if (line->foldingStartOffset>0) {
-			this->TextLineWithSH("%.*s",line->foldingStartOffset-startOffset,&line->text[startOffset]);
+                    if (line->foldingStartOffset>0) {
+                        this->TextLineWithSH("%.*s",line->foldingStartOffset-startOffset,&line->text[startOffset]);
                         ImGui::SameLine(0,0);
                     }
 
@@ -1920,7 +1943,7 @@ void CodeEditor::render()   {
 
                     // draw sh text before the folding point (that is not folded now)
                     if (line->foldingStartOffset>0) {
-			this->TextLineWithSH("%.*s",line->foldingStartOffset-startOffset,&line->text[startOffset]);
+                        this->TextLineWithSH("%.*s",line->foldingStartOffset-startOffset,&line->text[startOffset]);
                         ImGui::SameLine(0,0);
                     }
 
@@ -1932,31 +1955,31 @@ void CodeEditor::render()   {
                     ImGui::PopStyleColor();
                     ImGui::PopFont();
                 }
-		else this->TextLineWithSH("%s",&line->text[startOffset]);
+                else this->TextLineWithSH("%s",&line->text[startOffset]);
             }
-	    else if (line->isFoldingEnd())  {
-		if (line->foldingStartLine->isFolded()) {
-		    // End line of a folded region. Here we must just display what's left after the foldngEndOffset.
-		    this->TextLineWithSH("%s",&line->text[line->foldingEndOffset+line->foldingStartLine->foldingStartTag->end.size()]);
-		    //fprintf(stderr,"Line[%d] is a folded folding end\n",line->lineNumber);
-		}
-		else if (line->foldingStartLine->foldingStartTag->kind==FOLDING_TYPE_COMMENT) {
-		    // Open multiline comment ending line
+            else if (line->isFoldingEnd())  {
+                if (line->foldingStartLine->isFolded()) {
+                    // End line of a folded region. Here we must just display what's left after the foldngEndOffset.
+                    this->TextLineWithSH("%s",&line->text[line->foldingEndOffset+line->foldingStartLine->foldingStartTag->end.size()]);
+                    //fprintf(stderr,"Line[%d] is a folded folding end\n",line->lineNumber);
+                }
+                else if (line->foldingStartLine->foldingStartTag->kind==FOLDING_TYPE_COMMENT) {
+                    // Open multiline comment ending line
 
-		    // draw the start of the line directly as SH_COMMENT (using ImGui::Text(...), without parsing it with this->TextLineWithSH(...))
-		    const SyntaxHighlightingType sht = SH_COMMENT;
-		    ImGui::PushFont(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]));
-		    ImGui::PushStyleColor(ImGuiCol_Text,ImColor(style.color_syntax_highlighting[sht]));
-		    ImGui::Text("%.*s",line->foldingEndOffset+line->foldingStartLine->foldingStartTag->end.size(),line->text.c_str());
-		    ImGui::PopStyleColor();
-		    ImGui::PopFont();
+                    // draw the start of the line directly as SH_COMMENT (using ImGui::Text(...), without parsing it with this->TextLineWithSH(...))
+                    const SyntaxHighlightingType sht = SH_COMMENT;
+                    ImGui::PushFont(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]));
+                    ImGui::PushStyleColor(ImGuiCol_Text,ImColor(style.color_syntax_highlighting[sht]));
+                    ImGui::Text("%.*s",line->foldingEndOffset+line->foldingStartLine->foldingStartTag->end.size(),line->text.c_str());
+                    ImGui::PopStyleColor();
+                    ImGui::PopFont();
 
-		    // draw the end of the line parsed
-		    ImGui::SameLine(0,0);
-		    this->TextLineWithSH("%s",&line->text[line->foldingEndOffset+line->foldingStartLine->foldingStartTag->end.size()]);
-		}
-		else this->TextLineWithSH("%s",line->text.c_str());
-	    }
+                    // draw the end of the line parsed
+                    ImGui::SameLine(0,0);
+                    this->TextLineWithSH("%s",&line->text[line->foldingEndOffset+line->foldingStartLine->foldingStartTag->end.size()]);
+                }
+                else this->TextLineWithSH("%s",line->text.c_str());
+            }
             else if (line->foldingStartLine && line->foldingStartLine->foldingStartTag->kind==FOLDING_TYPE_COMMENT) {
                 // Internal lines of an unfolded comment region
                 const SyntaxHighlightingType sht = SH_COMMENT;
@@ -1982,11 +2005,14 @@ void CodeEditor::render()   {
             if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_TextInput);
             else ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
         }
+
+
     }
 
+    //if (visibleLines.size()>0) fprintf(stderr,"visibleLines.size()=%d firstVisibleLine=%d lastVisibleLine=%d\n",visibleLines.size(),visibleLines[0]->lineNumber+1,visibleLines[visibleLines.size()-1]->lineNumber+1);
 
     // Draw icon margin
-    if (showIconMargin) {
+    if (showIconMargin && ImGui::GetScrollX()<startCursorPosLineNumbers.x) {
         ImGui::SetCursorPos(startCursorPosIconMargin);
         ImVec2 startPos,endPos,screenStartPos,screenEndPos;
         ImGui::BeginGroup();
@@ -1995,7 +2021,7 @@ void CodeEditor::render()   {
 
             ImGui::PushID(line);
             startPos = ImGui::GetCursorPos();
-            screenStartPos.x = startPos.x + windowPos.x + lineHeight*0.5f;
+            screenStartPos.x = startPos.x + windowPos.x - ImGui::GetScrollX() + lineHeight*0.5f;
             screenStartPos.y = startPos.y + windowPos.y - ImGui::GetScrollY();
             if (ImGui::InvisibleButton("##DummyButton",btnSize))    {
                 if (io.KeyCtrl) {
@@ -2008,7 +2034,7 @@ void CodeEditor::render()   {
                 }
             }
             endPos = ImGui::GetCursorPos();
-            screenEndPos.x = endPos.x + windowPos.x;
+            screenEndPos.x = endPos.x + windowPos.x - ImGui::GetScrollX();
             screenEndPos.y = endPos.y + windowPos.y - ImGui::GetScrollY();
             if (line->attributes&Line::AT_ERROR) {
                 ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -2056,9 +2082,10 @@ void CodeEditor::render()   {
         ImGui::EndGroup();
         ImGui::SameLine(0,0);
     }
+    //else fprintf(stderr,"Hidden: %1.2f\n",ImGui::GetScrollX());
 
      // Draw line numbers
-    if (showLineNumbers) {
+    if (showLineNumbers && ImGui::GetScrollX()<startCursorPosFoldingMarks.x) {
         ImGui::SetCursorPos(startCursorPosLineNumbers);
         ImGui::BeginGroup();
         ImGui::PushStyleColor(ImGuiCol_Text,style.color_line_numbers);
@@ -2073,9 +2100,10 @@ void CodeEditor::render()   {
         ImGui::EndGroup();
         ImGui::SameLine(0,0);
     }
+    //else fprintf(stderr,"Hidden: %1.2f\n",ImGui::GetScrollX());
 
     // Draw folding spaces:
-    if (enableTextFolding) {
+    if (enableTextFolding &&  ImGui::GetScrollX()<startCursorPosTextEditor.x) {
         ImGui::SetCursorPos(startCursorPosFoldingMarks);
         ImGui::BeginGroup();
         ImGui::PushFont(const_cast<ImFont*>(ImFonts[FONT_STYLE_NORMAL]));
@@ -2137,7 +2165,7 @@ void CodeEditor::render()   {
         ImGui::EndGroup();
         ImGui::SameLine(0,0);
     }
-
+    //else fprintf(stderr,"Hidden: %1.2f\n",ImGui::GetScrollX());
 
     ImGui::PopFont();
     ImGui::PopStyleVar();
@@ -2186,7 +2214,7 @@ template <int NUM_TOKENS> inline static const char* FindNextToken(const char* te
 }
 
 // wrap_width=0 -> no wrapping
-void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, const char* text_end, float wrap_width, bool skipLineCommentAndStringProcessing)
+void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, const char* text_end, bool skipLineCommentAndStringProcessing)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = ImGui::GetCurrentWindow();
@@ -2200,7 +2228,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
 	const int text_len = (int)(text_end - text);
 	if (text_len > 0)
 	{
-	    window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_end, wrap_width);
+        window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_end, 0.f);
 	    if (g.LogEnabled) LogRenderedText(pos, text, text_end);
 	}
 	return;
@@ -2212,67 +2240,64 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
         const char* endComments[3] = {fsv->singleLineComment+strlen(fsv->singleLineComment),fsv->multiLineCommentStart+strlen(fsv->multiLineCommentStart),fsv->multiLineCommentEnd+strlen(fsv->multiLineCommentEnd)};
         //for (int j=0;j<3;j++) fprintf(stderr,"%d) \"%s\"\n",j,startComments[j]);
         int tki=-1;
-	const char* tk = FindNextToken<2>(text,text_end,startComments,endComments,&tki,fsv->stringDelimiterChars,fsv->stringEscapeChar,false);
+        const char* tk = FindNextToken<2>(text,text_end,startComments,endComments,&tki,fsv->stringDelimiterChars,fsv->stringEscapeChar,false);
         if (tk) {
-	    if (tki==0) {   // Found "//"
-                if (tk!=text) RenderTextLineWrappedWithSH(pos,text,tk,wrap_width,true);    // Draw until "//"
+            if (tki==0) {   // Found "//"
+                if (tk!=text) RenderTextLineWrappedWithSH(pos,text,tk,true);    // Draw until "//"
                 text = tk;
                 const int text_len = (int)(text_end - text);
                 if (text_len > 0)   {
-                    window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_COMMENT]]), g.FontSize, pos, style.color_syntax_highlighting[SH_COMMENT], text, text_end, wrap_width);
+                    window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_COMMENT]]), g.FontSize, pos, style.color_syntax_highlighting[SH_COMMENT], text, text_end, 0.f);
                     if (g.LogEnabled) LogRenderedText(pos, text, text_end);
-                    //pos.x+=charWidth*(text_end-text);
-                    pos.x+=ImGui::CalcTextSize(text,text_end).x;
+                    pos.x+=CalcTextWidth(text,text_end);
                 }
                 return;
             }
-	    else if (tki==1) {	// Found "/*"
-                if (tk!=text) RenderTextLineWrappedWithSH(pos,text,tk,wrap_width,true);    // Draw until "/*"
+            else if (tki==1) {	// Found "/*"
+                if (tk!=text) RenderTextLineWrappedWithSH(pos,text,tk,true);    // Draw until "/*"
                 const int lenOpenCmn = strlen(startComments[1]);
                 const char* endCmt = text_end;
-		const char* tk2 = FindNextToken<1>(tk+lenOpenCmn,text_end,&startComments[2],&endComments[2]);	// Look for "*/"
+                const char* tk2 = FindNextToken<1>(tk+lenOpenCmn,text_end,&startComments[2],&endComments[2]);	// Look for "*/"
                 if (tk2) endCmt = tk2+strlen(startComments[2]);
                 text = tk;
                 const int text_len = (int)(endCmt - text);
                 if (text_len > 0)   {
-		    window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_COMMENT]]), g.FontSize, pos, style.color_syntax_highlighting[SH_COMMENT], text, endCmt, wrap_width);
-		    if (g.LogEnabled) LogRenderedText(pos, text, endCmt);
-		    //pos.x+=charWidth*(endCmt-text);
-		    pos.x+=ImGui::CalcTextSize(text,endCmt).x;
+                    window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_COMMENT]]), g.FontSize, pos, style.color_syntax_highlighting[SH_COMMENT], text, endCmt, 0.f);
+                    if (g.LogEnabled) LogRenderedText(pos, text, endCmt);
+                    pos.x+=CalcTextWidth(text,endCmt);
                 }
-                if (tk2 && endCmt<text_end) RenderTextLineWrappedWithSH(pos,endCmt,text_end,wrap_width);    // Draw after "*/"
+                if (tk2 && endCmt<text_end) RenderTextLineWrappedWithSH(pos,endCmt,text_end);    // Draw after "*/"
                 return;
             }
-	    else if (tki>1) {	// Found " (or ')
-		tki = tki-2;	// Found fsv->stringDelimiterChars[tki]
-		if (tk!=text) RenderTextLineWrappedWithSH(pos,text,tk,wrap_width,true);    // Draw until "
-		//const bool mustSkipNextEscapeChar = (lang==LANG_CS && tk>text && *(tk-1)=='@');   // Nope, I don't think this matters...
-		if (tk+1<text_end)  {
-		    // Here I have to match exactly fsv->stringDelimiterChars[tki], not another! (we don't use FindNextToken<>)
-		    const char *tk2 = NULL,*tk2Start = tk+1;
-		    while ((tk2 = strchr(tk2Start,fsv->stringDelimiterChars[tki])))   {
-			if (tk2>=text_end) {tk2 = NULL;break;}
-			tk2Start = tk2+1;
-			if (tk2>text && *(tk2-1)==fsv->stringEscapeChar) continue;
-			break;
-		    }
-		    const char* endStringSH = tk2==NULL ? text_end : (tk2+1);
-		    // Draw String:
-		    window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_STRING]]), g.FontSize, pos, style.color_syntax_highlighting[SH_STRING], tk, endStringSH, wrap_width);
-		    if (g.LogEnabled) LogRenderedText(pos, tk, endStringSH);
-		    //pos.x+=charWidth*(text_end-text);
-		    pos.x+=ImGui::CalcTextSize(tk,endStringSH).x;
-		    if (tk2==NULL)	return;	// No other match found
-		    text = endStringSH;
-		    if (text!=text_end) {
-			//fprintf(stderr,"\"%.*s\"\n",(int)(text_end-text),text);
-			RenderTextLineWrappedWithSH(pos,text,text_end,wrap_width);			
-		    }
-		    return;
-		}
-	    }
-	    return;
-	}
+            else if (tki>1) {	// Found " (or ')
+                tki = tki-2;	// Found fsv->stringDelimiterChars[tki]
+                if (tk!=text) RenderTextLineWrappedWithSH(pos,text,tk,true);    // Draw until "
+                //const bool mustSkipNextEscapeChar = (lang==LANG_CS && tk>text && *(tk-1)=='@');   // Nope, I don't think this matters...
+                if (tk+1<text_end)  {
+                    // Here I have to match exactly fsv->stringDelimiterChars[tki], not another! (we don't use FindNextToken<>)
+                    const char *tk2 = NULL,*tk2Start = tk+1;
+                    while ((tk2 = strchr(tk2Start,fsv->stringDelimiterChars[tki])))   {
+                        if (tk2>=text_end) {tk2 = NULL;break;}
+                        tk2Start = tk2+1;
+                        if (tk2>text && *(tk2-1)==fsv->stringEscapeChar) continue;
+                        break;
+                    }
+                    const char* endStringSH = tk2==NULL ? text_end : (tk2+1);
+                    // Draw String:
+                    window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_STRING]]), g.FontSize, pos, style.color_syntax_highlighting[SH_STRING], tk, endStringSH, 0.f);
+                    if (g.LogEnabled) LogRenderedText(pos, tk, endStringSH);
+                    pos.x+=CalcTextWidth(tk,endStringSH);
+                    if (tk2==NULL)	return;	// No other match found
+                    text = endStringSH;
+                    if (text!=text_end) {
+                        //fprintf(stderr,"\"%.*s\"\n",(int)(text_end-text),text);
+                        RenderTextLineWrappedWithSH(pos,text,text_end);
+                    }
+                    return;
+                }
+            }
+            return;
+        }
     }
 
 
@@ -2286,7 +2311,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
     // skip tabs and spaces
     while (*s==sp || *s==tab)	{
     if (s+1==text_end)  {
-        window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_end, wrap_width);
+        window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_end, 0.f);
         if (g.LogEnabled) LogRenderedText(pos, text, text_end);
         return;
     }
@@ -2294,10 +2319,9 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
     }
     if (s>text)	{
     // Draw Tabs and spaces
-    window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, s, wrap_width);
+    window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, s, 0.f);
     if (g.LogEnabled) LogRenderedText(pos, text, s);
-    //pos.x+=charWidth*(s-text);
-    pos.x+=ImGui::CalcTextSize(text,s).x;
+    pos.x+=CalcTextWidth(text,s);
     text=s;
     }
 
@@ -2329,17 +2353,16 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
 	/*window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Button), s, s+offset, wrap_width);
 	if (g.LogEnabled) LogRenderedText(pos, s, s+offset);
 	//pos.x+=charWidth*(offset);
-	pos.x+=ImGui::CalcTextSize(s, s+offset).x;*/
+    pos.x+=CalcTextWidth(s, s+offset).x;*/
 	for (int j=0;j<offset;j++)  {
 	    const char* ch = s+j;	    
         int sht = -1;
 	if (tokenIsNumber && *ch=='.') {sht = SH_NUMBER;++tokenIsNumber;}
 	if (sht==-1 && !shTypePunctuationMap.get(*ch,sht)) sht = -1;
-        if (sht>=0 && sht<SH_COUNT) window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1, wrap_width);
-        else window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), s+j, s+j+1, wrap_width);
+        if (sht>=0 && sht<SH_COUNT) window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1, 0.f);
+        else window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), s+j, s+j+1, 0.f);
         if (g.LogEnabled) LogRenderedText(pos, s+j, s+j+1);
-	    //pos.x+=charWidth*(offset);
-	    pos.x+=ImGui::CalcTextSize(s+j, s+j+1).x;
+        pos.x+=CalcTextWidth(s+j, s+j+1);
 	}
     }
     s+=offset;
@@ -2366,15 +2389,14 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
     }
     if (sht>=0 || shTypeKeywordMap.get(tok,sht)) {
             //fprintf(stderr,"Getting shTypeMap: \"%s\",%d\n",tok,sht);
-            window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], tok, tok+len_tok, wrap_width);
+            window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], tok, tok+len_tok, 0.f);
         }
         else {
             //fprintf(stderr,"Not Getting shTypeMap: \"%s\",%d\n",tok,sht);
-            window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), tok, tok+len_tok, wrap_width);
+            window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), tok, tok+len_tok, 0.f);
         }
         if (g.LogEnabled) LogRenderedText(pos, tok, tok+len_tok);
-        //pos.x+=charWidth*(len_tok);
-        pos.x+=ImGui::CalcTextSize(tok, tok+len_tok).x;
+        pos.x+=CalcTextWidth(tok, tok+len_tok);
     }
     //printf("Token: %s\n", tok);
     oldTok = tok+len_tok;s+=len_tok;
@@ -2393,11 +2415,10 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
         int sht = -1;
 	if (tokenIsNumber && *ch=='.') {sht = SH_NUMBER;++tokenIsNumber;}
 	if (sht==-1 && !shTypePunctuationMap.get(*ch,sht)) sht = -1;
-        if (sht>=0 && sht<SH_COUNT) window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1, wrap_width);
-        else window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), s+j, s+j+1, wrap_width);
+        if (sht>=0 && sht<SH_COUNT) window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1, 0.f);
+        else window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), s+j, s+j+1, 0.f);
         if (g.LogEnabled) LogRenderedText(pos, s+j, s+j+1);
-	    //pos.x+=charWidth*(offset);
-	    pos.x+=ImGui::CalcTextSize(s+j, s+j+1).x;
+        pos.x+=CalcTextWidth(s+j, s+j+1);
 	}
     }
 

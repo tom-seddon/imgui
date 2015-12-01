@@ -131,13 +131,14 @@ inline int countCodePoints(uint8_t* s, size_t* count) {
     return state != UTF8_ACCEPT;
 }
 
-inline static unsigned CountUTF8Chars(const char* text,bool* pOptionalIStringMalformedOut=NULL)   {
+inline static unsigned CountUTF8Chars(const char* text,const char* text_end=NULL,bool* pOptionalIStringMalformedOut=NULL)   {
     uint32_t codepoint;
     uint32_t state = 0;
     unsigned count = 0;
-    const uint8_t* s = (const uint8_t*) text;
+    const char* s = (const char*) text;
+    if (!text_end) text_end = text + strlen(text);
 
-    for (count = 0; *s; ++s)    {
+    for (count = 0; s!=text_end; ++s)    {
         if (!decode(&state, &codepoint, *s)) ++count;
     }
 
