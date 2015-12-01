@@ -34,16 +34,16 @@ public:
     }
 
     inline void clear() {
-         for (int i = 0,isz=hashNodes.size(); i < isz; ++i) {
-            HashNode*& node = hashNodes[i];
-            while (node) {
-                HashNode*& prev = node;
-                node = node->next;
-                //prev->~NodeType();          // ImVector does not call it
-                ImGui::MemFree(prev);       // items MUST be allocated by the user using ImGui::MemAlloc(...)
-            }
-            node = NULL;
-        }
+	for (int i = 0,isz=hashNodes.size(); i < isz; ++i) {
+	    HashNode* node = hashNodes[i];
+	    while (node) {
+		HashNode* prev = node;
+		node = node->next;
+		//prev->~NodeType();          // ImVector does not call it
+		ImGui::MemFree(prev);       // items MUST be allocated by the user using ImGui::MemAlloc(...)
+	    }
+	    hashNodes[i] = NULL;
+	}
     }
 
     inline bool get(const K &key, V &value) const {

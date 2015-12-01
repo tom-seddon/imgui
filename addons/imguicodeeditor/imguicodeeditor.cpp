@@ -1382,7 +1382,6 @@ bool CodeEditor::load(const char* filename, Language optionalLanguage) {
     fclose(f);
     if (optionalLanguage==LANG_COUNT) {
         optionalLanguage = GetLanguageFromFilename(filename);
-        //fprintf(stderr,"GetLanguageFromFilename(\"%s\")=%d\n",filename,optionalLanguage);
     }
     setText(length>0 ? &text[0] : "",optionalLanguage);
     return true;
@@ -1413,7 +1412,9 @@ void CodeEditor::setText(const char *text, Language _lang) {
     }
     lang = _lang;
     lines.setText(text);
-    if (enableTextFolding) ParseTextForFolding(false,true);
+    if (enableTextFolding) {
+        ParseTextForFolding(false,true);
+    }
 }
 
 inline static ImString TrimSpacesAndTabs(const ImString& sIn)    {
@@ -1443,6 +1444,8 @@ void CodeEditor::ParseTextForFolding(bool forceAllSegmentsFoldedOrNot, bool fold
     bool acceptStartMultilineCommentFolding = true;	//internal, do not touch
     Line* line=NULL;
     char ch;const int numLines = lines.size();
+    const int singleLineCommentSize = foldingStrings.singleLineComment ? strlen(foldingStrings.singleLineComment) : 0;
+    int firstValidCharPos = -1;
     for (int i=0;i<numLines; i++) {
         line = lines[i];
         if (!line) continue;
@@ -1450,8 +1453,29 @@ void CodeEditor::ParseTextForFolding(bool forceAllSegmentsFoldedOrNot, bool fold
         if (text.size() == 0)   continue;
         foldingStrings.resetTemporaryLineData();
 
-	for (int ti=0,tisz=text.length(); ti<tisz; ti++) {
+        firstValidCharPos = -1; // calculated only if singleLineCommentSize>0 ATM
+    for (int ti=0,tisz=text.length(); ti<tisz; ti++) {
 	    const char c = text [ti];
+        if (firstValidCharPos==-1 && singleLineCommentSize && (!(c==' ' || c=='\t'))) {
+            firstValidCharPos = ti;
+            // check if it's a line comment so we can exit early and prevent tokens after "//" to be incorrectly detected.
+            // TODO: shouldn't we exit even when we're not "firstValidCharPos" ? YES, but doing proper code folding is DIFFICULT... so we don't do it.
+            const char* ptext = &text[ti];
+            if (strncmp(ptext,foldingStrings.singleLineComment,singleLineCommentSize)==0) {
+                //fprintf(stderr,"%d) %c (%s %d)\n",i+1,c,foldingStrings.singleLineComment,singleLineCommentSize);
+                // Ok, but we can't skip regions: (e.g. "//region Blah blah blah" or "//endregion")
+                bool mustSkip = true;
+                for (int fsi=0,fsisz=foldingStrings.size();fsi<fsisz;fsi++) {
+                    const FoldingString& fs = foldingStrings[fsi];
+                    if (fs.kind!=FOLDING_TYPE_REGION) continue;
+                    if ( (strncmp(ptext,fs.start.c_str(),fs.start.size())==0) || (strncmp(ptext,fs.end.c_str(),fs.end.size())==0) ) {
+                        mustSkip = false;
+                        break;
+                    }
+                }
+                if (mustSkip) break;   // Skip line
+            }
+        }
 	    for (int fsi=0,fsisz=foldingStrings.size();fsi<fsisz;fsi++) {
 		FoldingString& fs = foldingStrings[fsi];
 		if (acceptStartMultilineCommentFolding || fs.kind != FOLDING_TYPE_COMMENT) {

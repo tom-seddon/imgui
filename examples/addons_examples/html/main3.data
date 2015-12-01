@@ -1,3 +1,125 @@
+# include <sadd.h>
+
+using namespace std;
+
+//This is a comment
+class MyClass
+{
+public:
+MyClass() {}
+void Init(int num)
+{  // for loop
+for (int t=0;t<20;t++)
+	{
+     mNum=t; /* setting var */
+     const float myFloat = 1.25f;
+      break;
+	}
+}
+
+private:
+int mNum;
+};
+
+static const char* SomeStrings[] = {"One"/*Comment One*//*Comment*/,"Two /*Fake Comment*/","Three\"Four"};
+
+while (i<25 && i>=0)   {
+	i--;
+break;} /*comment*/{/*This should not fold*/}/*comment2*/for (int i=0;i<20;i++)    {
+			continue;//OK
+} // end second folding
+
+for (int j=0;j<200;j++)  {
+continue;}
+
+//region Custom Region Here
+{
+//something inside here
+}
+//endregion
+
+/*
+Multiline
+Comment
+Here
+*/
+
+/*
+Some Unicode Characters here:
+â‚¬â‚¬â‚¬â‚¬
+*/
+
+using System.IO.Text;
+
+class WriteTextFile
+{
+    static void Main()
+    {
+
+        // These examples assume a "C:\Users\Public\TestFolder" folder on your machine.
+        // You can modify the path if necessary.
+
+
+        // Example #1: Write an array of strings to a file.
+        // Create a string array that consists of three lines.
+        string[] lines = { "First line", "Second line", "Third line" };
+        // WriteAllLines creates a file, writes a collection of strings to the file,
+        // and then closes the file.  You do NOT need to call Flush() or Close().
+        System.IO.File.WriteAllLines(@"C:\Users\Public\TestFolder\WriteLines.txt", lines);
+
+
+        // Example #2: Write one string to a text file.
+        string text = "A class is the most powerful data type in C#. Like a structure, " +
+                       "a class defines the data and behavior of the data type. ";
+        // WriteAllText creates a file, writes the specified string to the file,
+        // and then closes the file.    You do NOT need to call Flush() or Close().
+        System.IO.File.WriteAllText(@"C:\Users\Public\TestFolder\WriteText.txt", text);
+
+        // Example #3: Write only some strings in an array to a file.
+        // The using statement automatically flushes AND CLOSES the stream and calls 
+        // IDisposable.Dispose on the stream object.
+        // NOTE: do not use FileStream for text files because it writes bytes, but StreamWriter
+        // encodes the output as text.
+        using (System.IO.StreamWriter file = 
+            new System.IO.StreamWriter(@"C:\Users\Public\TestFolder\WriteLines2.txt"))
+        {
+            foreach (string line in lines)
+            {
+                // If the line doesn't contain the word 'Second', write the line to the file.
+                if (!line.Contains("Second"))
+                {
+                    file.WriteLine(line);
+                }
+            }
+        }
+
+        // Example #4: Append new text to an existing file.
+        // The using statement automatically flushes AND CLOSES the stream and calls 
+        // IDisposable.Dispose on the stream object.
+        using (System.IO.StreamWriter file = 
+            new System.IO.StreamWriter(@"C:\Users\Public\TestFolder\WriteLines2.txt", true))
+        {
+            file.WriteLine("Fourth line");
+        }
+    }
+}
+ //Output (to WriteLines.txt):
+ //   First line
+ //   Second line
+ //   Third line
+
+ //Output (to WriteText.txt):
+ //   A class is the most powerful data type in C#. Like a structure, a class defines the data and behavior of the data type.
+
+ //Output to WriteLines2.txt after Example #3:
+ //   First line
+ //   Third line
+
+ //Output to WriteLines2.txt after Example #4:
+ //   First line
+ //   Third line
+ //   Fourth line
+
 /*
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -281,32 +403,31 @@ private:
 
 
 #endif //IMGUICODEEDITOR_H_
-7z¼¯' 2}Œ›Ù      #       ?9$( :œÉV‹NújP±ôİS±J‚h[Î}‰ÙPDVÀ…šä—3X’{Œ ¾ÆÇ!¼ ¢Cî<òæfhjÃïŸ'Â¸bøİC®ìã¾Ad>¤¹qà4–åÉ»)ÿI=â'š\›5êi´x´/[ß§}¿a‡o´zÄGÙ‰ˆó_×áSYƒhg<LŸóÈ•hË¿² Ì¦„3”°bº¡•'~Xb„údŸµO¸¿à"	V§ñé8Ú§êh#„G¸Œ¡’%·8ÂMË-Ïo¡M©²İeÛéü/¡ÿè7íö¬±¿3Pòh¡tLh'±Æ;@ªC|èöªry®´qxä˜,Â‡j°7´Ì×w÷£Ï‰BšOU¾å3à`"—gDßÄÊëˆ[
-×Ì¤ŸìC%Ä£×hm‹ªŒNK‰¢ƒ' ìÃª´(¸3h'Ò ¸ o×eu¯¡fÚ[ü3LlpÓŒ{ÛëC¾Køt,²=€4ÁSİ!lÍYŞÓ_Èbéx ‚å½Áóílæ-°|³‘t~®:ª¾µ”à_NÄñZ`rï›a(ìñ.Ğ“N ß8Ïõ¨h €Ã»…AW\1í’òE"”ŞŠgöÄšDGæNaWì˜u8WRÔ·Ì³cV§q6 b„@È‰Ù¢“¦¾Ñ{æ´ƒr¡¿s2–äã·â^¼/ü1aëùU,ª3¡Ä@Jë,á– Z¦j{†±<šÈvûUi-}hn&EåÃJ•g¡›Ö9İ¥m@IU_û˜Z>4óøşOş*7!^ähiW5ÆWÿ»Mè4„}ğY­l¦V²‡‹?•v”\ÌÄ0!ºï7ëŸï’rLJ±íHİG7ÕéY9‡îy'+Ïú«v	ûğç
-œ:ÀÎ>´jXËªóºx1å>=×İ:ú/÷×_R˜¡„q‰A¿E:ÿ‚
-;”&DÀyÆÜ$Sö¹`Ü_Oûî®2Æ9È¬ùœé¨š¥¿,+òø|c"ƒ1ÇŸ¡‡‚rDW€M5éÓª«a[xA"§‚>vö¬P‹iÉAu×å´ïxcÖ\zĞ)¸âíRã½øsëªâÀÙP¾İGWÅ(Sx¬MÚµ£}üÓlJ/pÍ#Ø]ÏÃ`y&Ù½$³çÓTÓ)»½-B°›`CÇBè¢ª­×™2k]Z¾²6Nlf6ß®zÒøTÍÙ-À9Òªò¾#†5O0ìHÎäP·Ã€ØŠˆšEø3×)4ßNµCó¤êëŠ“Ûé1)~°QZ`¬ÚÊ†	_üŞ‡vHîÒE£ O ôö—ef3³* öÿrÌih§Ä»KBMz:C¹»|lÍ5¤È˜éŸ±¨-‹YH$ÈyŸÖÏ®’ŒÌP¡ŠÇ«ò¶Ş{L¦§éædÃP°èƒd ŞÊ9i	+n]Ó€]}Ñ6ıf!<ºâ¯ü™…†·Qğã:bŠş`Å6wÖ•°ETŠPÛµ®ÌÓåüfPI›»ÁA;kI¼«ÍXºr%Ü\¸/˜.åÕÊgp†ï€üˆÖÕwV=ae¬îtÄõBß•7J”!Yš#ªAzASxyêàÇğ$•ûv ¿jºß)A1ängm’ÚšƒyÄÔÎIÜ"£|ó kXn‘y0B@qWñ­@‰›5ñYfîy×}·ùïáØ›kLãØL9FØêyŸ~î]È[qÍØu1ı¸iŸ­%—Ñ°+rœ‰Ÿ\…šs`Å)T+°ü¯àiÌP?=WoÙ-é‰uVRŸA­–9*’bmàK­&;~o¿ñ¨CBÿOYp+ˆXçÊ¦ª¿WœElnæ}M}U;8Í;â6Ø“˜ÉÚÜ) $„VVê…9\ùâ ZŞçHj'÷¶´üx$‘Uf–D²ëxQ³òûºğOc¾K½®¨ŸÚ&DÍ¿=:«QL˜xñİ2PØâŒ¢$sÙÿtş{›´˜ÚbŠ© EÔ:Ú8kàMÃ³H“Ó líˆù´ã—=¬&lÆ<0õ{Ÿ%oã©ƒv¾>9vM¯<‹öœàuQ=h0=Åçpû}u­NÿÿÄ5Ãô˜©bÁ8StÄ(B;ßcÄ©¿•UéSÖ¶¢ƒ°”•f5_`¯U¯+OFkã9?ğ@Éäey09›ßd6ÖcÿBï(‡­;ÜûI;o×´!“%÷Quåw¼~œ%ŒH=Ù•‘Cø"Kk	»ëß}ªÂS3€§ÑE“lÕaı<†Í5¸cô®-{ˆeúTW`ı0ğ`š¢»{¨bÆ5¡¡ıSvz|	!É„p‘¯#É¡¬ÌŠÛû’Ü&\°”šÒş<´¬Fœ2c>®µ÷wî½Øİ*&ú-±N‚÷¦aàâœß~¶G?bãÎ+Á:ÚŸùƒˆz™]5#Ìpû÷"}µPÔy_˜û üAŠèƒö$}÷di·7ñ(ø?ÜÆ­îi<ÏıQıÒO–¥ªˆ8[.B¬Á,Ë^ •GRbFãyÅr£Q-î†„«ˆñzMMÊ0‚HÓt¢	x%½×N‘^N*®¢tm8Şä ÔğyØ²/«º)´~2æw^ï7§¹íH–_!&p§‡²óµ¾ğ0Ÿ€Â£e¨rÄºÔDµ€ªµõÂu#ç¶6#âvvÃ9{Pê¬»àk4¢W¤Oë•ø~–+İ“rY…@J,qãô~Ğ«Ó*­xS}å4ÄÕ'Î·(ÎZ'Óß#8¨oJîšZ5â½,ÄTşÄö†l'ÔØbĞx
-Gî¸Ù±<K–>¸ÜP½†`¦L²ğ—÷@dŠ3.X÷¾M¡ŒÉâ}j“6Â¥$ÌÚ>-™æafj2…Zwâh?S»jxhkŸDëïöòP ÇN`gê„‰JPq\Vnë€r› şq‡«å·]Ô#ŞsáO!hS³m[3"¦à§fş«Õ1"£C’BKã²÷^”¢ËÕaº¶M"óÖwÂ“Ø­=Ø
-`­@~®hºz¥¦JJ´D|UmZ&i¡È·©××B
-÷^­3ãæ;Ç;²„5j°Óİ•5o
-_sØøÚ4³6ÉY¢œàøÄSï›ÕĞÚ0,}£¡¼%è&_‘\ŸzÙO7&ÇôQ=7Â7Ø› z&¥(ÑÂ¶TNc–2ÏÃô+2ftßQı@	‹#|ÌPªÅSií­gC:$r0HŞd#¦`’’Ä®ŠxµAzphÌF û.Ò?ü#Ôæº;Z"+êcyòCèØCL*–‘M­.Dí½˜vñZŒcŸ372ƒı†sBšvøí“çOñ´§{'ô«l	`?@á¸ld†
-ØææÚÚ^1¿©nŞµv]ëäô(ŠÓöÒ´ÃS[CáÏI|­ÉÎJD¦ûwÒÏáó}…3³`9W¦ÔˆƒÇp:l>Â3ˆ@€ ¹nOA‡²Ó±z—vêV¤D›£\xÿLv*?mNº^IºÅèTg_&…Nº>(kjºÉ¶˜œ%ùPu'v×)‡´½ƒqë~›&Öd­àxf.ÌXßKC }¤!,õar`X´Iï÷Ö÷ŞS›ĞåŠö8“å*o¬ZËÈĞ/Áj&ésJ÷üÁå‹`x9ä;r=ä«”ãÅ wh`„á]Ò¤NáV «@¨@ùG-Ø‹5Ú¹•(\üšİâ?ÊWTõ.É‡÷‚Ê•P}ôåÎú-Ùú½©p´—ëá¶®ËLê½ f°@¤ÀKzß€}b}ŸOw\¾G¿>`X`úr;™çÍBo/+Ä¢<”±ciQ‚\¬ÕÇWã]´ÁÑ¬	=ŞA¬÷’X÷)˜a¹îGŸ¹|üŒâ!›C=Û¢,®«ÇÍ”Œ"km¶½ûDR!²}dm±ÆºWˆÌ}Ûr6Í&'-‡ _ò§Ÿg8ñ”¨•@3 >ôKegÖ€%1
-¡»ç?4o5îQümL°lò4Q°•'–*	Åc}¢z‹VPÃ(AwŞfş(î&MÆ„µŸeË¤Ì¯+us¾X4¥÷¼µ8ÒV$-\:(÷†¥ÂDTdÛeâxá¯×%V¨— Áqšj:_M·D‹‘…ˆ7Ìã^gŞiyUfS®„ ‹<š»æe3¼ÇİtèÈÕ ®1 6^Ü+“ZeÅì~##ÿ~Şæq[EÌ¶’\3«„iãE,‚nÌ×XĞx¹Â©@	D~Ü1oÚŸµ_˜şA¤\J@³Òù¿jİG:»-3ı`PÜÈĞI=µåÌJÆ«soÀykõ”ø•`i´‰0[ç><q@3Ìz©Psät¯!|äæ.\ºĞ¶Y'¦·‚Ê~‚Ë•sÖ]Û½Â'§ ¼P4U$“ñgˆN;İ÷L¡ÁÙ¢ëlÓb!¿zozş)¡âòÒHEó”s@5á˜ ù?/Èø$3 ŠÃÛóU4o«gblâ§P ÑìÊ±í.­NÁx:6ø…Ğ§MËPÂ6ÛÙŒƒ	a‹ıToùÓ‡·ßK#éH'˜v}ÿ3Ã©ü§üøèüG,×™ñiÏ™v®ş¦P0á©\MsğOæ¢¦$[Æ/{œQÒŸ`ŞãêÂÜwóùMÁO¥»ß'g¥6íÃ›“Ç6FeÌ£’Êí5'Äp»ZÕœ½ŞEÄ4ÜX'óœ=ümpjw`G—V‚ä®w#şy»2Ûuâ¶J©ùo¡PTwú8vú"HJ„î&
-_áê¢•îg?ù\ô–É¨“îgEíø.  Ô,!úì&Õ	í¨QÄ„!ÌÍïÈ.-„,Ö›Áÿ©†ãƒ™p°í/ oj‘¬=*À:ì.ôõœ¨œFñ÷sÚŸàÖX$IA>›q‹íí&¢%:ôèpñË×CUú•Vúö„p$Wå²;»,'ˆÎÊ(ÓgAáëºåà]óäãI*QÿQ¿¸€zÿ6©ş€¥šL¼£Û SWÍWŸÏã{8éØG §”[°€F™È×ršÎ™Ñj:€Ä+¯×êÔPæóBå<ùFm”Vú²1«–En¬ÜnÀX•çYzÈ˜à,ûÃL¢êÎÕ³	·`Ó
-'Â]†É³Dß·3ELpà×äf‚îş\³AÔêX'ésŸeå[\Âİ¾ØuÍmf=Ã7eÉ<Úgº¦^©¢Ã¥AÏW½²§ÓÁí½j¹"«ÏüîÕÌljlæ¦ÇÈ 7c–ën.F1á¶·²h'<“
-tP;|dGşÄJ¤˜±Ì»FğÛJğØJiïÆûJÁXù®2šš?‹÷‘®ßB…xb5‡%¡Ög5Ô\ä}!—Ö]#¬Û¤›†4
-êåzz]xe¾®¬©÷±dÛ0¿|ÛC`÷`½Rù.áºd–Ó¸I Doà?Lô‹Í¾O¶%6&%UåÓCBöBÊ!ó[=a ¶d!©Ã,Œñ·×eYkèujâ·ŠN#şª§wYw”ªéƒm¹n€"\İƒÃ;5­Wd›w&Ö¾ÖW  Î[„ÌÄ‰V¶OÁ¼9“ïT¤U©AW”ïÍIüuqÁsß|lû3J=oá­a—ú 
-¯şN(Cf_…ÿÒğæ
-Õ@XWx…`…&!?À=èLa§ÜŠl@¯ö?
-s‹Õ¶=ZÍ¿9ƒ-~iÄåegvùƒôÂĞñû•e¥*Ğ£ÿãøH¥ãì-Ï,ƒÓ¬íYıû.úIJŸ¯=+µb¤w(â©ß2¹åƒñV#y9<n"9:Ãå=£¤ÆÃ‰ƒ‹íèòíT#11ø‚N)‘ü²Ğ}c_pèï›‡=¿êqà	sx«,(ÇğœÎÔ+ÕŸNPM1ÌĞo@p/[VtÍº™bãŠ|XÎD
-—hşó“):È §úËTq˜£¡™¦Pµ”u1:•Åáj@Õ8„„ Ó<i)_ô=¬”Â'¥X»kòCÓ (¿¼ÅÚ¯Q‹C®ğVâB>,Âªe¶Ç[®6cşcz êh¦PŞ=%Ó#;Ë#–XwÉ'8¡m@³@LPÍÃ:s/G-µ
-¥_¿ÑƒJá=å+8&)ÉW¤Ü¨İ/ÉŞüx¡ü­ˆÒA`ºëŞ®Íãµ¾æ
-@%K„$C gš§Fêtš)WA011ué=Óæã±ïRëõ
-#‚T^‰{™ÙÓ>:dD¡é¥/j?€2{Ìú>Åİ3î*Ë¡7aµ,U*%`` 
-©şVT,-©„ØÅÈ»şÍ½‰»'1¾on¹c‰c5i™C'Ş¨†¾4,C0ŸQ¢}ÈtgÙØ1•
-º ¬—E­O¿_—5‘À*d	/wÔE*$jAeóÖ^øœ'9•) Ò¦k%BŠH4Èş‡ÁVZ·°‚øh/['Á71Fòè*`ïå¢nÈ¿”š^ĞŸwf1O«6È†;Æœà1êñpéoqó_z+‰¬h^Â#‰õá³°
-Õ¢ö™sbİ•(ØšPÈÎbÚğ åÓG½gwQ÷Ö<YK™·…!h_ö‹Í¨õ‡‰MÙZh.“kàÜM»æ™ÀÅL\Ã¼ÔÁXyæ«ŠˆÌ?í6—s;—•ÎˆÆÖ¬ÀµÿØPèQ:,åš¤íE|&¥ûwøËĞ1LİĞyêŒ¾MÍ”i$ç&zTzMÁòóqÂå# [)ZÔ…äŸœt>—­Që(«óA­˜§# “ˆ  3®Ö
-@´×$Óş³~1â–›°öz8¤éƒÙd1}™\CÊ7}@ëªjçºÜDÖªd(‚Ç‡Iåx2Î×{Ôx'º=~ë]²’mºÜs@qQ 2H«]ªØyİ¯mA”T¨.¬.U´‚ ¡/i2áøêÔ.É‹Mè*”¾_ïÎ…·÷>Z9y«P=¸L   ”?	€š  #]   €¹
-k:  /* Creation of a simple Windows API program */
+-- Opens a file in read
+file = io.open("test.lua", "r")
+
+-- sets the default input file as test.lua
+io.input(file)
+
+-- prints the first line of the file
+print(io.read())
+
+-- closes the open file
+io.close(file)
+
+-- Opens a file in append mode
+file = io.open("test.lua", "a")
+
+-- sets the default output file as test.lua
+io.output(file)
+
+-- appends a word test to the last line of the file
+io.write("-- End of the test.lua file")
+
+-- closes the open file
+io.close(file)
+
+/* Creation of a simple Windows API program */
 
 #include <windows.h>
 
@@ -399,6 +520,591 @@ WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
+# This is the release version of the plugin file io_import_scene_osm_dev.py
+# If you would like to make edits, make them in the file io_import_scene_osm_dev.py and the other related modules
+# To create the release version of io_import_scene_osm_dev.py, executed:
+# python plugin_builder.py io_import_scene_osm_dev.py:
+bl_info = {
+	"name": "Import OpenStreetMap (.osm)",
+	"author": "Vladimir Elistratov <vladimir.elistratov@gmail.com>",
+	"version": (1, 0, 0),
+	"blender": (2, 6, 9),
+	"location": "File > Import > OpenStreetMap (.osm)",
+	"description": "Import a file in the OpenStreetMap format (.osm)",
+	"warning": "",
+	"wiki_url": "https://github.com/vvoovv/blender-geo/wiki/Import-OpenStreetMap-(.osm)",
+	"tracker_url": "https://github.com/vvoovv/blender-geo/issues",
+	"support": "COMMUNITY",
+	"category": "Import-Export",
+}
+
+import bpy, bmesh
+# ImportHelper is a helper class, defines filename and invoke() function which calls the file selector
+from bpy_extras.io_utils import ImportHelper
+
+import sys, os
+import math
+
+# see conversion formulas at
+# http://en.wikipedia.org/wiki/Transverse_Mercator_projection
+# and
+# http://mathworld.wolfram.com/MercatorProjection.html
+class TransverseMercator:
+	radius = 6378137
+
+	def __init__(self, **kwargs):
+		# setting default values
+		self.lat = 0 # in degrees
+		self.lon = 0 # in degrees
+		self.k = 1 # scale factor
+		
+		for attr in kwargs:
+			setattr(self, attr, kwargs[attr])
+		self.latInRadians = math.radians(self.lat)
+
+	def fromGeographic(self, lat, lon):
+		lat = math.radians(lat)
+		lon = math.radians(lon-self.lon)
+		B = math.sin(lon) * math.cos(lat)
+		x = 0.5 * self.k * self.radius * math.log((1+B)/(1-B))
+		y = self.k * self.radius * ( math.atan(math.tan(lat)/math.cos(lon)) - self.latInRadians )
+		return (x,y)
+
+	def toGeographic(self, x, y):
+		x = x/(self.k * self.radius)
+		y = y/(self.k * self.radius)
+		D = y + self.latInRadians
+		lon = math.atan(math.sinh(x)/math.cos(D))
+		lat = math.asin(math.sin(D)/math.cosh(x))
+
+		lon = self.lon + math.degrees(lon)
+		lat = math.degrees(lat)
+		return (lat, lon)
+import xml.etree.cElementTree as etree
+import inspect, importlib
+
+def prepareHandlers(kwArgs):
+	nodeHandlers = []
+	wayHandlers = []
+	# getting a dictionary with local variables
+	_locals = locals()
+	for handlers in ("nodeHandlers", "wayHandlers"):
+		if handlers in kwArgs:
+			for handler in kwArgs[handlers]:
+				if isinstance(handler, str):
+					# we've got a module name
+					handler = importlib.import_module(handler)
+				if inspect.ismodule(handler):
+					# iterate through all module functions
+					for f in inspect.getmembers(handler, inspect.isclass):
+						_locals[handlers].append(f[1])
+				elif inspect.isclass(handler):
+					_locals[handlers].append(handler)
+		if len(_locals[handlers])==0: _locals[handlers] = None
+	return (nodeHandlers if len(nodeHandlers) else None, wayHandlers if len(wayHandlers) else None)
+
+class OsmParser:
+	
+	def __init__(self, filename, **kwargs):
+		self.nodes = {}
+		self.ways = {}
+		self.relations = {}
+		self.minLat = 90
+		self.maxLat = -90
+		self.minLon = 180
+		self.maxLon = -180
+		# self.bounds contains the attributes of the bounds tag of the .osm file if available
+		self.bounds = None
+		
+		(self.nodeHandlers, self.wayHandlers) = prepareHandlers(kwargs)
+		
+		self.doc = etree.parse(filename)
+		self.osm = self.doc.getroot()
+		self.prepare()
+
+	def prepare(self):
+		allowedTags = set(("node", "way", "bounds"))
+		for e in self.osm: # e stands for element
+			attrs = e.attrib
+			if e.tag not in allowedTags : continue
+			if "action" in attrs and attrs["action"] == "delete": continue
+			if e.tag == "node":
+				_id = attrs["id"]
+				tags = None
+				for c in e:
+					if c.tag == "tag":
+						if not tags: tags = {}
+						tags[c.get("k")] = c.get("v")
+				lat = float(attrs["lat"])
+				lon = float(attrs["lon"])
+				# calculating minLat, maxLat, minLon, maxLon
+				# commented out: only imported objects take part in the extent calculation
+				#if lat<self.minLat: self.minLat = lat
+				#elif lat>self.maxLat: self.maxLat = lat
+				#if lon<self.minLon: self.minLon = lon
+				#elif lon>self.maxLon: self.maxLon = lon
+				# creating entry
+				entry = dict(
+					id=_id,
+					e=e,
+					lat=lat,
+					lon=lon
+				)
+				if tags: entry["tags"] = tags
+				self.nodes[_id] = entry
+			elif e.tag == "way":
+				_id = attrs["id"]
+				nodes = []
+				tags = None
+				for c in e:
+					if c.tag == "nd":
+						nodes.append(c.get("ref"))
+					elif c.tag == "tag":
+						if not tags: tags = {}
+						tags[c.get("k")] = c.get("v")
+				# ignore ways without tags
+				if tags:
+					self.ways[_id] = dict(
+						id=_id,
+						e=e,
+						nodes=nodes,
+						tags=tags
+					)
+			elif e.tag == "bounds":
+				self.bounds = {
+					"minLat": float(attrs["minlat"]),
+					"minLon": float(attrs["minlon"]),
+					"maxLat": float(attrs["maxlat"]),
+					"maxLon": float(attrs["maxlon"])
+				}
+		
+		self.calculateExtent()
+
+	def iterate(self, wayFunction, nodeFunction):
+		nodeHandlers = self.nodeHandlers
+		wayHandlers = self.wayHandlers
+		
+		if wayHandlers:
+			for _id in self.ways:
+				way = self.ways[_id]
+				if "tags" in way:
+					for handler in wayHandlers:
+						if handler.condition(way["tags"], way):
+							wayFunction(way, handler)
+							continue
+		
+		if nodeHandlers:
+			for _id in self.nodes:
+				node = self.nodes[_id]
+				if "tags" in node:
+					for handler in nodeHandlers:
+						if handler.condition(node["tags"], node):
+							nodeFunction(node, handler)
+							continue
+
+	def parse(self, **kwargs):
+		def wayFunction(way, handler):
+			handler.handler(way, self, kwargs)
+		def nodeFunction(node, handler):
+			handler.handler(node, self, kwargs)
+		self.iterate(wayFunction, nodeFunction)
+
+	def calculateExtent(self):
+		def wayFunction(way, handler):
+			wayNodes = way["nodes"]
+			for node in range(len(wayNodes)-1): # skip the last node which is the same as the first ones
+				nodeFunction(self.nodes[wayNodes[node]])
+		def nodeFunction(node, handler=None):
+			lon = node["lon"]
+			lat = node["lat"]
+			if lat<self.minLat: self.minLat = lat
+			elif lat>self.maxLat: self.maxLat = lat
+			if lon<self.minLon: self.minLon = lon
+			elif lon>self.maxLon: self.maxLon = lon
+		self.iterate(wayFunction, nodeFunction)
+import os, math
+import bpy, bmesh
+import bmesh
+
+def extrudeMesh(bm, thickness):
+	"""
+	Extrude bmesh
+	"""
+	geom = bmesh.ops.extrude_face_region(bm, geom=bm.faces)
+	verts_extruded = [v for v in geom["geom"] if isinstance(v, bmesh.types.BMVert)]
+	bmesh.ops.translate(bm, verts=verts_extruded, vec=(0, 0, thickness))
+def assignTags(obj, tags):
+	for key in tags:
+		obj[key] = tags[key]
+
+class buildings:
+	@staticmethod
+	def condition(tags, way):
+		return "building" in tags
+	
+	@staticmethod
+	def handler(way, parser, kwargs):
+		wayNodes = way["nodes"]
+		numNodes = len(wayNodes)-1 # we need to skip the last node which is the same as the first ones
+		# a polygon must have at least 3 vertices
+		if numNodes<3: return
+		
+		if not kwargs["bm"]: # not a single mesh
+			tags = way["tags"]
+			thickness = kwargs["thickness"] if ("thickness" in kwargs) else 0
+			osmId = way["id"]
+			# compose object name
+			name = osmId
+			if "addr:housenumber" in tags and "addr:street" in tags:
+				name = tags["addr:street"] + ", " + tags["addr:housenumber"]
+			elif "name" in tags:
+				name = tags["name"]
+		
+		bm = kwargs["bm"] if kwargs["bm"] else bmesh.new()
+		verts = []
+		for node in range(numNodes):
+			node = parser.nodes[wayNodes[node]]
+			v = kwargs["projection"].fromGeographic(node["lat"], node["lon"])
+			verts.append( bm.verts.new((v[0], v[1], 0)) )
+		
+		bm.faces.new(verts)
+		
+		if not kwargs["bm"]:
+			thickness = kwargs["thickness"] if ("thickness" in kwargs) else 0
+			# extrude
+			if thickness>0:
+				extrudeMesh(bm, thickness)
+			
+			bm.normal_update()
+			
+			mesh = bpy.data.meshes.new(osmId)
+			bm.to_mesh(mesh)
+			
+			obj = bpy.data.objects.new(name, mesh)
+			bpy.context.scene.objects.link(obj)
+			bpy.context.scene.update()
+			
+			# final adjustments
+			obj.select = True
+			# assign OSM tags to the blender object
+			assignTags(obj, tags)
+
+
+class highways:
+	@staticmethod
+	def condition(tags, way):
+		return "highway" in tags
+	
+	@staticmethod
+	def handler(way, parser, kwargs):
+		wayNodes = way["nodes"]
+		numNodes = len(wayNodes) # we need to skip the last node which is the same as the first ones
+		# a way must have at least 2 vertices
+		if numNodes<2: return
+		
+		if not kwargs["bm"]: # not a single mesh
+			tags = way["tags"]
+			osmId = way["id"]
+			# compose object name
+			name = tags["name"] if "name" in tags else osmId
+		
+		bm = kwargs["bm"] if kwargs["bm"] else bmesh.new()
+		verts = []
+		prevVertex = None
+		for node in range(numNodes):
+			node = parser.nodes[wayNodes[node]]
+			v = kwargs["projection"].fromGeographic(node["lat"], node["lon"])
+			v = bm.verts.new((v[0], v[1], 0))
+			if prevVertex:
+				bm.edges.new([prevVertex, v])
+			prevVertex = v
+		
+		if not kwargs["bm"]:
+			mesh = bpy.data.meshes.new(osmId)
+			bm.to_mesh(mesh)
+			
+			obj = bpy.data.objects.new(name, mesh)
+			bpy.context.scene.objects.link(obj)
+			bpy.context.scene.update()
+			
+			# final adjustments
+			obj.select = True
+			# assign OSM tags to the blender object
+			assignTags(obj, tags)
+import os, math
+import bpy, bmesh
+import bmesh
+
+def extrudeMesh(bm, thickness):
+	"""
+	Extrude bmesh
+	"""
+	geom = bmesh.ops.extrude_face_region(bm, geom=bm.faces)
+	verts_extruded = [v for v in geom["geom"] if isinstance(v, bmesh.types.BMVert)]
+	bmesh.ops.translate(bm, verts=verts_extruded, vec=(0, 0, thickness))
+def assignTags(obj, tags):
+	for key in tags:
+		obj[key] = tags[key]
+
+class buildings:
+	@staticmethod
+	def condition(tags, way):
+		return "building" in tags
+	
+	@staticmethod
+	def handler(way, parser, kwargs):
+		wayNodes = way["nodes"]
+		numNodes = len(wayNodes)-1 # we need to skip the last node which is the same as the first ones
+		# a polygon must have at least 3 vertices
+		if numNodes<3: return
+		
+		if not kwargs["bm"]: # not a single mesh
+			tags = way["tags"]
+			thickness = kwargs["thickness"] if ("thickness" in kwargs) else 0
+			osmId = way["id"]
+			# compose object name
+			name = osmId
+			if "addr:housenumber" in tags and "addr:street" in tags:
+				name = tags["addr:street"] + ", " + tags["addr:housenumber"]
+			elif "name" in tags:
+				name = tags["name"]
+		
+		bm = kwargs["bm"] if kwargs["bm"] else bmesh.new()
+		verts = []
+		for node in range(numNodes):
+			node = parser.nodes[wayNodes[node]]
+			v = kwargs["projection"].fromGeographic(node["lat"], node["lon"])
+			verts.append( bm.verts.new((v[0], v[1], 0)) )
+		
+		bm.faces.new(verts)
+		
+		if not kwargs["bm"]:
+			thickness = kwargs["thickness"] if ("thickness" in kwargs) else 0
+			# extrude
+			if thickness>0:
+				extrudeMesh(bm, thickness)
+			
+			bm.normal_update()
+			
+			mesh = bpy.data.meshes.new(osmId)
+			bm.to_mesh(mesh)
+			
+			obj = bpy.data.objects.new(name, mesh)
+			bpy.context.scene.objects.link(obj)
+			bpy.context.scene.update()
+			
+			# final adjustments
+			obj.select = True
+			# assign OSM tags to the blender object
+			assignTags(obj, tags)
+
+
+class highways:
+	@staticmethod
+	def condition(tags, way):
+		return "highway" in tags
+	
+	@staticmethod
+	def handler(way, parser, kwargs):
+		wayNodes = way["nodes"]
+		numNodes = len(wayNodes) # we need to skip the last node which is the same as the first ones
+		# a way must have at least 2 vertices
+		if numNodes<2: return
+		
+		if not kwargs["bm"]: # not a single mesh
+			tags = way["tags"]
+			osmId = way["id"]
+			# compose object name
+			name = tags["name"] if "name" in tags else osmId
+		
+		bm = kwargs["bm"] if kwargs["bm"] else bmesh.new()
+		verts = []
+		prevVertex = None
+		for node in range(numNodes):
+			node = parser.nodes[wayNodes[node]]
+			v = kwargs["projection"].fromGeographic(node["lat"], node["lon"])
+			v = bm.verts.new((v[0], v[1], 0))
+			if prevVertex:
+				bm.edges.new([prevVertex, v])
+			prevVertex = v
+		
+		if not kwargs["bm"]:
+			mesh = bpy.data.meshes.new(osmId)
+			bm.to_mesh(mesh)
+			
+			obj = bpy.data.objects.new(name, mesh)
+			bpy.context.scene.objects.link(obj)
+			bpy.context.scene.update()
+			
+			# final adjustments
+			obj.select = True
+			# assign OSM tags to the blender object
+			assignTags(obj, tags)
+import bmesh
+
+def extrudeMesh(bm, thickness):
+	"""
+	Extrude bmesh
+	"""
+	geom = bmesh.ops.extrude_face_region(bm, geom=bm.faces)
+	verts_extruded = [v for v in geom["geom"] if isinstance(v, bmesh.types.BMVert)]
+	bmesh.ops.translate(bm, verts=verts_extruded, vec=(0, 0, thickness))
+
+class ImportOsm(bpy.types.Operator, ImportHelper):
+	"""Import a file in the OpenStreetMap format (.osm)"""
+	bl_idname = "import_scene.osm"  # important since its how bpy.ops.import_scene.osm is constructed
+	bl_label = "Import OpenStreetMap"
+	bl_options = {"UNDO"}
+
+	# ImportHelper mixin class uses this
+	filename_ext = ".osm"
+
+	filter_glob = bpy.props.StringProperty(
+		default="*.osm",
+		options={"HIDDEN"},
+	)
+
+	ignoreGeoreferencing = bpy.props.BoolProperty(
+		name="Ignore existing georeferencing",
+		description="Ignore existing georeferencing and make a new one",
+		default=False,
+	)
+	
+	singleMesh = bpy.props.BoolProperty(
+		name="Import as a single mesh",
+		description="Import OSM objects as a single mesh instead of separate Blender objects",
+		default=False,
+	)
+
+	importBuildings = bpy.props.BoolProperty(
+		name="Import buildings",
+		description="Import building outlines",
+		default=True,
+	)
+
+	importHighways = bpy.props.BoolProperty(
+		name="Import roads and paths",
+		description="Import roads and paths",
+		default=False,
+	)
+
+	thickness = bpy.props.FloatProperty(
+		name="Thickness",
+		description="Set thickness to make OSM building outlines extruded",
+		default=0,
+	)
+
+	def execute(self, context):
+		# setting active object if there is no active object
+		if context.mode != "OBJECT":
+			# if there is no object in the scene, only "OBJECT" mode is provided
+			if not context.scene.objects.active:
+				context.scene.objects.active = context.scene.objects[0]
+			bpy.ops.object.mode_set(mode="OBJECT")
+		
+		bpy.ops.object.select_all(action="DESELECT")
+		
+		name = os.path.basename(self.filepath)
+		
+		if self.singleMesh:
+			self.bm = bmesh.new()
+		else:
+			self.bm = None
+			# create an empty object to parent all imported OSM objects
+			bpy.ops.object.empty_add(type="PLAIN_AXES", location=(0, 0, 0))
+			parentObject = context.active_object
+			self.parentObject = parentObject
+			parentObject.name = name
+		
+		self.read_osm_file(context)
+		
+		if self.singleMesh:
+			bm = self.bm
+			# extrude
+			if self.thickness>0:
+				extrudeMesh(bm, self.thickness)
+			
+			bm.normal_update()
+			
+			mesh = bpy.data.meshes.new(name)
+			bm.to_mesh(mesh)
+			
+			obj = bpy.data.objects.new(name, mesh)
+			bpy.context.scene.objects.link(obj)
+			
+			# remove double vertices
+			context.scene.objects.active = obj
+			bpy.ops.object.mode_set(mode="EDIT")
+			bpy.ops.mesh.select_all(action="SELECT")
+			bpy.ops.mesh.remove_doubles()
+			bpy.ops.mesh.select_all(action="DESELECT")
+			bpy.ops.object.mode_set(mode="OBJECT")
+			
+			bpy.context.scene.update()
+		else:
+			# perform parenting
+			context.scene.objects.active = parentObject
+			bpy.ops.object.parent_set()
+		
+		bpy.ops.object.select_all(action="DESELECT")
+		return {"FINISHED"}
+
+	def read_osm_file(self, context):
+		scene = context.scene
+		
+		wayHandlers = []
+		if self.importBuildings: wayHandlers.append(buildings)
+		if self.importHighways: wayHandlers.append(highways)
+		
+		osm = OsmParser(self.filepath,
+			# possible values for wayHandlers and nodeHandlers list elements:
+			#	1) a string name for the module containing classes (all classes from the modules will be used as handlers)
+			#	2) a python variable representing the module containing classes (all classes from the modules will be used as handlers)
+			#	3) a python variable representing the class
+			# Examples:
+			# wayHandlers = [buildings, highways]
+			# wayHandlers = [handlers.buildings]
+			# wayHandlers = [handlers]
+			# wayHandlers = ["handlers"]
+			wayHandlers = wayHandlers
+		)
+		
+		if "latitude" in scene and "longitude" in scene and not self.ignoreGeoreferencing:
+			lat = scene["latitude"]
+			lon = scene["longitude"]
+		else:
+			if osm.bounds and self.importHighways:
+				# If the .osm file contains the bounds tag,
+				# use its values as the extent of the imported area.
+				# Highways may go far beyond the values of the bounds tag.
+				# A user might get confused if higways are used in the calculation of the extent of the imported area.
+				bounds = osm.bounds
+				lat = (bounds["minLat"] + bounds["maxLat"])/2
+				lon = (bounds["minLon"] + bounds["maxLon"])/2
+			else:
+				lat = (osm.minLat + osm.maxLat)/2
+				lon = (osm.minLon + osm.maxLon)/2
+			scene["latitude"] = lat
+			scene["longitude"] = lon
+		
+		osm.parse(
+			projection = TransverseMercator(lat=lat, lon=lon),
+			thickness = self.thickness,
+			bm = self.bm # if present, indicates the we need to create as single mesh
+		)
+
+
+# Only needed if you want to add into a dynamic menu
+def menu_func_import(self, context):
+	self.layout.operator(ImportOsm.bl_idname, text="OpenStreetMap (.osm)")
+
+def register():
+	bpy.utils.register_class(ImportOsm)
+	bpy.types.INFO_MT_file_import.append(menu_func_import)
+
+def unregister():
+	bpy.utils.unregister_class(ImportOsm)
+	bpy.types.INFO_MT_file_import.remove(menu_func_import)
         FFTMh½QL  ˜   GDEF ğ   –À    GPOS5ÎN°  —Ì   @GSUBR·€s  –à   ìOS/2ŒûŠ_  ¨   Vcmap
 ì±    Rcvt éÛ  ¬  4fpgm[kß  ä   ¬gasp    –´   glyfÄÌW  h  c|headüœÅ  ,   6hhea@ó  d   $hmtxK„@Ï     locaÔiî”  à  ˆmaxp>,  ˆ    name`äê‰  sä  !postus©  ”ü  ·prep:ÇÀ        W
 '¥ G_<õ      Ò{}š    Ò{}š  şÑm             mş  Ñ    Ñ                    Ã M  2    ™   W   Ñ   3™  3™  × f  	æ &ÿÒ ùû  (    PfEd @   ¬şšmã` ßßß    Ñ D    Ñ  Ñ  R  ¾ ! 9ª\ ¦ X“dé f … ö ˜ ‰ f  … ‹ ƒ é“ X X X ô  % ¦ ‹ ‰ Å é f ‰ É m ‰ × V ‹ u Å u  ‹ / “ 9    % œÏ fZ H   … Á Ã { { Ã { Ã ² º ì   m Ã ‰ ¾ ‰j Õ ƒ Ã d   L h Ë İ İ X   Õ ‹ Í % Ç?   w Xd  =+ XBFÛ Ã jé‹X ô Á    Á % % % % % %   ‹ Å Å Å Å É É É É  ‹ u u u u u –  “ “ “ “ % É ¼ … … … … … … ) Ã { { { { ² ² ² ² ‰ Ã ‰ ‰ ‰ ‰ ‰ X / Ã Ã Ã Ã h ¾ h %                 L       0        ~ ÿ ¬ÿÿ       ¬ÿÿÿãÿÂà                                        	
