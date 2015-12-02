@@ -278,7 +278,8 @@ private:
     void TextLineWithSH(const char *fmt...);
 
     float CalcTextWidth(const char* text,const char* text_end=NULL,int* pNumUTF8CharsOut=NULL);
-
+    mutable bool curlineStartedWithDiesis;
+    mutable Line* curline;
 };
 
 

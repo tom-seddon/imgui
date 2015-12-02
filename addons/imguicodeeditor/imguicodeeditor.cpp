@@ -1899,6 +1899,8 @@ void CodeEditor::render()   {
             if (mustSkipNextVisibleLine) mustSkipNextVisibleLine = false;
             else visibleLines.push_back(line);
 
+            curlineStartedWithDiesis = false;
+            curline = line;
             // ImGui::PushID(line);// ImGui::PopID();
             //if (line->isFoldable()) {fprintf(stderr,"Line[%d] is foldable\n",line->lineNumber);}
 
@@ -2021,6 +2023,7 @@ void CodeEditor::render()   {
                 //fprintf(stderr,"Line[%d] can be merged to the next\n",lines[i]->lineNumber);
             }
         }
+        curlineStartedWithDiesis = false;curline = NULL;    // Reset temp variables
         ImGui::PopStyleColor();
         ImGui::PopFont();
         ImGui::EndGroup();
@@ -2344,7 +2347,22 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                     // Draw String:
                     window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_STRING]]), g.FontSize, pos, style.color_syntax_highlighting[SH_STRING], tk, endStringSH, 0.f);
                     if (g.LogEnabled) LogRenderedText(pos, tk, endStringSH);
-                    pos.x+=CalcTextWidth(tk,endStringSH);
+                    const float token_width = CalcTextWidth(tk,endStringSH);
+                    // TEST: Mouse interaction on token when CTRL is pressed-------------------
+                    const bool testMouseInteraction = true;
+                    if (testMouseInteraction && ImGui::GetIO().KeyCtrl) {
+                        // See if we can strip 2 chars
+                        const ImVec2 token_size(token_width,g.FontSize);
+                        const ImVec2& token_pos = pos;
+                        ImRect bb(token_pos, token_pos + token_size);
+                        if (ImGui::ItemAdd(bb, NULL) && ImGui::IsItemHovered()) {
+                            window->DrawList->AddLine(ImVec2(bb.Min.x,bb.Max.y), bb.Max, style.color_syntax_highlighting[SH_STRING], 2.f);
+                            //if (ImGui::GetIO().MouseClicked[0])  {fprintf(stderr,"Mouse clicked on token: \"%s\"(%d->\"%s\") curlineStartedWithDiesis=%s line=\"%s\"\n",s,len_tok,tok,curlineStartedWithDiesis?"true":"false",curline->text.c_str());}
+                            ImGui::SetTooltip("Token (quotes are included): %.*s\nSH = %s\nLine (%d):\"%s\"\nLine starts with '#': %s",(int)(endStringSH-tk),tk,SyntaxHighlightingTypeStrings[SH_STRING],curline->lineNumber+1,curline->text.c_str(),curlineStartedWithDiesis?"true":"false");
+                        }
+                    }
+                    // -----------------------------------------------------------------------
+                    pos.x+=token_width;
                     if (tk2==NULL)	return;	// No other match found
                     text = endStringSH;
                     if (text!=text_end) {
@@ -2387,7 +2405,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
     if (s<text_end) {
         // Handle '#' in Cpp
         if (*s=='#')	{
-            lineStartsWithDiesis = true;
+            curlineStartedWithDiesis = lineStartsWithDiesis = true;
             if (lang==LANG_CPP && s+1<text_end && (*(s+1)==sp || *(s+1)==tab)) firstTokenHasPreprocessorStyle = true;
         }
     }
@@ -2405,62 +2423,75 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
     int offset = 0,len_tok=0,num_tokens=0;
     short int tokenIsNumber = 0;
     while (tok) {
-    offset = tok-oldTok;
-    if (offset>0) {
-	// Print Punctuation
-	/*window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Button), s, s+offset, wrap_width);
-	if (g.LogEnabled) LogRenderedText(pos, s, s+offset);
-	//pos.x+=charWidth*(offset);
+        offset = tok-oldTok;
+        if (offset>0) {
+            // Print Punctuation
+            /*window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Button), s, s+offset, wrap_width);
+    if (g.LogEnabled) LogRenderedText(pos, s, s+offset);
+    //pos.x+=charWidth*(offset);
     pos.x+=CalcTextWidth(s, s+offset).x;*/
-	for (int j=0;j<offset;j++)  {
-	    const char* ch = s+j;	    
-        int sht = -1;
-	if (tokenIsNumber && *ch=='.') {sht = SH_NUMBER;++tokenIsNumber;}
-	if (sht==-1 && !shTypePunctuationMap.get(*ch,sht)) sht = -1;
-        if (sht>=0 && sht<SH_COUNT) window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1, 0.f);
-        else window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), s+j, s+j+1, 0.f);
-        if (g.LogEnabled) LogRenderedText(pos, s+j, s+j+1);
-        pos.x+=CalcTextWidth(s+j, s+j+1);
-	}
-    }
-    s+=offset;
-    // Print Token (Syntax highlighting through HashMap here)
-    len_tok = strlen(tok);if (--tokenIsNumber<0) tokenIsNumber=0;
-    if (len_tok>0)  {
-    int sht = -1;	// Mandatory assignment
-    // Handle special starting tokens
-    if ((firstTokenHasPreprocessorStyle && num_tokens<2) || (lang==LANG_CPP && lineStartsWithDiesis && strcmp(tok,"defined")==0))	sht = SH_KEYWORD_PREPROCESSOR;
-
-    if (sht==-1)	{
-        // Handle numbers
-        if (tokenIsNumber==0)   {
-            const char *tmp=tok,*tmpEnd=(tok+len_tok);
-            for (tmp=tok;tmp!=tmpEnd;++tmp)	{
-                if ((*tmp)<'0' || (*tmp)>'9')	{
-                    if ((tmp+2 == tmpEnd) && (*tmp)=='.')  tokenIsNumber = 1;	// TODO: What if '.' is a token splitter char ?
-                    break;
+            for (int j=0;j<offset;j++)  {
+                const char* ch = s+j;
+                int sht = -1;
+                if (tokenIsNumber && *ch=='.') {sht = SH_NUMBER;++tokenIsNumber;}
+                if (sht==-1 && !shTypePunctuationMap.get(*ch,sht)) sht = -1;
+                if (sht>=0 && sht<SH_COUNT) window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1, 0.f);
+                else window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), s+j, s+j+1, 0.f);
+                if (g.LogEnabled) LogRenderedText(pos, s+j, s+j+1);
+                pos.x+=CalcTextWidth(s+j, s+j+1);
+            }
+        }
+        s+=offset;
+        // Print Token (Syntax highlighting through HashMap here)
+        len_tok = strlen(tok);if (--tokenIsNumber<0) tokenIsNumber=0;
+        if (len_tok>0)  {
+            int sht = -1;	// Mandatory assignment
+            // Handle special starting tokens
+            if ((firstTokenHasPreprocessorStyle && num_tokens<2) || (lang==LANG_CPP && lineStartsWithDiesis && strcmp(tok,"defined")==0))	sht = SH_KEYWORD_PREPROCESSOR;
+            if (sht==-1)	{
+                // Handle numbers
+                if (tokenIsNumber==0)   {
+                    const char *tmp=tok,*tmpEnd=(tok+len_tok);
+                    for (tmp=tok;tmp!=tmpEnd;++tmp)	{
+                        if ((*tmp)<'0' || (*tmp)>'9')	{
+                            if ((tmp+2 == tmpEnd) && (*tmp)=='.')  tokenIsNumber = 1;	// TODO: What if '.' is a token splitter char ?
+                            break;
+                        }
+                    }
+                    if (tmp==tmpEnd) tokenIsNumber = 1;
+                }
+                if (tokenIsNumber) sht = SH_NUMBER;
+            }
+            if (sht>=0 || shTypeKeywordMap.get(tok,sht)) {
+                //fprintf(stderr,"Getting shTypeMap: \"%s\",%d\n",tok,sht);
+                window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], tok, tok+len_tok, 0.f);
+            }
+            else {
+                //fprintf(stderr,"Not Getting shTypeMap: \"%s\",%d\n",tok,sht);
+                window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), tok, tok+len_tok, 0.f);
+            }
+            if (g.LogEnabled) LogRenderedText(pos, tok, tok+len_tok);
+            const float token_width = CalcTextWidth(tok,tok+len_tok);   // We'll use this later
+            // TEST: Mouse interaction on token when CTRL is pressed-------------------
+            const bool testMouseInteraction = true;
+            if (testMouseInteraction && ImGui::GetIO().KeyCtrl) {
+                const ImVec2 token_size(token_width,g.FontSize);// = ImGui::CalcTextSize(tok, tok+len_tok, false, 0.f);
+                const ImVec2& token_pos = pos;
+                ImRect bb(token_pos, token_pos + token_size);
+                if (ImGui::ItemAdd(bb, NULL) && ImGui::IsItemHovered()) {
+                    window->DrawList->AddLine(ImVec2(bb.Min.x,bb.Max.y), bb.Max, sht>=0 ? style.color_syntax_highlighting[sht] : window->Color(ImGuiCol_Text), 2.f);
+                    if (ImGui::GetIO().MouseClicked[0])  {fprintf(stderr,"Mouse clicked on token: \"%s\"(%d->\"%s\") curlineStartedWithDiesis=%s line=\"%s\"\n",s,len_tok,tok,curlineStartedWithDiesis?"true":"false",curline->text.c_str());}
+                    ImGui::SetTooltip("Token: \"%s\" len=%d\nToken unclamped: \"%s\"\nSH = %s\nLine (%d):\"%s\"\nLine starts with '#': %s",tok,len_tok,s,sht<0 ? "None" : SyntaxHighlightingTypeStrings[sht],curline->lineNumber+1,curline->text.c_str(),curlineStartedWithDiesis?"true":"false");
                 }
             }
-            if (tmp==tmpEnd) tokenIsNumber = 1;
+            // -----------------------------------------------------------------------
+            pos.x+=token_width;
         }
-	if (tokenIsNumber) sht = SH_NUMBER;
-    }
-    if (sht>=0 || shTypeKeywordMap.get(tok,sht)) {
-            //fprintf(stderr,"Getting shTypeMap: \"%s\",%d\n",tok,sht);
-            window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], tok, tok+len_tok, 0.f);
-        }
-        else {
-            //fprintf(stderr,"Not Getting shTypeMap: \"%s\",%d\n",tok,sht);
-            window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), tok, tok+len_tok, 0.f);
-        }
-        if (g.LogEnabled) LogRenderedText(pos, tok, tok+len_tok);
-        pos.x+=CalcTextWidth(tok, tok+len_tok);
-    }
-    //printf("Token: %s\n", tok);
-    oldTok = tok+len_tok;s+=len_tok;
-    tok = strtok(NULL,fsv->punctuationStringsMerged);
+        //printf("Token: %s\n", tok);
+        oldTok = tok+len_tok;s+=len_tok;
+        tok = strtok(NULL,fsv->punctuationStringsMerged);
 
-    ++num_tokens;
+        ++num_tokens;
     }
 
     offset = text_end-s;
