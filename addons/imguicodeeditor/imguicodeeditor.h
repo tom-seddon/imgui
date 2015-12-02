@@ -37,7 +37,7 @@ SYNTAX HIGHLIGHTING:
 ->  See if we can remove strtok (maybe we need a profiler)
 ->  Implement file load/save methods (does we need to read/write BOMs or not ?) -> DONE (without BOM)
 ->  Test (and fix) the SH with other files (that's the main reason of the previous point) -> DONE (more or less)
-->  Implement horizontal scrolling if possible (... ATM even vertical scrolling has problems...)
+->  Implement horizontal scrolling if possible (... ATM even vertical scrolling has problems...) -> DONE
 
 EDITOR:
 ->  Implement an editor from scratch (how to do it? For sure I have to use a single line editor, but how to integrate it with the existing SH-text-drawing system ?)
@@ -209,14 +209,17 @@ public:
         ImVec4 color_background;
         ImVec4 color_text;
         int font_text;
+        ImU32 color_line_numbers_background;
         ImVec4 color_line_numbers;
         int font_line_numbers;
-        ImU32 color_margin_error;
-        ImU32 color_margin_warning;
-        ImU32 color_margin_breakpoint;
-        ImU32 color_margin_bookmark;
-        ImU32 color_margin_contour;
-        float margin_contour_thickness;
+        ImU32 color_icon_margin_background;
+        ImU32 color_icon_margin_error;
+        ImU32 color_icon_margin_warning;
+        ImU32 color_icon_margin_breakpoint;
+        ImU32 color_icon_margin_bookmark;
+        ImU32 color_icon_margin_contour;
+        float icon_margin_contour_thickness;
+        ImU32 color_folding_margin_background;
 
         ImU32 color_syntax_highlighting[SH_COUNT];
         int font_syntax_highlighting[SH_COUNT];

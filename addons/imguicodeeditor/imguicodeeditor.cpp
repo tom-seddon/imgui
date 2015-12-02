@@ -85,12 +85,12 @@ CodeEditor::Style::Style() {
     color_background =          ImColor(40,40,50,255);
     color_text =                ImGui::GetStyle().Colors[ImGuiCol_Text];
     color_line_numbers =        ImVec4(color_text.x,color_text.y,color_text.z,0.25f);
-    color_margin_error =        ImColor(255,0,0);
-    color_margin_warning =      ImColor(255,255,0);
-    color_margin_breakpoint =   ImColor(255,190,0,225);
-    color_margin_bookmark =     ImColor(190,190,225);
-    color_margin_contour =      ImColor(50,50,150);
-    margin_contour_thickness =  1.f;
+    color_icon_margin_error =        ImColor(255,0,0);
+    color_icon_margin_warning =      ImColor(255,255,0);
+    color_icon_margin_breakpoint =   ImColor(255,190,0,225);
+    color_icon_margin_bookmark =     ImColor(190,190,225);
+    color_icon_margin_contour =      ImColor(50,50,150);
+    icon_margin_contour_thickness =  1.f;
     font_text = font_line_numbers = FONT_STYLE_NORMAL;
 
     for (int i=0;i<SH_COUNT;i++)    {
@@ -162,6 +162,8 @@ CodeEditor::Style::Style() {
     //font_syntax_highlighting[ SH_MATH_OPERATORS]        = FONT_STYLE_BOLD;
 
 
+    color_icon_margin_background = color_line_numbers_background = color_folding_margin_background
+    = ImColor(color_background.x,color_background.y,color_background.z,0.f);
 
     color_syntax_highlighting[SH_FOLDED_COMMENT] = color_syntax_highlighting[SH_COMMENT];
     color_syntax_highlighting[SH_FOLDED_PARENTHESIS] = color_syntax_highlighting[SH_BRACKETS_CURLY];
@@ -182,6 +184,7 @@ bool CodeEditor::Style::Edit(CodeEditor::Style& s) {
     changed|=ImGui::ColorEdit4( "background##color_background",&s.color_background.x);
     changed|=ImGui::ColorEdit4( "text##color_text",&s.color_text.x);
     changed|=ImGui::Combo("text##font_text",&s.font_text,&FontStyleStrings[0],FONT_STYLE_COUNT,-1);
+    changed|=EditColorImU32( "line_numbers_bg##color_line_numbers_background",s.color_line_numbers_background);
     changed|=ImGui::ColorEdit4( "line_numbers##color_line_numbers",&s.color_line_numbers.x);
     changed|=ImGui::Combo("line_numbers##font_line_numbers",&s.font_line_numbers,&FontStyleStrings[0],FONT_STYLE_COUNT,-1);
     ImGui::Spacing();
@@ -190,12 +193,15 @@ bool CodeEditor::Style::Edit(CodeEditor::Style& s) {
     ImGui::Text("Margin");
     ImGui::Separator();
     ImGui::Spacing();
-    changed|=EditColorImU32(    "error##color_margin_error",s.color_margin_error);
-    changed|=EditColorImU32(    "warning##color_margin_warning",s.color_margin_warning);
-    changed|=EditColorImU32(    "breakpoint##color_margin_breakpoint",s.color_margin_breakpoint);
-    changed|=EditColorImU32(    "bookmark##color_margin_bookmark",s.color_margin_bookmark);
-    changed|=EditColorImU32(    "contour##color_margin_contour",s.color_margin_contour);
-    changed|=ImGui::DragFloat(  "contour_width##margin_contour_thickness",&s.margin_contour_thickness,dragSpeed,1.f,5.f,prec);
+    changed|=EditColorImU32(    "error##color_margin_error",s.color_icon_margin_error);
+    changed|=EditColorImU32(    "warning##color_margin_warning",s.color_icon_margin_warning);
+    changed|=EditColorImU32(    "breakpoint##color_margin_breakpoint",s.color_icon_margin_breakpoint);
+    changed|=EditColorImU32(    "bookmark##color_margin_bookmark",s.color_icon_margin_bookmark);
+    changed|=EditColorImU32(    "contour##color_margin_contour",s.color_icon_margin_contour);
+    changed|=ImGui::DragFloat(  "contour_width##margin_contour_thickness",&s.icon_margin_contour_thickness,dragSpeed,0.5f,5.f,prec);
+    ImGui::Spacing();
+    changed|=EditColorImU32( "icon_margin_bg##color_icon_margin_background",s.color_icon_margin_background);
+    changed|=EditColorImU32( "folding_margin_bg##color_folding_margin_background",s.color_folding_margin_background);
     ImGui::Spacing();
 
     ImGui::Separator();
@@ -211,7 +217,7 @@ bool CodeEditor::Style::Edit(CodeEditor::Style& s) {
     else if (item == SH_FOLDED_COMMENT)	changed|=EditColorImU32("background##color_folded_comment_background",s.color_folded_comment_background);
     else if (item == SH_FOLDED_REGION)	{
         changed|=EditColorImU32("background##color_folded_region_background",s.color_folded_region_background);
-        changed|=ImGui::DragFloat(  "contour_width##folded_region_contour_thickness",&s.folded_region_contour_thickness,dragSpeed,1.f,5.f,prec);
+        changed|=ImGui::DragFloat(  "contour_width##folded_region_contour_thickness",&s.folded_region_contour_thickness,dragSpeed,0.5f,5.f,prec);
     }
 
     ImGui::Separator();
@@ -229,20 +235,25 @@ bool CodeEditor::Style::Save(const CodeEditor::Style &style, const char *filenam
     ImVec4 tmpColor = ImColor(style.color_background);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_background",4);
     tmpColor = ImColor(style.color_text);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_text",4);
     s.save(&style.font_text,"font_text");
+    tmpColor = ImColor(style.color_line_numbers_background);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_line_numbers_background",4);
     tmpColor = ImColor(style.color_line_numbers);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_line_numbers",4);
     s.save(&style.font_line_numbers,"font_line_numbers");
-    tmpColor = ImColor(style.color_margin_error);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_margin_error",4);
-    tmpColor = ImColor(style.color_margin_warning);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_margin_warning",4);
-    tmpColor = ImColor(style.color_margin_breakpoint);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_margin_breakpoint",4);
-    tmpColor = ImColor(style.color_margin_bookmark);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_margin_bookmark",4);
-    tmpColor = ImColor(style.color_margin_contour);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_margin_contour",4);
+    tmpColor = ImColor(style.color_icon_margin_error);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_icon_margin_error",4);
+    tmpColor = ImColor(style.color_icon_margin_warning);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_icon_margin_warning",4);
+    tmpColor = ImColor(style.color_icon_margin_breakpoint);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_icon_margin_breakpoint",4);
+    tmpColor = ImColor(style.color_icon_margin_bookmark);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_icon_margin_bookmark",4);
+    tmpColor = ImColor(style.color_icon_margin_contour);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_icon_margin_contour",4);
+
+    tmpColor = ImColor(style.color_icon_margin_background);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_icon_margin_background",4);
+    tmpColor = ImColor(style.color_folding_margin_background);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_folding_margin_background",4);
+
 
     for (int i=0;i<SH_COUNT;i++)    {
         tmpColor = ImColor(style.color_syntax_highlighting[i]);s.save(ImGui::FT_COLOR,&tmpColor.x,SyntaxHighlightingColorStrings[i],4);
         s.save(ImGui::FT_ENUM,&style.font_syntax_highlighting[i],SyntaxHighlightingFontStrings[i]);
     }
 
-    s.save(ImGui::FT_FLOAT,&style.margin_contour_thickness,"margin_contour_thickness");
+    s.save(ImGui::FT_FLOAT,&style.icon_margin_contour_thickness,"icon_margin_contour_thickness");
 
     tmpColor = ImColor(style.color_folded_parenthesis_background);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_folded_parenthesis_background",4);
     tmpColor = ImColor(style.color_folded_comment_background);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_folded_comment_background",4);
@@ -260,12 +271,12 @@ static bool StyleParser(ImGuiHelper::FieldType ft,int /*numArrayElements*/,void*
     ImVec4& tmp = *((ImVec4*) pValue);  // we cast it soon to float for now...    
     switch (ft) {
     case ImGui::FT_FLOAT:
-        if (strcmp(name,"margin_contour_thickness")==0)                     s.margin_contour_thickness = tmp.x;
-	else if (strcmp(name,"folded_region_contour_thickness")==0)	    s.folded_region_contour_thickness = tmp.x;
-	//else if (strcmp(name,"grid_size")==0)                               s.grid_size = tmp.x;
+        if (strcmp(name,"icon_margin_contour_thickness")==0)                s.icon_margin_contour_thickness = tmp.x;
+    else if (strcmp(name,"folded_region_contour_thickness")==0)             s.folded_region_contour_thickness = tmp.x;
+    //else if (strcmp(name,"grid_size")==0)                                 s.grid_size = tmp.x;
     break;
     case ImGui::FT_INT:
-        //if (strcmp(name,"link_num_segments")==0)                            s.link_num_segments = *((int*)pValue);
+        //if (strcmp(name,"link_num_segments")==0)                          s.link_num_segments = *((int*)pValue);
     break;
     case ImGui::FT_ENUM:
         if (strcmp(name,"font_line_numbers")==0)   {
@@ -287,15 +298,18 @@ static bool StyleParser(ImGuiHelper::FieldType ft,int /*numArrayElements*/,void*
     case ImGui::FT_COLOR:
         if (strcmp(name,"color_background")==0)                             s.color_background = ImColor(tmp);
         else if (strcmp(name,"color_text")==0)                              s.color_text = ImColor(tmp);
+        else if (strcmp(name,"color_line_numbers_background")==0)           s.color_line_numbers = ImColor(tmp);
         else if (strcmp(name,"color_line_numbers")==0)                      s.color_line_numbers = ImColor(tmp);
-        else if (strcmp(name,"color_margin_error")==0)                      s.color_margin_error = ImColor(tmp);
-        else if (strcmp(name,"color_margin_warning")==0)                    s.color_margin_warning = ImColor(tmp);
-        else if (strcmp(name,"color_margin_breakpoint")==0)                 s.color_margin_breakpoint = ImColor(tmp);
-        else if (strcmp(name,"color_margin_bookmark")==0)                   s.color_margin_bookmark = ImColor(tmp);
-        else if (strcmp(name,"color_margin_contour")==0)                    s.color_margin_contour = ImColor(tmp);
-	else if (strcmp(name,"color_folded_parenthesis_background")==0)	    s.color_folded_parenthesis_background = ImColor(tmp);
-	else if (strcmp(name,"color_folded_comment_background")==0)	    s.color_folded_comment_background = ImColor(tmp);
-	else if (strcmp(name,"color_folded_region_background")==0)	    s.color_folded_region_background = ImColor(tmp);
+        else if (strcmp(name,"color_icon_margin_error")==0)                 s.color_icon_margin_error = ImColor(tmp);
+        else if (strcmp(name,"color_icon_margin_warning")==0)               s.color_icon_margin_warning = ImColor(tmp);
+        else if (strcmp(name,"color_icon_margin_breakpoint")==0)            s.color_icon_margin_breakpoint = ImColor(tmp);
+        else if (strcmp(name,"color_icon_margin_bookmark")==0)              s.color_icon_margin_bookmark = ImColor(tmp);
+        else if (strcmp(name,"color_icon_margin_contour")==0)               s.color_icon_margin_contour = ImColor(tmp);
+        else if (strcmp(name,"color_folded_parenthesis_background")==0)     s.color_folded_parenthesis_background = ImColor(tmp);
+        else if (strcmp(name,"color_folded_comment_background")==0)         s.color_folded_comment_background = ImColor(tmp);
+        else if (strcmp(name,"color_folded_region_background")==0)          s.color_folded_region_background = ImColor(tmp);
+        else if (strcmp(name,"color_icon_margin_background")==0)            s.color_icon_margin_background = ImColor(tmp);
+        else if (strcmp(name,"color_folding_margin_background")==0)         s.color_folding_margin_background = ImColor(tmp);
         else {
             for (int i=0;i<SH_COUNT;i++) {
                 if (strcmp(name,SyntaxHighlightingColorStrings[i])==0)      {s.color_syntax_highlighting[i] = ImColor(tmp);break;}
@@ -1821,7 +1835,7 @@ void CodeEditor::render()   {
 
     const ImVec2 windowPos = ImGui::GetWindowPos();
     //const ImVec2 windowSize = ImGui::GetWindowSize();
-
+    const float windowScale = ImGui::GetCurrentWindow()->FontWindowScale;
 
     const float lineHeight = ImGui::GetTextLineHeight();    // This is the font size too
     int lineStart,lineEnd;
@@ -1868,6 +1882,7 @@ void CodeEditor::render()   {
     {
         ImGui::SetCursorPos(startCursorPosTextEditor);
         ImGui::BeginGroup();
+        const float folded_region_contour_thickness = style.folded_region_contour_thickness * windowScale;
         ImGui::PushStyleColor(ImGuiCol_Text,style.color_text);
         ImGui::PushFont(const_cast<ImFont*>(ImFonts[style.font_text]));
         bool mustSkipNextVisibleLine = false;
@@ -1899,7 +1914,15 @@ void CodeEditor::render()   {
                     }
 
                     // draw the folded tag
-                    const SyntaxHighlightingType sht = FoldingTypeToSyntaxHighlightingType[line->foldingStartTag->kind];
+                    SyntaxHighlightingType sht = FoldingTypeToSyntaxHighlightingType[line->foldingStartTag->kind];
+                    if (style.color_syntax_highlighting[sht]>>24==0)    {
+                        if (line->foldingStartTag->kind==FOLDING_TYPE_COMMENT) sht = SH_COMMENT;
+                        else if (line->foldingStartTag->kind==FOLDING_TYPE_PARENTHESIS) {
+                            if (line->foldingStartTag->start[0]=='{') sht = SH_BRACKETS_CURLY;
+                            else if (line->foldingStartTag->start[0]=='[') sht = SH_BRACKETS_SQUARE;
+                            else if (line->foldingStartTag->start[0]=='(') sht = SH_BRACKETS_ROUND;
+                        }
+                    }
                     ImGui::PushFont(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]));
                     ImGui::PushStyleColor(ImGuiCol_Text,ImColor(style.color_syntax_highlighting[sht]));
                     if (line->foldingStartTag->title.size()>0) {
@@ -1908,7 +1931,7 @@ void CodeEditor::render()   {
                         if (bgColor >> 24 !=0)	{
                             const ImVec2 regionNameSize = ImGui::CalcTextSize(line->foldingStartTag->title.c_str());    // Well, it'a a monospace font... we can optimize it
                             ImVec2 startPos = ImGui::GetCursorPos();
-                            startPos.x+= windowPos.x - lineHeight*0.09f;
+                            startPos.x+= windowPos.x - ImGui::GetScrollX() - lineHeight*0.09f;
                             startPos.y+= windowPos.y - ImGui::GetScrollY();
                             ImDrawList* drawList = ImGui::GetWindowDrawList();
                             ImGui::ImDrawListAddRect(drawList,startPos,ImVec2(startPos.x+regionNameSize.x+lineHeight*0.25f,startPos.y+regionNameSize.y),bgColor,0,0.f,0x0F,0);
@@ -1925,10 +1948,10 @@ void CodeEditor::render()   {
                             // Draw frame around text
                             const ImVec2 regionNameSize = ImGui::CalcTextSize(regionName);    // Well, it'a a monospace font... we can optimize it
                             ImVec2 startPos = ImGui::GetCursorPos();
-                            startPos.x+= windowPos.x - lineHeight*0.18f;
+                            startPos.x+= windowPos.x - ImGui::GetScrollX() - lineHeight*0.18f;
                             startPos.y+= windowPos.y - ImGui::GetScrollY();
                             ImDrawList* drawList = ImGui::GetWindowDrawList();
-                            ImGui::ImDrawListAddRect(drawList,startPos,ImVec2(startPos.x+regionNameSize.x+lineHeight*0.5f,startPos.y+regionNameSize.y),ImColor(style.color_folded_region_background),ImColor(style.color_syntax_highlighting[sht]),0.f,0x0F,style.folded_region_contour_thickness);
+                            ImGui::ImDrawListAddRect(drawList,startPos,ImVec2(startPos.x+regionNameSize.x+lineHeight*0.5f,startPos.y+regionNameSize.y),ImColor(style.color_folded_region_background),ImColor(style.color_syntax_highlighting[sht]),0.f,0x0F,folded_region_contour_thickness);
 
                             // Draw text
                             ImGui::Text("%s",regionName);
@@ -2014,14 +2037,24 @@ void CodeEditor::render()   {
     // Draw icon margin
     if (showIconMargin && ImGui::GetScrollX()<startCursorPosLineNumbers.x) {
         ImGui::SetCursorPos(startCursorPosIconMargin);
+        // Draw background --------------------------------------
+        if (style.color_icon_margin_background>>24!=0)    {
+            ImDrawList* drawList = ImGui::GetWindowDrawList();
+            //const float deltaX = windowScale * ImGui::GetStyle().WindowPadding.x;   // I'm not sure it's ImGui::GetStyle().WindowPadding.x *2.f...
+            const ImVec2 ssp(startCursorPosIconMargin.x+windowPos.x-ImGui::GetScrollX()-lineHeight*0.25f,startCursorPosIconMargin.y+windowPos.y-ImGui::GetScrollY());
+            const ImVec2 sep(ssp.x+lineHeight*1.25f,ssp.y+ lineHeight*visibleLines.size());
+            drawList->AddRectFilled(ssp,sep,style.color_icon_margin_background);
+        }
+        //-------------------------------------------------------
         ImVec2 startPos,endPos,screenStartPos,screenEndPos;
+        const float icon_margin_contour_thickness = style.icon_margin_contour_thickness * windowScale;
         ImGui::BeginGroup();
         for (int i = 0,isz=visibleLines.size();i<isz;i++) {
             Line* line = visibleLines[i];
 
             ImGui::PushID(line);
             startPos = ImGui::GetCursorPos();
-            screenStartPos.x = startPos.x + windowPos.x - ImGui::GetScrollX() + lineHeight*0.5f;
+            screenStartPos.x = startPos.x + windowPos.x - ImGui::GetScrollX() + lineHeight*0.75f;//windowScale * ImGui::GetStyle().WindowPadding.x;
             screenStartPos.y = startPos.y + windowPos.y - ImGui::GetScrollY();
             if (ImGui::InvisibleButton("##DummyButton",btnSize))    {
                 if (io.KeyCtrl) {
@@ -2038,11 +2071,11 @@ void CodeEditor::render()   {
             screenEndPos.y = endPos.y + windowPos.y - ImGui::GetScrollY();
             if (line->attributes&Line::AT_ERROR) {
                 ImDrawList* drawList = ImGui::GetWindowDrawList();
-                ImGui::ImDrawListAddRect(drawList,screenStartPos,screenEndPos,style.color_margin_error,style.color_margin_contour,0.f,0x0F,style.margin_contour_thickness);
+                ImGui::ImDrawListAddRect(drawList,screenStartPos,screenEndPos,style.color_icon_margin_error,style.color_icon_margin_contour,0.f,0x0F,icon_margin_contour_thickness);
             }
             else if (line->attributes&Line::AT_WARNING) {
                 ImDrawList* drawList = ImGui::GetWindowDrawList();
-                ImGui::ImDrawListAddRect(drawList,screenStartPos,screenEndPos,style.color_margin_warning,style.color_margin_contour,0.f,0x0F,style.margin_contour_thickness);
+                ImGui::ImDrawListAddRect(drawList,screenStartPos,screenEndPos,style.color_icon_margin_warning,style.color_icon_margin_contour,0.f,0x0F,icon_margin_contour_thickness);
             }
             if (line->attributes&Line::AT_BREAKPOINT) {
                 ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -2050,7 +2083,7 @@ void CodeEditor::render()   {
                 const float radius = (screenEndPos.y-screenStartPos.y)*0.4f;
                 //drawList->AddCircleFilled(center,radius,style.color_margin_breakpoint);
                 //drawList->AddCircle(center,radius,style.color_margin_contour);
-                ImGui::ImDrawListAddCircle(drawList,center,radius,style.color_margin_breakpoint,style.color_margin_contour,12,style.margin_contour_thickness);
+                ImGui::ImDrawListAddCircle(drawList,center,radius,style.color_icon_margin_breakpoint,style.color_icon_margin_contour,12,icon_margin_contour_thickness);
 
             }
             if (line->attributes&Line::AT_BOOKMARK) {
@@ -2060,7 +2093,7 @@ void CodeEditor::render()   {
                 const ImVec2 a(center.x-radius,center.y-radius);
                 const ImVec2 b(center.x+radius,center.y+radius);
                 //ImGui::ImDrawListAddRect(drawList,a,b,style.color_margin_bookmark,style.color_margin_contour);
-                ImGui::ImDrawListAddRect(drawList,a,b,style.color_margin_bookmark,style.color_margin_contour,0.f,0x0F,style.margin_contour_thickness);
+                ImGui::ImDrawListAddRect(drawList,a,b,style.color_icon_margin_bookmark,style.color_icon_margin_contour,0.f,0x0F,icon_margin_contour_thickness);
             }
             ImGui::SetCursorPos(endPos);
 
@@ -2088,6 +2121,14 @@ void CodeEditor::render()   {
     if (showLineNumbers && ImGui::GetScrollX()<startCursorPosFoldingMarks.x) {
         ImGui::SetCursorPos(startCursorPosLineNumbers);
         ImGui::BeginGroup();
+        // Draw background --------------------------------------
+        if (style.color_line_numbers_background>>24!=0)    {
+            ImDrawList* drawList = ImGui::GetWindowDrawList();
+            const ImVec2 ssp(startCursorPosLineNumbers.x+windowPos.x-ImGui::GetScrollX(),startCursorPosLineNumbers.y+windowPos.y-ImGui::GetScrollY());
+            const ImVec2 sep(ssp.x+lineNumberSize,ssp.y+ lineHeight*visibleLines.size());
+            drawList->AddRectFilled(ssp,sep,style.color_line_numbers_background);
+        }
+        //-------------------------------------------------------
         ImGui::PushStyleColor(ImGuiCol_Text,style.color_line_numbers);
         ImGui::PushFont(const_cast<ImFont*>(ImFonts[style.font_line_numbers]));
         // I've struggled so much to display the line numbers half of their size, with no avail...
@@ -2105,6 +2146,14 @@ void CodeEditor::render()   {
     // Draw folding spaces:
     if (enableTextFolding &&  ImGui::GetScrollX()<startCursorPosTextEditor.x) {
         ImGui::SetCursorPos(startCursorPosFoldingMarks);
+        // Draw background --------------------------------------
+        if (style.color_folding_margin_background>>24!=0)    {
+            ImDrawList* drawList = ImGui::GetWindowDrawList();
+            const ImVec2 ssp(startCursorPosFoldingMarks.x+windowPos.x-ImGui::GetScrollX(),startCursorPosFoldingMarks.y+windowPos.y-ImGui::GetScrollY());
+            const ImVec2 sep(ssp.x+sizeFoldingMarks*0.8f,ssp.y+ lineHeight*visibleLines.size());
+            drawList->AddRectFilled(ssp,sep,style.color_folding_margin_background);
+        }
+        //-------------------------------------------------------
         ImGui::BeginGroup();
         ImGui::PushFont(const_cast<ImFont*>(ImFonts[FONT_STYLE_NORMAL]));
         ImGui::PushStyleColor(ImGuiCol_Header,transparent);
@@ -2127,8 +2176,17 @@ void CodeEditor::render()   {
             if (foldableLine)
             {
                 //fprintf(stderr,"enableTextFolding: Line[%d] is foldable\n",line->lineNumber);
+                SyntaxHighlightingType sht = FoldingTypeToSyntaxHighlightingType[foldableLine->foldingStartTag->kind];
+                if (style.color_syntax_highlighting[sht]>>24==0)    {
+                    if (line->foldingStartTag->kind==FOLDING_TYPE_COMMENT) sht = SH_COMMENT;
+                    else if (line->foldingStartTag->kind==FOLDING_TYPE_PARENTHESIS) {
+                        if (line->foldingStartTag->start[0]=='{') sht = SH_BRACKETS_CURLY;
+                        else if (line->foldingStartTag->start[0]=='[') sht = SH_BRACKETS_SQUARE;
+                        else if (line->foldingStartTag->start[0]=='(') sht = SH_BRACKETS_ROUND;
+                    }
+                }
                 const bool wasFolded = foldableLine->isFolded();
-                ImGui::PushStyleColor(ImGuiCol_Text,ImColor(style.color_syntax_highlighting[FoldingTypeToSyntaxHighlightingType[foldableLine->foldingStartTag->kind]]));
+                ImGui::PushStyleColor(ImGuiCol_Text,ImColor(style.color_syntax_highlighting[sht]));
                 ImGui::SetNextTreeNodeOpened(!wasFolded,ImGuiSetCond_Always);
                 if (!ImGui::TreeNode(line,"%s",""))  {
                     if (!wasFolded)   {
