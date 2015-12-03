@@ -37,7 +37,7 @@ SYNTAX HIGHLIGHTING:
 ->  See if we can remove strtok (maybe we need a profiler)
 ->  Implement file load/save methods (does we need to read/write BOMs or not ?) -> DONE (without BOM)
 ->  Test (and fix) the SH with other files (that's the main reason of the previous point) -> DONE (more or less)
-->  Implement horizontal scrolling if possible (... ATM even vertical scrolling has problems...) -> DONE
+->  Implement horizontal scrolling if possible (... ATM even vertical scrolling has problems...) -> DONE (but AFAIK ImGui does not allow having horizontal scrolling in one child and vertical scrolling in a "parent" child, so the margins must scroll too)
 
 EDITOR:
 ->  Implement an editor from scratch (how to do it? For sure I have to use a single line editor, but how to integrate it with the existing SH-text-drawing system ?)
@@ -45,6 +45,7 @@ EDITOR:
 ->  Implement the possibility to select text through multiple lines (and what about selecting while scrolling. Would it be possible?)
 ->  Implement copy and paste.
 ->  Implement an Undo/Redo stack.
+->  Implement find and replce text (? No, we're not that professional.. and I bet I'll never get to this point).
 
 While reading all this points, I'm seriously thinking about coding it again from scratch... maybe getting inspiration from the source of other free editors.
 I'm really thinking that the CodeEditor has about 70% probability of being aborted during development...
@@ -276,10 +277,6 @@ private:
     void TextLineUnformattedWithSH(const char *text, const char *text_end);
     void TextLineWithSHV(const char *fmt, va_list args);
     void TextLineWithSH(const char *fmt...);
-
-    float CalcTextWidth(const char* text,const char* text_end=NULL,int* pNumUTF8CharsOut=NULL);
-    mutable bool curlineStartedWithDiesis;
-    mutable Line* curline;
 };
 
 

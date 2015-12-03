@@ -18,7 +18,11 @@
  THE SOFTWARE.
 */
 #include "imguicodeeditor.h"
-#include "utf8helper.h"         // not sure if it's necessary
+
+#define IMGUICODEEDITOR_USE_UTF8HELPER_H    // speed opt ?
+#ifdef IMGUICODEEDITOR_USE_UTF8HELPER_H
+#   include "utf8helper.h"         // not sure if it's necessary to count UTF8 chars
+#endif //IMGUICODEEDITOR_USE_UTF8HELPER_H
 
 #define IMGUI_NEW(type)         new (ImGui::MemAlloc(sizeof(type) ) ) type
 #define IMGUI_DELETE(type, obj) reinterpret_cast<type*>(obj)->~type(), ImGui::MemFree(obj)
@@ -62,6 +66,27 @@ static void ImDrawListAddCircle(ImDrawList* dl,const ImVec2& centre, float radiu
     const float a_max = IM_PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
     ImDrawListPathArcTo(dl,centre, radii, 0.0f, a_max, num_segments);
     ImDrawListPathFillAndStroke(dl,fillColor,strokeColor,true,strokeThickness,antiAliased);
+}
+
+
+static inline int CountUTF8Chars(const char* text_begin, const char* text_end=NULL)   {
+#   ifndef IMGUICODEEDITOR_USE_UTF8HELPER_H
+    if (!text_end) text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
+    int cnt = 0;const char* s = text_begin;unsigned int c = 0;
+    while (s < text_end)    {
+        // Decode and advance source
+        c = (unsigned int)*s;
+        if (c < 0x80)   {s += 1;++cnt;}
+        else    {
+            s += ImTextCharFromUtf8(&c, s, text_end);           // probably slower than UTF8Helper::decode(...)
+            if (c == 0) break;  // Mmmh, not sure about this
+            ++cnt;
+        }
+    }
+    return cnt;
+#   else // IMGUICODEEDITOR_USE_UTF8HELPER_H
+    return UTF8Helper::CountUTF8Chars(text_begin,text_end); // This should be much faster (because UTF8Helper::decode() should be faster than ImTextCharFromUtf8()), but UTF8Helper also checks if a string is malformed, so I don't know.
+#   endif //IMGUICODEEDITOR_USE_UTF8HELPER_H
 }
 
 } // namespace ImGui
@@ -334,31 +359,6 @@ bool CodeEditor::Style::Load(CodeEditor::Style &style, const char *filename)  {
 
 const ImFont* CodeEditor::ImFonts[FONT_STYLE_COUNT] = {NULL,NULL,NULL,NULL};
 
-void CodeEditor::TextLineUnformattedWithSH(const char* text, const char* text_end)
-{
-    ImGuiWindow* window = ImGui::GetCurrentWindow();
-    if (window->SkipItems) return;
-
-    IM_ASSERT(text != NULL);
-    const char* text_begin = text;
-    if (text_end == NULL) text_end = text + strlen(text); // FIXME-OPT
-
-    {
-        const float wrap_width = 0.0f;
-        const ImVec2 text_size = ImGui::CalcTextSize(text_begin, text_end, false, wrap_width);
-
-        // Account of baseline offset
-        ImVec2 text_pos = window->DC.CursorPos;
-        text_pos.y += window->DC.CurrentLineTextBaseOffset;
-
-        ImRect bb(text_pos, text_pos + text_size);
-        ImGui::ItemSize(text_size);
-        if (!ImGui::ItemAdd(bb, NULL))  return;
-
-        // Render (we don't hide text after ## in this end-user function)
-        RenderTextLineWrappedWithSH(bb.Min, text_begin, text_end);
-    }
-}
 void CodeEditor::TextLineWithSHV(const char* fmt, va_list args) {
     if (ImGui::GetCurrentWindow()->SkipItems)  return;
 
@@ -372,29 +372,54 @@ void CodeEditor::TextLineWithSH(const char* fmt, ...)   {
     TextLineWithSHV(fmt, args);
     va_end(args);
 }
+static inline float MyCalcTextWidthA(ImFont* font,float size, const char* text_begin, const char* text_end, const char** remaining,int *pNumUTF8CharsOut=NULL,bool cancelOutCharacterSpacingForTheLastCharacterOfALine=false)  {
+    // Warning: *pNumUTF8CharsOut must be set to zero by the caller
+    const float scale = size / font->FontSize;
+    float text_width = 0.f;int numUTF8Chars = 0;
+//#   define NO_IMGUICODEEDITOR_USE_OPT_FOR_MONOSPACE_FONTS
+#   ifdef NO_IMGUICODEEDITOR_USE_OPT_FOR_MONOSPACE_FONTS
+    if (!text_end) text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
+    const char* s = text_begin;
+    while (s < text_end)    {
+        // Decode and advance source
+        unsigned int c = (unsigned int)*s;
+        if (c < 0x80)   {s += 1;++numUTF8Chars;}
+        else    {
+            s += ImTextCharFromUtf8(&c, s, text_end);
+            if (c == 0) break;
+            ++numUTF8Chars;
+        }
 
-float CodeEditor::CalcTextWidth(const char *text, const char *text_end, int *pNumUTF8CharsOut)
-{
-    return ImGui::CalcTextSize(text,text_end).x;
-    /*
-    ImGuiState& g = *GImGui;
-    ImFont* font = g.Font;
-    const float font_size = g.FontSize;
-    //const float font_size = g.FontImFonts[0]->FontSize;
-    const float font_scale = font_size / font->FontSize;
-
-    const unsigned numUTF8Chars = UTF8Helper::CountUTF8Chars(text,text_end);
-    if (pNumUTF8CharsOut) *pNumUTF8CharsOut = (int) numUTF8Chars;
-    float text_width = numUTF8Chars * font_size;
-
-    // Cancel out character spacing for the last character of a line (it is baked into glyph->XAdvance field)
-    const float character_spacing_x = 1.0f * font_scale;
-    if (text_width > 0.0f) text_width -= character_spacing_x;
-
-    //static unsigned init = 0;if (init++%100==0) {fprintf(stderr,"\"%.*s\" text_width=%1.2f font_size=%1.2f font_scale=%1.2f \n",(int)(text_end-text),text,text_width,font_size,font_scale);}
-
+        text_width += ((int)c < font->IndexXAdvance.Size ? font->IndexXAdvance[(int)c] : font->FallbackXAdvance) * scale;
+    }
+    if (remaining)  *remaining = s;
+#   else //NO_IMGUICODEEDITOR_USE_OPT_FOR_MONOSPACE_FONTS
+#       ifndef IMGUICODEEDITOR_USE_UTF8HELPER_H
+    // Actually this does not work corrently with TABS, because TABS have a different width even in MONOSPACE fonts (TO FIX)
+    IM_ASSERT(remaining==NULL); // this arg is not currently supported by this opt
+    numUTF8Chars = ImGui::CountUTF8Chars(text_begin,text_end);
+    text_width = (font->FallbackXAdvance * scale) * numUTF8Chars;   // We use font->FallbackXAdvance for all (we could have used font->IndexXAdvance[0])
+#       else //IMGUICODEEDITOR_USE_UTF8HELPER_H
+    if (!text_end) text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
+    const char* s = text_begin;int codepoint;int state = 0;const unsigned int tab = (unsigned int)'\t';
+    int numTabs = 0;
+    for (numUTF8Chars = 0; s!=text_end; ++s)    {
+        if (UTF8Helper::decode(&state, &codepoint, *s)==UTF8Helper::UTF8_ACCEPT) {
+            ++numUTF8Chars;
+            if (codepoint == tab) ++numTabs;
+        }
+    }
+    text_width = scale * (font->FallbackXAdvance * (numUTF8Chars-numTabs) + font->IndexXAdvance[tab] * numTabs);
+    if (remaining)  *remaining = s;
+#       endif //IMGUICODEEDITOR_USE_UTF8HELPER_H
+#   endif //NO_IMGUICODEEDITOR_USE_OPT_FOR_MONOSPACE_FONTS
+    if (pNumUTF8CharsOut) *pNumUTF8CharsOut+=numUTF8Chars;
+    if (cancelOutCharacterSpacingForTheLastCharacterOfALine && text_width > 0.0f) text_width -= scale;
     return text_width;
-    */
+}
+static inline float MyCalcTextWidth(const char *text, const char *text_end=NULL, int *pNumUTF8CharsOut=NULL)    {
+    // Warning: *pNumUTF8CharsOut must be set to zero by the caller
+    return MyCalcTextWidthA(GImGui->Font,GImGui->FontSize,text,text_end,NULL,pNumUTF8CharsOut,true);
 }
 
 
@@ -617,7 +642,7 @@ void Lines::SplitText(const char *text, ImVector<Line*> &lines,ImString* pOption
 	    line->lineNumber =		lines.size();
 	    line->offset =		offsetInBytes;
 	    line->offsetInUTF8chars =	offsetInUTF8Chars;
-	    line->numUTF8chars =	UTF8Helper::CountUTF8Chars(line->text.c_str());
+        line->numUTF8chars =	ImGui::CountUTF8Chars(line->text.c_str());
 	    lines.push_back(line);
 	    //-----------------------------
 	    offsetInBytes+=line->size();
@@ -633,7 +658,7 @@ void Lines::SplitText(const char *text, ImVector<Line*> &lines,ImString* pOption
     line->lineNumber =		lines.size();
     line->offset =		offsetInBytes;
     line->offsetInUTF8chars =	offsetInUTF8Chars;
-    line->numUTF8chars =	UTF8Helper::CountUTF8Chars(line->text.c_str());
+    line->numUTF8chars =	ImGui::CountUTF8Chars(line->text.c_str());
     lines.push_back(line);
     //-----------------------------
     offsetInBytes+=line->size();
@@ -661,6 +686,10 @@ void CodeEditor::SetFonts(const ImFont *normal, const ImFont *bold, const ImFont
     ImFonts[FONT_STYLE_BOLD]=bold?bold:fnt;
     ImFonts[FONT_STYLE_ITALIC]=italic?italic:fnt;
     ImFonts[FONT_STYLE_BOLD_ITALIC]=boldItalic?boldItalic:ImFonts[FONT_STYLE_BOLD]?ImFonts[FONT_STYLE_BOLD]:ImFonts[FONT_STYLE_ITALIC]?ImFonts[FONT_STYLE_ITALIC]:fnt;
+
+    IM_ASSERT(ImFonts[FONT_STYLE_NORMAL]->FontSize == ImFonts[FONT_STYLE_BOLD]->FontSize);
+    IM_ASSERT(ImFonts[FONT_STYLE_BOLD]->FontSize == ImFonts[FONT_STYLE_ITALIC]->FontSize);
+    IM_ASSERT(ImFonts[FONT_STYLE_ITALIC]->FontSize == ImFonts[FONT_STYLE_BOLD_ITALIC]->FontSize);
 }
 
 
@@ -1684,6 +1713,12 @@ void CodeEditor::ParseTextForFolding(bool forceAllSegmentsFoldedOrNot, bool fold
 
 static const SyntaxHighlightingType FoldingTypeToSyntaxHighlightingType[FOLDING_TYPE_REGION+1] = {SH_FOLDED_PARENTHESIS,SH_FOLDED_COMMENT,SH_FOLDED_REGION};
 
+// Global temporary variables:
+static bool gCurlineStartedWithDiesis;
+static Line* gCurline;
+static bool gIsCurlineHovered;
+static bool gIsCursorChanged;
+
 // Main method
 void CodeEditor::render()   {
     if (lines.size()==0) return;
@@ -1860,17 +1895,17 @@ void CodeEditor::render()   {
     int precision =  0;
     if (showLineNumbers)    { // No time for a better approach
         ImGui::PushFont(const_cast<ImFont*>(ImFonts[style.font_line_numbers]));
-        if (lineEnd<9)          {precision=1;lineNumberSize=CalcTextWidth("9");}
-        else if (lineEnd<99)    {precision=2;lineNumberSize=CalcTextWidth("99");}
-        else if (lineEnd<999)   {precision=3;lineNumberSize=CalcTextWidth("999");}
-        else if (lineEnd<9999)  {precision=4;lineNumberSize=CalcTextWidth("9999");}
-        else if (lineEnd<99999) {precision=5;lineNumberSize=CalcTextWidth("99999");}
-        else if (lineEnd<999999){precision=6;lineNumberSize=CalcTextWidth("999999");}
-        else                    {precision=7;lineNumberSize=CalcTextWidth("9999999");}
+        if (lineEnd<9)          {precision=1;lineNumberSize=MyCalcTextWidth("9");}
+        else if (lineEnd<99)    {precision=2;lineNumberSize=MyCalcTextWidth("99");}
+        else if (lineEnd<999)   {precision=3;lineNumberSize=MyCalcTextWidth("999");}
+        else if (lineEnd<9999)  {precision=4;lineNumberSize=MyCalcTextWidth("9999");}
+        else if (lineEnd<99999) {precision=5;lineNumberSize=MyCalcTextWidth("99999");}
+        else if (lineEnd<999999){precision=6;lineNumberSize=MyCalcTextWidth("999999");}
+        else                    {precision=7;lineNumberSize=MyCalcTextWidth("9999999");}
         ImGui::PopFont();
     }
     ImGui::PushFont(const_cast<ImFont*>(ImFonts[FONT_STYLE_NORMAL]));
-    const float sizeFoldingMarks = CalcTextWidth("   ");    // Wrong, but no time to fix it
+    const float sizeFoldingMarks = MyCalcTextWidth("   ");    // Wrong, but no time to fix it
     const ImVec2 startCursorPosIconMargin(ImGui::GetCursorPosX(),ImGui::GetCursorPosY() + (lineStart * lineHeight));
     const ImVec2 startCursorPosLineNumbers(startCursorPosIconMargin.x + (showIconMargin ? btnSize.x : 0.f),startCursorPosIconMargin.y);
     const ImVec2 startCursorPosFoldingMarks(startCursorPosLineNumbers.x + (enableTextFolding ? lineNumberSize : 0.f),startCursorPosLineNumbers.y);
@@ -1882,6 +1917,7 @@ void CodeEditor::render()   {
     {
         ImGui::SetCursorPos(startCursorPosTextEditor);
         ImGui::BeginGroup();
+        gIsCursorChanged = false;
         const float folded_region_contour_thickness = style.folded_region_contour_thickness * windowScale;
         ImGui::PushStyleColor(ImGuiCol_Text,style.color_text);
         ImGui::PushFont(const_cast<ImFont*>(ImFonts[style.font_text]));
@@ -1899,8 +1935,8 @@ void CodeEditor::render()   {
             if (mustSkipNextVisibleLine) mustSkipNextVisibleLine = false;
             else visibleLines.push_back(line);
 
-            curlineStartedWithDiesis = false;
-            curline = line;
+            gCurlineStartedWithDiesis = gIsCurlineHovered = false;
+            gCurline = line;
             // ImGui::PushID(line);// ImGui::PopID();
             //if (line->isFoldable()) {fprintf(stderr,"Line[%d] is foldable\n",line->lineNumber);}
 
@@ -2023,16 +2059,16 @@ void CodeEditor::render()   {
                 //fprintf(stderr,"Line[%d] can be merged to the next\n",lines[i]->lineNumber);
             }
         }
-        curlineStartedWithDiesis = false;curline = NULL;    // Reset temp variables
+        gCurlineStartedWithDiesis = gIsCurlineHovered = false;gCurline = NULL;    // Reset temp variables
         ImGui::PopStyleColor();
         ImGui::PopFont();
         ImGui::EndGroup();
         if (!leftPaneHasMouseCursor)    {
-            if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_TextInput);
-            else ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
-        }
-
-
+            if (!gIsCursorChanged) {
+                if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_TextInput);
+                else ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+            }
+        }        
     }
 
     //if (visibleLines.size()>0) fprintf(stderr,"visibleLines.size()=%d firstVisibleLine=%d lastVisibleLine=%d\n",visibleLines.size(),visibleLines[0]->lineNumber+1,visibleLines[visibleLines.size()-1]->lineNumber+1);
@@ -2240,6 +2276,31 @@ void CodeEditor::render()   {
 }
 
 
+void CodeEditor::TextLineUnformattedWithSH(const char* text, const char* text_end)  {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return;
+
+    IM_ASSERT(text != NULL);
+    const char* text_begin = text;
+    if (text_end == NULL) text_end = text + strlen(text); // FIXME-OPT
+
+    {
+        const float wrap_width = 0.0f;
+        const ImVec2 text_size = ImGui::CalcTextSize(text_begin, text_end, false, wrap_width);
+
+        // Account of baseline offset
+        ImVec2 text_pos = window->DC.CursorPos;
+        text_pos.y += window->DC.CurrentLineTextBaseOffset;
+
+        ImRect bb(text_pos, text_pos + text_size);
+        ImGui::ItemSize(text_size);
+        if (!ImGui::ItemAdd(bb, NULL))  return;
+        gIsCurlineHovered = ImGui::IsItemHovered();
+
+        // Render (we don't hide text after ## in this end-user function)
+        RenderTextLineWrappedWithSH(bb.Min, text_begin, text_end);
+    }
+}
 template <int NUM_TOKENS> inline static const char* FindNextToken(const char* text,const char* text_end,const char* token_start[NUM_TOKENS],const char* token_end[NUM_TOKENS],int* pTokenIndexOut=NULL,const char* optionalStringDelimiters=NULL,const char stringEscapeChar='\\',bool skipEscapeChar=false) {
     if (pTokenIndexOut) *pTokenIndexOut=-1;
     const char *pt,*t,*tks,*tke;
@@ -2273,8 +2334,6 @@ template <int NUM_TOKENS> inline static const char* FindNextToken(const char* te
     }
     return NULL;
 }
-
-// wrap_width=0 -> no wrapping
 void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, const char* text_end, bool skipLineCommentAndStringProcessing)
 {
     ImGuiState& g = *GImGui;
@@ -2310,7 +2369,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                 if (text_len > 0)   {
                     window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_COMMENT]]), g.FontSize, pos, style.color_syntax_highlighting[SH_COMMENT], text, text_end, 0.f);
                     if (g.LogEnabled) LogRenderedText(pos, text, text_end);
-                    pos.x+=CalcTextWidth(text,text_end);
+                    pos.x+=MyCalcTextWidth(text,text_end);
                 }
                 return;
             }
@@ -2325,7 +2384,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                 if (text_len > 0)   {
                     window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_COMMENT]]), g.FontSize, pos, style.color_syntax_highlighting[SH_COMMENT], text, endCmt, 0.f);
                     if (g.LogEnabled) LogRenderedText(pos, text, endCmt);
-                    pos.x+=CalcTextWidth(text,endCmt);
+                    pos.x+=MyCalcTextWidth(text,endCmt);
                 }
                 if (tk2 && endCmt<text_end) RenderTextLineWrappedWithSH(pos,endCmt,text_end);    // Draw after "*/"
                 return;
@@ -2347,10 +2406,9 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                     // Draw String:
                     window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_STRING]]), g.FontSize, pos, style.color_syntax_highlighting[SH_STRING], tk, endStringSH, 0.f);
                     if (g.LogEnabled) LogRenderedText(pos, tk, endStringSH);
-                    const float token_width = CalcTextWidth(tk,endStringSH);
+                    const float token_width = MyCalcTextWidth(tk,endStringSH);
                     // TEST: Mouse interaction on token when CTRL is pressed-------------------
-                    const bool testMouseInteraction = true;
-                    if (testMouseInteraction && ImGui::GetIO().KeyCtrl) {
+                    if (gIsCurlineHovered && ImGui::GetIO().KeyCtrl) {
                         // See if we can strip 2 chars
                         const ImVec2 token_size(token_width,g.FontSize);
                         const ImVec2& token_pos = pos;
@@ -2358,7 +2416,8 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                         if (ImGui::ItemAdd(bb, NULL) && ImGui::IsItemHovered()) {
                             window->DrawList->AddLine(ImVec2(bb.Min.x,bb.Max.y), bb.Max, style.color_syntax_highlighting[SH_STRING], 2.f);
                             //if (ImGui::GetIO().MouseClicked[0])  {fprintf(stderr,"Mouse clicked on token: \"%s\"(%d->\"%s\") curlineStartedWithDiesis=%s line=\"%s\"\n",s,len_tok,tok,curlineStartedWithDiesis?"true":"false",curline->text.c_str());}
-                            ImGui::SetTooltip("Token (quotes are included): %.*s\nSH = %s\nLine (%d):\"%s\"\nLine starts with '#': %s",(int)(endStringSH-tk),tk,SyntaxHighlightingTypeStrings[SH_STRING],curline->lineNumber+1,curline->text.c_str(),curlineStartedWithDiesis?"true":"false");
+                            ImGui::SetTooltip("Token (quotes are included): %.*s\nSH = %s\nLine (%d):\"%s\"\nLine starts with '#': %s",(int)(endStringSH-tk),tk,SyntaxHighlightingTypeStrings[SH_STRING],gCurline->lineNumber+1,gCurline->text.c_str(),gCurlineStartedWithDiesis?"true":"false");
+                            gIsCursorChanged = true;ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
                         }
                     }
                     // -----------------------------------------------------------------------
@@ -2397,7 +2456,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
     // Draw Tabs and spaces
     window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, s, 0.f);
     if (g.LogEnabled) LogRenderedText(pos, text, s);
-    pos.x+=CalcTextWidth(text,s);
+    pos.x+=MyCalcTextWidth(text,s);
     text=s;
     }
 
@@ -2405,7 +2464,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
     if (s<text_end) {
         // Handle '#' in Cpp
         if (*s=='#')	{
-            curlineStartedWithDiesis = lineStartsWithDiesis = true;
+            gCurlineStartedWithDiesis = lineStartsWithDiesis = true;
             if (lang==LANG_CPP && s+1<text_end && (*(s+1)==sp || *(s+1)==tab)) firstTokenHasPreprocessorStyle = true;
         }
     }
@@ -2438,7 +2497,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                 if (sht>=0 && sht<SH_COUNT) window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1, 0.f);
                 else window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), s+j, s+j+1, 0.f);
                 if (g.LogEnabled) LogRenderedText(pos, s+j, s+j+1);
-                pos.x+=CalcTextWidth(s+j, s+j+1);
+                pos.x+=MyCalcTextWidth(s+j, s+j+1);
             }
         }
         s+=offset;
@@ -2471,17 +2530,17 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                 window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), tok, tok+len_tok, 0.f);
             }
             if (g.LogEnabled) LogRenderedText(pos, tok, tok+len_tok);
-            const float token_width = CalcTextWidth(tok,tok+len_tok);   // We'll use this later
+            const float token_width = MyCalcTextWidth(tok,tok+len_tok);   // We'll use this later
             // TEST: Mouse interaction on token when CTRL is pressed-------------------
-            const bool testMouseInteraction = true;
-            if (testMouseInteraction && ImGui::GetIO().KeyCtrl) {
+            if (gIsCurlineHovered && ImGui::GetIO().KeyCtrl) {
                 const ImVec2 token_size(token_width,g.FontSize);// = ImGui::CalcTextSize(tok, tok+len_tok, false, 0.f);
                 const ImVec2& token_pos = pos;
                 ImRect bb(token_pos, token_pos + token_size);
                 if (ImGui::ItemAdd(bb, NULL) && ImGui::IsItemHovered()) {
                     window->DrawList->AddLine(ImVec2(bb.Min.x,bb.Max.y), bb.Max, sht>=0 ? style.color_syntax_highlighting[sht] : window->Color(ImGuiCol_Text), 2.f);
-                    if (ImGui::GetIO().MouseClicked[0])  {fprintf(stderr,"Mouse clicked on token: \"%s\"(%d->\"%s\") curlineStartedWithDiesis=%s line=\"%s\"\n",s,len_tok,tok,curlineStartedWithDiesis?"true":"false",curline->text.c_str());}
-                    ImGui::SetTooltip("Token: \"%s\" len=%d\nToken unclamped: \"%s\"\nSH = %s\nLine (%d):\"%s\"\nLine starts with '#': %s",tok,len_tok,s,sht<0 ? "None" : SyntaxHighlightingTypeStrings[sht],curline->lineNumber+1,curline->text.c_str(),curlineStartedWithDiesis?"true":"false");
+                    if (ImGui::GetIO().MouseClicked[0])  {fprintf(stderr,"Mouse clicked on token: \"%s\"(%d->\"%s\") curlineStartedWithDiesis=%s line=\"%s\"\n",s,len_tok,tok,gCurlineStartedWithDiesis?"true":"false",gCurline->text.c_str());}
+                    ImGui::SetTooltip("Token: \"%s\" len=%d\nToken unclamped: \"%s\"\nSH = %s\nLine (%d):\"%s\"\nLine starts with '#': %s",tok,len_tok,s,sht<0 ? "None" : SyntaxHighlightingTypeStrings[sht],gCurline->lineNumber+1,gCurline->text.c_str(),gCurlineStartedWithDiesis?"true":"false");
+                    gIsCursorChanged = true;ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
                 }
             }
             // -----------------------------------------------------------------------
@@ -2507,7 +2566,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
         if (sht>=0 && sht<SH_COUNT) window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1, 0.f);
         else window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), s+j, s+j+1, 0.f);
         if (g.LogEnabled) LogRenderedText(pos, s+j, s+j+1);
-        pos.x+=CalcTextWidth(s+j, s+j+1);
+        pos.x+=MyCalcTextWidth(s+j, s+j+1);
 	}
     }
 

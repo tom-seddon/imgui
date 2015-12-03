@@ -14,13 +14,9 @@
 #ifndef UTF8HELPER_H_
 #define UTF8HELPER_H_
 
-#include "../imguistring/imguistring.h"
 
 class UTF8Helper {
 public:
-    typedef ImString string;
-    typedef ImVector<string> stringVector;
-    typedef ImVector<unsigned> uintVector;
     typedef unsigned char uint8_t;
     typedef int uint32_t;
 protected:
@@ -55,6 +51,7 @@ static const uint8_t _utf8d[] = {
 };
 	return _utf8d[byte];
 }
+public:
 inline static uint32_t decode(uint32_t* state, uint32_t* codep, uint32_t byte) {
   uint32_t type = utf8d(byte);
 
@@ -98,6 +95,7 @@ static const uint8_t _utf8d[] = {
 };	
 	return _utf8d[byte];
 }
+public:
 inline static uint32_t decode(uint32_t* state, uint32_t* codep, uint32_t byte) {
   uint32_t type = utf8d(byte);
 
@@ -131,10 +129,11 @@ inline int countCodePoints(uint8_t* s, size_t* count) {
     return state != UTF8_ACCEPT;
 }
 
-inline static unsigned CountUTF8Chars(const char* text,const char* text_end=NULL,bool* pOptionalIStringMalformedOut=NULL)   {
+// This returns the number of codepoints
+inline static int CountUTF8Chars(const char* text,const char* text_end=NULL,bool* pOptionalIStringMalformedOut=NULL)   {
     uint32_t codepoint;
     uint32_t state = 0;
-    unsigned count = 0;
+    int count = 0;
     const char* s = (const char*) text;
     if (!text_end) text_end = text + strlen(text);
 
