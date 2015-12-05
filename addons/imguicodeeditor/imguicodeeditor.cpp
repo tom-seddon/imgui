@@ -89,6 +89,223 @@ static inline int CountUTF8Chars(const char* text_begin, const char* text_end=NU
 #   endif //IMGUICODEEDITOR_USE_UTF8HELPER_H
 }
 
+static inline float MyCalcTextWidthA(ImFont* font,float size, const char* text_begin, const char* text_end, const char** remaining,int *pNumUTF8CharsOut=NULL,bool cancelOutCharacterSpacingForTheLastCharacterOfALine=false)  {
+    // Warning: *pNumUTF8CharsOut must be set to zero by the caller
+    const float scale = size / font->FontSize;
+    float text_width = 0.f;int numUTF8Chars = 0;
+//#   define NO_IMGUICODEEDITOR_USE_OPT_FOR_MONOSPACE_FONTS
+#   ifdef NO_IMGUICODEEDITOR_USE_OPT_FOR_MONOSPACE_FONTS
+    if (!text_end) text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
+    const char* s = text_begin;
+    while (s < text_end)    {
+        // Decode and advance source
+        unsigned int c = (unsigned int)*s;
+        if (c < 0x80)   {s += 1;++numUTF8Chars;}
+        else    {
+            s += ImTextCharFromUtf8(&c, s, text_end);
+            if (c == 0) break;
+            ++numUTF8Chars;
+        }
+
+        text_width += ((int)c < font->IndexXAdvance.Size ? font->IndexXAdvance[(int)c] : font->FallbackXAdvance) * scale;
+    }
+    if (remaining)  *remaining = s;
+#   else //NO_IMGUICODEEDITOR_USE_OPT_FOR_MONOSPACE_FONTS
+#       ifndef IMGUICODEEDITOR_USE_UTF8HELPER_H
+    // Actually this does not work corrently with TABS, because TABS have a different width even in MONOSPACE fonts (TO FIX)
+    IM_ASSERT(remaining==NULL); // this arg is not currently supported by this opt
+    numUTF8Chars = ImGui::CountUTF8Chars(text_begin,text_end);
+    text_width = (font->FallbackXAdvance * scale) * numUTF8Chars;   // We use font->FallbackXAdvance for all (we could have used font->IndexXAdvance[0])
+#       else //IMGUICODEEDITOR_USE_UTF8HELPER_H
+    if (!text_end) text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
+    const char* s = text_begin;int codepoint;int state = 0;const unsigned int tab = (unsigned int)'\t';
+    int numTabs = 0;
+    for (numUTF8Chars = 0; s!=text_end; ++s)    {
+        if (UTF8Helper::decode(&state, &codepoint, *s)==UTF8Helper::UTF8_ACCEPT) {
+            ++numUTF8Chars;
+            if (codepoint == tab) ++numTabs;
+        }
+    }
+    text_width = scale * (font->FallbackXAdvance * (numUTF8Chars-numTabs) + font->IndexXAdvance[tab] * numTabs);
+    if (remaining)  *remaining = s;
+#       endif //IMGUICODEEDITOR_USE_UTF8HELPER_H
+#   endif //NO_IMGUICODEEDITOR_USE_OPT_FOR_MONOSPACE_FONTS
+    if (pNumUTF8CharsOut) *pNumUTF8CharsOut+=numUTF8Chars;
+    if (cancelOutCharacterSpacingForTheLastCharacterOfALine && text_width > 0.0f) text_width -= scale;
+    return text_width;
+}
+static inline float MyCalcTextWidth(const char *text, const char *text_end=NULL, int *pNumUTF8CharsOut=NULL)    {
+    // Warning: *pNumUTF8CharsOut must be set to zero by the caller
+    return MyCalcTextWidthA(GImGui->Font,GImGui->FontSize,text,text_end,NULL,pNumUTF8CharsOut,true);
+}
+
+
+// Basically these 3 methods are similiar to the ones in ImFont or ImDrawList classes, but:
+// -> specialized for text lines (no '\n' and '\r' chars).
+// -> furthermore, now "pos" is taken by reference, because before I kept calling: font->AddText(...,pos,text,...);pos+=ImGui::CalcTextSize(text);
+//      Now that is done in a single call.
+// TODO:    remove all this garbage and just use plain ImGui methods and call ImGui::GetCursorPosX() instead of ImGui::CalcTextSize(...) every time.
+//          [I won't get far in this addon if I keep adding useless code...]
+// TODO: Do the same for utf8helper.h. Just remove it. I DON'T MIND if it will be slower, the code must be clean and ordered, not fast.
+static inline void ImDrawListRenderTextLine(ImDrawList* draw_list,const ImFont* font,float size, ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, bool cpu_fine_clip)
+{
+    if (!text_end) text_end = text_begin + strlen(text_begin);
+
+    if ((int)pos.y > clip_rect.w) {
+        pos.x+= (int)pos.x + MyCalcTextWidth(text_begin,text_end);
+        return;
+    }
+
+    // Align to be pixel perfect
+    pos.x = (float)(int)pos.x + font->DisplayOffset.x;
+    pos.y = (float)(int)pos.y + font->DisplayOffset.y;
+    float& x = pos.x;
+    float& y = pos.y;
+
+    const float scale = size / font->FontSize;
+    const float line_height = font->FontSize * scale;
+
+    ImDrawVert* vtx_write = draw_list->_VtxWritePtr;
+    ImDrawIdx* idx_write = draw_list->_IdxWritePtr;
+    unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
+
+    const char* s = text_begin;
+    if (y + line_height < clip_rect.y) while (s < text_end && *s != '\n')  s++;// Fast-forward to next line
+
+    while (s < text_end)
+    {
+        // Decode and advance source
+        unsigned int c = (unsigned int)*s;
+        if (c < 0x80)   {s += 1;}
+        else    {
+            s += ImTextCharFromUtf8(&c, s, text_end);
+            if (c == 0) break;
+        }
+
+        float char_width = 0.0f;
+        if (const ImFont::Glyph* glyph = font->FindGlyph((unsigned short)c))
+        {
+            char_width = glyph->XAdvance * scale;
+
+            // Clipping on Y is more likely
+            if (c != ' ' && c != '\t')
+            {
+                // We don't do a second finer clipping test on the Y axis (TODO: do some measurement see if it is worth it, probably not)
+                float y1 = (float)(y + glyph->Y0 * scale);
+                float y2 = (float)(y + glyph->Y1 * scale);
+
+                float x1 = (float)(x + glyph->X0 * scale);
+                float x2 = (float)(x + glyph->X1 * scale);
+                if (x1 <= clip_rect.z && x2 >= clip_rect.x)
+                {
+                    // Render a character
+                    float u1 = glyph->U0;
+                    float v1 = glyph->V0;
+                    float u2 = glyph->U1;
+                    float v2 = glyph->V1;
+
+                    // CPU side clipping used to fit text in their frame when the frame is too small. Only does clipping for axis aligned quads.
+                    if (cpu_fine_clip)
+                    {
+                        if (x1 < clip_rect.x)
+                        {
+                            u1 = u1 + (1.0f - (x2 - clip_rect.x) / (x2 - x1)) * (u2 - u1);
+                            x1 = clip_rect.x;
+                        }
+                        if (y1 < clip_rect.y)
+                        {
+                            v1 = v1 + (1.0f - (y2 - clip_rect.y) / (y2 - y1)) * (v2 - v1);
+                            y1 = clip_rect.y;
+                        }
+                        if (x2 > clip_rect.z)
+                        {
+                            u2 = u1 + ((clip_rect.z - x1) / (x2 - x1)) * (u2 - u1);
+                            x2 = clip_rect.z;
+                        }
+                        if (y2 > clip_rect.w)
+                        {
+                            v2 = v1 + ((clip_rect.w - y1) / (y2 - y1)) * (v2 - v1);
+                            y2 = clip_rect.w;
+                        }
+                        if (y1 >= y2)
+                        {
+                            x += char_width;
+                            continue;
+                        }
+                    }
+
+                    // NB: we are not calling PrimRectUV() here because non-inlined causes too much overhead in a debug build.
+                    // inlined:
+                    {
+                        idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+2);
+                        idx_write[3] = (ImDrawIdx)(vtx_current_idx); idx_write[4] = (ImDrawIdx)(vtx_current_idx+2); idx_write[5] = (ImDrawIdx)(vtx_current_idx+3);
+                        vtx_write[0].pos.x = x1; vtx_write[0].pos.y = y1; vtx_write[0].col = col; vtx_write[0].uv.x = u1; vtx_write[0].uv.y = v1;
+                        vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = col; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
+                        vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = col; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;
+                        vtx_write[3].pos.x = x1; vtx_write[3].pos.y = y2; vtx_write[3].col = col; vtx_write[3].uv.x = u1; vtx_write[3].uv.y = v2;
+                        vtx_write += 4;
+                        vtx_current_idx += 4;
+                        idx_write += 6;
+                    }
+                }
+            }
+        }
+
+        x += char_width;
+    }
+
+    draw_list->_VtxWritePtr = vtx_write;
+    draw_list->_VtxCurrentIdx = vtx_current_idx;
+    draw_list->_IdxWritePtr = idx_write;
+
+    // restore pos
+    pos.x -= font->DisplayOffset.x;
+    pos.y -= font->DisplayOffset.y;
+
+}
+static inline void ImDrawListAddTextLine(ImDrawList* draw_list,const ImFont* font, float font_size, ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, const ImVec4* cpu_fine_clip_rect = NULL)
+{
+    if (text_end == NULL)   text_end = text_begin + strlen(text_begin);
+    if ((col >> 24) == 0)   {
+        pos.x+= (int)pos.x + MyCalcTextWidth(text_begin,text_end);
+        return;
+    }
+    if (text_begin == text_end) return;
+
+    IM_ASSERT(font->ContainerAtlas->TexID == draw_list->_TextureIdStack.back());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
+
+    // reserve vertices for worse case (over-reserving is useful and easily amortized)
+    const int char_count = (int)(text_end - text_begin);
+    const int vtx_count_max = char_count * 4;
+    const int idx_count_max = char_count * 6;
+    const int vtx_begin = draw_list->VtxBuffer.Size;
+    const int idx_begin = draw_list->IdxBuffer.Size;
+    draw_list->PrimReserve(idx_count_max, vtx_count_max);
+
+    ImVec4 clip_rect = draw_list->_ClipRectStack.back();
+    if (cpu_fine_clip_rect) {
+        clip_rect.x = ImMax(clip_rect.x, cpu_fine_clip_rect->x);
+        clip_rect.y = ImMax(clip_rect.y, cpu_fine_clip_rect->y);
+        clip_rect.z = ImMin(clip_rect.z, cpu_fine_clip_rect->z);
+        clip_rect.w = ImMin(clip_rect.w, cpu_fine_clip_rect->w);
+    }
+    ImDrawListRenderTextLine(draw_list,font,font_size, pos, col, clip_rect, text_begin, text_end, cpu_fine_clip_rect != NULL);
+
+    // give back unused vertices
+    // FIXME-OPT: clean this up
+    draw_list->VtxBuffer.resize((int)(draw_list->_VtxWritePtr - draw_list->VtxBuffer.Data));
+    draw_list->IdxBuffer.resize((int)(draw_list->_IdxWritePtr - draw_list->IdxBuffer.Data));
+    int vtx_unused = vtx_count_max - (draw_list->VtxBuffer.Size - vtx_begin);
+    int idx_unused = idx_count_max - (draw_list->IdxBuffer.Size - idx_begin);
+    draw_list->CmdBuffer.back().ElemCount -= idx_unused;
+    draw_list->_VtxWritePtr -= vtx_unused;
+    draw_list->_IdxWritePtr -= idx_unused;
+    draw_list->_VtxCurrentIdx = (ImDrawIdx)draw_list->VtxBuffer.Size;
+}
+static inline void ImDrawListAddTextLine(ImDrawList* draw_list,ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end=NULL)   {
+    ImDrawListAddTextLine(draw_list,GImGui->Font, GImGui->FontSize, pos, col, text_begin, text_end);
+}
+
 } // namespace ImGui
 
 namespace ImGuiCe   {
@@ -371,55 +588,6 @@ void CodeEditor::TextLineWithSH(const char* fmt, ...)   {
     va_start(args, fmt);
     TextLineWithSHV(fmt, args);
     va_end(args);
-}
-static inline float MyCalcTextWidthA(ImFont* font,float size, const char* text_begin, const char* text_end, const char** remaining,int *pNumUTF8CharsOut=NULL,bool cancelOutCharacterSpacingForTheLastCharacterOfALine=false)  {
-    // Warning: *pNumUTF8CharsOut must be set to zero by the caller
-    const float scale = size / font->FontSize;
-    float text_width = 0.f;int numUTF8Chars = 0;
-//#   define NO_IMGUICODEEDITOR_USE_OPT_FOR_MONOSPACE_FONTS
-#   ifdef NO_IMGUICODEEDITOR_USE_OPT_FOR_MONOSPACE_FONTS
-    if (!text_end) text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
-    const char* s = text_begin;
-    while (s < text_end)    {
-        // Decode and advance source
-        unsigned int c = (unsigned int)*s;
-        if (c < 0x80)   {s += 1;++numUTF8Chars;}
-        else    {
-            s += ImTextCharFromUtf8(&c, s, text_end);
-            if (c == 0) break;
-            ++numUTF8Chars;
-        }
-
-        text_width += ((int)c < font->IndexXAdvance.Size ? font->IndexXAdvance[(int)c] : font->FallbackXAdvance) * scale;
-    }
-    if (remaining)  *remaining = s;
-#   else //NO_IMGUICODEEDITOR_USE_OPT_FOR_MONOSPACE_FONTS
-#       ifndef IMGUICODEEDITOR_USE_UTF8HELPER_H
-    // Actually this does not work corrently with TABS, because TABS have a different width even in MONOSPACE fonts (TO FIX)
-    IM_ASSERT(remaining==NULL); // this arg is not currently supported by this opt
-    numUTF8Chars = ImGui::CountUTF8Chars(text_begin,text_end);
-    text_width = (font->FallbackXAdvance * scale) * numUTF8Chars;   // We use font->FallbackXAdvance for all (we could have used font->IndexXAdvance[0])
-#       else //IMGUICODEEDITOR_USE_UTF8HELPER_H
-    if (!text_end) text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
-    const char* s = text_begin;int codepoint;int state = 0;const unsigned int tab = (unsigned int)'\t';
-    int numTabs = 0;
-    for (numUTF8Chars = 0; s!=text_end; ++s)    {
-        if (UTF8Helper::decode(&state, &codepoint, *s)==UTF8Helper::UTF8_ACCEPT) {
-            ++numUTF8Chars;
-            if (codepoint == tab) ++numTabs;
-        }
-    }
-    text_width = scale * (font->FallbackXAdvance * (numUTF8Chars-numTabs) + font->IndexXAdvance[tab] * numTabs);
-    if (remaining)  *remaining = s;
-#       endif //IMGUICODEEDITOR_USE_UTF8HELPER_H
-#   endif //NO_IMGUICODEEDITOR_USE_OPT_FOR_MONOSPACE_FONTS
-    if (pNumUTF8CharsOut) *pNumUTF8CharsOut+=numUTF8Chars;
-    if (cancelOutCharacterSpacingForTheLastCharacterOfALine && text_width > 0.0f) text_width -= scale;
-    return text_width;
-}
-static inline float MyCalcTextWidth(const char *text, const char *text_end=NULL, int *pNumUTF8CharsOut=NULL)    {
-    // Warning: *pNumUTF8CharsOut must be set to zero by the caller
-    return MyCalcTextWidthA(GImGui->Font,GImGui->FontSize,text,text_end,NULL,pNumUTF8CharsOut,true);
 }
 
 
@@ -1895,17 +2063,17 @@ void CodeEditor::render()   {
     int precision =  0;
     if (showLineNumbers)    { // No time for a better approach
         ImGui::PushFont(const_cast<ImFont*>(ImFonts[style.font_line_numbers]));
-        if (lineEnd<9)          {precision=1;lineNumberSize=MyCalcTextWidth("9");}
-        else if (lineEnd<99)    {precision=2;lineNumberSize=MyCalcTextWidth("99");}
-        else if (lineEnd<999)   {precision=3;lineNumberSize=MyCalcTextWidth("999");}
-        else if (lineEnd<9999)  {precision=4;lineNumberSize=MyCalcTextWidth("9999");}
-        else if (lineEnd<99999) {precision=5;lineNumberSize=MyCalcTextWidth("99999");}
-        else if (lineEnd<999999){precision=6;lineNumberSize=MyCalcTextWidth("999999");}
-        else                    {precision=7;lineNumberSize=MyCalcTextWidth("9999999");}
+        if (lineEnd<9)          {precision=1;lineNumberSize=ImGui::MyCalcTextWidth("9");}
+        else if (lineEnd<99)    {precision=2;lineNumberSize=ImGui::MyCalcTextWidth("99");}
+        else if (lineEnd<999)   {precision=3;lineNumberSize=ImGui::MyCalcTextWidth("999");}
+        else if (lineEnd<9999)  {precision=4;lineNumberSize=ImGui::MyCalcTextWidth("9999");}
+        else if (lineEnd<99999) {precision=5;lineNumberSize=ImGui::MyCalcTextWidth("99999");}
+        else if (lineEnd<999999){precision=6;lineNumberSize=ImGui::MyCalcTextWidth("999999");}
+        else                    {precision=7;lineNumberSize=ImGui::MyCalcTextWidth("9999999");}
         ImGui::PopFont();
     }
     ImGui::PushFont(const_cast<ImFont*>(ImFonts[FONT_STYLE_NORMAL]));
-    const float sizeFoldingMarks = MyCalcTextWidth("   ");    // Wrong, but no time to fix it
+    const float sizeFoldingMarks = ImGui::MyCalcTextWidth("   ");    // Wrong, but no time to fix it
     const ImVec2 startCursorPosIconMargin(ImGui::GetCursorPosX(),ImGui::GetCursorPosY() + (lineStart * lineHeight));
     const ImVec2 startCursorPosLineNumbers(startCursorPosIconMargin.x + (showIconMargin ? btnSize.x : 0.f),startCursorPosIconMargin.y);
     const ImVec2 startCursorPosFoldingMarks(startCursorPosLineNumbers.x + (enableTextFolding ? lineNumberSize : 0.f),startCursorPosLineNumbers.y);
@@ -2285,20 +2453,45 @@ void CodeEditor::TextLineUnformattedWithSH(const char* text, const char* text_en
     if (text_end == NULL) text_end = text + strlen(text); // FIXME-OPT
 
     {
-        const float wrap_width = 0.0f;
-        const ImVec2 text_size = ImGui::CalcTextSize(text_begin, text_end, false, wrap_width);
 
         // Account of baseline offset
         ImVec2 text_pos = window->DC.CursorPos;
         text_pos.y += window->DC.CurrentLineTextBaseOffset;
 
-        ImRect bb(text_pos, text_pos + text_size);
-        ImGui::ItemSize(text_size);
-        if (!ImGui::ItemAdd(bb, NULL))  return;
-        gIsCurlineHovered = ImGui::IsItemHovered();
+        // I would like to remove the call to CalcText(...) here (in "text_size"), and I could simply retrieve
+        // bb.Min after the call to RenderTextLineWrappedWithSH(...) to calculate it for free...
+        // But the truth is that RenderTextLineWrappedWithSH(...) is using "gIsCurlineHovered"
+        // to detect if it can make more expensive processing to detect when mouse is hovering over tokens.
 
-        // Render (we don't hide text after ## in this end-user function)
-        RenderTextLineWrappedWithSH(bb.Min, text_begin, text_end);
+        // Maybe here we can set "gIsCurlineHovered" only if mouse is in the y range and > x0.
+        // Is it possible to do it ? How ?
+
+        // Idea: Do it only if "ImGui::GetIO().KeyCtrl" is down.
+
+        if (ImGui::GetIO().KeyCtrl) {
+            // TO FIX: Folded code when KeyCtrl is down appears shifted one tab to the right. Why ?
+
+            const ImVec2 text_size(ImGui::MyCalcTextWidth(text_begin, text_end),ImGui::GetTextLineHeight());
+            ImRect bb(text_pos, text_pos + text_size);
+            ImGui::ItemSize(text_size);
+            if (!ImGui::ItemAdd(bb, NULL))  return;
+            gIsCurlineHovered = ImGui::IsItemHovered();
+
+            // Render (we don't hide text after ## in this end-user function)
+            RenderTextLineWrappedWithSH(bb.Min, text_begin, text_end);
+        }
+        else {
+            const ImVec2 old_text_pos = text_pos;
+
+            gIsCurlineHovered = false;
+            RenderTextLineWrappedWithSH(text_pos, text_begin, text_end);
+
+            const ImVec2 text_size(text_pos.x-old_text_pos.x,ImGui::GetTextLineHeight());
+            ImRect bb(old_text_pos, old_text_pos + text_size);
+            ImGui::ItemSize(text_size);
+            if (!ImGui::ItemAdd(bb, NULL))  return;
+            gIsCurlineHovered = ImGui::IsItemHovered();
+        }
     }
 }
 template <int NUM_TOKENS> inline static const char* FindNextToken(const char* text,const char* text_end,const char* token_start[NUM_TOKENS],const char* token_end[NUM_TOKENS],int* pTokenIndexOut=NULL,const char* optionalStringDelimiters=NULL,const char stringEscapeChar='\\',bool skipEscapeChar=false) {
@@ -2345,16 +2538,14 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
 
     const FoldingStringVector* fsv = GetGlobalFoldingStringVectorForLanguage(this->lang);
     if (!fsv || lang==LANG_NONE)	{
-	const int text_len = (int)(text_end - text);
-	if (text_len > 0)
-	{
-        window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_end, 0.f);
-	    if (g.LogEnabled) LogRenderedText(pos, text, text_end);
-	}
-	return;
+        const int text_len = (int)(text_end - text);
+        if (text_len > 0)   {
+            ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_end);
+            if (g.LogEnabled) LogRenderedText(pos, text, text_end);
+        }
+        return;
     }
 
-    //const float charWidth = ImGui::CalcTextSize("0").x;
     if (!skipLineCommentAndStringProcessing) {
         const char* startComments[3] = {fsv->singleLineComment,fsv->multiLineCommentStart,fsv->multiLineCommentEnd};
         const char* endComments[3] = {fsv->singleLineComment+strlen(fsv->singleLineComment),fsv->multiLineCommentStart+strlen(fsv->multiLineCommentStart),fsv->multiLineCommentEnd+strlen(fsv->multiLineCommentEnd)};
@@ -2367,9 +2558,8 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                 text = tk;
                 const int text_len = (int)(text_end - text);
                 if (text_len > 0)   {
-                    window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_COMMENT]]), g.FontSize, pos, style.color_syntax_highlighting[SH_COMMENT], text, text_end, 0.f);
+                    ImGui::ImDrawListAddTextLine(window->DrawList,const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_COMMENT]]), g.FontSize, pos, style.color_syntax_highlighting[SH_COMMENT], text, text_end);
                     if (g.LogEnabled) LogRenderedText(pos, text, text_end);
-                    pos.x+=MyCalcTextWidth(text,text_end);
                 }
                 return;
             }
@@ -2382,9 +2572,8 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                 text = tk;
                 const int text_len = (int)(endCmt - text);
                 if (text_len > 0)   {
-                    window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_COMMENT]]), g.FontSize, pos, style.color_syntax_highlighting[SH_COMMENT], text, endCmt, 0.f);
+                    ImGui::ImDrawListAddTextLine(window->DrawList,const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_COMMENT]]), g.FontSize, pos, style.color_syntax_highlighting[SH_COMMENT], text, endCmt);
                     if (g.LogEnabled) LogRenderedText(pos, text, endCmt);
-                    pos.x+=MyCalcTextWidth(text,endCmt);
                 }
                 if (tk2 && endCmt<text_end) RenderTextLineWrappedWithSH(pos,endCmt,text_end);    // Draw after "*/"
                 return;
@@ -2404,14 +2593,15 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                     }
                     const char* endStringSH = tk2==NULL ? text_end : (tk2+1);
                     // Draw String:
-                    window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_STRING]]), g.FontSize, pos, style.color_syntax_highlighting[SH_STRING], tk, endStringSH, 0.f);
+                    const ImVec2 oldPos = pos;
+                    ImGui::ImDrawListAddTextLine(window->DrawList,const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_STRING]]), g.FontSize, pos, style.color_syntax_highlighting[SH_STRING], tk, endStringSH);
                     if (g.LogEnabled) LogRenderedText(pos, tk, endStringSH);
-                    const float token_width = MyCalcTextWidth(tk,endStringSH);
-                    // TEST: Mouse interaction on token when CTRL is pressed-------------------
-                    if (gIsCurlineHovered && ImGui::GetIO().KeyCtrl) {
+                    const float token_width = pos.x - oldPos.x;  //MyCalcTextWidth(tk,endStringSH);
+                    // TEST: Mouse interaction on token (gIsCurlineHovered == true when CTRL is pressed)-------------------
+                    if (gIsCurlineHovered) {
                         // See if we can strip 2 chars
                         const ImVec2 token_size(token_width,g.FontSize);
-                        const ImVec2& token_pos = pos;
+                        const ImVec2& token_pos = oldPos;
                         ImRect bb(token_pos, token_pos + token_size);
                         if (ImGui::ItemAdd(bb, NULL) && ImGui::IsItemHovered()) {
                             window->DrawList->AddLine(ImVec2(bb.Min.x,bb.Max.y), bb.Max, style.color_syntax_highlighting[SH_STRING], 2.f);
@@ -2420,8 +2610,8 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                             gIsCursorChanged = true;ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
                         }
                     }
-                    // -----------------------------------------------------------------------
-                    pos.x+=token_width;
+                    // ----------------------------------------------------------------------------------------------------
+                    //pos.x+=token_width;
                     if (tk2==NULL)	return;	// No other match found
                     text = endStringSH;
                     if (text!=text_end) {
@@ -2446,18 +2636,17 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
     // skip tabs and spaces
     while (*s==sp || *s==tab)	{
     if (s+1==text_end)  {
-        window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_end, 0.f);
+        ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_end);
         if (g.LogEnabled) LogRenderedText(pos, text, text_end);
         return;
     }
     ++s;
     }
     if (s>text)	{
-    // Draw Tabs and spaces
-    window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, s, 0.f);
-    if (g.LogEnabled) LogRenderedText(pos, text, s);
-    pos.x+=MyCalcTextWidth(text,s);
-    text=s;
+        // Draw Tabs and spaces
+        ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, s);
+        if (g.LogEnabled) LogRenderedText(pos, text, s);
+        text=s;
     }
 
     // process special chars at the start of the line (e.g. "//" or '#' in cpp)
@@ -2494,10 +2683,9 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                 int sht = -1;
                 if (tokenIsNumber && *ch=='.') {sht = SH_NUMBER;++tokenIsNumber;}
                 if (sht==-1 && !shTypePunctuationMap.get(*ch,sht)) sht = -1;
-                if (sht>=0 && sht<SH_COUNT) window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1, 0.f);
-                else window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), s+j, s+j+1, 0.f);
+                if (sht>=0 && sht<SH_COUNT) ImGui::ImDrawListAddTextLine(window->DrawList,const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1);
+                else ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), s+j, s+j+1);
                 if (g.LogEnabled) LogRenderedText(pos, s+j, s+j+1);
-                pos.x+=MyCalcTextWidth(s+j, s+j+1);
             }
         }
         s+=offset;
@@ -2521,20 +2709,21 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                 }
                 if (tokenIsNumber) sht = SH_NUMBER;
             }
+            const ImVec2 oldPos = pos;
             if (sht>=0 || shTypeKeywordMap.get(tok,sht)) {
                 //fprintf(stderr,"Getting shTypeMap: \"%s\",%d\n",tok,sht);
-                window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], tok, tok+len_tok, 0.f);
+                ImGui::ImDrawListAddTextLine(window->DrawList,const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], tok, tok+len_tok);
             }
             else {
                 //fprintf(stderr,"Not Getting shTypeMap: \"%s\",%d\n",tok,sht);
-                window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), tok, tok+len_tok, 0.f);
+                ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), tok, tok+len_tok);
             }
             if (g.LogEnabled) LogRenderedText(pos, tok, tok+len_tok);
-            const float token_width = MyCalcTextWidth(tok,tok+len_tok);   // We'll use this later
-            // TEST: Mouse interaction on token when CTRL is pressed-------------------
-            if (gIsCurlineHovered && ImGui::GetIO().KeyCtrl) {
+            const float token_width = pos.x - oldPos.x;//MyCalcTextWidth(tok,tok+len_tok);   // We'll use this later
+            // TEST: Mouse interaction on token (gIsCurlineHovered == true when CTRL is pressed)-------------------
+            if (gIsCurlineHovered) {
                 const ImVec2 token_size(token_width,g.FontSize);// = ImGui::CalcTextSize(tok, tok+len_tok, false, 0.f);
-                const ImVec2& token_pos = pos;
+                const ImVec2& token_pos = oldPos;
                 ImRect bb(token_pos, token_pos + token_size);
                 if (ImGui::ItemAdd(bb, NULL) && ImGui::IsItemHovered()) {
                     window->DrawList->AddLine(ImVec2(bb.Min.x,bb.Max.y), bb.Max, sht>=0 ? style.color_syntax_highlighting[sht] : window->Color(ImGuiCol_Text), 2.f);
@@ -2543,8 +2732,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                     gIsCursorChanged = true;ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
                 }
             }
-            // -----------------------------------------------------------------------
-            pos.x+=token_width;
+            // ----------------------------------------------------------------------------------------------------
         }
         //printf("Token: %s\n", tok);
         oldTok = tok+len_tok;s+=len_tok;
@@ -2555,19 +2743,18 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
 
     offset = text_end-s;
     if (offset>0) {
-    // Print Punctuation
-    //window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Button), s, s+offset, wrap_width);
-    //if (g.LogEnabled) LogRenderedText(pos, s, s+offset);
-	for (int j=0;j<offset;j++)  {
-	    const char* ch = s+j;
-        int sht = -1;
-	if (tokenIsNumber && *ch=='.') {sht = SH_NUMBER;++tokenIsNumber;}
-	if (sht==-1 && !shTypePunctuationMap.get(*ch,sht)) sht = -1;
-        if (sht>=0 && sht<SH_COUNT) window->DrawList->AddText(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1, 0.f);
-        else window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), s+j, s+j+1, 0.f);
-        if (g.LogEnabled) LogRenderedText(pos, s+j, s+j+1);
-        pos.x+=MyCalcTextWidth(s+j, s+j+1);
-	}
+        // Print Punctuation
+        //window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Button), s, s+offset, wrap_width);
+        //if (g.LogEnabled) LogRenderedText(pos, s, s+offset);
+        for (int j=0;j<offset;j++)  {
+            const char* ch = s+j;
+            int sht = -1;
+            if (tokenIsNumber && *ch=='.') {sht = SH_NUMBER;++tokenIsNumber;}
+            if (sht==-1 && !shTypePunctuationMap.get(*ch,sht)) sht = -1;
+            if (sht>=0 && sht<SH_COUNT) ImGui::ImDrawListAddTextLine(window->DrawList,const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1);
+            else ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), s+j, s+j+1);
+            if (g.LogEnabled) LogRenderedText(pos, s+j, s+j+1);
+        }
     }
 
 }

@@ -461,6 +461,16 @@ void DrawGL()	// Mandatory
             ImGui::InputTextMultilineWithHorizontalScrolling("", buffer, 1024, height);
             ImGui::PopID();
 
+            // Based on the code by krys-spectralpixel (https://github.com/krys-spectralpixel), posted here: https://github.com/ocornut/imgui/issues/261
+            ImGui::Spacing();
+            ImGui::Text("Tabs (based on the code by krys-spectralpixel):");
+            static const char* tabNames[] = {"Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
+            static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
+            static const char* tabTooltips[numTabs] = {"Render Tab Tooltip","","","","Object Type Tooltip","","","","","Tired to add tooltips...",""};
+            static int selectedTab = 0;
+            /*const bool tabSelectedChanged =*/ ImGui::Tabs(numTabs,tabNames,selectedTab,tabTooltips,true);
+            ImGui::Text("\nTab Page For Tab: \"%s\" here.\n\n",tabNames[selectedTab]);
+
 #           else //NO_IMGUIVARIOUSCONTROLS
             ImGui::Text("%s","Excluded from this build.\n");
 #           endif //NO_IMGUIVARIOUSCONTROLS

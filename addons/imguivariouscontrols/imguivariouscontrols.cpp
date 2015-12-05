@@ -598,6 +598,81 @@ bool InputTextMultilineWithHorizontalScrolling(const char* label, char* buf, siz
     return changed;
 }
 
+// Based on the code by krys-spectralpixel (https://github.com/krys-spectralpixel), posted here: https://github.com/ocornut/imgui/issues/261
+bool Tabs(int numTabs, const char** labelsPersistentStorage, int& selected, const char** tooltipsPersistentStorage, bool autoLayout) {
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    const ImVec2 itemSpacing =  style.ItemSpacing;
+    const ImVec4 color =        style.Colors[ImGuiCol_Button];
+    const ImVec4 colorActive =  style.Colors[ImGuiCol_ButtonActive];
+    const ImVec4 colorHover =   style.Colors[ImGuiCol_ButtonHovered];
+    style.ItemSpacing.x =       1;
+    style.ItemSpacing.y =       1;
+
+
+    if (numTabs>0 && (selected<0 || selected>=numTabs)) selected = 0;
+
+    // Parameters to adjust to make autolayout work as expected:----------
+    const float btnOffset =         2.f*style.ItemSpacing.x;    // It should be: ImGui::Button(text).size.x = ImGui::CalcTextSize(text).x + btnOffset;
+    const float sameLineOffset =    2.f*style.ItemSpacing.x;    // It should be: sameLineOffset = ImGui::SameLine().size.x;
+    const float uniqueLineOffset =  5.f*style.WindowPadding.x;  // width to be sutracted by windowWidth to make it work.
+    //--------------------------------------------------------------------
+
+    float windowWidth = 0.f,sumX=0.f,btnWidth = 0.f;
+    if (autoLayout) windowWidth = ImGui::GetWindowWidth() - uniqueLineOffset;
+
+    bool selection_changed = false;
+    for (int i = 0; i < numTabs; i++)
+    {
+        // push the style
+        if (i == selected)
+        {
+            style.Colors[ImGuiCol_Button] =         colorActive;
+            style.Colors[ImGuiCol_ButtonActive] =   colorActive;
+            style.Colors[ImGuiCol_ButtonHovered] =  colorActive;
+        }
+        else
+        {
+            style.Colors[ImGuiCol_Button] =         color;
+            style.Colors[ImGuiCol_ButtonActive] =   colorActive;
+            style.Colors[ImGuiCol_ButtonHovered] =  colorHover;
+        }
+
+        ImGui::PushID(i);   // otherwise two tabs with the same name would clash.
+
+        if (!autoLayout) {if (i>0) ImGui::SameLine();}
+        else if (sumX > 0.f) {
+            sumX+=sameLineOffset;  // Maybe we can skip it if we use SameLine(0,0) below
+
+            btnWidth = ImGui::CalcTextSize(labelsPersistentStorage[i]).x;
+            btnWidth+=btnOffset;
+
+            sumX+=btnWidth;
+            if (sumX>windowWidth) sumX = 0.f;
+            else ImGui::SameLine();
+        }
+
+        // Draw the button
+        if (ImGui::Button(labelsPersistentStorage[i]))   {selection_changed = (selected!=i);selected = i;}
+        if (autoLayout && sumX==0.f) {
+            // First element of a line
+            //sumX = ImGui::GetCursorPosX();        // Thought it worked... workaround:
+            sumX = ImGui::CalcTextSize(labelsPersistentStorage[i]).x;
+            sumX+=btnOffset;
+        }
+        if (tooltipsPersistentStorage && tooltipsPersistentStorage[i] && ImGui::IsItemHovered() && strlen(tooltipsPersistentStorage[i])>0) ImGui::SetTooltip("%s",tooltipsPersistentStorage[i]);
+        ImGui::PopID();
+    }
+
+    // Restore the style
+    style.Colors[ImGuiCol_Button] =         color;
+    style.Colors[ImGuiCol_ButtonActive] =   colorActive;
+    style.Colors[ImGuiCol_ButtonHovered] =  colorHover;
+    style.ItemSpacing =                     itemSpacing;
+
+    return selection_changed;
+}
+
 /* // Snippet by Omar. To evalutate. But in main.cpp thare's another example that supports correct window resizing.
  * // And here is not straightforward to determine the sizes we want to use...
 //#include <imgui_internal.h>

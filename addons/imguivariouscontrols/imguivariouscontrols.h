@@ -231,6 +231,9 @@ bool ColorCombo(const char* label,ImVec4 *pColorOut=NULL,bool supportsAlpha=fals
 // Based on the code from: https://github.com/Roflraging (see https://github.com/ocornut/imgui/issues/383)
 bool InputTextMultilineWithHorizontalScrolling(const char* label, char* buf, size_t buf_size, float height, ImGuiInputTextFlags flags = 0);
 
+// Based on the code by krys-spectralpixel (https://github.com/krys-spectralpixel), posted here: https://github.com/ocornut/imgui/issues/261
+bool Tabs(int numTabs, const char** labelsPersistentStorage, int& selected, const char** tooltipsPersistentStorage=NULL ,bool autoLayout=true);
+
 } // namespace ImGui
 
 
