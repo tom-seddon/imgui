@@ -471,7 +471,7 @@ void DrawGL()	// Mandatory
 
             // Based on the code by krys-spectralpixel (https://github.com/krys-spectralpixel), posted here: https://github.com/ocornut/imgui/issues/261
             ImGui::Spacing();
-            ImGui::Text("Tabs (based on the code by krys-spectralpixel):");
+            ImGui::Text("TabLabels (based on the code by krys-spectralpixel):");
             static const char* tabNames[] = {"Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
             static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
             static const char* tabTooltips[numTabs] = {"Render Tab Tooltip","","","","Object Type Tooltip","","","","","Tired to add tooltips...",""};
