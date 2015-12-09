@@ -458,7 +458,15 @@ void DrawGL()	// Mandatory
             static char buffer[1024] = "Code posted by Roflraging to the ImGui Issue Section (https://github.com/ocornut/imgui/issues/383).";
             const float height = 60;
             ImGui::PushID(buffer);
-            ImGui::InputTextMultilineWithHorizontalScrolling("", buffer, 1024, height);
+            ImGui::InputTextMultilineWithHorizontalScrolling("ITMWHS", buffer, 1024, height);   // Note that now the label is not displayed ATM
+            ImGui::PopID();
+
+            ImGui::Spacing();
+            ImGui::Text("Same as above with a context-menu that should work (more or less):");
+            static char buffer2[1024] = "Code posted by Roflraging to the ImGui Issue Section (https://github.com/ocornut/imgui/issues/383).";
+            ImGui::PushID(buffer2);
+            static bool popup_open = false;static int threeStaticInts[3]={0,0,0};
+            ImGui::InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu("ITMWHS2", buffer2, 1024, height,popup_open,threeStaticInts);
             ImGui::PopID();
 
             // Based on the code by krys-spectralpixel (https://github.com/krys-spectralpixel), posted here: https://github.com/ocornut/imgui/issues/261
@@ -467,9 +475,22 @@ void DrawGL()	// Mandatory
             static const char* tabNames[] = {"Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
             static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
             static const char* tabTooltips[numTabs] = {"Render Tab Tooltip","","","","Object Type Tooltip","","","","","Tired to add tooltips...",""};
+            static int tabItemOrdering[numTabs] = {0,1,2,3,4,5,6,7,8,9,10,11};
             static int selectedTab = 0;
-            /*const bool tabSelectedChanged =*/ ImGui::Tabs(numTabs,tabNames,selectedTab,tabTooltips,true);
-            ImGui::Text("\nTab Page For Tab: \"%s\" here.\n\n",tabNames[selectedTab]);
+            static int optionalHoveredTab = 0;
+            int justClosedTabIndex=-1,justClosedTabIndexInsideTabItemOrdering = -1,oldSelectedTab = selectedTab;
+            /*const bool tabSelectedChanged =*/ ImGui::TabLabels(numTabs,tabNames,selectedTab,tabTooltips,true,&optionalHoveredTab,&tabItemOrdering[0],true,true,&justClosedTabIndex,&justClosedTabIndexInsideTabItemOrdering);
+            // Optional stuff
+            if (justClosedTabIndex==1) {
+                tabItemOrdering[justClosedTabIndexInsideTabItemOrdering] = justClosedTabIndex;   // Prevent the user from closing Tab "Layers"
+                selectedTab = oldSelectedTab;   // This is safer, in case we had closed the selected tab
+            }
+            // Draw tab page
+            ImGui::Spacing();ImGui::Text("Tab Page For Tab: \"%s\" here.",tabNames[selectedTab]);
+            ImGui::SameLine();if (ImGui::SmallButton("Reset Tab Labels")) {for (int i=0;i<numTabs;i++) tabItemOrdering[i] = i;}
+            ImGui::Spacing();
+            //if (optionalHoveredTab>=0) ImGui::Text("Mouse is hovering Tab Label: \"%s\".\n\n",tabNames[optionalHoveredTab]);
+
 
 #           else //NO_IMGUIVARIOUSCONTROLS
             ImGui::Text("%s","Excluded from this build.\n");
@@ -694,6 +715,7 @@ int main(int argc, char** argv)
             0, // € ™ ↖ ⇖ ⬁ ⬉ ⤡ ⤢ ☺ ♪
         };
     const float fontSizeInPixels = 18.f;
+                                  //-40.f; // If < 0, it's the number of lines that fit the whole screen (but without any kind of vertical spacing)
 
 
     // These lines load an embedded font. [However these files are way too big... inside <imgui.cpp> they used a better format storing bytes at groups of 4, so the files are more concise (1/4?) than mine]

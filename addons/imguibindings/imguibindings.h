@@ -140,14 +140,15 @@ struct ImImpl_InitParams	{
         sizeInPixels(_sizeInPixels),pGlyphRanges(pOptionalGlyphRanges?pOptionalGlyphRanges:ImImpl_InitParams::GetGlyphRangesDefault())
         ,useFontConfig(false)
         {IM_ASSERT(pMemoryData);IM_ASSERT(_memoryDataFile);
-        IM_ASSERT(sizeInPixels>0);filePath[0]='\0';
+        //IM_ASSERT(sizeInPixels>0);
+        filePath[0]='\0';
         if (pOptionalFontConfig) {useFontConfig=true;fontConfig=*pOptionalFontConfig;}}
         FontData(const char* _filePath,float _sizeInPixels=15.f,const ImWchar* pOptionalGlyphRanges=NULL,ImFontConfig* pOptionalFontConfig=NULL)
         : pMemoryData(NULL) , memoryDataSize(0),sizeInPixels(_sizeInPixels),pGlyphRanges(pOptionalGlyphRanges?pOptionalGlyphRanges:ImImpl_InitParams::GetGlyphRangesDefault())
         ,useFontConfig(false)
         {IM_ASSERT(_filePath && strlen(_filePath)>0);
          const size_t len = strlen(_filePath);IM_ASSERT(len>0 && len<2047);
-         if (len<2047) strcpy(filePath,_filePath);IM_ASSERT(sizeInPixels>0);
+         if (len<2047) strcpy(filePath,_filePath);//IM_ASSERT(sizeInPixels>0);
          if (pOptionalFontConfig) {useFontConfig=true;fontConfig=*pOptionalFontConfig;}}
     };
 	ImVec2 gWindowSize;

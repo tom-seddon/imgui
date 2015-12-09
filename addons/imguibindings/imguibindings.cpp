@@ -61,8 +61,10 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
         const ImImpl_InitParams& P = *pOptionalInitParams;
         if (P.forceAddDefaultFontAsFirstFont) io.Fonts->AddFontDefault();
 
+        const float screenHeight = io.DisplaySize.y;
         for (int i=0,isz=(int)P.fonts.size();i<isz;i++)   {
             const ImImpl_InitParams::FontData& fd = P.fonts[i];
+            const float sizeInPixels = fd.sizeInPixels==0.f ? 13.f : (fd.sizeInPixels>0 ? fd.sizeInPixels : (screenHeight/(-fd.sizeInPixels)));
             ImFont* my_font = NULL;
             const bool hasValidPath = strlen(fd.filePath)>0;
             const bool hasValidMemory = fd.pMemoryData && fd.memoryDataSize>0;
@@ -80,14 +82,14 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
                         memcpy(tempBuffer,(void*)&buffVec[0],buffVec.size());
                         bufferToFeedImGui = tempBuffer;
                         ImImpl_InitParams::FontData fd2 = fd;fd2.fontConfig.FontDataOwnedByAtlas=true;
-                        my_font = io.Fonts->AddFontFromMemoryTTF(bufferToFeedImGui,buffVec.size(),fd.sizeInPixels,fd.useFontConfig?&fd2.fontConfig:NULL,fd.pGlyphRanges);
+                        my_font = io.Fonts->AddFontFromMemoryTTF(bufferToFeedImGui,buffVec.size(),sizeInPixels,fd.useFontConfig?&fd2.fontConfig:NULL,fd.pGlyphRanges);
                         if (!my_font) {ImGui::MemFree(tempBuffer);tempBuffer=NULL;bufferToFeedImGui=NULL;}
                     }
                     isTtfGz = my_font!=NULL;
                 }
-                if (!isTtfGz) my_font = io.Fonts->AddFontFromFileTTF(fd.filePath,fd.sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
+                if (!isTtfGz) my_font = io.Fonts->AddFontFromFileTTF(fd.filePath,sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
 #           else   //IMGUI_USE_ZLIB
-                my_font = io.Fonts->AddFontFromFileTTF(fd.filePath,fd.sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
+                my_font = io.Fonts->AddFontFromFileTTF(fd.filePath,sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
 #           endif   //IMGUI_USE_ZLIB
             }
             else if (hasValidMemory)  {
@@ -105,13 +107,13 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
                 }
                 switch (fd.memoryDataCompression)   {
                 case ImImpl_InitParams::FontData::COMP_NONE:
-                    my_font = io.Fonts->AddFontFromMemoryTTF(bufferToFeedImGui,fd.memoryDataSize,fd.sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
+                    my_font = io.Fonts->AddFontFromMemoryTTF(bufferToFeedImGui,fd.memoryDataSize,sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
                     break;
                 case ImImpl_InitParams::FontData::COMP_STB:
-                    my_font = io.Fonts->AddFontFromMemoryCompressedTTF(bufferToFeedImGui,fd.memoryDataSize,fd.sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
+                    my_font = io.Fonts->AddFontFromMemoryCompressedTTF(bufferToFeedImGui,fd.memoryDataSize,sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
                     break;
                 case ImImpl_InitParams::FontData::COMP_STBBASE85:
-                    my_font = io.Fonts->AddFontFromMemoryCompressedBase85TTF((const char*)bufferToFeedImGui,fd.sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
+                    my_font = io.Fonts->AddFontFromMemoryCompressedBase85TTF((const char*)bufferToFeedImGui,sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
                     break;
 #if             (!defined(NO_IMGUIHELPER) && defined(IMGUI_USE_ZLIB))
                 case ImImpl_InitParams::FontData::COMP_GZ:  {
@@ -122,7 +124,7 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
                         memcpy(tempBuffer,(void*)&buffVec[0],buffVec.size());
                         bufferToFeedImGui = tempBuffer;
                         ImImpl_InitParams::FontData fd2 = fd;fd2.fontConfig.FontDataOwnedByAtlas=true;
-                        my_font = io.Fonts->AddFontFromMemoryTTF(bufferToFeedImGui,buffVec.size(),fd.sizeInPixels,fd.useFontConfig?&fd2.fontConfig:NULL,fd.pGlyphRanges);
+                        my_font = io.Fonts->AddFontFromMemoryTTF(bufferToFeedImGui,buffVec.size(),sizeInPixels,fd.useFontConfig?&fd2.fontConfig:NULL,fd.pGlyphRanges);
                         if (!my_font) {ImGui::MemFree(tempBuffer);tempBuffer=NULL;bufferToFeedImGui=NULL;}
                     }
                     }

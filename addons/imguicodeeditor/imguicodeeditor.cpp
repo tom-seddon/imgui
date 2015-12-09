@@ -579,9 +579,25 @@ const ImFont* CodeEditor::ImFonts[FONT_STYLE_COUNT] = {NULL,NULL,NULL,NULL};
 void CodeEditor::TextLineWithSHV(const char* fmt, va_list args) {
     if (ImGui::GetCurrentWindow()->SkipItems)  return;
 
+//#define TEST_HERE
+#ifndef TEST_HERE
     ImGuiState& g = *GImGui;
     const char* text_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
     TextLineUnformattedWithSH(g.TempBuffer, text_end);
+#else //TEST_HERE
+    ImGuiState& g = *GImGui;
+    const char* text_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
+    // Bg Color-------------------
+    ImU32 bg_col = ImColor(255,255,255,50);
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+    // All the way to the right
+    //ImGui::RenderFrame(pos, ImVec2(pos.x + ImGui::GetContentRegionMax().x+ImGui::GetScrollX(), pos.y + ImGui::GetTextLineHeight()), bg_col,false);
+    // Until text end
+    ImGui::RenderFrame(pos, ImVec2(pos.x + ImGui::MyCalcTextWidth(g.TempBuffer, text_end), pos.y + ImGui::GetTextLineHeight()), bg_col,false);
+    //----------------------------
+    TextLineUnformattedWithSH(g.TempBuffer, text_end);
+#undef TEST_HERE
+#endif //TEST_HERE
 }
 void CodeEditor::TextLineWithSH(const char* fmt, ...)   {
     va_list args;

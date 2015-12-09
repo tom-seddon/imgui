@@ -105,6 +105,7 @@ static void ImImpl_ImeSetInputScreenPosFn(int x, int y)
 }
 #endif
 
+
 // GLFW callbacks to get events
 static void glfw_error_callback(int /*error*/, const char* description)	{
     fputs(description, stderr);

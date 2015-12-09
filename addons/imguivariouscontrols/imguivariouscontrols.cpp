@@ -537,14 +537,21 @@ struct MultilineScrollState {
     float scrollRegionX;
     float scrollX;
     ImGuiStorage *storage;
+    const char* textToPasteInto;
+    int actionToPerformCopyCutSelectAllFrom1To3;
 
     // Output.
     bool newScrollPositionAvailable;
     float newScrollX;
+    int CursorPos;
+    int SelectionStart; //                                      // Read (== to SelectionEnd when no selection)
+    int SelectionEnd;   //                                      // Read
 };
 // Based on the code from: https://github.com/Roflraging (see https://github.com/ocornut/imgui/issues/383)
 static int MultilineScrollCallback(ImGuiTextEditCallbackData *data) {
+    //static int cnt=0;fprintf(stderr,"MultilineScrollCallback (%d)\n",++cnt);
     MultilineScrollState *scrollState = (MultilineScrollState *)data->UserData;
+
     ImGuiID cursorId = ImGui::GetID("cursor");
     int oldCursorIndex = scrollState->storage->GetInt(cursorId, 0);
 
@@ -570,36 +577,116 @@ static int MultilineScrollCallback(ImGuiTextEditCallbackData *data) {
 
     scrollState->storage->SetInt(cursorId, data->CursorPos);
 
+    scrollState->CursorPos = data->CursorPos;
+    if (data->SelectionStart<=data->SelectionEnd) {scrollState->SelectionStart = data->SelectionStart;scrollState->SelectionEnd = data->SelectionEnd;}
+    else {scrollState->SelectionStart = data->SelectionEnd;scrollState->SelectionEnd = data->SelectionStart;}
+
     return 0;
 }
 // Based on the code from: https://github.com/Roflraging (see https://github.com/ocornut/imgui/issues/383)
-bool InputTextMultilineWithHorizontalScrolling(const char* label, char* buf, size_t buf_size, float height, ImGuiInputTextFlags flags)  {
+bool InputTextMultilineWithHorizontalScrolling(const char* label, char* buf, size_t buf_size, float height, ImGuiInputTextFlags flags, bool* pOptionalIsHoveredOut, int *pOptionalCursorPosOut, int *pOptionalSelectionStartOut, int *pOptionalSelectionEndOut,float SCROLL_WIDTH)  {
     float scrollbarSize = ImGui::GetStyle().ScrollbarSize;
-    float labelWidth = ImGui::CalcTextSize(label).x + scrollbarSize;
-    float SCROLL_WIDTH = 2000.0f; // Very large scrolling width to allow for very long lines.
+    //float labelWidth = ImGui::CalcTextSize(label).x + scrollbarSize;
     MultilineScrollState scrollState = {};
 
     // Set up child region for horizontal scrolling of the text box.
-    ImGui::BeginChild(label, ImVec2(-labelWidth, height), false, ImGuiWindowFlags_HorizontalScrollbar);
+    ImGui::BeginChild(label, ImVec2(0/*-labelWidth*/, height), false, ImGuiWindowFlags_HorizontalScrollbar);
     scrollState.scrollRegionX = ImGui::GetWindowWidth() - scrollbarSize; if (scrollState.scrollRegionX<0) scrollState.scrollRegionX = 0;
     scrollState.scrollX = ImGui::GetScrollX();
     scrollState.storage = ImGui::GetStateStorage();
-    bool changed = ImGui::InputTextMultiline(label, buf, buf_size, ImVec2(SCROLL_WIDTH, (height - scrollbarSize)>0?(height - scrollbarSize):0),
+    bool changed = ImGui::InputTextMultiline(label, buf, buf_size, ImVec2(SCROLL_WIDTH-scrollbarSize, (height - scrollbarSize)>0?(height - scrollbarSize):0),
                                              flags | ImGuiInputTextFlags_CallbackAlways, MultilineScrollCallback, &scrollState);
+    if (pOptionalIsHoveredOut) *pOptionalIsHoveredOut = ImGui::IsItemHovered();
 
     if (scrollState.newScrollPositionAvailable) {
         ImGui::SetScrollX(scrollState.newScrollX);
     }
 
     ImGui::EndChild();
-    ImGui::SameLine();
-    ImGui::Text("%s",label);
+    //ImGui::SameLine();
+    //ImGui::Text("%s",label);
+
+    if (pOptionalCursorPosOut) *pOptionalCursorPosOut = scrollState.CursorPos;
+    if (pOptionalSelectionStartOut) *pOptionalSelectionStartOut = scrollState.SelectionStart;
+    if (pOptionalSelectionEndOut)   *pOptionalSelectionEndOut = scrollState.SelectionEnd;
 
     return changed;
 }
 
+// Based on the code from: https://github.com/Roflraging (see https://github.com/ocornut/imgui/issues/383)
+bool InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu(const char *label, char *buf, int buf_size, float height,bool& staticBoolVar,int *staticArrayOfThreeIntegersHere, ImGuiInputTextFlags flags, bool *pOptionalHoveredOut,float SCROLL_WIDTH, const char *copyName, const char *cutName, const char* pasteName)   {
+    bool isHovered=false;
+    int& cursorPos=staticArrayOfThreeIntegersHere[0];
+    int& selectionStart=staticArrayOfThreeIntegersHere[1];
+    int& selectionEnd=staticArrayOfThreeIntegersHere[2];
+    bool& popup_open = staticBoolVar;
+    const bool changed = InputTextMultilineWithHorizontalScrolling(label,buf,(size_t)buf_size,height,flags,&isHovered,popup_open ? NULL : &cursorPos,popup_open ? NULL : &selectionStart,popup_open ? NULL : &selectionEnd,SCROLL_WIDTH);
+    if (pOptionalHoveredOut) *pOptionalHoveredOut=isHovered;
+    // Popup Menu ------------------------------------------
+
+    const bool readOnly = flags&ImGuiInputTextFlags_ReadOnly;       // "Cut","","Paste" not available
+    const bool hasSelectedText = selectionStart != selectionEnd;	// "Copy","Cut" available
+
+    if (hasSelectedText || !readOnly)	{
+        const bool onlyPaste = !readOnly && !hasSelectedText;
+        const char* clipboardText = ImGui::GetIO().GetClipboardTextFn();
+        const bool canPaste = clipboardText && strlen(clipboardText)>0;
+        if (onlyPaste && !canPaste) popup_open = false;
+        else {
+            static const char* entries[] = {"Copy","Cut","","Paste"};   // "" is separator
+            const char* pEntries[4]={copyName?copyName:entries[0],cutName?cutName:entries[1],entries[2],pasteName?pasteName:entries[3]};
+            popup_open|= ImGui::GetIO().MouseClicked[1] && isHovered; // RIGHT CLICK
+            int sel = ImGui::PopupMenuSimple(popup_open,onlyPaste ? &pEntries[3] : pEntries,(readOnly||onlyPaste)?1:canPaste? 4:2);
+            if (sel==3) sel = 2; // Normally separator takes out one space
+            const bool mustCopy = sel==0 && !onlyPaste;
+            const bool mustCut = !mustCopy && sel==1;
+            const bool mustPaste = !mustCopy && !mustCut && (sel==2 || (sel==0 && onlyPaste));
+            if (mustCopy || mustCut || (mustPaste && (selectionStart<selectionEnd))) {
+                // Copy to clipboard
+                if (!mustPaste)	{
+                    const char tmp = buf[selectionEnd];buf[selectionEnd]='\0';
+                    ImGui::GetIO().SetClipboardTextFn(&buf[selectionStart]);
+                    buf[selectionEnd]=tmp;
+                }
+                // Delete chars
+                if (!mustCopy) {
+                    //if (mustPaste) {fprintf(stderr,"Deleting before pasting: %d  %d.\n",selectionStart,selectionEnd);}
+                    strncpy(&buf[selectionStart],&buf[selectionEnd],buf_size-selectionEnd);
+                    for (int i=selectionStart+buf_size-selectionEnd;i<buf_size;i++) buf[i]='\0';
+                }
+                popup_open = false;
+            }
+            if (mustPaste)  {
+                // This is VERY HARD to make it work as expected...
+                const int cursorPosition = (selectionStart<selectionEnd) ? selectionStart : cursorPos;
+                const int clipboardTextSize = strlen(clipboardText);
+                int buf_len = strlen(buf);if (buf_len>buf_size) buf_len=buf_size;
+
+                // Step 1- Shift [cursorPosition] to [cursorPosition+clipboardTextSize]
+                const int numCharsToShiftRight = buf_len - cursorPosition;
+                //fprintf(stderr,"Pasting: \"%s\"(%d) at %d. buf_len=%d buf_size=%d numCharsToShiftRight=%d\n",clipboardText,clipboardTextSize,cursorPosition,buf_len,buf_size,numCharsToShiftRight);
+
+                for (int i=cursorPosition+numCharsToShiftRight>buf_size?buf_size-1:cursorPosition+numCharsToShiftRight-1;i>=cursorPosition;i--) {
+                    if (i+clipboardTextSize<buf_size) {
+                        //fprintf(stderr,"moving to the right char (%d): '%c' (%d)\n",i,buf[i],(int)buf[i]);
+                        buf[i+clipboardTextSize] = buf[i];
+                    }
+                }
+                // Step 2- Overwrite [cursorPosition] o [cursorPosition+clipboardTextSize]
+                for (int i=cursorPosition,isz=cursorPosition+clipboardTextSize>=buf_size?buf_size:cursorPosition+clipboardTextSize;i<isz;i++) buf[i]=clipboardText[i-cursorPosition];
+
+                popup_open = false;
+            }
+        }
+    }
+    else popup_open = false;
+    //------------------------------------------------------------------
+    return changed;
+}
+
+
 // Based on the code by krys-spectralpixel (https://github.com/krys-spectralpixel), posted here: https://github.com/ocornut/imgui/issues/261
-bool Tabs(int numTabs, const char** labelsPersistentStorage, int& selected, const char** tooltipsPersistentStorage, bool autoLayout) {
+bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const char** tabLabelTooltips, bool wrapMode, int *pOptionalHoveredIndex, int* pOptionalItemOrdering, bool allowTabReorder, bool allowTabClosingThroughMMB, int *pOptionalClosedTabIndex, int *pOptionalClosedTabIndexInsideItemOrdering) {
     ImGuiStyle& style = ImGui::GetStyle();
 
     const ImVec2 itemSpacing =  style.ItemSpacing;
@@ -610,22 +697,38 @@ bool Tabs(int numTabs, const char** labelsPersistentStorage, int& selected, cons
     style.ItemSpacing.y =       1;
 
 
-    if (numTabs>0 && (selected<0 || selected>=numTabs)) selected = 0;
+    if (numTabs>0 && (selectedIndex<0 || selectedIndex>=numTabs)) {
+        if (!pOptionalItemOrdering)  selectedIndex = 0;
+        else selectedIndex = -1;
+    }
+    if (pOptionalHoveredIndex) *pOptionalHoveredIndex = -1;
+    if (pOptionalClosedTabIndex) *pOptionalClosedTabIndex = -1;
+    if (pOptionalClosedTabIndexInsideItemOrdering) *pOptionalClosedTabIndexInsideItemOrdering = -1;
 
     // Parameters to adjust to make autolayout work as expected:----------
-    const float btnOffset =         2.f*style.ItemSpacing.x;    // It should be: ImGui::Button(text).size.x = ImGui::CalcTextSize(text).x + btnOffset;
-    const float sameLineOffset =    2.f*style.ItemSpacing.x;    // It should be: sameLineOffset = ImGui::SameLine().size.x;
-    const float uniqueLineOffset =  5.f*style.WindowPadding.x;  // width to be sutracted by windowWidth to make it work.
+    // The correct values are probably the ones in the comments, but I took some margin so that they work well
+    // with a (medium size) vertical scrollbar too [Ok I should detect its presence and use the appropriate values...].
+    const float btnOffset =         2.f*style.FramePadding.x;   // [2.f*style.FramePadding.x] It should be: ImGui::Button(text).size.x = ImGui::CalcTextSize(text).x + btnOffset;
+    const float sameLineOffset =    2.f*style.ItemSpacing.x;    // [style.ItemSpacing.x]      It should be: sameLineOffset = ImGui::SameLine().size.x;
+    const float uniqueLineOffset =  2.f*style.WindowPadding.x;  // [style.WindowPadding.x]    Width to be sutracted by windowWidth to make it work.
     //--------------------------------------------------------------------
 
-    float windowWidth = 0.f,sumX=0.f,btnWidth = 0.f;
-    if (autoLayout) windowWidth = ImGui::GetWindowWidth() - uniqueLineOffset;
+    float windowWidth = 0.f,sumX=0.f;
+    if (wrapMode) windowWidth = ImGui::GetWindowWidth() - uniqueLineOffset;
+
+    static int draggingTabIndex = -1;int draggingTabTargetIndex = -1;   // These are indices inside pOptionalItemOrdering
+    const bool isMouseDragging = ImGui::IsMouseDragging(0,-1.f);
+    const bool isMMBreleased = ImGui::IsMouseReleased(2);
+    int justClosedTabIndex = -1;
 
     bool selection_changed = false;
-    for (int i = 0; i < numTabs; i++)
+    for (int j = 0,i; j < numTabs; j++)
     {
+        i = pOptionalItemOrdering ? pOptionalItemOrdering[j] : j;
+        if (i==-1) continue;
+
         // push the style
-        if (i == selected)
+        if (i == selectedIndex)
         {
             style.Colors[ImGuiCol_Button] =         colorActive;
             style.Colors[ImGuiCol_ButtonActive] =   colorActive;
@@ -640,28 +743,66 @@ bool Tabs(int numTabs, const char** labelsPersistentStorage, int& selected, cons
 
         ImGui::PushID(i);   // otherwise two tabs with the same name would clash.
 
-        if (!autoLayout) {if (i>0) ImGui::SameLine();}
+        if (!wrapMode) {if (i>0) ImGui::SameLine();}
         else if (sumX > 0.f) {
-            sumX+=sameLineOffset;  // Maybe we can skip it if we use SameLine(0,0) below
-
-            btnWidth = ImGui::CalcTextSize(labelsPersistentStorage[i]).x;
-            btnWidth+=btnOffset;
-
-            sumX+=btnWidth;
+            sumX+=sameLineOffset;   // Maybe we can skip it if we use SameLine(0,0) below
+            sumX+=ImGui::CalcTextSize(tabLabels[i]).x+btnOffset;
             if (sumX>windowWidth) sumX = 0.f;
             else ImGui::SameLine();
         }
 
         // Draw the button
-        if (ImGui::Button(labelsPersistentStorage[i]))   {selection_changed = (selected!=i);selected = i;}
-        if (autoLayout && sumX==0.f) {
+        if (ImGui::Button(tabLabels[i]))   {selection_changed = (selectedIndex!=i);selectedIndex = i;}
+        if (wrapMode && sumX==0.f) {
             // First element of a line
-            //sumX = ImGui::GetCursorPosX();        // Thought it worked... workaround:
-            sumX = ImGui::CalcTextSize(labelsPersistentStorage[i]).x;
-            sumX+=btnOffset;
+            sumX = ImGui::GetItemRectSize().x;
         }
-        if (tooltipsPersistentStorage && tooltipsPersistentStorage[i] && ImGui::IsItemHovered() && strlen(tooltipsPersistentStorage[i])>0) ImGui::SetTooltip("%s",tooltipsPersistentStorage[i]);
+
+        if (ImGui::IsItemHovered()) {
+            if (pOptionalHoveredIndex) *pOptionalHoveredIndex = i;
+            if (tabLabelTooltips && tabLabelTooltips[i] && strlen(tabLabelTooltips[i])>0)  ImGui::SetTooltip("%s",tabLabelTooltips[i]);
+
+            if (pOptionalItemOrdering)  {
+                if (allowTabReorder)  {
+                    if (isMouseDragging) {
+                        if (draggingTabIndex==-1) {
+                            draggingTabIndex = j;
+                        }
+                    }
+                    else if (draggingTabIndex>=0 && draggingTabIndex<numTabs && draggingTabIndex!=j){
+                        draggingTabTargetIndex = j; // For some odd reasons this seems to get called only when draggingTabIndex < i !
+                    }
+                }
+                if (allowTabClosingThroughMMB)  {
+                    if (isMMBreleased) {
+                        justClosedTabIndex = i;
+                        if (pOptionalClosedTabIndex) *pOptionalClosedTabIndex = i;
+                        if (pOptionalClosedTabIndexInsideItemOrdering) *pOptionalClosedTabIndexInsideItemOrdering = j;
+                        pOptionalItemOrdering[j] = -1;
+                    }
+                }
+            }
+        }
         ImGui::PopID();
+    }
+
+    if (draggingTabTargetIndex!=-1) {
+        // swap draggingTabIndex ang draggingTabTargetIndex in pOptionalItemOrdering
+        const int tmp = pOptionalItemOrdering[draggingTabTargetIndex];
+        pOptionalItemOrdering[draggingTabTargetIndex] = pOptionalItemOrdering[draggingTabIndex];
+        pOptionalItemOrdering[draggingTabIndex] = tmp;
+        //fprintf(stderr,"%d %d\n",draggingTabIndex,draggingTabTargetIndex);
+        draggingTabTargetIndex = draggingTabIndex = -1;
+    }
+    if (!isMouseDragging) draggingTabIndex = -1;
+    if (selectedIndex == justClosedTabIndex && selectedIndex>=0)    {
+        selectedIndex = -1;
+        for (int j = 0,i; j < numTabs; j++) {
+            i = pOptionalItemOrdering ? pOptionalItemOrdering[j] : j;
+            if (i==-1) continue;
+            selectedIndex = i;
+            break;
+        }
     }
 
     // Restore the style
@@ -672,6 +813,8 @@ bool Tabs(int numTabs, const char** labelsPersistentStorage, int& selected, cons
 
     return selection_changed;
 }
+
+
 
 /* // Snippet by Omar. To evalutate. But in main.cpp thare's another example that supports correct window resizing.
  * // And here is not straightforward to determine the sizes we want to use...
