@@ -54,7 +54,7 @@ https://github.com/ocornut/imgui/issues/108
 https://github.com/ocornut/imgui/issues/200
 */
 
- #include "imhashmap.h" // TODO: move to .cpp
+ //#include "imhashmap.h" // TODO: move to .cpp
 
 
 namespace ImGuiCe {
@@ -269,8 +269,8 @@ public:
     void ParseTextForFolding(bool forceAllSegmentsFoldedOrNot = false, bool foldingStateToForce = true);
     Language lang;
     // We could have stored a pair of these in each "language struct", but this way we save memory and can make per-instance changes
-    ImHashMapString shTypeKeywordMap;       // Map from a (persistent) string token to a SyntaxHighlightingType
-    ImHashMapChar   shTypePunctuationMap;
+    ImHashMapCString shTypeKeywordMap;       // Map from a (persistent) string token (const char*) to a SyntaxHighlightingType
+    ImHashMapChar    shTypePunctuationMap;
 private:
     static bool StaticInited;
     void RenderTextLineWrappedWithSH(ImVec2 &pos, const char *text, const char *text_end, bool skipLineCommentProcessing=false);

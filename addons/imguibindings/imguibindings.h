@@ -260,6 +260,43 @@ extern void WaitFor(unsigned int ms);
 extern GLuint ImImpl_LoadTexture(const char* filename,int req_comp=0,GLenum magFilter=GL_LINEAR,GLenum minFilter=GL_LINEAR_MIPMAP_LINEAR,GLenum wrapS=GL_REPEAT,GLenum wrapT=GL_REPEAT);
 extern GLuint ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory,int filenameInMemorySize,int req_comp=0,GLenum magFilter=GL_LINEAR,GLenum minFilter=GL_LINEAR_MIPMAP_LINEAR,GLenum wrapS=GL_REPEAT,GLenum wrapT=GL_REPEAT);
 
+#ifndef IMIMPL_SHADER_NONE
+class ImImpl_CompileShaderStruct {
+public:
+    GLuint vertexShaderOverride,fragmentShaderOverride; // when !=0, the shader codes will be ignored, and these will be used.
+    GLuint programOverride;             // when !=0, the shaders will be ignored completely.
+    bool dontLinkProgram;               // when "true", shaders are attached to the program, but not linked, the program is returned to "programOverride" and are returned to "vertexShaderOverride" and "fragmentShaderOverride" if "dontDeleteAttachedShaders" is true.
+                                        // however, when "false" and linking is performed, then the shaders are detached and deleted IN ANY CASE.
+    bool dontDeleteAttachedShaders;     // After the program is linked, by default all the attached shaders are deleted IN ANY CASE.
+
+    // const char* optionalPrefixText;  // TODO: Add "optionalPrefixText", to be put between the generated preprocessor code and the shader source
+#ifndef NO_IMGUISTRING
+protected:
+    typedef ImHashMap<ImString,ImString,ImHashFunctionImString,ImHashMapKeyEqualityFunctionDefault<ImString>,256> ImStringImStringMap;
+    ImStringImStringMap mPreprocessorDefinitionsWithValue;
+    ImVector < ImString > mPreprocessorDefinitions; // Without values (don't remember why I split them here)
+    int mNumPreprocessorAdditionalLines;
+    ImString mPreprocessorAdditionalShaderCode;
+public:
+    // TODO: Test all this staff
+    void addPreprocessorDefinition(const ImString& name,const ImString& value="");
+    void removePreprocessorDefinition(const ImString& name);
+    void updatePreprocessorDefinitions();   // mandatory after a set of add/remove calls to generate an usable "mPreprocessorAdditionalShaderCode"
+    inline const char* getPreprocessorDefinitionAdditionalCode() const {return mPreprocessorAdditionalShaderCode.c_str();}
+    inline int getNumPreprocessorDefinitionAdditionalLines() const {return mNumPreprocessorAdditionalLines;}
+    void resetPreprocessorDefinitions();
+    ImImpl_CompileShaderStruct() {clearShaderOptions();resetPreprocessorDefinitions();}
+#else  //NO_IMGUISTRING
+public:
+    ImImpl_CompileShaderStruct() {clearShaderOptions();}
+#endif //NO_IMGUISTRING
+public:
+    void clearShaderOptions() {vertexShaderOverride = fragmentShaderOverride = programOverride = 0;dontLinkProgram = dontDeleteAttachedShaders = false;}
+};
+// returns the shader program ID.
+extern GLuint ImImpl_CompileShaders(const GLchar** vertexShaderSource, const GLchar** fragmentShaderSource,ImImpl_CompileShaderStruct* pOptionalOptions=NULL);
+#endif //IMIMPL_SHADER_NONE
+
 #ifdef IMIMPL_FORCE_DEBUG_CONTEXT
 extern "C" void GLDebugMessageCallback(GLenum source, GLenum type,
     GLuint id, GLenum severity,GLsizei length, const GLchar *msg,const void *userParam);

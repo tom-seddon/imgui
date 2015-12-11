@@ -224,7 +224,6 @@ void DrawGL()	// Mandatory
         static bool show_another_window = false;
         static bool show_node_graph_editor_window = false;
         static bool show_splitter_test_window = false;
-        static bool show_scintilla_test_window = false;
 
         // 1. Show a simple window
         {

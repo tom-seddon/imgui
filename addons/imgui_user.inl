@@ -6,6 +6,10 @@
 #ifndef IMGUI_USER_ADDONS_INL_
 #define IMGUI_USER_ADDONS_INL_
 
+#ifndef NO_IMGUISTRING
+#include "./imguistring/imguistring.cpp"
+#endif //NO_IMGUISTRING
+
 #ifdef IMGUI_USE_AUTO_BINDING	// defined in imgui_user.h
 #	ifdef __EMSCRIPTEN__
 #	include <emscripten.h>		// wip: doesn't work by itself (ATM I'm currently preparing it for use with IMGUI_USE_SDL2_BINDING only)
@@ -24,7 +28,6 @@
 #	include "./imguibindings/imguibindings.cpp"
 #endif //IMGUI_USE_AUTO_BINDING
 
-
 #ifdef IMGUI_USE_MINIZIP	// requires linking to library -lZlib
 //extern "C" {
 #include "./imguifilesystem/minizip/ioapi.c"
@@ -33,9 +36,6 @@
 //}
 #endif //IMGUI_USE_MINIZIP
 
-#ifndef NO_IMGUISTRING
-#include "./imguistring/imguistring.cpp"
-#endif //NO_IMGUISTRING
 #ifndef NO_IMGUIHELPER
 #include "./imguihelper/imguihelper.cpp"
 #endif //NO_IMGUIHELPER

@@ -1596,7 +1596,7 @@ struct NodeGraphEditorParseCallback1Struct {
     int numNodes,selectedNodeIndex,numLinks;
     NodeGraphEditorParseCallback1Struct() : scrolling(0,0),numNodes(0),selectedNodeIndex(-1),numLinks(0) {}
 };
-static bool NodeGraphEditorParseCallback1(ImGuiHelper::FieldType ft,int numArrayElements,void* pValue,const char* name,void* userPtr)    {
+static bool NodeGraphEditorParseCallback1(ImGuiHelper::FieldType /*ft*/,int /*numArrayElements*/,void* pValue,const char* name,void* userPtr)    {
     NodeGraphEditorParseCallback1Struct* cbs = (NodeGraphEditorParseCallback1Struct*) userPtr;
     if (strcmp(name,"scrolling")==0) cbs->scrolling = *((ImVec2*)pValue);
     else if (strcmp(name,"num_nodes")==0) cbs->numNodes = *((int*)pValue);
@@ -1614,7 +1614,7 @@ struct NodeGraphEditorParseCallback2Struct {
     NodeGraphEditorParseCallback2Struct() : curNodeIndex(-1),typeID(-1),numFields(0),userID(-1),isOpen(false),Pos(0,0),
     mustOvrName(false),mustOvrInput(false),mustOvrOutput(false) {ovrName[0]='\0';ovrInput[0]='\0';ovrOutput[0]='\0';}
 };
-static bool NodeGraphEditorParseCallback2(ImGuiHelper::FieldType ft,int numArrayElements,void* pValue,const char* name,void* userPtr)    {
+static bool NodeGraphEditorParseCallback2(ImGuiHelper::FieldType /*ft*/,int numArrayElements,void* pValue,const char* name,void* userPtr)    {
     NodeGraphEditorParseCallback2Struct* cbs = (NodeGraphEditorParseCallback2Struct*) userPtr;
     if (strcmp(name,"node_index")==0)   cbs->curNodeIndex = *((int*)pValue);
     else if (strcmp(name,"typeID")==0)  cbs->typeID = *((int*)pValue);
@@ -1648,7 +1648,7 @@ struct NodeGraphEditorParseCallback3Struct {
     int link_index,node1_index,input_slot,node2_index,output_slot;
     NodeGraphEditorParseCallback3Struct() : link_index(-1),node1_index(-1),input_slot(-1),node2_index(-1),output_slot(-1) {}
 };
-static bool NodeGraphEditorParseCallback3(ImGuiHelper::FieldType ft,int numArrayElements,void* pValue,const char* name,void* userPtr)    {
+static bool NodeGraphEditorParseCallback3(ImGuiHelper::FieldType /*ft*/,int /*numArrayElements*/,void* pValue,const char* name,void* userPtr)    {
     NodeGraphEditorParseCallback3Struct* cbl = (NodeGraphEditorParseCallback3Struct*) userPtr;
     if (strcmp(name,"link_index")==0)   cbl->link_index = *((int*)pValue);
     else if (strcmp(name,"InputNode")==0)  cbl->node1_index = *((int*)pValue);

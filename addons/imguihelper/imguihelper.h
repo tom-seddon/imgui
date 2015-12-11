@@ -24,7 +24,11 @@ void Text(int fntIndex,const char* fmt, ...) IM_PRINTFARGS(2);
 
 #   ifdef IMGUI_USE_ZLIB	// requires linking to library -lZlib
 // Two methods that fill rv and return true on success
+#       ifndef NO_IMGUIHELPER_SERIALIZATION
+#           ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
 bool GzDecompressFromFile(const char* filePath,ImVector<char>& rv,bool clearRvBeforeUsage=true);
+#           endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#       endif //NO_IMGUIHELPER_SERIALIZATION
 bool GzDecompressFromMemory(const char* memoryBuffer,int memoryBufferSize,ImVector<char>& rv,bool clearRvBeforeUsage=true);
 #   endif //IMGUI_USE_ZLIB
 
@@ -56,6 +60,8 @@ typedef ImGui::FieldType FieldType;
 
 #ifndef NO_IMGUIHELPER_SERIALIZATION
 #ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+bool GetFileContent(const char* filePath,ImVector<char>& contentOut,bool clearContentOutBeforeUsage=true,const char* modes="rb",bool appendTrailingZeroIfModesIsNotBinary=true);
+
 class Deserializer {
     char* f_data;
     size_t f_size;

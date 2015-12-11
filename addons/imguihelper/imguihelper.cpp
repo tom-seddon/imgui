@@ -352,6 +352,37 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
     //------------------------------------------------
     return buf_end;
 }
+
+bool GetFileContent(const char *filePath, ImVector<char> &contentOut, bool clearContentOutBeforeUsage, const char *modes, bool appendTrailingZeroIfModesIsNotBinary)   {
+    ImVector<char>& f_data = contentOut;
+    if (clearContentOutBeforeUsage) f_data.clear();
+//----------------------------------------------------
+    if (!filePath) return false;
+    const bool appendTrailingZero = appendTrailingZeroIfModesIsNotBinary && modes && strlen(modes)>0 && modes[strlen(modes)-1]!='b';
+    FILE* f;
+    if ((f = fopen(filePath, modes)) == NULL) return false;
+    if (fseek(f, 0, SEEK_END))  {
+        fclose(f);
+        return false;
+    }
+    const long f_size_signed = ftell(f);
+    if (f_size_signed == -1)    {
+        fclose(f);
+        return false;
+    }
+    size_t f_size = (size_t)f_size_signed;
+    if (fseek(f, 0, SEEK_SET))  {
+        fclose(f);
+        return false;
+    }
+    f_data.resize(f_size+(appendTrailingZero?1:0));
+    const size_t f_size_read = fread(&f_data[0], 1, f_size, f);
+    fclose(f);
+    if (f_size_read == 0 || f_size_read!=f_size)    return false;
+    if (appendTrailingZero) f_data[f_size] = '\0';
+//----------------------------------------------------
+    return true;
+}
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 void Serializer::clear() {if (f) {fclose(f);f=NULL;}}
@@ -464,35 +495,19 @@ bool Serializer::saveCustomFieldTypeHeader(const char* name, int numTextLines) {
 
 namespace ImGui {
 
+#ifndef NO_IMGUIHELPER_SERIALIZATION
+#ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
 bool GzDecompressFromFile(const char* filePath,ImVector<char>& rv,bool clearRvBeforeUsage)   {
 if (clearRvBeforeUsage) rv.clear();
 ImVector<char> f_data;
-//----------------------------------------------------
-    if (!filePath) return false;
-    FILE* f;
-    if ((f = fopen(filePath, "rb")) == NULL) return false;
-    if (fseek(f, 0, SEEK_END))  {
-        fclose(f);
-        return false;
-    }
-    const long f_size_signed = ftell(f);
-    if (f_size_signed == -1)    {
-        fclose(f);
-        return false;
-    }
-    size_t f_size = (size_t)f_size_signed;
-    if (fseek(f, 0, SEEK_SET))  {
-        fclose(f);
-        return false;
-    }
-    f_data.resize(f_size);
-    const size_t f_size_read = fread(&f_data[0], 1, f_size, f);
-    fclose(f);
-    if (f_size_read == 0 || f_size_read!=f_size)    return false;
+if (!ImGuiHelper::GetFileContent(filePath,f_data,true,"rb",false)) return false;
 //----------------------------------------------------
 return GzDecompressFromMemory(&f_data[0],f_data.size(),rv,clearRvBeforeUsage);
 //----------------------------------------------------
 }
+#endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#endif //NO_IMGUIHELPER_SERIALIZATION
+
 bool GzDecompressFromMemory(const char* memoryBuffer,int memoryBufferSize,ImVector<char>& rv,bool clearRvBeforeUsage)    {
 if (clearRvBeforeUsage) rv.clear();
 const int startRv = rv.size();

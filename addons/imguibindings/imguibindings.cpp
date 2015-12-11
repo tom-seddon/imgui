@@ -70,7 +70,7 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
             const bool hasValidMemory = fd.pMemoryData && fd.memoryDataSize>0;
             //if (i==0 && !P.forceAddDefaultFontAsFirstFont && (hasValidPath || hasValidMemory) && fd.useFontConfig && fd.fontConfig.MergeMode) io.Fonts->AddFontDefault();
             if (hasValidPath)  {
-#if         (!defined(NO_IMGUIHELPER) && defined(IMGUI_USE_ZLIB))
+#if         (defined(IMGUI_USE_ZLIB) && !defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
                 bool isTtfGz = false;
                 char* ttfGzExt = strrchr((char*) fd.filePath,'.');
                 if (ttfGzExt && (strcmp(ttfGzExt,".gz")==0 || strcmp(ttfGzExt,".GZ")==0))   {
@@ -270,52 +270,146 @@ GLuint ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory,int fi
 }
 
 #ifndef IMIMPL_SHADER_NONE
-static GLuint CompileShaders(const GLchar** vertexShaderSource, const GLchar** fragmentShaderSource )
-{
-    //Compile vertex shader
-    GLuint vertexShader( glCreateShader( GL_VERTEX_SHADER ) );
-    glShaderSource( vertexShader, 1, vertexShaderSource, NULL );
-    glCompileShader( vertexShader );
+#ifndef NO_IMGUISTRING
+void ImImpl_CompileShaderStruct::addPreprocessorDefinition(const ImString& name,const ImString& value) {
+    if (value.size()>0) mPreprocessorDefinitionsWithValue.put(name,value);
+    else mPreprocessorDefinitions.push_back(name);
+}
+void ImImpl_CompileShaderStruct::removePreprocessorDefinition(const ImString& name)   {
+    for (int i=0,sz=mPreprocessorDefinitions.size();i<sz;i++)   {
+        if (mPreprocessorDefinitions[i] == name)    {
+            mPreprocessorDefinitions[i] = mPreprocessorDefinitions[sz-1];
+            mPreprocessorDefinitions.resize(sz-1);
+            break;
+        }
+    }
+    mPreprocessorDefinitionsWithValue.remove(name);
+}
+void ImImpl_CompileShaderStruct::updatePreprocessorDefinitions()   {
+    mNumPreprocessorAdditionalLines = 0;
+    mPreprocessorAdditionalShaderCode = "";
+    ImString name="",value="";int bucketIndex=0;void* node = NULL;
+    while ( (node = mPreprocessorDefinitionsWithValue.getNextPair(bucketIndex,node,name,value)) )  {
+        mPreprocessorAdditionalShaderCode+=ImString("#define ")+name+" "+value+"\n";
+        ++mNumPreprocessorAdditionalLines;
+    }
+    for (int i=0,sz=mPreprocessorDefinitions.size();i<sz;i++)   {
+        const ImString& name = mPreprocessorDefinitions[i];
+        mPreprocessorAdditionalShaderCode+=ImString("#define ")+name+"\n";++mNumPreprocessorAdditionalLines;
+    }
+}
+void ImImpl_CompileShaderStruct::resetPreprocessorDefinitions()    {
+    mPreprocessorAdditionalShaderCode="";
+    mNumPreprocessorAdditionalLines=0;
+    mPreprocessorDefinitions.clear();
+    mPreprocessorDefinitionsWithValue.clear();
+}
+#endif //NO_IMGUISTRING
+static GLuint ImImpl_CreateShader(GLenum type,const GLchar** shaderSource, ImImpl_CompileShaderStruct *pOptionalOptions, const char* shaderTypeName="Shader")    {
 
+    const char* sourcePrefix = NULL;
+    int numPrefixLines =  0;
+    if (pOptionalOptions)   {
+#       ifndef NO_IMGUISTRING
+        int lenPd = strlen(pOptionalOptions->getPreprocessorDefinitionAdditionalCode());
+        if (lenPd==0) {pOptionalOptions->updatePreprocessorDefinitions();lenPd=strlen(pOptionalOptions->getPreprocessorDefinitionAdditionalCode());}
+        if (lenPd>0)  {
+            sourcePrefix = pOptionalOptions->getPreprocessorDefinitionAdditionalCode();
+            numPrefixLines = pOptionalOptions->getNumPreprocessorDefinitionAdditionalLines();
+        }
+#       endif //NO_IMGUISTRING
+    }
+
+    //Preprocess shader source
+    const GLchar* pSource = *shaderSource;
+#   ifndef NO_IMGUISTRING
+    ImString tmp = "";
+    if (sourcePrefix) {
+        if (numPrefixLines==0)  {
+            for (const char* p=sourcePrefix;*p!='\0';p++)   {
+                if (*p=='\n') ++numPrefixLines;
+            }
+        }
+        tmp = sourcePrefix;
+        tmp+= pSource;
+        pSource=tmp.c_str();
+    }
+#   endif //NO_IMGUISTRING
+
+    //Compile shader
+    GLuint shader( glCreateShader( type ) );
+    glShaderSource( shader, 1, &pSource, NULL );
+    glCompileShader( shader );
 
     // check
     GLint bShaderCompiled;
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &bShaderCompiled);
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &bShaderCompiled);
 
     if (!bShaderCompiled)        {
         int i32InfoLogLength, i32CharsWritten;
-        glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &i32InfoLogLength);
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &i32InfoLogLength);
 
-        char* pszInfoLog = new char[i32InfoLogLength];
-        glGetShaderInfoLog(vertexShader, i32InfoLogLength, &i32CharsWritten, pszInfoLog);
-        printf("********VertexShader %s\n", pszInfoLog);
-
-        delete[] pszInfoLog;
+        ImVector<char> pszInfoLog; pszInfoLog.resize(i32InfoLogLength+2);pszInfoLog[0]='\0';
+        glGetShaderInfoLog(shader, i32InfoLogLength, &i32CharsWritten, &pszInfoLog[0]);
+        if (numPrefixLines==0) printf("********%s %s\n", shaderTypeName, &pszInfoLog[0]);
+        else {
+            printf("********%sError\n",shaderTypeName);
+ #          ifndef NO_IMGUISTRING
+            ImString logString = &pszInfoLog[0];
+            bool ok = false;
+            int beg = logString.find('(');
+            if (beg!=ImString::npos) {
+                ++beg;
+                const int end = beg < logString.size() ? logString.find(')',beg) : ImString::npos;
+                if (end!=ImString::npos) {
+                    //printf("LINE: %s\n",logString.substr(beg,end-beg).c_str());
+                    int originalLineNumber = -1;
+                    sscanf(logString.substr(beg,end-beg).c_str(),"%d",&originalLineNumber);
+                    if (originalLineNumber < numPrefixLines) printf("Error in autogenerated preprocessor definition code:\n%s", logString.c_str());
+                    else {
+                        ImVector<char> tmp; tmp.resize(16);tmp[0]='\0';
+                        const int tmpSz = sprintf(&tmp[0],"%d",(originalLineNumber - numPrefixLines));
+                        IM_ASSERT(tmpSz>0 && tmpSz<15);
+                        if (tmpSz>0) tmp[tmpSz]='\0';
+                        logString = logString.substr(0,beg);logString+=&tmp[0];logString+=logString.substr(end);
+                        printf("%s", logString.c_str());
+                    }
+                    ok = true;
+                }
+            }
+            if (!ok) printf("%s", logString.c_str());
+ #          endif //NO_IMGUISTRING
+        }
+        fflush(stdout);
     }
 
-    //Compile fragment shader
-    GLuint fragmentShader( glCreateShader( GL_FRAGMENT_SHADER ) );
-    glShaderSource( fragmentShader, 1, fragmentShaderSource, NULL );
-    glCompileShader( fragmentShader );
+    return shader;
+}
+GLuint ImImpl_CompileShaders(const GLchar** vertexShaderSource, const GLchar** fragmentShaderSource , ImImpl_CompileShaderStruct *pOptionalOptions)
+{
+    const GLuint vertexShader = (pOptionalOptions && pOptionalOptions->vertexShaderOverride) ? pOptionalOptions->vertexShaderOverride :
+            (pOptionalOptions && pOptionalOptions->programOverride) ? 0 :
+            ImImpl_CreateShader(GL_VERTEX_SHADER,vertexShaderSource,pOptionalOptions,"VertexShader");
 
-    //check
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &bShaderCompiled);
+    const GLuint fragmentShader = (pOptionalOptions && pOptionalOptions->fragmentShaderOverride) ? pOptionalOptions->fragmentShaderOverride :
+            (pOptionalOptions && pOptionalOptions->programOverride) ? 0 :
+            ImImpl_CreateShader(GL_FRAGMENT_SHADER,fragmentShaderSource,pOptionalOptions,"FragmentShader");
 
-    if (!bShaderCompiled)        {
-        int i32InfoLogLength, i32CharsWritten;
-        glGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &i32InfoLogLength);
-
-        char* pszInfoLog = new char[i32InfoLogLength];
-        glGetShaderInfoLog(fragmentShader, i32InfoLogLength, &i32CharsWritten, pszInfoLog);
-        printf("********FragmentShader %s\n", pszInfoLog);
-
-        delete[] pszInfoLog;
-    }
 
     //Link vertex and fragment shader together
-    GLuint program( glCreateProgram() );
-    glAttachShader( program, vertexShader );
-    glAttachShader( program, fragmentShader );
+    const GLuint program = (pOptionalOptions && pOptionalOptions->programOverride) ? pOptionalOptions->programOverride : glCreateProgram();
+    if (vertexShader)   glAttachShader( program, vertexShader );
+    if (fragmentShader) glAttachShader( program, fragmentShader );
+
+    if (pOptionalOptions && pOptionalOptions->dontLinkProgram)  {
+        pOptionalOptions->programOverride = program;
+        if (pOptionalOptions->dontDeleteAttachedShaders) {
+            pOptionalOptions->vertexShaderOverride   = vertexShader;
+            pOptionalOptions->fragmentShaderOverride = fragmentShader;
+        }
+        return program;
+    }
+
     glLinkProgram( program );
 
     //check
@@ -325,16 +419,18 @@ static GLuint CompileShaders(const GLchar** vertexShaderSource, const GLchar** f
         int i32InfoLogLength, i32CharsWritten;
         glGetProgramiv(program, GL_INFO_LOG_LENGTH, &i32InfoLogLength);
 
-        char* pszInfoLog = new char[i32InfoLogLength];
-        glGetProgramInfoLog(program, i32InfoLogLength, &i32CharsWritten, pszInfoLog);
-        printf("%s",pszInfoLog);
-
-        delete[] pszInfoLog;
+        ImVector<char> pszInfoLog; pszInfoLog.resize(i32InfoLogLength+2);pszInfoLog[0]='\0';
+        glGetProgramInfoLog(program, i32InfoLogLength, &i32CharsWritten, &pszInfoLog[0]);
+        printf("%s",&pszInfoLog[0]);
+        fflush(stdout);
     }
 
     //Delete shaders objects
-    glDeleteShader( vertexShader );
-    glDeleteShader( fragmentShader );
+    if (!pOptionalOptions || !pOptionalOptions->dontDeleteAttachedShaders)  {
+        GLuint attachedShaders[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};GLsizei attachedShaderCount = 0;
+        glGetAttachedShaders(program,sizeof(attachedShaders)/sizeof(attachedShaders[0]),&attachedShaderCount,attachedShaders);
+        for (GLsizei i=0;i<attachedShaderCount;i++) glDeleteShader( attachedShaders[i] );
+    }
 
     return program;
 }
@@ -431,7 +527,7 @@ static const GLchar* gFragmentShaderSource[] = {
 //------------------------------------------------------------------------
 
     if (gImImplPrivateParams.program==0)    {
-        gImImplPrivateParams.program = CompileShaders(gVertexShaderSource, gFragmentShaderSource );
+        gImImplPrivateParams.program = ImImpl_CompileShaders(gVertexShaderSource, gFragmentShaderSource );
         if (gImImplPrivateParams.program==0) {
             fprintf(stderr,"Error compiling shaders.\n");
             return;

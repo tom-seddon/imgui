@@ -23,7 +23,7 @@ CONFIG+= use_glfw3
 IMGUI_BASE_PATH=../..
 
 # Experimental, needs zlib (here we link to -lz, some might have -lzip)
-CONFIG+= imguifilesystem_supports_zip_files
+#CONFIG+= imguifilesystem_supports_zip_files
 
 # These are optional definitions that nobody will ever use (all undefined by default):
 #DEFINES+=IMIMPL_SHADER_NONE			    # no shaders at all, and no vertex buffer object as well (minimal implementation).
