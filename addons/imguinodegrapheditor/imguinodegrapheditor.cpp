@@ -702,7 +702,7 @@ void NodeGraphEditor::render()
     draw_list->ChannelsMerge();
 
     // Open context menu
-    if (!open_context_menu && selectedNode && (selectedNode==node_hovered_in_list || selectedNode==node_hovered_in_scene) && (ImGui::IsKeyReleased(io.KeyMap[ImGuiKey_Delete]) || mustDeleteANodeSoon)) {
+    if (!open_context_menu && selectedNode && (selectedNode==node_hovered_in_list || selectedNode==node_hovered_in_scene) && (/*ImGui::IsKeyReleased(io.KeyMap[ImGuiKey_Delete]) || */mustDeleteANodeSoon)) {
         // Delete selected node directly:
         if (selectedNode==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
         if (selectedNode==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;

@@ -312,7 +312,7 @@ static GLuint ImImpl_CreateShader(GLenum type,const GLchar** shaderSource, ImImp
     if (pOptionalOptions)   {
 #       ifndef NO_IMGUISTRING
         int lenPd = strlen(pOptionalOptions->getPreprocessorDefinitionAdditionalCode());
-        if (lenPd==0) {pOptionalOptions->updatePreprocessorDefinitions();lenPd=strlen(pOptionalOptions->getPreprocessorDefinitionAdditionalCode());}
+        //if (lenPd==0) {pOptionalOptions->updatePreprocessorDefinitions();lenPd=strlen(pOptionalOptions->getPreprocessorDefinitionAdditionalCode());}
         if (lenPd>0)  {
             sourcePrefix = pOptionalOptions->getPreprocessorDefinitionAdditionalCode();
             numPrefixLines = pOptionalOptions->getNumPreprocessorDefinitionAdditionalLines();

@@ -265,11 +265,10 @@ class ImImpl_CompileShaderStruct {
 public:
     GLuint vertexShaderOverride,fragmentShaderOverride; // when !=0, the shader codes will be ignored, and these will be used.
     GLuint programOverride;             // when !=0, the shaders will be ignored completely.
-    bool dontLinkProgram;               // when "true", shaders are attached to the program, but not linked, the program is returned to "programOverride" and are returned to "vertexShaderOverride" and "fragmentShaderOverride" if "dontDeleteAttachedShaders" is true.
+    bool dontLinkProgram;               // when "true", shaders are attached to the program, but not linked, the program is returned to "programOverride" and the shaders are returned to "vertexShaderOverride" and "fragmentShaderOverride" if "dontDeleteAttachedShaders" is true.
                                         // however, when "false" and linking is performed, then the shaders are detached and deleted IN ANY CASE.
     bool dontDeleteAttachedShaders;     // After the program is linked, by default all the attached shaders are deleted IN ANY CASE.
 
-    // const char* optionalPrefixText;  // TODO: Add "optionalPrefixText", to be put between the generated preprocessor code and the shader source
 #ifndef NO_IMGUISTRING
 protected:
     typedef ImHashMap<ImString,ImString,ImHashFunctionImString,ImHashMapKeyEqualityFunctionDefault<ImString>,256> ImStringImStringMap;
@@ -285,13 +284,14 @@ public:
     inline const char* getPreprocessorDefinitionAdditionalCode() const {return mPreprocessorAdditionalShaderCode.c_str();}
     inline int getNumPreprocessorDefinitionAdditionalLines() const {return mNumPreprocessorAdditionalLines;}
     void resetPreprocessorDefinitions();
-    ImImpl_CompileShaderStruct() {clearShaderOptions();resetPreprocessorDefinitions();}
+    void reset() {clearShaderOptions();resetPreprocessorDefinitions();}
 #else  //NO_IMGUISTRING
 public:
-    ImImpl_CompileShaderStruct() {clearShaderOptions();}
+    void reset()  {clearShaderOptions();}
 #endif //NO_IMGUISTRING
 public:
     void clearShaderOptions() {vertexShaderOverride = fragmentShaderOverride = programOverride = 0;dontLinkProgram = dontDeleteAttachedShaders = false;}
+    ImImpl_CompileShaderStruct() {reset();}
 };
 // returns the shader program ID. "optionalShaderCodePrefix" (if present) is just copied before the source of both shaders. "pOptionalOptions" can be used to tune dynamic definitions inside the shader code and some shader compilation and linking processing steps.
 extern GLuint ImImpl_CompileShadersFromMemory(const GLchar** vertexShaderSource, const GLchar** fragmentShaderSource,ImImpl_CompileShaderStruct* pOptionalOptions=NULL, const GLchar** optionalVertexShaderCodePrefix=NULL, const GLchar** optionalFragmentShaderCodePrefix=NULL);
