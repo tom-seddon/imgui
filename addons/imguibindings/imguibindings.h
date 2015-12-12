@@ -293,8 +293,14 @@ public:
 public:
     void clearShaderOptions() {vertexShaderOverride = fragmentShaderOverride = programOverride = 0;dontLinkProgram = dontDeleteAttachedShaders = false;}
 };
-// returns the shader program ID.
-extern GLuint ImImpl_CompileShaders(const GLchar** vertexShaderSource, const GLchar** fragmentShaderSource,ImImpl_CompileShaderStruct* pOptionalOptions=NULL);
+// returns the shader program ID. "optionalShaderCodePrefix" (if present) is just copied before the source of both shaders. "pOptionalOptions" can be used to tune dynamic definitions inside the shader code and some shader compilation and linking processing steps.
+extern GLuint ImImpl_CompileShadersFromMemory(const GLchar** vertexShaderSource, const GLchar** fragmentShaderSource,ImImpl_CompileShaderStruct* pOptionalOptions=NULL, const GLchar** optionalVertexShaderCodePrefix=NULL, const GLchar** optionalFragmentShaderCodePrefix=NULL);
+#   ifndef NO_IMGUIHELPER_SERIALIZATION
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+// returns the shader program ID. "pOptionalOptions" can be used to tune dynamic definitions inside the shader code and some shader compilation and linking processing steps.
+extern GLuint ImImpl_CompileShadersFromFile(const char* vertexShaderFilePath, const char* fragmentShaderFilePath,ImImpl_CompileShaderStruct* pOptionalOptions=NULL, bool allowProcessingASingleIncludeDirectivePlacedAtTheFirstLineOfTheShaderCode=false);
+#       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#   endif //NO_IMGUIHELPER_SERIALIZATION
 #endif //IMIMPL_SHADER_NONE
 
 #ifdef IMIMPL_FORCE_DEBUG_CONTEXT

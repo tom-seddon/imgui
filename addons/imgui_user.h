@@ -15,6 +15,9 @@
 #ifndef NO_IMGUISTRING
 #include "./imguistring/imguistring.h"
 #endif //NO_IMGUISTRING
+#ifndef NO_IMGUIHELPER
+#include "./imguihelper/imguihelper.h"
+#endif //NO_IMGUIHELPER
 
 #undef IMGUI_USE_AUTO_BINDING
 #if (defined(IMGUI_USE_GLUT_BINDING) || defined(IMGUI_USE_SDL2_BINDING) || defined(IMGUI_USE_GLFW_BINDING) || defined(IMGUI_USE_WINAPI_BINDING))
@@ -22,9 +25,6 @@
 # 	include "./imguibindings/imguibindings.h"
 #endif //IMGUI_USE_AUTO_BINDING
 
-#ifndef NO_IMGUIHELPER
-#include "./imguihelper/imguihelper.h"
-#endif //NO_IMGUIHELPER
 #ifndef NO_IMGUILISTVIEW
 #include "./imguilistview/imguilistview.h"
 #endif //NO_IMGUILISTVIEW

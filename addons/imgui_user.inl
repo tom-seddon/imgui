@@ -9,6 +9,9 @@
 #ifndef NO_IMGUISTRING
 #include "./imguistring/imguistring.cpp"
 #endif //NO_IMGUISTRING
+#ifndef NO_IMGUIHELPER
+#include "./imguihelper/imguihelper.cpp"
+#endif //NO_IMGUIHELPER
 
 #ifdef IMGUI_USE_AUTO_BINDING	// defined in imgui_user.h
 #	ifdef __EMSCRIPTEN__
@@ -36,9 +39,6 @@
 //}
 #endif //IMGUI_USE_MINIZIP
 
-#ifndef NO_IMGUIHELPER
-#include "./imguihelper/imguihelper.cpp"
-#endif //NO_IMGUIHELPER
 #ifndef NO_IMGUILISTVIEW
 #include "./imguilistview/imguilistview.cpp"
 #endif //NO_IMGUILISTVIEW
