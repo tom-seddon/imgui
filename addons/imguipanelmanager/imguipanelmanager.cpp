@@ -26,11 +26,11 @@ static bool DockWindowButton(bool* p_undocked,bool *p_open=NULL)
     bool pressed = ButtonBehavior(bb, id, &hovered, &held);//, true);
 
     // Render
-    ImU32 col = window->Color((held && hovered) ? ColorDockButtonActive : hovered ? ColorDockButtonHovered : ColorDockButton);
+    ImU32 col = GetColorU32((held && hovered) ? ColorDockButtonActive : hovered ? ColorDockButtonHovered : ColorDockButton);
     window->DrawList->AddRectFilled(bb.Min, bb.Max, col, 0);
 
     if (p_undocked) {
-        col = !hovered ? window->Color(ColorDockButtonLines) : window->Color(ColorDockButtonLinesHovered);
+        col = !hovered ? GetColorU32(ColorDockButtonLines) : GetColorU32(ColorDockButtonLinesHovered);
         ImRect bb2 = bb;
         const ImVec2  sz = bb.GetSize();
         if (*p_undocked)    {
@@ -419,7 +419,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostModalRootWindow())
         {
             ImRect fullscreen_rect = GetVisibleRect();
-            window->DrawList->AddRectFilled(fullscreen_rect.Min, fullscreen_rect.Max, window->Color(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
+            window->DrawList->AddRectFilled(fullscreen_rect.Min, fullscreen_rect.Max, GetColorU32(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
         }
 
         // Draw window + handle manual resize
@@ -428,11 +428,11 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         if (window->Collapsed)
         {
             // Draw title bar only
-            window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_TitleBgCollapsed), window_rounding);
+            window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_TitleBgCollapsed), window_rounding);
             if (flags & ImGuiWindowFlags_ShowBorders)
             {
-                window->DrawList->AddRect(title_bar_rect.GetTL()+ImVec2(1,1), title_bar_rect.GetBR()+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), window_rounding);
-                window->DrawList->AddRect(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_Border), window_rounding);
+                window->DrawList->AddRect(title_bar_rect.GetTL()+ImVec2(1,1), title_bar_rect.GetBR()+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), window_rounding);
+                window->DrawList->AddRect(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border), window_rounding);
             }
         }
         else
@@ -448,7 +448,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 const ImGuiID resize_id = window->GetID("#RESIZE");
                 bool hovered, held;
                 ButtonBehavior(resize_rect, resize_id, &hovered, &held, /*true,*/ ImGuiButtonFlags_FlattenChilds);
-                resize_col = window->Color(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
+                resize_col = GetColorU32(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
 
                 if (hovered || held)
                     g.MouseCursor = ImGuiMouseCursor_ResizeNWSE;
@@ -481,35 +481,35 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             if (bg_alpha > 0.0f)
             {
                 if ((flags & ImGuiWindowFlags_ComboBox) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_ComboBg, bg_alpha), window_rounding);
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_ComboBg, bg_alpha), window_rounding);
                 else if ((flags & ImGuiWindowFlags_Tooltip) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_TooltipBg, bg_alpha), window_rounding);
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_TooltipBg, bg_alpha), window_rounding);
                 else if ((flags & ImGuiWindowFlags_Popup) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, bg_alpha), window_rounding);
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_WindowBg, bg_alpha), window_rounding);
                 else if ((flags & ImGuiWindowFlags_ChildWindow) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size - window->ScrollbarSizes, window->Color(ImGuiCol_ChildWindowBg, bg_alpha), window_rounding, window->ScrollbarY ? (1|8) : (0xF));
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size - window->ScrollbarSizes, GetColorU32(ImGuiCol_ChildWindowBg, bg_alpha), window_rounding, window->ScrollbarY ? (1|8) : (0xF));
                 else
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, bg_alpha), window_rounding);
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_WindowBg, bg_alpha), window_rounding);
             }
 
             // Title bar
             if (!(flags & ImGuiWindowFlags_NoTitleBar))
-                window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color((g.FocusedWindow && window->RootNonPopupWindow == g.FocusedWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, 1|2);
+                window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32((g.FocusedWindow && window->RootNonPopupWindow == g.FocusedWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, 1|2);
 
             // Menu bar
             if (flags & ImGuiWindowFlags_MenuBar)
             {
                 ImRect menu_bar_rect = window->MenuBarRect();
-                window->DrawList->AddRectFilled(menu_bar_rect.GetTL(), menu_bar_rect.GetBR(), window->Color(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, 1|2);
+                window->DrawList->AddRectFilled(menu_bar_rect.GetTL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, 1|2);
             }
 
             // Borders
             if (flags & ImGuiWindowFlags_ShowBorders)
             {
-                window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), window_rounding);
-                window->DrawList->AddRect(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_Border), window_rounding);
+                window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), window_rounding);
+                window->DrawList->AddRect(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_Border), window_rounding);
                 if (!(flags & ImGuiWindowFlags_NoTitleBar))
-                    window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_Border));
+                    window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border));
             }
 
             // Scrollbars
@@ -833,7 +833,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
                 }
 
                 if (hovered || held)    {
-                    const ImGuiCol resize_col = window->Color(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
+                    const ImGuiCol resize_col = GetColorU32(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
                     window->DrawList->AddRectFilled(resize_aabb.Min, resize_aabb.Max, resize_col, rounding, rounding_corners);
                 }
                 if (held) wd.persistFocus = true;

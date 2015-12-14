@@ -2556,7 +2556,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
     if (!fsv || lang==LANG_NONE)	{
         const int text_len = (int)(text_end - text);
         if (text_len > 0)   {
-            ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_end);
+            ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, ImGui::GetColorU32(ImGuiCol_Text), text, text_end);
             if (g.LogEnabled) LogRenderedText(pos, text, text_end);
         }
         return;
@@ -2652,7 +2652,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
     // skip tabs and spaces
     while (*s==sp || *s==tab)	{
     if (s+1==text_end)  {
-        ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_end);
+        ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, ImGui::GetColorU32(ImGuiCol_Text), text, text_end);
         if (g.LogEnabled) LogRenderedText(pos, text, text_end);
         return;
     }
@@ -2660,7 +2660,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
     }
     if (s>text)	{
         // Draw Tabs and spaces
-        ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, s);
+        ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, ImGui::GetColorU32(ImGuiCol_Text), text, s);
         if (g.LogEnabled) LogRenderedText(pos, text, s);
         text=s;
     }
@@ -2690,7 +2690,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
         offset = tok-oldTok;
         if (offset>0) {
             // Print Punctuation
-            /*window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Button), s, s+offset, wrap_width);
+            /*window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Button), s, s+offset, wrap_width);
     if (g.LogEnabled) LogRenderedText(pos, s, s+offset);
     //pos.x+=charWidth*(offset);
     pos.x+=CalcTextWidth(s, s+offset).x;*/
@@ -2700,7 +2700,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                 if (tokenIsNumber && *ch=='.') {sht = SH_NUMBER;++tokenIsNumber;}
                 if (sht==-1 && !shTypePunctuationMap.get(*ch,sht)) sht = -1;
                 if (sht>=0 && sht<SH_COUNT) ImGui::ImDrawListAddTextLine(window->DrawList,const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1);
-                else ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), s+j, s+j+1);
+                else ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, ImGui::GetColorU32(ImGuiCol_Text), s+j, s+j+1);
                 if (g.LogEnabled) LogRenderedText(pos, s+j, s+j+1);
             }
         }
@@ -2732,7 +2732,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
             }
             else {
                 //fprintf(stderr,"Not Getting shTypeMap: \"%s\",%d\n",tok,sht);
-                ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), tok, tok+len_tok);
+                ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, ImGui::GetColorU32(ImGuiCol_Text), tok, tok+len_tok);
             }
             if (g.LogEnabled) LogRenderedText(pos, tok, tok+len_tok);
             const float token_width = pos.x - oldPos.x;//MyCalcTextWidth(tok,tok+len_tok);   // We'll use this later
@@ -2742,7 +2742,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                 const ImVec2& token_pos = oldPos;
                 ImRect bb(token_pos, token_pos + token_size);
                 if (ImGui::ItemAdd(bb, NULL) && ImGui::IsItemHovered()) {
-                    window->DrawList->AddLine(ImVec2(bb.Min.x,bb.Max.y), bb.Max, sht>=0 ? style.color_syntax_highlighting[sht] : window->Color(ImGuiCol_Text), 2.f);
+                    window->DrawList->AddLine(ImVec2(bb.Min.x,bb.Max.y), bb.Max, sht>=0 ? style.color_syntax_highlighting[sht] : ImGui::GetColorU32(ImGuiCol_Text), 2.f);
                     if (ImGui::GetIO().MouseClicked[0])  {fprintf(stderr,"Mouse clicked on token: \"%s\"(%d->\"%s\") curlineStartedWithDiesis=%s line=\"%s\"\n",s,len_tok,tok,gCurlineStartedWithDiesis?"true":"false",gCurline->text.c_str());}
                     ImGui::SetTooltip("Token: \"%s\" len=%d\nToken unclamped: \"%s\"\nSH = %s\nLine (%d):\"%s\"\nLine starts with '#': %s",tok,len_tok,s,sht<0 ? "None" : SyntaxHighlightingTypeStrings[sht],gCurline->lineNumber+1,gCurline->text.c_str(),gCurlineStartedWithDiesis?"true":"false");
                     gIsCursorChanged = true;ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
@@ -2760,7 +2760,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
     offset = text_end-s;
     if (offset>0) {
         // Print Punctuation
-        //window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Button), s, s+offset, wrap_width);
+        //window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Button), s, s+offset, wrap_width);
         //if (g.LogEnabled) LogRenderedText(pos, s, s+offset);
         for (int j=0;j<offset;j++)  {
             const char* ch = s+j;
@@ -2768,7 +2768,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
             if (tokenIsNumber && *ch=='.') {sht = SH_NUMBER;++tokenIsNumber;}
             if (sht==-1 && !shTypePunctuationMap.get(*ch,sht)) sht = -1;
             if (sht>=0 && sht<SH_COUNT) ImGui::ImDrawListAddTextLine(window->DrawList,const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1);
-            else ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), s+j, s+j+1);
+            else ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, ImGui::GetColorU32(ImGuiCol_Text), s+j, s+j+1);
             if (g.LogEnabled) LogRenderedText(pos, s+j, s+j+1);
         }
     }
