@@ -322,6 +322,17 @@ private:
 #endif //ImVectorEx
 
 
+#ifndef ImPair
+template<typename T,typename U> struct ImPair {
+    T first;U second;
+    inline ImPair(const T &t=T(),const U &u=U()): first(t),second(u) {}
+    inline ImPair(const ImPair<T,U>& o): first(o.first),second(o.second) {}
+    inline bool operator==(const ImPair<T,U>& o) const {return (first==o.first && second==o.second);}
+    inline const ImPair<T,U>& operator=(const ImPair<T,U>& o) {first=o.first;second=o.second;return *this;}
+};
+#endif //ImPair
+
+
 // ImHashMap (unluckily it is not API-compatible with STL)
 #ifndef ImHashMap
 typedef unsigned char ImHashInt;  // optimized for MAX_HASH_INT = 256 (this was we can skip clamping the hash: hash%=MAX_HASH_INT)
@@ -531,6 +542,20 @@ struct ImHashFunctionImString {
 };
 template <int MAX_HASH_INT = 256> class ImHashMapImStringBase : public ImHashMap<ImString,int,ImHashFunctionImString,ImHashMapKeyEqualityFunctionDefault<ImString>,MAX_HASH_INT> {};
 typedef ImHashMapImStringBase<256>                                                               ImHashMapImString;   // map <ImString,int>.                We can change the int to comsume less memory if needed
+
+
+// Something to ease having ImPair as keys
+template <typename K1,typename K2> struct ImHashFunctionImPairDefault {
+    inline ImHashInt operator()(const ImPair<K1,K2>&  key) const {
+        return (ImHashInt) (key.first*23+key.second)%256;
+    }
+};
+template <typename K1,typename K2> struct ImHashMapImPairEqualityFunction {
+    inline bool operator()(const ImPair<K1,K2>&  k1,const ImPair<K1,K2>& k2) const {
+        return (k1.first==k2.first && k1.second==k2.second);
+    }
+};
+template <typename K1,typename K2,typename V, typename F = ImHashFunctionImPairDefault<K1,K2>,typename E = ImHashMapImPairEqualityFunction<K1,K2>,int MAX_HASH_INT = 256 > class ImHashMapImPair : public ImHashMap<ImPair<K1,K2>,V,F,E,MAX_HASH_INT> {};
 #endif //ImHashMap
 
 

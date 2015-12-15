@@ -477,8 +477,9 @@ void DrawGL()	// Mandatory
             static int tabItemOrdering[numTabs] = {0,1,2,3,4,5,6,7,8,9,10,11};
             static int selectedTab = 0;
             static int optionalHoveredTab = 0;
+            static bool allowTabLabelDragAndDrop=true;static bool tabLabelWrapMode = true;static bool allowClosingTabsWithMMB = true;
             int justClosedTabIndex=-1,justClosedTabIndexInsideTabItemOrdering = -1,oldSelectedTab = selectedTab;
-            /*const bool tabSelectedChanged =*/ ImGui::TabLabels(numTabs,tabNames,selectedTab,tabTooltips,true,&optionalHoveredTab,&tabItemOrdering[0],true,true,&justClosedTabIndex,&justClosedTabIndexInsideTabItemOrdering);
+            /*const bool tabSelectedChanged =*/ ImGui::TabLabels(numTabs,tabNames,selectedTab,tabTooltips,tabLabelWrapMode,&optionalHoveredTab,&tabItemOrdering[0],allowTabLabelDragAndDrop,allowClosingTabsWithMMB,&justClosedTabIndex,&justClosedTabIndexInsideTabItemOrdering);
             // Optional stuff
             if (justClosedTabIndex==1) {
                 tabItemOrdering[justClosedTabIndexInsideTabItemOrdering] = justClosedTabIndex;   // Prevent the user from closing Tab "Layers"
@@ -486,8 +487,10 @@ void DrawGL()	// Mandatory
             }
             // Draw tab page
             ImGui::Spacing();ImGui::Text("Tab Page For Tab: \"%s\" here.",tabNames[selectedTab]);
-            ImGui::SameLine();if (ImGui::SmallButton("Reset Tab Labels")) {for (int i=0;i<numTabs;i++) tabItemOrdering[i] = i;}
-            ImGui::Spacing();
+            ImGui::Checkbox("Wrap Mode##TabLabelWrapMode",&tabLabelWrapMode);
+            ImGui::SameLine();ImGui::Checkbox("Drag And Drop##TabLabelDragAndDrop",&allowTabLabelDragAndDrop);
+            ImGui::SameLine();ImGui::Checkbox("MMB closes tabs (buggy)##TabLabelMMBClosing",&allowClosingTabsWithMMB);
+            ImGui::SameLine();if (ImGui::SmallButton("Reset Tabs")) {for (int i=0;i<numTabs;i++) tabItemOrdering[i] = i;}
             //if (optionalHoveredTab>=0) ImGui::Text("Mouse is hovering Tab Label: \"%s\".\n\n",tabNames[optionalHoveredTab]);
 
 

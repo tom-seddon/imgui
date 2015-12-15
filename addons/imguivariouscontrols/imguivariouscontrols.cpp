@@ -47,6 +47,9 @@ void TestProgressBar()  {
     ImGui::ProgressBar("ProgressBar",1.f-progress);
     ImGui::ProgressBar("",500+progress*1000,500,1500,"%4.0f (absolute value in [500,1500] and fixed bar size)",ImVec2(150,-1));
     ImGui::ProgressBar("",500+progress*1000,500,1500,"%3.0f%% (same as above, but with percentage and new colors)",ImVec2(150,-1),ImVec4(0.7,0.7,1,1),ImVec4(0.05,0.15,0.5,0.8),ImVec4(0.8,0.8,0,1));
+    // This one has just been added to ImGui:
+    //char txt[48]="";sprintf(txt,"%3d%% (ImGui default progress bar)",(int)(progress*100));
+    //ImGui::ProgressBar(progress,ImVec2(0,0),txt);
 }
 
 
@@ -693,9 +696,13 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
     const ImVec4 color =        style.Colors[ImGuiCol_Button];
     const ImVec4 colorActive =  style.Colors[ImGuiCol_ButtonActive];
     const ImVec4 colorHover =   style.Colors[ImGuiCol_ButtonHovered];
+    const ImVec4 colorText =   style.Colors[ImGuiCol_Text];
     style.ItemSpacing.x =       1;
     style.ItemSpacing.y =       1;
-
+    const ImVec4 colorSelectedTab(color.x,color.y,color.z,color.w*0.5f);
+    const ImVec4 colorSelectedTabHovered(colorHover.x,colorHover.y,colorHover.z,colorHover.w*0.5f);
+    const ImVec4 colorSelectedTabText(colorText.x*0.8f,colorText.y*0.8f,colorText.z*0.6f,colorText.w*0.8f);
+    //ImGui::ClampColor(colorSelectedTabText);
 
     if (numTabs>0 && (selectedIndex<0 || selectedIndex>=numTabs)) {
         if (!pOptionalItemOrdering)  selectedIndex = 0;
@@ -705,60 +712,63 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
     if (pOptionalClosedTabIndex) *pOptionalClosedTabIndex = -1;
     if (pOptionalClosedTabIndexInsideItemOrdering) *pOptionalClosedTabIndexInsideItemOrdering = -1;
 
-    // Parameters to adjust to make autolayout work as expected:----------
-    // The correct values are probably the ones in the comments, but I took some margin so that they work well
-    // with a (medium size) vertical scrollbar too [Ok I should detect its presence and use the appropriate values...].
-    const float btnOffset =         2.f*style.FramePadding.x;   // [2.f*style.FramePadding.x] It should be: ImGui::Button(text).size.x = ImGui::CalcTextSize(text).x + btnOffset;
-    const float sameLineOffset =    2.f*style.ItemSpacing.x;    // [style.ItemSpacing.x]      It should be: sameLineOffset = ImGui::SameLine().size.x;
-    const float uniqueLineOffset =  2.f*style.WindowPadding.x;  // [style.WindowPadding.x]    Width to be sutracted by windowWidth to make it work.
-    //--------------------------------------------------------------------
-
     float windowWidth = 0.f,sumX=0.f;
-    if (wrapMode) windowWidth = ImGui::GetWindowWidth() - uniqueLineOffset;
+    if (wrapMode) windowWidth = ImGui::GetWindowWidth() - style.WindowPadding.x - (ImGui::GetScrollMaxY()>0 ? style.ScrollbarSize : 0.f);
 
     static int draggingTabIndex = -1;int draggingTabTargetIndex = -1;   // These are indices inside pOptionalItemOrdering
-    const bool isMouseDragging = ImGui::IsMouseDragging(0,-1.f);
-    const bool isMMBreleased = ImGui::IsMouseReleased(2);
-    int justClosedTabIndex = -1;
+    static ImVec2 draggingTabSize(0,0);
+    static ImVec2 draggingTabOffset(0,0);
 
-    bool selection_changed = false;
+    const bool isMMBreleased = ImGui::IsMouseReleased(2);
+    const bool isMouseDragging = ImGui::IsMouseDragging(0,2.f);
+    int justClosedTabIndex = -1,newSelectedIndex = selectedIndex;
+
+
+    bool selection_changed = false;bool noButtonDrawn = true;
     for (int j = 0,i; j < numTabs; j++)
     {
         i = pOptionalItemOrdering ? pOptionalItemOrdering[j] : j;
         if (i==-1) continue;
 
-        // push the style
-        if (i == selectedIndex)
-        {
-            style.Colors[ImGuiCol_Button] =         colorActive;
-            style.Colors[ImGuiCol_ButtonActive] =   colorActive;
-            style.Colors[ImGuiCol_ButtonHovered] =  colorActive;
-        }
-        else
-        {
-            style.Colors[ImGuiCol_Button] =         color;
-            style.Colors[ImGuiCol_ButtonActive] =   colorActive;
-            style.Colors[ImGuiCol_ButtonHovered] =  colorHover;
-        }
-
-        ImGui::PushID(i);   // otherwise two tabs with the same name would clash.
-
-        if (!wrapMode) {if (i>0) ImGui::SameLine();}
+        if (!wrapMode) {if (!noButtonDrawn) ImGui::SameLine();}
         else if (sumX > 0.f) {
-            sumX+=sameLineOffset;   // Maybe we can skip it if we use SameLine(0,0) below
-            sumX+=ImGui::CalcTextSize(tabLabels[i]).x+btnOffset;
+            sumX+=style.ItemSpacing.x;   // Maybe we can skip it if we use SameLine(0,0) below
+            sumX+=ImGui::CalcTextSize(tabLabels[i]).x+2.f*style.FramePadding.x;
             if (sumX>windowWidth) sumX = 0.f;
             else ImGui::SameLine();
         }
 
+        if (i == selectedIndex) {
+            // Push the style
+            style.Colors[ImGuiCol_Button] =         colorSelectedTab;
+            style.Colors[ImGuiCol_ButtonActive] =   colorSelectedTab;
+            style.Colors[ImGuiCol_ButtonHovered] =  colorSelectedTabHovered;
+            style.Colors[ImGuiCol_Text] =           colorSelectedTabText;
+        }
         // Draw the button
-        if (ImGui::Button(tabLabels[i]))   {selection_changed = (selectedIndex!=i);selectedIndex = i;}
-        if (wrapMode && sumX==0.f) {
-            // First element of a line
-            sumX = ImGui::GetItemRectSize().x;
+        ImGui::PushID(i);   // otherwise two tabs with the same name would clash.
+        if (ImGui::Button(tabLabels[i]))   {selection_changed = (selectedIndex!=i);newSelectedIndex = i;}
+        ImGui::PopID();
+        if (i == selectedIndex) {
+            // Reset the style
+            style.Colors[ImGuiCol_Button] =         color;
+            style.Colors[ImGuiCol_ButtonActive] =   colorActive;
+            style.Colors[ImGuiCol_ButtonHovered] =  colorHover;
+            style.Colors[ImGuiCol_Text] =           colorText;
+        }
+        noButtonDrawn = false;
+
+        if (wrapMode) {
+            if (sumX==0.f) sumX = style.WindowPadding.x + ImGui::GetItemRectSize().x; // First element of a line
+        }
+        else if (isMouseDragging && allowTabReorder && pOptionalItemOrdering) {
+            // We still need sumX
+            if (sumX==0.f) sumX = style.WindowPadding.x + ImGui::GetItemRectSize().x; // First element of a line
+            else sumX+=style.ItemSpacing.x + ImGui::GetItemRectSize().x;
+
         }
 
-        if (ImGui::IsItemHovered()) {
+        if (ImGui::IsItemHoveredRect()) {
             if (pOptionalHoveredIndex) *pOptionalHoveredIndex = i;
             if (tabLabelTooltips && tabLabelTooltips[i] && strlen(tabLabelTooltips[i])>0)  ImGui::SetTooltip("%s",tabLabelTooltips[i]);
 
@@ -767,10 +777,18 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
                     if (isMouseDragging) {
                         if (draggingTabIndex==-1) {
                             draggingTabIndex = j;
+                            draggingTabSize = ImGui::GetItemRectSize();
+                            const ImVec2& mp = ImGui::GetIO().MousePos;
+                            const ImVec2 draggingTabCursorPos = ImGui::GetCursorPos();
+                            draggingTabOffset=ImVec2(
+                                        mp.x+draggingTabSize.x*0.5f-sumX+ImGui::GetScrollX(),
+                                        mp.y+draggingTabSize.y*0.5f-draggingTabCursorPos.y+ImGui::GetScrollY()
+                                        );
+
                         }
                     }
                     else if (draggingTabIndex>=0 && draggingTabIndex<numTabs && draggingTabIndex!=j){
-                        draggingTabTargetIndex = j; // For some odd reasons this seems to get called only when draggingTabIndex < i !
+                        draggingTabTargetIndex = j; // For some odd reasons this seems to get called only when draggingTabIndex < i ! (Probably during mouse dragging ImGui owns the mouse someway and sometimes ImGui::IsItemHovered() is not getting called)
                     }
                 }
                 if (allowTabClosingThroughMMB)  {
@@ -783,18 +801,42 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
                 }
             }
         }
-        ImGui::PopID();
+
     }
 
+    selectedIndex = newSelectedIndex;
+
+    // Draw tab label while mouse drags it
+    if (draggingTabIndex>=0 && draggingTabIndex<numTabs) {
+        const ImVec2& mp = ImGui::GetIO().MousePos;
+        const ImVec2 wp = ImGui::GetWindowPos();
+        ImVec2 start(wp.x+mp.x-draggingTabOffset.x-draggingTabSize.x*0.5f,wp.y+mp.y-draggingTabOffset.y-draggingTabSize.y*0.5f);
+        const ImVec2 end(start.x+draggingTabSize.x,start.y+draggingTabSize.y);
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        const float draggedBtnAlpha = 0.65f;
+        const ImVec4& btnColor = style.Colors[ImGuiCol_Button];
+        drawList->AddRectFilled(start,end,ImColor(btnColor.x,btnColor.y,btnColor.z,btnColor.w*draggedBtnAlpha),style.FrameRounding);
+        start.x+=style.FramePadding.x;start.y+=style.FramePadding.y;
+        const ImVec4& txtColor = style.Colors[ImGuiCol_Text];
+        drawList->AddText(start,ImColor(txtColor.x,txtColor.y,txtColor.z,txtColor.w*draggedBtnAlpha),tabLabels[pOptionalItemOrdering[draggingTabIndex]]);
+
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
+    }
+
+    // Drop tab label
     if (draggingTabTargetIndex!=-1) {
-        // swap draggingTabIndex ang draggingTabTargetIndex in pOptionalItemOrdering
+        // swap draggingTabIndex and draggingTabTargetIndex in pOptionalItemOrdering
         const int tmp = pOptionalItemOrdering[draggingTabTargetIndex];
         pOptionalItemOrdering[draggingTabTargetIndex] = pOptionalItemOrdering[draggingTabIndex];
         pOptionalItemOrdering[draggingTabIndex] = tmp;
         //fprintf(stderr,"%d %d\n",draggingTabIndex,draggingTabTargetIndex);
         draggingTabTargetIndex = draggingTabIndex = -1;
     }
+
+    // Reset draggingTabIndex if necessary
     if (!isMouseDragging) draggingTabIndex = -1;
+
+    // Change selected tab when user closes the selected tab
     if (selectedIndex == justClosedTabIndex && selectedIndex>=0)    {
         selectedIndex = -1;
         for (int j = 0,i; j < numTabs; j++) {
@@ -809,6 +851,7 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
     style.Colors[ImGuiCol_Button] =         color;
     style.Colors[ImGuiCol_ButtonActive] =   colorActive;
     style.Colors[ImGuiCol_ButtonHovered] =  colorHover;
+    style.Colors[ImGuiCol_Text] =           colorText;
     style.ItemSpacing =                     itemSpacing;
 
     return selection_changed;
