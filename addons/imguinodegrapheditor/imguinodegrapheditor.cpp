@@ -702,7 +702,7 @@ void NodeGraphEditor::render()
     draw_list->ChannelsMerge();
 
     // Open context menu
-    if (!open_context_menu && selectedNode && (selectedNode==node_hovered_in_list || selectedNode==node_hovered_in_scene) && (/*ImGui::IsKeyReleased(io.KeyMap[ImGuiKey_Delete]) || */mustDeleteANodeSoon)) {
+    if (!open_context_menu && selectedNode && (selectedNode==node_hovered_in_list || selectedNode==node_hovered_in_scene) && ((ImGui::IsKeyReleased(io.KeyMap[ImGuiKey_Delete]) && !ImGui::GetIO().WantTextInput) || mustDeleteANodeSoon)) {
         // Delete selected node directly:
         if (selectedNode==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
         if (selectedNode==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
@@ -710,11 +710,10 @@ void NodeGraphEditor::render()
         selectedNode = node_hovered_in_list = node_hovered_in_scene = NULL;
         open_delete_only_context_menu = false;	// just in case...
     }
-    else if (!isAContextMenuOpen && !ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() && getNumAvailableNodeTypes()>0 && nodeFactoryFunctionPtr)   {
+    else if (/*!isAContextMenuOpen &&*/ !ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() && getNumAvailableNodeTypes()>0 && nodeFactoryFunctionPtr)   {
         if (ImGui::IsMouseClicked(1))   {   // Open context menu for adding nodes
             selectedNode = node_hovered_in_list = node_hovered_in_scene = NULL;
             open_context_menu = true;
-            // TODO: we must close the "context_menu" popup here if it's already open. How to do it ?
         }
     }
 
@@ -722,6 +721,7 @@ void NodeGraphEditor::render()
     if (open_context_menu || open_delete_only_context_menu)  {
         if (node_hovered_in_list) selectedNode = node_hovered_in_list;
         if (node_hovered_in_scene) selectedNode = node_hovered_in_scene;
+        ImGuiState& g = *GImGui; while (g.OpenedPopupStack.size() > 0) g.OpenedPopupStack.pop_back();   // Close all existing context-menus
         ImGui::PushID(selectedNode);
         if (open_delete_only_context_menu) ImGui::OpenPopup("delete_only_context_menu");
         else if (open_context_menu) ImGui::OpenPopup("context_menu");
@@ -743,7 +743,7 @@ void NodeGraphEditor::render()
             }
         }
         ImGui::EndPopup();
-        isAContextMenuOpen = true;
+        //isAContextMenuOpen = true;
     }
     else if (ImGui::BeginPopup("context_menu"))  {
         Node* node = selectedNode;
@@ -792,9 +792,9 @@ void NodeGraphEditor::render()
             //if (ImGui::MenuItem("Paste", NULL, false, false)) {}
         }
         ImGui::EndPopup();
-        isAContextMenuOpen = true;
+        //isAContextMenuOpen = true;
     }
-    else isAContextMenuOpen = false;
+    //else isAContextMenuOpen = false;
     ImGui::PopID();
     ImGui::PopStyleVar();
 

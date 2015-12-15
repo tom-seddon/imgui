@@ -175,7 +175,7 @@ static bool InitBinding(const ImImpl_InitParams* pOptionalInitParams=NULL,int ar
 }
 
 
-
+#   include <SDL2/SDL.h>
 static void ImImplMainLoopFrame(void* pDone)	{
     ImGuiIO& io = ImGui::GetIO();
     int& done = *((int*) pDone);
@@ -199,11 +199,14 @@ static void ImImplMainLoopFrame(void* pDone)	{
         }
     }
 
+    static bool gImGuiAppIsIconified = false;
     while (SDL_PollEvent(&event))
     {
         switch (event.type)
         {
         case SDL_WINDOWEVENT: {
+            if (event.window.event<=SDL_WINDOWEVENT_RESTORED) gImGuiAppIsIconified = (event.window.event==SDL_WINDOWEVENT_MINIMIZED || event.window.event==SDL_WINDOWEVENT_HIDDEN);
+            //printf("%d\n",event.window.event);fflush(stdout);
             switch (event.window.event) {
             case SDL_WINDOWEVENT_RESIZED:
             {
@@ -322,7 +325,8 @@ static void ImImplMainLoopFrame(void* pDone)	{
 
     SDL_GL_SwapWindow(window);
 
-    if (curFramesDelay>=0 && ++curFramesDelay>numFramesDelay) WaitFor(200);     // 200 = 5 FPS - frame rate when ImGui is inactive
+    if (gImGuiAppIsIconified) {WaitFor(500);/*printf("Minimized\n");fflush(stdout);*/}
+    else if (curFramesDelay>=0 && ++curFramesDelay>numFramesDelay) WaitFor(200);     // 200 = 5 FPS - frame rate when ImGui is inactive
     else {
         const float& inverseFPSClamp = gImGuiWereOutsideImGui ? gImGuiInverseFPSClampOutsideImGui : gImGuiInverseFPSClampInsideImGui;
         if (inverseFPSClamp==0.f) WaitFor(500);

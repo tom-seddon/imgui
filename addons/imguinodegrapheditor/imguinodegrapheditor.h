@@ -301,7 +301,7 @@ struct NodeGraphEditor	{
     bool inited;
     bool allowOnlyOneLinkPerInputSlot;  // multiple links can still be connected to single output slots
     bool avoidCircularLinkLoopsInOut;   // however multiple paths from a node to another are still allowed (only in-out circuits are prevented)
-    bool isAContextMenuOpen;            // to fix a bug
+    //bool isAContextMenuOpen;            // to fix a bug
     float oldFontWindowScale;           // to fix zooming (CTRL+mouseWheel)
 
     // Node types here are supposed to be zero-based and contiguous
@@ -411,7 +411,7 @@ struct NodeGraphEditor	{
         nodeFactoryFunctionPtr = NULL;
         inited = init_in_ctr;
         colorEditMode = ImGuiColorEditMode_RGB;
-        isAContextMenuOpen = false;
+        //isAContextMenuOpen = false;
         oldFontWindowScale = 0.f;
         nodesBaseWidth = 120.f;
     }

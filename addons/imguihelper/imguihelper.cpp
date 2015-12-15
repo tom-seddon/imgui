@@ -51,6 +51,11 @@ bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS)	{
 #       endif //_WIN32
 }
 
+void CloseAllPopupMenus()   {
+    ImGuiState& g = *GImGui;
+    while (g.OpenedPopupStack.size() > 0) g.OpenedPopupStack.pop_back();
+}
+
 #ifndef NO_IMGUIHELPER_FONT_METHODS
 void InitPushFontOverload() {
     ImGuiIO& io = ImGui::GetIO();
@@ -93,8 +98,6 @@ void Text(int fntIndex, const char *fmt,...)    {
     TextV(fntIndex,fmt, args);
     va_end(args);
 }
-
-
 #endif //NO_IMGUIHELPER_FONT_METHODS
 
 

@@ -300,6 +300,7 @@ if (pOptionalInitParams && pOptionalInitParams->useOpenGLDebugContext) glfwWindo
     glfwMakeContextCurrent(window);
     glfwSetKeyCallback(window, glfw_key_callback);
     glfwSetMouseButtonCallback(window, glfw_mouse_button_callback);
+    //glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, 1);
     glfwSetScrollCallback(window, glfw_scroll_callback);
     glfwSetCharCallback(window, glfw_char_callback);
     glfwSetCursorPosCallback(window, glfw_mouse_move_callback);
@@ -405,11 +406,10 @@ static void ImImplMainLoopFrame(void* userPtr)	{
 
     if (!gImGuiPaused)	{
         io.DeltaTime = (float) deltaTime;
+        for (size_t i = 0; i < 5; i++) io.MouseDown[i]=(glfwGetMouseButton(window, i)==GLFW_PRESS);
         // Start the frame
         ImGui::NewFrame();
-        for (size_t i = 0; i < 5; i++) {
-            io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
-        }
+        for (size_t i = 0; i < 5; i++) io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
     }
 
     DrawGL();
