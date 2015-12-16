@@ -271,7 +271,6 @@ public:
 
 #ifndef NO_IMGUISTRING
 protected:
-    typedef ImHashMap<ImString,ImString,ImHashFunctionImString,ImHashMapKeyEqualityFunctionDefault<ImString>,256> ImStringImStringMap;
     ImStringImStringMap mPreprocessorDefinitionsWithValue;
     ImVectorEx < ImString > mPreprocessorDefinitions; // Without values (don't remember why I split them here)
     int mNumPreprocessorAdditionalLines;

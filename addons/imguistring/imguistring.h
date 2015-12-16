@@ -78,7 +78,8 @@ inline const ImString& operator=(const ImString& other) {
     return *this;
 }
 
-/*inline const ImString operator+(const ImString& other) const {
+/* // Nope: moved outside
+inline const ImString operator+(const ImString& other) const {
     ImString rv(*this);
     return rv+=other;
 }*/
@@ -200,10 +201,7 @@ inline void push_back(const char c) {
 //TODO: redefine all the other methods we want to hide here...
 
 };
-inline const ImString operator+(const ImString& v1, const ImString& v2 ) {
-    ImString rv(v1);
-    return rv.operator+=(v2);
-}
+inline const ImString operator+(ImString v1, const ImString& v2 ) {return v1+=(v2);}
 #endif //ImString
 
 
@@ -352,9 +350,30 @@ template <typename K> struct ImHashMapKeyEqualityFunctionDefault {
         return (k1 == k2);
     }
 };
+template <typename K> struct ImHashMapAssignmentFunctionDefault {
+    inline void operator()(K& key,const K& key2) const {key = key2;}
+};
+template <typename K> struct ImHashMapConstructorFunctionDummy {
+    inline void operator()(K& ) const {}
+};
+template <typename K> struct ImHashMapDestructorFunctionDummy {
+    inline void operator()(K& ) const {}
+};
+template <typename K> struct ImHashMapConstructorFunctionDefault {
+    inline void operator()(K& k) const {new (&k) K();}
+};
+template <typename K> struct ImHashMapDestructorFunctionDefault {
+    inline void operator()(K& k) const {k.~K();}
+};
+
+
 
 // Hash map class template
-template <typename K, typename V, typename F = ImHashFunctionDefault<K>,typename E = ImHashMapKeyEqualityFunctionDefault<K>,int MAX_HASH_INT = 256 > class ImHashMap
+template <typename K, typename V, typename F = ImHashFunctionDefault<K>,typename E = ImHashMapKeyEqualityFunctionDefault<K>,
+    typename CK = ImHashMapConstructorFunctionDummy<K>,typename DK = ImHashMapDestructorFunctionDummy<K>,typename AK = ImHashMapAssignmentFunctionDefault<K>,
+    typename CV = ImHashMapConstructorFunctionDummy<V>,typename DV = ImHashMapDestructorFunctionDummy<V>,typename AV = ImHashMapAssignmentFunctionDefault<V>,
+    int MAX_HASH_INT = 256 >
+class ImHashMap
 {
 protected:
 struct HashNode {
@@ -363,7 +382,6 @@ struct HashNode {
     HashNode *next; // next HashNode with the same key
     friend class HashMap;
 };
-typedef HashNode HashNode;
 public:
     ImHashMap() {
         hashNodes.resize(MAX_HASH_INT);
@@ -380,10 +398,12 @@ public:
     for (int i = 0,isz=hashNodes.size(); i < isz; ++i) {
         HashNode* node = hashNodes[i];
         while (node) {
-        HashNode* prev = node;
-        node = node->next;
-        //prev->~NodeType();          // ImVector does not call it
-        ImGui::MemFree(prev);       // items MUST be allocated by the user using ImGui::MemAlloc(...)
+            HashNode* prev = node;
+            node = node->next;
+            //prev->~HashNode();          // ImVector does not call it
+            destructorKFunc(prev->key);
+            destructorVFunc(prev->value);
+            ImGui::MemFree(prev);       // items MUST be allocated by the user using ImGui::MemAlloc(...)
         }
         hashNodes[i] = NULL;
     }
@@ -396,7 +416,7 @@ public:
         IM_ASSERT(hash>=0 && hash<hashNodes.size());    // MAX_HASH_INT too low
         HashNode* node = hashNodes[hash];
         while (node) {
-            if (equalFunc(node->key,key)) {value = node->value;return true;}
+            if (equalFunc(node->key,key)) {assignVFunc(value,node->value);return true;}
             node = node->next;
         }
         return false;
@@ -414,11 +434,13 @@ public:
             // key not found
             node = (HashNode*) ImGui::MemAlloc(sizeof(HashNode));   // items MUST be free by the user using ImGui::MemFree(...)
             //new (node) HashNode(key,value);                         // ImVector does not call it
-            node->key=key;node->value=value;node->next=NULL;
+            constructorKFunc(node->key);    assignKFunc(node->key,key);
+            constructorVFunc(node->value);  assignVFunc(node->value,value);
+            node->next=NULL;
             if (!prev) hashNodes[hash] = node;                 // first bucket slot
             else prev->next = node;
         }
-        else node->value = value;                           // key in the hashMap already
+        else assignVFunc(node->value,value);                   // key in the hashMap already
     }
 
     inline void remove(const K &key) {
@@ -434,7 +456,9 @@ public:
             if (!prev) hashNodes[hash] = node->next;  // node in the first bucket slot -> replace the entry with node->next
             else prev->next = node->next;             // bypass node
             // delete node
-            //node->~NodeType();          // ImVector does not call it
+            //node->~HashNode();          // ImVector does not call it
+            destructorKFunc(node->key);
+            destructorVFunc(node->value);
             ImGui::MemFree(node);       // items MUST be allocated by the user using ImGui::MemAlloc(...)
         }
     }
@@ -450,8 +474,8 @@ public:
         const HashNode* startPair = (const HashNode*) prevPair;
         if (!startPair->next) {++bucketIndexInOut;startPair=NULL;}
         else {
-            key     = startPair->next->key;
-            value   = startPair->next->value;
+            assignKFunc(key,startPair->key);
+            assignVFunc(value,startPair->value);
             return (void*) startPair->next;
         }
         if (bucketIndexInOut<0 || bucketIndexInOut>=MAX_HASH_INT) {bucketIndexInOut = -1;return NULL;}
@@ -459,8 +483,8 @@ public:
         for (int i=bucketIndexInOut,isz=hashNodes.size();i<isz;i++)   {
             node = hashNodes[i];
             if (node) {
-                key     = node->key;
-                value   = node->value;
+                assignKFunc(key,node->key);
+                assignVFunc(value,node->value);
                 bucketIndexInOut = i;
                 return (void*) node;
             }
@@ -475,6 +499,14 @@ protected:
     bool mustClampHash;             // This could be static...
     E equalFunc;
 
+    CK constructorKFunc;
+    DK destructorKFunc;
+    AK assignKFunc;
+
+    CV constructorVFunc;
+    DV destructorVFunc;
+    AV assignVFunc;
+
     int GetNumBuckets() {return MAX_HASH_INT;}
     void* getFirstPair(int& bucketIndexOut,K& key,V& value) const {
         bucketIndexOut = 0;
@@ -483,8 +515,8 @@ protected:
         for (int i=bucketIndexOut,isz=hashNodes.size();i<isz;i++)   {
             node = hashNodes[i];
             if (node) {
-                key     = node->key;
-                value   = node->value;
+                assignKFunc(key,node->key);
+                assignVFunc(value,node->value);
                 bucketIndexOut = i;
                 return (void*) node;
             }
@@ -511,7 +543,10 @@ struct ImHashMapStringCEqualityFunction {
 
 // ImHashMap specialized for strings (actually char*)
 // Important the keys must be persistent somewhere. They are not owned, because they are not copied for performance reasons (people usually use these terms when they mean: I'm too lazy to code it).
-template <int MAX_HASH_INT = 256> class ImHashMapCStringBase : public ImHashMap<const char*,int,ImHashFunctionCString,ImHashMapStringCEqualityFunction,MAX_HASH_INT> {};
+template <int MAX_HASH_INT = 256> class ImHashMapCStringBase : public ImHashMap<const char*,int,ImHashFunctionCString,ImHashMapStringCEqualityFunction,
+    ImHashMapConstructorFunctionDummy<const char*>, ImHashMapDestructorFunctionDummy<const char*>, ImHashMapAssignmentFunctionDefault<const char*>,
+    ImHashMapConstructorFunctionDummy<int>,         ImHashMapDestructorFunctionDummy<int>,         ImHashMapAssignmentFunctionDefault<int>,
+    MAX_HASH_INT> {};
 
 struct ImHashFunctionChar {
     inline ImHashInt operator()(char key) const {
@@ -521,7 +556,10 @@ struct ImHashFunctionChar {
 
 // Finally, here are the two types that are actually used inside imguicodeeditor ATM:
 typedef ImHashMapCStringBase<256>                                                               ImHashMapCString;   // map <const char* (not owned),int>.  We can change the int to comsume less memory if needed
-typedef ImHashMap<char,int,ImHashFunctionChar,ImHashMapKeyEqualityFunctionDefault<char>,256>    ImHashMapChar;      // map <char,int>.                     We can change the int to comsume less memory if needed
+typedef ImHashMap<char,int,ImHashFunctionChar,ImHashMapKeyEqualityFunctionDefault<char>,
+    ImHashMapConstructorFunctionDummy<char>, ImHashMapDestructorFunctionDummy<char>, ImHashMapAssignmentFunctionDefault<char>,
+    ImHashMapConstructorFunctionDummy<int>,  ImHashMapDestructorFunctionDummy<int>,  ImHashMapAssignmentFunctionDefault<int>,
+    256>    ImHashMapChar;      // map <char,int>.                     We can change the int to comsume less memory if needed
 
 
 // Default hash and equality functions class specialized for ImStrings (NEVER TESTED!)
@@ -544,9 +582,18 @@ struct ImHashFunctionImString {
 #       endif //IMGUISTRING_ALTERNATIVE_ImHashFunctionImString
     }
 };
-template <int MAX_HASH_INT = 256> class ImHashMapImStringBase : public ImHashMap<ImString,int,ImHashFunctionImString,ImHashMapKeyEqualityFunctionDefault<ImString>,MAX_HASH_INT> {};
+template <int MAX_HASH_INT = 256> class ImHashMapImStringBase : public ImHashMap<ImString,int,
+    ImHashFunctionImString,ImHashMapKeyEqualityFunctionDefault<ImString>,
+    ImHashMapConstructorFunctionDefault<ImString>,  ImHashMapDestructorFunctionDefault<ImString>,   ImHashMapAssignmentFunctionDefault<ImString>,
+    ImHashMapConstructorFunctionDummy<int>,         ImHashMapDestructorFunctionDummy<int>,          ImHashMapAssignmentFunctionDefault<int>,
+    MAX_HASH_INT> {};
 typedef ImHashMapImStringBase<256>                                                               ImHashMapImString;   // map <ImString,int>.                We can change the int to comsume less memory if needed
 
+// Map <ImString,ImString>.
+typedef ImHashMap<ImString,ImString,ImHashFunctionImString,ImHashMapKeyEqualityFunctionDefault<ImString>,
+    ImHashMapConstructorFunctionDefault<ImString>,ImHashMapDestructorFunctionDefault<ImString>,ImHashMapAssignmentFunctionDefault<ImString>,
+    ImHashMapConstructorFunctionDefault<ImString>,ImHashMapDestructorFunctionDefault<ImString>,ImHashMapAssignmentFunctionDefault<ImString>,
+    256> ImStringImStringMap;
 
 // Something to ease having ImPair as keys
 template <typename K1,typename K2> struct ImHashFunctionImPairDefault {
@@ -559,7 +606,18 @@ template <typename K1,typename K2> struct ImHashMapImPairEqualityFunction {
         return (k1.first==k2.first && k1.second==k2.second);
     }
 };
-template <typename K1,typename K2,typename V, typename F = ImHashFunctionImPairDefault<K1,K2>,typename E = ImHashMapImPairEqualityFunction<K1,K2>,int MAX_HASH_INT = 256 > class ImHashMapImPair : public ImHashMap<ImPair<K1,K2>,V,F,E,MAX_HASH_INT> {};
+template <typename K1,typename K2,typename V, typename F = ImHashFunctionImPairDefault<K1,K2>,typename E = ImHashMapImPairEqualityFunction<K1,K2>,
+
+typename CK = ImHashMapConstructorFunctionDefault<ImPair<K1,K2> >,typename DK = ImHashMapDestructorFunctionDefault<ImPair<K1,K2> >,typename AK = ImHashMapAssignmentFunctionDefault<ImPair<K1,K2> >,
+typename CV = ImHashMapConstructorFunctionDefault<V>,typename DV = ImHashMapDestructorFunctionDefault<V>,typename AV = ImHashMapAssignmentFunctionDefault<V>,
+int MAX_HASH_INT = 256 > class ImHashMapImPair : public ImHashMap<ImPair<K1,K2>,V,F,E,CK,DK,AK,CV,DV,AV,MAX_HASH_INT> {};
+
+// Not sure this works:
+template <typename K1,typename K2,typename V, typename F = ImHashFunctionImPairDefault<K1,K2>,typename E = ImHashMapImPairEqualityFunction<K1,K2>,
+typename CK = ImHashMapConstructorFunctionDummy<ImPair<K1,K2> >,typename DK = ImHashMapConstructorFunctionDummy<ImPair<K1,K2> >,typename AK = ImHashMapAssignmentFunctionDefault<ImPair<K1,K2> >,
+typename CV = ImHashMapConstructorFunctionDummy<V>,typename DV = ImHashMapConstructorFunctionDummy<V>,typename AV = ImHashMapAssignmentFunctionDefault<V>,
+int MAX_HASH_INT = 256 > class ImHashMapImPairFast : public ImHashMap<ImPair<K1,K2>,V,F,E,CK,DK,AK,CV,DV,AV,MAX_HASH_INT> {};
+
 #endif //ImHashMap
 
 
