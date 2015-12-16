@@ -78,10 +78,10 @@ inline const ImString& operator=(const ImString& other) {
     return *this;
 }
 
-inline const ImString operator+(const ImString& other) const {
+/*inline const ImString operator+(const ImString& other) const {
     ImString rv(*this);
     return rv+=other;
-}
+}*/
 inline const ImString& operator+=(const ImString& other) {
     const int curSize = size();
     if (curSize==0) return operator=(other);
@@ -200,6 +200,10 @@ inline void push_back(const char c) {
 //TODO: redefine all the other methods we want to hide here...
 
 };
+inline const ImString operator+(const ImString& v1, const ImString& v2 ) {
+    ImString rv(v1);
+    return rv.operator+=(v2);
+}
 #endif //ImString
 
 

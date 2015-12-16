@@ -179,7 +179,7 @@ static bool InitBinding(const ImImpl_InitParams* pOptionalInitParams=NULL,int ar
 static void ImImplMainLoopFrame(void* pDone)	{
     ImGuiIO& io = ImGui::GetIO();
     int& done = *((int*) pDone);
-    SDL_Event event;
+    static SDL_Event event;
 
     if (!gImGuiPaused) {
         for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
@@ -375,6 +375,7 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
         SDL_FreeCursor(sdlCursors[i]);
     }
     //---------------------------------------------------------------
+    if (window) {SDL_DestroyWindow(window);window = NULL;}
     SDL_Quit();
     return 0;
 }

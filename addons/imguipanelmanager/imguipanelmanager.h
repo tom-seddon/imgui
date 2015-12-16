@@ -66,7 +66,12 @@ struct PanelManager {
         Pane(Position _pos,const char* name)
         : bar(name),pos(_pos),visible(true),allowHoverOnTogglableWindows(false),hoverReleaseTimer(-1),hoverReleaseIndex(-1)
         {}
-
+        ~Pane() {clear();}
+        void clear() {
+            bar.clearButtons();
+            for (int i=0;i<windows.size();i++) windows[i].~AssociatedWindow();
+            windows.clear();
+        }
         // returns pane.getSize();
         size_t addButtonAndWindow(const Toolbutton& button,const AssociatedWindow& window,int insertPosition=-1);
         // returns pane.getSize();
@@ -126,6 +131,12 @@ struct PanelManager {
     public:
     PanelManager(bool _visible=true,float _dockedWindowsAlpha=-1.f) : paneLeft(NULL),paneRight(NULL),paneTop(NULL),paneBottom(NULL),visible(_visible),
     innerBarQuadPos(0,0),innerBarQuadSize(-1,-1),innerQuadPos(0,0),innerQuadSize(-1,-1),dockedWindowsAlpha(_dockedWindowsAlpha),innerQuadChangedTimer(-1.f) {}
+    ~PanelManager() {clear();}
+    void clear() {
+        for (int i=0;i<panes.size();i++) panes[i].~Pane();
+        panes.clear();
+        paneLeft = paneRight = paneTop = paneBottom = NULL;
+    }
 
     Pane* addPane(Position pos,const char* toolbarName);
 

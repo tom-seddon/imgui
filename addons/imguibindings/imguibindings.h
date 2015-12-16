@@ -273,24 +273,33 @@ public:
 protected:
     typedef ImHashMap<ImString,ImString,ImHashFunctionImString,ImHashMapKeyEqualityFunctionDefault<ImString>,256> ImStringImStringMap;
     ImStringImStringMap mPreprocessorDefinitionsWithValue;
-    ImVector < ImString > mPreprocessorDefinitions; // Without values (don't remember why I split them here)
+    ImVectorEx < ImString > mPreprocessorDefinitions; // Without values (don't remember why I split them here)
     int mNumPreprocessorAdditionalLines;
     ImString mPreprocessorAdditionalShaderCode;
+
+    ImVectorEx<ImPair<ImString,GLuint> > mBindAttributeMap;
+    bool mBindAttributes;
 public:
-    // TODO: Test all this staff
-    void addPreprocessorDefinition(const ImString& name,const ImString& value="");
+    // This interface allows prepending the shader source with runtime definition (e.g. #define MY_VAR 12 [untested], or just #define MY_VAR [tested]):
+    void addPreprocessorDefinition(const ImString& name,const ImString& value="");  // TODO: [Untested value!=""]
     void removePreprocessorDefinition(const ImString& name);
     void updatePreprocessorDefinitions();   // mandatory after a set of add/remove calls to generate an usable "mPreprocessorAdditionalShaderCode"
     inline const char* getPreprocessorDefinitionAdditionalCode() const {return mPreprocessorAdditionalShaderCode.c_str();}
     inline int getNumPreprocessorDefinitionAdditionalLines() const {return mNumPreprocessorAdditionalLines;}
     void resetPreprocessorDefinitions();
-    void reset() {clearShaderOptions();resetPreprocessorDefinitions();}
+
+    // This interface allows binding attribute locations before linking the program:
+    void bindAttributeLocation(const ImString& attribute,GLuint bindingLocation);
+    void resetBindAttributeLocations();
+    inline void processBindAttributeLocationsOn(GLuint program) const;
+
+    void reset() {resetShaderOptions();resetPreprocessorDefinitions();resetBindAttributeLocations();}
 #else  //NO_IMGUISTRING
 public:
-    void reset()  {clearShaderOptions();}
+    void reset()  {resetShaderOptions();}
 #endif //NO_IMGUISTRING
 public:
-    void clearShaderOptions() {vertexShaderOverride = fragmentShaderOverride = programOverride = 0;dontLinkProgram = dontDeleteAttachedShaders = false;}
+    void resetShaderOptions() {vertexShaderOverride = fragmentShaderOverride = programOverride = 0;dontLinkProgram = dontDeleteAttachedShaders = false;}
     ImImpl_CompileShaderStruct() {reset();}
 };
 // returns the shader program ID. "optionalShaderCodePrefix" (if present) is just copied before the source of both shaders. "pOptionalOptions" can be used to tune dynamic definitions inside the shader code and some shader compilation and linking processing steps.

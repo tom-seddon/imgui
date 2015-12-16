@@ -907,7 +907,10 @@ size_t ImGui::PanelManager::Pane::addButtonAndWindow(const ImGui::Toolbutton &bu
     }
     else {
         bar.addButton(button);
-        windows.push_back(window);
+	windows.push_back(window);
+	/*const int wsz = (int) windows.size();
+	windows.resize(wsz+1);
+	windows[wsz] = window;*/
     }
     bar.updatePositionAndSize();
     return getSize();
@@ -966,6 +969,7 @@ size_t ImGui::PanelManager::Pane::deleteButtonAt(int index)   {
         if (bar.hoverButtonIndex==i+1) bar.hoverButtonIndex=i;
     }
     --numButtons;
+    bar.buttons[numButtons].~Button();
     bar.buttons.resize(numButtons);
     windows.resize(numButtons);
     bar.updatePositionAndSize();

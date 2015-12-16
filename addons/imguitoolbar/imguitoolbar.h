@@ -144,6 +144,7 @@ public:
         strcpy(name,_name);
         setProperties(_keepAButtonSelected,_vertical,_lightAllBarWhenHovered,_hvAlignmentsIn01,_opacityOffAndOn,_bg_col,_displayPortion);
     }
+    ~Toolbar() {clearButtons();}
     void setProperties(bool _keepAButtonSelected=false,bool _vertical=false,bool _lightAllBarWhenHovered=true,const ImVec2& _hvAlignmentsIn01=ImVec2(0.5f,0.f),const ImVec2& _opacityOffAndOn=ImVec2(-1.f,-1.f),const ImVec4& _bg_col=ImVec4(1,1,1,1),const ImVec4& _displayPortion=ImVec4(0,0,-1,-1)) {
         keepAButtonSelected = _keepAButtonSelected;
         vertical = _vertical;
@@ -294,7 +295,10 @@ public:
     inline void addSeparator(float pixels) {
         buttons.push_back(Button("",NULL,ImVec2(0,0),ImVec2(0,0),ImVec2(pixels,pixels)));
     }
-    inline void clearButtons() {buttons.clear();}
+    inline void clearButtons() {
+        for (int i=0;i<buttons.size();i++) buttons[i].~Button();
+        buttons.clear();
+    }
 
     inline void setVisible(bool flag) {visible = flag;}
     inline bool getVisible() {return visible;}
