@@ -13,6 +13,15 @@
 #define ImVectorEx std::vector
 #endif //IMGUISTRING_STL_FALLBACK
 
+#ifndef IMGUI_FORCE_INLINE
+#	ifdef _MSC_VER
+#		define IMGUI_FORCE_INLINE __forceinline
+#	elif (defined(__clang__) || defined(__GNUC__) || defined(__MINGW32__) || defined(__MINGW64__))
+#		define IMGUI_FORCE_INLINE inline __attribute__((__always_inline__))
+#	else
+#		define IMGUI_FORCE_INLINE inline
+#	endif
+#endif//IMGUI_FORCE_INLINE
 
 #ifndef ImString
 // A string implementation based on ImVector<char>
@@ -223,12 +232,12 @@ public:
     ImVectorEx(int size=0)      { Size = Capacity = 0; Data = NULL;if (size>0) resize(size);}
     ~ImVectorEx()               { clear(); }
 
-    inline bool                 empty() const                   { return Size == 0; }
-    inline int                  size() const                    { return Size; }
-    inline int                  capacity() const                { return Capacity; }
+    IMGUI_FORCE_INLINE bool                 empty() const                   { return Size == 0; }
+    IMGUI_FORCE_INLINE int                  size() const                    { return Size; }
+    IMGUI_FORCE_INLINE int                  capacity() const                { return Capacity; }
 
-    inline value_type&          operator[](int i)               { IM_ASSERT(i < Size); return Data[i]; }
-    inline const value_type&    operator[](int i) const         { IM_ASSERT(i < Size); return Data[i]; }
+    IMGUI_FORCE_INLINE value_type&          operator[](int i)               { IM_ASSERT(i < Size); return Data[i]; }
+    IMGUI_FORCE_INLINE const value_type&    operator[](int i) const         { IM_ASSERT(i < Size); return Data[i]; }
 
     void                        clear()                         {
         if (Data) {
@@ -238,29 +247,23 @@ public:
             Size = Capacity = 0;
         }
     }
-    inline iterator             begin()                         { return Data; }
-    inline const_iterator       begin() const                   { return Data; }
-    inline iterator             end()                           { return Data + Size; }
-    inline const_iterator       end() const                     { return Data + Size; }
-    inline value_type&          front()                         { IM_ASSERT(Size > 0); return Data[0]; }
-    inline const value_type&    front() const                   { IM_ASSERT(Size > 0); return Data[0]; }
-    inline value_type&          back()                          { IM_ASSERT(Size > 0); return Data[Size-1]; }
-    inline const value_type&    back() const                    { IM_ASSERT(Size > 0); return Data[Size-1]; }
+    IMGUI_FORCE_INLINE iterator             begin()                         { return Data; }
+    IMGUI_FORCE_INLINE const_iterator       begin() const                   { return Data; }
+    IMGUI_FORCE_INLINE iterator             end()                           { return Data + Size; }
+    IMGUI_FORCE_INLINE const_iterator       end() const                     { return Data + Size; }
+    IMGUI_FORCE_INLINE value_type&          front()                         { IM_ASSERT(Size > 0); return Data[0]; }
+    IMGUI_FORCE_INLINE const value_type&    front() const                   { IM_ASSERT(Size > 0); return Data[0]; }
+    IMGUI_FORCE_INLINE value_type&          back()                          { IM_ASSERT(Size > 0); return Data[Size-1]; }
+    IMGUI_FORCE_INLINE const value_type&    back() const                    { IM_ASSERT(Size > 0); return Data[Size-1]; }
 
-    inline int                  _grow_capacity(int new_size) const   { int new_capacity = Capacity ? (Capacity + Capacity/2) : 8; return new_capacity > new_size ? new_capacity : new_size; }
+    IMGUI_FORCE_INLINE int                  _grow_capacity(int new_size) const   { int new_capacity = Capacity ? (Capacity + Capacity/2) : 8; return new_capacity > new_size ? new_capacity : new_size; }
 
     void                        resize(int new_size)            {
         if (new_size > Capacity) {
             reserve(_grow_capacity(new_size));
-            for (int i=Size;i<new_size;i++) {
-                new(&Data[i]) T();
-            }
+            for (int i=Size;i<new_size;i++) {new(&Data[i]) T();}
         }
-        if (new_size < Size)   {
-            for (int i=new_size;i<Size;i++) {
-                Data[i].~T();
-            }
-        }
+        if (new_size < Size)   {for (int i=new_size;i<Size;i++) Data[i].~T();}
         Size = new_size;
     }
     void                        reserve(int new_capacity)
@@ -291,7 +294,7 @@ public:
         }
     }
 
-    const ImVectorEx<T>& operator=(const ImVectorEx<T>& o)  {
+    IMGUI_FORCE_INLINE const ImVectorEx<T>& operator=(const ImVectorEx<T>& o)  {
         resize(o.Size);
         for (int i=0;i<o.Size;i++) (*this)[i]=o[i];
         return *this;
@@ -327,10 +330,10 @@ private:
 #ifndef ImPair
 template<typename T,typename U> struct ImPair {
     T first;U second;
-    inline ImPair(const T &t=T(),const U &u=U()): first(t),second(u) {}
-    inline ImPair(const ImPair<T,U>& o): first(o.first),second(o.second) {}
-    inline bool operator==(const ImPair<T,U>& o) const {return (first==o.first && second==o.second);}
-    inline const ImPair<T,U>& operator=(const ImPair<T,U>& o) {first=o.first;second=o.second;return *this;}
+    IMGUI_FORCE_INLINE ImPair(const T &t=T(),const U &u=U()): first(t),second(u) {}
+    IMGUI_FORCE_INLINE ImPair(const ImPair<T,U>& o): first(o.first),second(o.second) {}
+    IMGUI_FORCE_INLINE bool operator==(const ImPair<T,U>& o) const {return (first==o.first && second==o.second);}
+    IMGUI_FORCE_INLINE const ImPair<T,U>& operator=(const ImPair<T,U>& o) {first=o.first;second=o.second;return *this;}
 };
 #endif //ImPair
 
@@ -341,37 +344,36 @@ typedef unsigned char ImHashInt;  // optimized for MAX_HASH_INT = 256 (this was 
 
 // Default hash and key-equality function classes (optional, just to ease ImHashMap usage)
 template <typename K> struct ImHashFunctionDefault {
-    inline ImHashInt operator()(const K& key) const {
+    IMGUI_FORCE_INLINE ImHashInt operator()(const K& key) const {
         return reinterpret_cast<ImHashInt>(key);
     }
 };
 template <typename K> struct ImHashMapKeyEqualityFunctionDefault {
-    inline bool operator()(const K& k1,const K& k2) const {
+    IMGUI_FORCE_INLINE bool operator()(const K& k1,const K& k2) const {
         return (k1 == k2);
     }
 };
 template <typename K> struct ImHashMapAssignmentFunctionDefault {
-    inline void operator()(K& key,const K& key2) const {key = key2;}
+    IMGUI_FORCE_INLINE void operator()(K& key,const K& key2) const {key = key2;}
 };
 template <typename K> struct ImHashMapConstructorFunctionDummy {
-    inline void operator()(K& ) const {}
+    IMGUI_FORCE_INLINE void operator()(K& ) const {}
 };
 template <typename K> struct ImHashMapDestructorFunctionDummy {
-    inline void operator()(K& ) const {}
+    IMGUI_FORCE_INLINE void operator()(K& ) const {}
 };
 template <typename K> struct ImHashMapConstructorFunctionDefault {
-    inline void operator()(K& k) const {new (&k) K();}
+    IMGUI_FORCE_INLINE void operator()(K& k) const {new (&k) K();}
 };
 template <typename K> struct ImHashMapDestructorFunctionDefault {
-    inline void operator()(K& k) const {k.~K();}
+    IMGUI_FORCE_INLINE void operator()(K& k) const {k.~K();}
 };
-
 
 
 // Hash map class template
 template <typename K, typename V, typename F = ImHashFunctionDefault<K>,typename E = ImHashMapKeyEqualityFunctionDefault<K>,
-    typename CK = ImHashMapConstructorFunctionDummy<K>,typename DK = ImHashMapDestructorFunctionDummy<K>,typename AK = ImHashMapAssignmentFunctionDefault<K>,
-    typename CV = ImHashMapConstructorFunctionDummy<V>,typename DV = ImHashMapDestructorFunctionDummy<V>,typename AV = ImHashMapAssignmentFunctionDefault<V>,
+    typename CK = ImHashMapConstructorFunctionDefault<K>,typename DK = ImHashMapDestructorFunctionDefault<K>,typename AK = ImHashMapAssignmentFunctionDefault<K>,
+    typename CV = ImHashMapConstructorFunctionDefault<V>,typename DV = ImHashMapDestructorFunctionDefault<V>,typename AV = ImHashMapAssignmentFunctionDefault<V>,
     int MAX_HASH_INT = 256 >
 class ImHashMap
 {
@@ -383,12 +385,9 @@ struct HashNode {
     friend class HashMap;
 };
 public:
-    ImHashMap() {
-        hashNodes.resize(MAX_HASH_INT);
-        for (int i=0,isz=hashNodes.size();i<isz;i++) hashNodes[i]=NULL;
-        mustClampHash = (sizeof(ImHashInt)!=8 || MAX_HASH_INT<256);
-        IM_ASSERT(!(sizeof(ImHashInt)==8 && MAX_HASH_INT>256));    // Tip: It's useless to have MAX_HASH_INT>256, if you don't change the type ImHashInt.
-    }
+    typedef K KeyType;
+    typedef V ValueType;
+    ImHashMap() {init(true,true);}
     ~ImHashMap() {
         clear();
         hashNodes.clear();
@@ -416,7 +415,11 @@ public:
         IM_ASSERT(hash>=0 && hash<hashNodes.size());    // MAX_HASH_INT too low
         HashNode* node = hashNodes[hash];
         while (node) {
-            if (equalFunc(node->key,key)) {assignVFunc(value,node->value);return true;}
+            if (equalFunc(node->key,key)) {
+                if (retrieveKeyUsingDefaultAssignmentOperator)value = node->value;
+                else assignVFunc(value,node->value);
+                return true;
+            }
             node = node->next;
         }
         return false;
@@ -474,8 +477,10 @@ public:
         const HashNode* startPair = (const HashNode*) prevPair;
         if (!startPair->next) {++bucketIndexInOut;startPair=NULL;}
         else {
-            assignKFunc(key,startPair->key);
-            assignVFunc(value,startPair->value);
+            if (retrieveKeyUsingDefaultAssignmentOperator) key = startPair->key;
+            else assignKFunc(key,startPair->key);
+            if (retrieveValueUsingDefaultAssignmentOperator) value = startPair->value;
+            else assignVFunc(value,startPair->value);
             return (void*) startPair->next;
         }
         if (bucketIndexInOut<0 || bucketIndexInOut>=MAX_HASH_INT) {bucketIndexInOut = -1;return NULL;}
@@ -483,8 +488,10 @@ public:
         for (int i=bucketIndexInOut,isz=hashNodes.size();i<isz;i++)   {
             node = hashNodes[i];
             if (node) {
-                assignKFunc(key,node->key);
-                assignVFunc(value,node->value);
+                if (retrieveKeyUsingDefaultAssignmentOperator) key = node->key;
+                else assignKFunc(key,node->key);
+                if (retrieveValueUsingDefaultAssignmentOperator) value = node->value;
+                else assignVFunc(value,node->value);
                 bucketIndexInOut = i;
                 return (void*) node;
             }
@@ -507,6 +514,20 @@ protected:
     DV destructorVFunc;
     AV assignVFunc;
 
+    // if e.g. K is char*, and we use "assignKFunc" to deep-copy the string in the map, by default we want to return references to the user, overriding "assignKFunc".
+    bool retrieveKeyUsingDefaultAssignmentOperator;    // used in getNextPair(...) and getFirstPair(...)
+    bool retrieveValueUsingDefaultAssignmentOperator;  // used in get(...), getNextPair(...) and getFirstPair(...)
+
+    //ImHashMap(bool _retrieveKeyUsingDefaultAssignmentOperator,bool _retrieveValueUsingDefaultAssignmentOperator) {init(_retrieveKeyUsingDefaultAssignmentOperator,_retrieveValueUsingDefaultAssignmentOperator);}
+
+    void init(bool _retrieveKeyUsingDefaultAssignmentOperator=true,bool _retrieveValueUsingDefaultAssignmentOperator=true) {
+        hashNodes.resize(MAX_HASH_INT);
+        for (int i=0,isz=hashNodes.size();i<isz;i++) hashNodes[i]=NULL;
+        mustClampHash = (sizeof(ImHashInt)!=8 || MAX_HASH_INT<256);
+        IM_ASSERT(!(sizeof(ImHashInt)==8 && MAX_HASH_INT>256));    // Tip: It's useless to have MAX_HASH_INT>256, if you don't change the type ImHashInt.
+        retrieveKeyUsingDefaultAssignmentOperator = _retrieveKeyUsingDefaultAssignmentOperator;
+        retrieveValueUsingDefaultAssignmentOperator = _retrieveValueUsingDefaultAssignmentOperator;
+    }
     int GetNumBuckets() {return MAX_HASH_INT;}
     void* getFirstPair(int& bucketIndexOut,K& key,V& value) const {
         bucketIndexOut = 0;
@@ -515,8 +536,10 @@ protected:
         for (int i=bucketIndexOut,isz=hashNodes.size();i<isz;i++)   {
             node = hashNodes[i];
             if (node) {
-                assignKFunc(key,node->key);
-                assignVFunc(value,node->value);
+                if (retrieveKeyUsingDefaultAssignmentOperator) key = node->key;
+                else assignKFunc(key,node->key);
+                if (retrieveValueUsingDefaultAssignmentOperator) value = node->value;
+                else assignVFunc(value,node->value);
                 bucketIndexOut = i;
                 return (void*) node;
             }
@@ -529,42 +552,66 @@ protected:
 
 // Default hash and equality functions class specialized for strings (actually char*)
 struct ImHashFunctionCString {
-    inline ImHashInt operator()(const char* s) const {
+    IMGUI_FORCE_INLINE ImHashInt operator()(const char* s) const {
         ImHashInt h = 0;
         for (const char* t=s;*t!='\0';t++) h+=*t;   // We just sum up the chars (naive hash)
         return h;
     }
 };
 struct ImHashMapStringCEqualityFunction {
-    inline bool operator()(const char* k1,const char* k2) const {
-        return (strcmp(k1,k2)==0);
+    IMGUI_FORCE_INLINE bool operator()(const char* k1,const char* k2) const {
+        return ((!k1 || !k2) ? (k1==k2) : (strcmp(k1,k2)==0));
+    }
+};
+struct ImHashMapConstructorFunctionCString {
+    IMGUI_FORCE_INLINE void operator()(char*& k) const {k=NULL;}
+};
+struct ImHashMapDestructorFunctionCString {
+    IMGUI_FORCE_INLINE void operator()(char*& k) const {if (k)  {ImGui::MemFree((void*)k);k = NULL;}}
+};
+struct ImHashMapAssignmentFunctionCString {
+    IMGUI_FORCE_INLINE void operator()(char*& k,const char* k2) const {
+        const int sz = k ? strlen(k) : -1;
+        const int sz2 = k2 ? strlen(k2) : -1;
+        if (sz == sz2) {
+            if (sz==-1) return;
+            strcpy((char*)k,k2);return;
+        }
+        if (sz) {ImGui::MemFree((void*)k);k = NULL;}
+        if (sz2==-1) return;
+        k = (char*) ImGui::MemAlloc(sz2+1);strcpy((char*)k,k2);
     }
 };
 
-// ImHashMap specialized for strings (actually char*)
-// Important the keys must be persistent somewhere. They are not owned, because they are not copied for performance reasons (people usually use these terms when they mean: I'm too lazy to code it).
-template <int MAX_HASH_INT = 256> class ImHashMapCStringBase : public ImHashMap<const char*,int,ImHashFunctionCString,ImHashMapStringCEqualityFunction,
+template <int MAX_HASH_INT = 256> class ImHashMapCStringBase : public ImHashMap<char*,int,ImHashFunctionCString,ImHashMapStringCEqualityFunction,
+    ImHashMapConstructorFunctionCString, ImHashMapDestructorFunctionCString, ImHashMapAssignmentFunctionCString,
+    ImHashMapConstructorFunctionDummy<int>,         ImHashMapDestructorFunctionDummy<int>,         ImHashMapAssignmentFunctionDefault<int>,
+    MAX_HASH_INT> {};   // map<char*,int> [Untested]: the keys are deep-copied inside the map, but, when retrieved, they are returned as references.
+
+// Important the keys must be persistent somewhere. They are not owned, because they are not copied for performance reasons.
+template <int MAX_HASH_INT = 256> class ImHashMapConstCStringBase : public ImHashMap<const char*,int,ImHashFunctionCString,ImHashMapStringCEqualityFunction,
     ImHashMapConstructorFunctionDummy<const char*>, ImHashMapDestructorFunctionDummy<const char*>, ImHashMapAssignmentFunctionDefault<const char*>,
     ImHashMapConstructorFunctionDummy<int>,         ImHashMapDestructorFunctionDummy<int>,         ImHashMapAssignmentFunctionDefault<int>,
-    MAX_HASH_INT> {};
+    MAX_HASH_INT> {};   // map<const char*,int>: the strings are never deep-copied (much faster but dengerous)
 
+
+// Finally, here are the two types that are actually used inside imguicodeeditor ATM:
+typedef ImHashMapConstCStringBase<256>                                              ImHashMapConstCString;  // map <const char* (not owned),int>.  We can change the int to comsume less memory if needed
+typedef ImHashMapCStringBase<256>                                                   ImHashMapCString;       // map <char* (owned),int>.  We can change the int to comsume less memory if needed
 struct ImHashFunctionChar {
-    inline ImHashInt operator()(char key) const {
+    IMGUI_FORCE_INLINE ImHashInt operator()(char key) const {
         return (ImHashInt) (key);
     }
 };
-
-// Finally, here are the two types that are actually used inside imguicodeeditor ATM:
-typedef ImHashMapCStringBase<256>                                                               ImHashMapCString;   // map <const char* (not owned),int>.  We can change the int to comsume less memory if needed
 typedef ImHashMap<char,int,ImHashFunctionChar,ImHashMapKeyEqualityFunctionDefault<char>,
     ImHashMapConstructorFunctionDummy<char>, ImHashMapDestructorFunctionDummy<char>, ImHashMapAssignmentFunctionDefault<char>,
     ImHashMapConstructorFunctionDummy<int>,  ImHashMapDestructorFunctionDummy<int>,  ImHashMapAssignmentFunctionDefault<int>,
     256>    ImHashMapChar;      // map <char,int>.                     We can change the int to comsume less memory if needed
 
 
-// Default hash and equality functions class specialized for ImStrings (NEVER TESTED!)
+// Default hash and equality functions class specialized for ImStrings
 struct ImHashFunctionImString {
-    inline ImHashInt operator()(const ImString& s) const {
+    IMGUI_FORCE_INLINE ImHashInt operator()(const ImString& s) const {
 //#       define IMGUISTRING_ALTERNATIVE_ImHashFunctionImString
 #       ifndef IMGUISTRING_ALTERNATIVE_ImHashFunctionImString
         ImHashInt h = 0;
@@ -597,12 +644,12 @@ typedef ImHashMap<ImString,ImString,ImHashFunctionImString,ImHashMapKeyEqualityF
 
 // Something to ease having ImPair as keys
 template <typename K1,typename K2> struct ImHashFunctionImPairDefault {
-    inline ImHashInt operator()(const ImPair<K1,K2>&  key) const {
+    IMGUI_FORCE_INLINE ImHashInt operator()(const ImPair<K1,K2>&  key) const {
         return (ImHashInt) (key.first*23+key.second)%256;
     }
 };
 template <typename K1,typename K2> struct ImHashMapImPairEqualityFunction {
-    inline bool operator()(const ImPair<K1,K2>&  k1,const ImPair<K1,K2>& k2) const {
+    IMGUI_FORCE_INLINE bool operator()(const ImPair<K1,K2>&  k1,const ImPair<K1,K2>& k2) const {
         return (k1.first==k2.first && k1.second==k2.second);
     }
 };

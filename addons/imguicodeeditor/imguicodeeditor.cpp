@@ -1649,7 +1649,7 @@ void CodeEditor::setText(const char *text, Language _lang) {
             for (int i=0,isz = SH_LOGICAL_OPERATORS;i<isz;i++)  {
                 const ImVectorEx<const char*>& v = fsv->keywords[i];
                 for (int j=0,jsz=v.size();j<jsz;j++) {
-                    shTypeKeywordMap.put(v[j],i);
+                    shTypeKeywordMap.put((MyKeywordMapType::KeyType)v[j],i);
                     //fprintf(stderr,"Putting in shTypeMap: \"%s\",%d\n",v[j],i);
                 }
             }

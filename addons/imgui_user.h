@@ -6,6 +6,26 @@
 #ifndef IMGUI_USER_ADDONS_H_
 #define IMGUI_USER_ADDONS_H_
 
+#ifndef IMGUI_FORCE_INLINE
+#	ifdef _MSC_VER
+#		define IMGUI_FORCE_INLINE __forceinline
+#	elif (defined(__clang__) || defined(__GNUC__) || defined(__MINGW32__) || defined(__MINGW64__))
+#		define IMGUI_FORCE_INLINE inline __attribute__((__always_inline__))
+#	else
+#		define IMGUI_FORCE_INLINE inline
+#	endif
+#endif//IMGUI_FORCE_INLINE
+
+#ifndef IMGUI_NO_INLINE
+#	ifdef _MSC_VER
+#		define IMGUI_NO_INLINE __declspec((noinline))
+#	elif (defined(__clang__) || defined(__GNUC__) || defined(__MINGW32__) || defined(__MINGW64__))
+#		define IMGUI_NO_INLINE __attribute__((__noinline__))
+#	else
+#		define IMGUI_NO_INLINE
+#	endif
+#endif//IMGUI_NO_INLINE
+
 #ifdef IMGUI_USE_MINIZIP	// requires linking to library -lZlib
 #   ifndef IMGUI_USE_ZLIB
 #   define IMGUI_USE_ZLIB	// requires linking to library -lZlib

@@ -255,10 +255,8 @@ public:
     // WARNING: This method must be called BEFORE any instance of CodeEditor is initialized (otherwise the program might crash due to ImVectorEx reallocations)    
     static bool SetFoldingSupportForLanguage(Language language,const ImVectorEx<FoldingTag>& foldingTags,bool mergeAdditionalTrailingCharIfPossible=false,char additionalTrailingChar=';');
     static bool HasFoldingSupportForLanguage(Language language);
-    // Warning: tokens must be persistent (e.g. pointers to static strings)
     static bool AddSyntaxHighlightingTokens(Language language,SyntaxHighlightingType type,const char** tokens,int numTokens);
     static bool ClearSyntaxHighlightingTokens(Language language,SyntaxHighlightingType type);
-    // Warning: strings must be persistent (e.g. pointers to static strings)
     static bool SetSyntaxHighlightingExtraStuff(Language language,const char* singleLineComment=NULL,const char* stringDelimiters=NULL,const char* logicalOperators=NULL,const char* mathOperators=NULL,const char* punctuation=NULL);
     static Language GetLanguageFromFilename(const char* filename);
     // End Static Stuff -------------------------------------------------------------------------------------
@@ -269,7 +267,9 @@ public:
     void ParseTextForFolding(bool forceAllSegmentsFoldedOrNot = false, bool foldingStateToForce = true);
     Language lang;
     // We could have stored a pair of these in each "language struct", but this way we save memory and can make per-instance changes
-    ImHashMapCString shTypeKeywordMap;       // Map from a (persistent) string token (const char*) to a SyntaxHighlightingType
+    typedef ImHashMapCString MyKeywordMapType;      // Map from a string token (char*) to a SyntaxHighlightingType.         [chars are deep copied inside map]
+    //typedef ImHashMapConstCString MyKeywordMapType; // Map from a string token (const char*) to a SyntaxHighlightingType.   [const chars are not copied inside map]
+    MyKeywordMapType shTypeKeywordMap;
     ImHashMapChar    shTypePunctuationMap;
 private:
     static bool StaticInited;
