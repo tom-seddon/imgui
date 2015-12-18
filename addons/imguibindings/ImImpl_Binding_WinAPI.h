@@ -342,37 +342,51 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
         if (deltaTime<=0) deltaTime=1.0f/60.0f;
 
 
+        // Start the frame
+        {
+            io.DeltaTime = deltaTime;
 
-        if (!gImGuiPaused)	{
-            // Setup inputs
+            // Setup inputs (why I didn't use the event loop?)
             BYTE keystate[256];
             ::GetKeyboardState(keystate);
             for (int i = 0; i < 256; i++)   io.KeysDown[i] = (keystate[i] & 0x80) != 0;
             io.KeyCtrl = (keystate[VK_CONTROL] & 0x80) != 0;
             io.KeyShift = (keystate[VK_SHIFT] & 0x80) != 0;
             io.KeyAlt = (keystate[VK_MENU] & 0x80) != 0;
-
-            static ImGuiMouseCursor oldCursor = ImGuiMouseCursor_Arrow;
-            static bool oldMustHideCursor = io.MouseDrawCursor;
-            if (oldMustHideCursor!=io.MouseDrawCursor) {
-                ShowCursor(!io.MouseDrawCursor);
-                oldMustHideCursor = io.MouseDrawCursor;
-                oldCursor = ImGuiMouseCursor_Count_;
-            }
-            if (!io.MouseDrawCursor) {
-                if (oldCursor!=ImGui::GetMouseCursor()) {
-                    oldCursor=ImGui::GetMouseCursor();
-                    SetCursor(win32Cursors[oldCursor]);
-                    //fprintf(stderr,"SetCursor(%d);\n",oldCursor);
+            for (int key=VK_F1;key<VK_F12;key++)  {
+                const int i = key-VK_F1;
+                const bool prevState = gImGuiFunctionKeyDown[i];
+                const bool down = (keystate[key] & 0x80) != 0;  // Or just query "key" only, if (key>=256)
+                gImGuiFunctionKeyDown[i] = down;
+                if (down!=prevState)    {
+                    if (down) gImGuiFunctionKeyPressed[i] = true;
+                    else gImGuiFunctionKeyReleased[i] = true;
                 }
             }
 
-            io.DeltaTime = deltaTime;
-            // Start the frame
-            ImGui::NewFrame();
-            for (size_t i = 0; i < 5; i++) {
-                io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
+            if (!gImGuiPaused)	{
+                static ImGuiMouseCursor oldCursor = ImGuiMouseCursor_Arrow;
+                static bool oldMustHideCursor = io.MouseDrawCursor;
+                if (oldMustHideCursor!=io.MouseDrawCursor) {
+                    ShowCursor(!io.MouseDrawCursor);
+                    oldMustHideCursor = io.MouseDrawCursor;
+                    oldCursor = ImGuiMouseCursor_Count_;
+                }
+                if (!io.MouseDrawCursor) {
+                    if (oldCursor!=ImGui::GetMouseCursor()) {
+                        oldCursor=ImGui::GetMouseCursor();
+                        SetCursor(win32Cursors[oldCursor]);
+                        //fprintf(stderr,"SetCursor(%d);\n",oldCursor);
+                    }
+                }
+                ImGui::NewFrame();
             }
+            else {
+                ImImpl_NewFramePaused();    // Enables some ImGui queries regardless ImGui::NewFrame() not being called.
+                gImGuiCapturesInput = false;
+            }
+
+            for (size_t i = 0; i < 5; i++) io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
         }
 
         DrawGL();
@@ -393,18 +407,16 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
             if (gImGuiWereOutsideImGui) curFramesDelay = -1;
 
             // Rendering
-#           ifdef IMGUIBINDINGS_RESTORE_GL_STATE
-            GLint oldViewport[4];glGetIntegerv(GL_VIEWPORT, oldViewport);
-#           endif //IMGUIBINDINGS_RESTORE_GL_STATE
-            glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
             ImGui::Render();
-#           ifdef IMGUIBINDINGS_RESTORE_GL_STATE
-            glViewport(oldViewport[0], oldViewport[1], (GLsizei)oldViewport[2], (GLsizei)oldViewport[3])
-#           endif //IMGUIBINDINGS_RESTORE_GL_STATE
         }
         else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
         SwapBuffers( hDC );
+
+        // Reset additional special keys composed states (mandatory):
+        for (int i=0;i<12;i++) {gImGuiFunctionKeyPressed[i] = gImGuiFunctionKeyReleased[i]= false;}
+
+        // Handle clamped FPS:
         if (gImGuiAppIconized) WaitFor(500);
         else if (curFramesDelay>=0 && ++curFramesDelay>numFramesDelay) WaitFor(200);     // 200 = 5 FPS - frame rate when ImGui is inactive
         else {

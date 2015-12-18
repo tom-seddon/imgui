@@ -9,6 +9,9 @@ float gImGuiInverseFPSClampOutsideImGui = -1.0f;   // CAN'T BE 0. < 0 = No clamp
 bool gImGuiCapturesInput = false;
 bool gImGuiWereOutsideImGui = true;
 bool gImGuiBindingMouseDblClicked[5]={false,false,false,false,false};
+bool gImGuiFunctionKeyDown[12]={false,false,false,false,false,false,false,false,false,false,false,false};
+bool gImGuiFunctionKeyPressed[12]={false,false,false,false,false,false,false,false,false,false,false,false};
+bool gImGuiFunctionKeyReleased[12]={false,false,false,false,false,false,false,false,false,false,false,false};
 // --------------------------------------------------------------------------------------------------------------
 
 struct ImImpl_PrivateParams  {
@@ -842,6 +845,18 @@ extern "C" void GLDebugMessageCallback(GLenum source, GLenum type,
 
 void ImImpl_RenderDrawLists(ImDrawData* draw_data)
 {
+    ImGuiIO& io = ImGui::GetIO();
+
+#   ifdef IMGUIBINDINGS_RESTORE_GL_STATE
+    GLint oldViewport[4];glGetIntegerv(GL_VIEWPORT, oldViewport);
+#   endif //IMGUIBINDINGS_RESTORE_GL_STATE
+    const float width = io.DisplaySize.x;
+    const float height = io.DisplaySize.y;
+    const float fb_height = io.DisplaySize.y * io.DisplayFramebufferScale.y;   // Handle cases of screen coordinates != from framebuffer coordinates (e.g. retina displays)
+    const float fb_width = io.DisplaySize.x * io.DisplayFramebufferScale.x;
+    draw_data->ScaleClipRects(io.DisplayFramebufferScale);
+    glViewport(0, 0, (GLsizei)fb_width, (GLsizei)fb_height);
+
 #ifndef IMIMPL_SHADER_NONE
     // Setup render state: alpha-blending enabled, no face culling (or GL_FRONT face culling), no depth testing, scissor enabled
     GLint last_texture=0;
@@ -862,12 +877,6 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     glUseProgram(gImImplPrivateParams.program);
     glUniform1i(gImImplPrivateParams.uniLocTexture, 0);
     // Setup orthographic projection matrix
-    ImGuiIO& io = ImGui::GetIO();
-    const float width = io.DisplaySize.x;
-    const float height = io.DisplaySize.y;
-    const float fb_height = io.DisplaySize.y * io.DisplayFramebufferScale.y;   // Handle cases of screen coordinates != from framebuffer coordinates (e.g. retina displays)
-    draw_data->ScaleClipRects(io.DisplayFramebufferScale);
-
     const float ortho[4][4] = {
         { 2.0f/width,   0.0f,           0.0f, 0.0f },
         { 0.0f,         2.0f/-height,   0.0f, 0.0f },
@@ -960,11 +969,6 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     glEnable(GL_TEXTURE_2D);
     //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context
 
-    // Handle cases of screen coordinates != from framebuffer coordinates (e.g. retina displays)
-    ImGuiIO& io = ImGui::GetIO();
-    float fb_height = io.DisplaySize.y * io.DisplayFramebufferScale.y;
-    draw_data->ScaleClipRects(io.DisplayFramebufferScale);
-
     // Setup orthographic projection matrix
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
@@ -1016,6 +1020,61 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     glBindTexture(GL_TEXTURE_2D, last_texture);
 #   endif //IMGUIBINDINGS_RESTORE_GL_STATE
 #endif //IMIMPL_SHADER_NONE
+
+#   ifdef IMGUIBINDINGS_RESTORE_GL_STATE
+    glViewport(oldViewport[0], oldViewport[1], (GLsizei)oldViewport[2], (GLsizei)oldViewport[3]);
+#   endif //IMGUIBINDINGS_RESTORE_GL_STATE
 }
 
 
+void ImImpl_NewFramePaused()    {
+    ImGuiState& g = *GImGui;
+    g.Time += g.IO.DeltaTime;
+
+    // Update inputs state
+    if (g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0)
+        g.IO.MousePos = ImVec2(-9999.0f, -9999.0f);
+    if ((g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0) || (g.IO.MousePosPrev.x < 0 && g.IO.MousePosPrev.y < 0))   // if mouse just appeared or disappeared (negative coordinate) we cancel out movement in MouseDelta
+        g.IO.MouseDelta = ImVec2(0.0f, 0.0f);
+    else
+        g.IO.MouseDelta = g.IO.MousePos - g.IO.MousePosPrev;
+    g.IO.MousePosPrev = g.IO.MousePos;
+    for (int i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
+    {
+        g.IO.MouseClicked[i] = g.IO.MouseDown[i] && g.IO.MouseDownDuration[i] < 0.0f;
+        g.IO.MouseReleased[i] = !g.IO.MouseDown[i] && g.IO.MouseDownDuration[i] >= 0.0f;
+        g.IO.MouseDownDurationPrev[i] = g.IO.MouseDownDuration[i];
+        g.IO.MouseDownDuration[i] = g.IO.MouseDown[i] ? (g.IO.MouseDownDuration[i] < 0.0f ? 0.0f : g.IO.MouseDownDuration[i] + g.IO.DeltaTime) : -1.0f;
+        g.IO.MouseDoubleClicked[i] = false;
+        if (g.IO.MouseClicked[i])
+        {
+            if (g.Time - g.IO.MouseClickedTime[i] < g.IO.MouseDoubleClickTime)
+            {
+                if (ImLengthSqr(g.IO.MousePos - g.IO.MouseClickedPos[i]) < g.IO.MouseDoubleClickMaxDist * g.IO.MouseDoubleClickMaxDist)
+                    g.IO.MouseDoubleClicked[i] = true;
+                g.IO.MouseClickedTime[i] = -FLT_MAX;    // so the third click isn't turned into a double-click
+            }
+            else
+            {
+                g.IO.MouseClickedTime[i] = g.Time;
+            }
+            g.IO.MouseClickedPos[i] = g.IO.MousePos;
+            g.IO.MouseDragMaxDistanceSqr[i] = 0.0f;
+        }
+        else if (g.IO.MouseDown[i])
+        {
+            g.IO.MouseDragMaxDistanceSqr[i] = ImMax(g.IO.MouseDragMaxDistanceSqr[i], ImLengthSqr(g.IO.MousePos - g.IO.MouseClickedPos[i]));
+        }
+    }
+    memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
+    for (int i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
+        g.IO.KeysDownDuration[i] = g.IO.KeysDown[i] ? (g.IO.KeysDownDuration[i] < 0.0f ? 0.0f : g.IO.KeysDownDuration[i] + g.IO.DeltaTime) : -1.0f;
+
+    // Calculate frame-rate for the user, as a purely luxurious feature
+    g.FramerateSecPerFrameAccum += g.IO.DeltaTime - g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx];
+    g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx] = g.IO.DeltaTime;
+    g.FramerateSecPerFrameIdx = (g.FramerateSecPerFrameIdx + 1) % IM_ARRAYSIZE(g.FramerateSecPerFrame);
+    g.IO.Framerate = 1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame));
+
+    g.IO.WantCaptureKeyboard = g.IO.WantCaptureMouse = g.IO.WantTextInput = false;
+}

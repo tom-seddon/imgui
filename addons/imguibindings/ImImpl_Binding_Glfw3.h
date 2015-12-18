@@ -159,17 +159,34 @@ static void glfw_scroll_callback(GLFWwindow* /*window*/, double /*xoffset*/, dou
     ImGuiIO& io = ImGui::GetIO();
     io.MouseWheel = (yoffset != 0.0f) ? yoffset > 0.0f ? 1 : - 1 : 0;           // Mouse wheel: -1,0,+1
 }
+static bool gImGuiCapsLockDown = false;
 static void glfw_key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action, int mods)	{
     ImGuiIO& io = ImGui::GetIO();
     io.KeyCtrl = (mods & GLFW_MOD_CONTROL);
     io.KeyShift = (mods & GLFW_MOD_SHIFT);
     io.KeyAlt = (mods & GLFW_MOD_ALT);
-    if (action == GLFW_PRESS)           io.KeysDown[key] = true;
-    else if (action == GLFW_RELEASE)    io.KeysDown[key] = false;
-    if (key==GLFW_KEY_LEFT_CONTROL || key==GLFW_KEY_RIGHT_CONTROL)  io.KeyCtrl = (action == GLFW_PRESS);
-    else if (key==GLFW_KEY_LEFT_SHIFT || key==GLFW_KEY_RIGHT_SHIFT) io.KeyShift = (action == GLFW_PRESS);
-    else if (key==GLFW_KEY_LEFT_ALT || key==GLFW_KEY_RIGHT_ALT)     io.KeyAlt = (action == GLFW_PRESS);
-
+    const bool down = (action!=GLFW_RELEASE);
+    // (action == GLFW_PRESS);
+    if (key==GLFW_KEY_LEFT_CONTROL || key==GLFW_KEY_RIGHT_CONTROL)  io.KeyCtrl = down;
+    else if (key==GLFW_KEY_LEFT_SHIFT || key==GLFW_KEY_RIGHT_SHIFT) io.KeyShift = down;
+    else if (key==GLFW_KEY_LEFT_ALT || key==GLFW_KEY_RIGHT_ALT)     io.KeyAlt = down;
+    if (key == GLFW_KEY_CAPS_LOCK) gImGuiCapsLockDown = down;
+    else if (key>=GLFW_KEY_A && key<=GLFW_KEY_Z && !io.KeyShift && !gImGuiCapsLockDown) {
+        if (!(io.KeyCtrl && (key==GLFW_KEY_X || key==GLFW_KEY_C || key==GLFW_KEY_V ||
+            key==GLFW_KEY_A || key==GLFW_KEY_Y || key==GLFW_KEY_Z)))    // Preserve copy/paste etc.
+                key+= ((const int)'a'-GLFW_KEY_A);
+    }
+    if (key>=GLFW_KEY_F1 && key<=GLFW_KEY_F12) {
+        const int i = key-GLFW_KEY_F1;
+        const bool prevState = gImGuiFunctionKeyDown[i];
+        gImGuiFunctionKeyDown[i] = down;
+        if (down!=prevState)    {
+            if (down) gImGuiFunctionKeyPressed[i] = true;
+            else gImGuiFunctionKeyReleased[i] = true;
+        }
+        //fprintf(stderr,"%d) D:%d P:%d R:%d\n",i,(int)gImGuiFunctionKeyDown[i],(int)gImGuiFunctionKeyPressed[i],(int)gImGuiFunctionKeyReleased[i]);
+    }
+    else if (key>=0 && key<512)  io.KeysDown[key] = down;
 }
 static void glfw_char_callback(GLFWwindow* /*window*/, unsigned int c)	{
     if (c > 0 && c < 0x10000 && !ImGui::GetIO().KeyCtrl) ImGui::GetIO().AddInputCharacter((unsigned short)c);
@@ -227,6 +244,7 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     InitImGuiFontTexture(pOptionalInitParams);
     InitImGuiProgram();
     InitImGuiBuffer();
+
 }
 
 
@@ -355,15 +373,15 @@ Window x11Window;
 };
 
 
+
 static void ImImplMainLoopFrame(void* userPtr)	{
     ImImplMainLoopFrameStruct& mainLoopFrameStruct = *((ImImplMainLoopFrameStruct*) userPtr);
 
     static double time = 0.0f;
     ImGuiIO& io = ImGui::GetIO();
 
+    for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
     if (!gImGuiPaused)	{
-        for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
-
         static ImGuiMouseCursor oldCursor = ImGuiMouseCursor_Arrow;
         static bool oldMustHideCursor = io.MouseDrawCursor;
         if (oldMustHideCursor!=io.MouseDrawCursor) {
@@ -404,11 +422,15 @@ static void ImImplMainLoopFrame(void* userPtr)	{
     deltaTime = (float) (current_time - time);
     time = current_time;
 
-    if (!gImGuiPaused)	{
+    // Start the frame
+    {
         io.DeltaTime = (float) deltaTime;
-        for (size_t i = 0; i < 5; i++) io.MouseDown[i]=(glfwGetMouseButton(window, i)==GLFW_PRESS);
-        // Start the frame
-        ImGui::NewFrame();
+        for (size_t i = 0; i < 5; i++) io.MouseDown[i]=(glfwGetMouseButton(window, i)!=GLFW_RELEASE);
+        if (!gImGuiPaused) ImGui::NewFrame();
+        else {
+            ImImpl_NewFramePaused();    // Enables some ImGui queries regardless ImGui::NewFrame() not being called.
+            gImGuiCapturesInput = false;
+        }
         for (size_t i = 0; i < 5; i++) io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
     }
 
@@ -429,19 +451,16 @@ static void ImImplMainLoopFrame(void* userPtr)	{
         //fprintf(stderr,"gImGuiCapturesInput=%s curFramesDelay=%d wereOutsideImGui=%s\n",gImGuiCapturesInput?"true":"false",curFramesDelay,wereOutsideImGui?"true":"false");
 
         // Rendering
-#       ifdef IMGUIBINDINGS_RESTORE_GL_STATE
-        GLint oldViewport[4];glGetIntegerv(GL_VIEWPORT, oldViewport);
-#       endif //IMGUIBINDINGS_RESTORE_GL_STATE
-        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
         ImGui::Render();
-#       ifdef IMGUIBINDINGS_RESTORE_GL_STATE
-        glViewport(oldViewport[0], oldViewport[1], (GLsizei)oldViewport[2], (GLsizei)oldViewport[3])
-#       endif //IMGUIBINDINGS_RESTORE_GL_STATE
     }
     else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
     glfwSwapBuffers(window);
 
+    // Reset additional special keys composed states (mandatory):
+    for (int i=0;i<12;i++) {gImGuiFunctionKeyPressed[i] = gImGuiFunctionKeyReleased[i]= false;}
+
+    // Handle clamped FPS:
     if (curFramesDelay>=0 && ++curFramesDelay>numFramesDelay) WaitFor(200);     // 200 = 5 FPS - frame rate when ImGui is inactive
     else {
         const float& inverseFPSClamp = gImGuiWereOutsideImGui ? gImGuiInverseFPSClampOutsideImGui : gImGuiInverseFPSClampInsideImGui;

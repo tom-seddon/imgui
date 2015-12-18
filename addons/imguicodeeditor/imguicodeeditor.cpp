@@ -966,17 +966,27 @@ class FoldingStringVector : public ImVectorEx<FoldingString> {
     public:
     bool mergeAdditionalTrailingCharIfPossible;
     char additionalTrailingChar;
-    FoldingStringVector() : Base(),mergeAdditionalTrailingCharIfPossible(false),additionalTrailingChar(';'),punctuationStringsMerged("") {resetSHvariables();}
-    FoldingStringVector(size_t size) : Base(size),mergeAdditionalTrailingCharIfPossible(false),additionalTrailingChar(';'),punctuationStringsMerged("") {resetSHvariables();}
+    FoldingStringVector() {
+        mergeAdditionalTrailingCharIfPossible = false;
+        additionalTrailingChar = ';';
+        punctuationStringsMerged[0] = '\0';
+        resetSHvariables();
+    }
+    FoldingStringVector(size_t size) : Base(size) {
+        mergeAdditionalTrailingCharIfPossible = false;
+        additionalTrailingChar = ';';
+        punctuationStringsMerged[0] = '\0';
+        resetSHvariables();
+    }
 
-    FoldingStringVector(const ImVectorEx<FoldingTag>& tags,bool _mergeAdditionalTrailingCharIfPossible=false,char _additionalTrailingChar=';') : punctuationStringsMerged("")   {
+    FoldingStringVector(const ImVectorEx<FoldingTag>& tags,bool _mergeAdditionalTrailingCharIfPossible=false,char _additionalTrailingChar=';')   {
+        punctuationStringsMerged[0] = '\0';
         mergeAdditionalTrailingCharIfPossible = _mergeAdditionalTrailingCharIfPossible;
         additionalTrailingChar = _additionalTrailingChar;
         this->reserve(tags.size());
         for (size_t i=0,isz=tags.size();i<isz;i++)  {
             this->push_back(FoldingString(tags[i]));
         }
-
         resetSHvariables();
     }
 
@@ -1021,7 +1031,7 @@ class FoldingStringVector : public ImVectorEx<FoldingString> {
     char stringEscapeChar;
     const char* stringDelimiterChars;   // e.g. "\"'"
 
-    char punctuationStringsMerged[1024];	// This must be sorted alphabetically
+    char punctuationStringsMerged[1024];	// This must be sorted alphabetically (to be honest now that we use a map, sorting it's not needed anymore (and it was not used even before!))
     ImVectorEx<int> punctuationStringsMergedSHMap;
     const char* languageExtensions;
 

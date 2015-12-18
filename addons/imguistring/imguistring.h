@@ -500,6 +500,16 @@ public:
         return NULL;
     }
 
+    // overloads to have a "standard" default value
+    IMGUI_FORCE_INLINE V get(const K& key,const V& fallbackReturnValue=V(),bool* pOptionalSuccessOut=NULL) const {
+        IM_ASSERT(retrieveKeyUsingDefaultAssignmentOperator);
+        V rv(fallbackReturnValue);bool ok = get(key,rv);if (pOptionalSuccessOut) *pOptionalSuccessOut = ok;return rv;
+    }
+    /*IMGUI_FORCE_INLINE V operator[](const K& key) const {
+        IM_ASSERT(retrieveKeyUsingDefaultAssignmentOperator);
+        V rv;get(key,rv);return rv;
+    }*/
+
 protected:
     ImVector<HashNode* > hashNodes; // Since MAX_HASH_INT is constant, we could have just used an array...
     F hashFunc;

@@ -181,9 +181,8 @@ static void ImImplMainLoopFrame(void* pDone)	{
     int& done = *((int*) pDone);
     static SDL_Event event;
 
+    for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
     if (!gImGuiPaused) {
-        for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
-
         static ImGuiMouseCursor oldCursor = ImGuiMouseCursor_Arrow;
         static bool oldMustHideCursor = io.MouseDrawCursor;
         if (oldMustHideCursor!=io.MouseDrawCursor) {
@@ -232,8 +231,23 @@ static void ImImplMainLoopFrame(void* pDone)	{
             io.KeyShift = (mod & (KMOD_LSHIFT|KMOD_RSHIFT)) != 0;
             io.KeyAlt = (mod & (KMOD_LALT|KMOD_RALT)) != 0;
 
-            io.KeysDown[event.key.keysym.sym & ~SDLK_SCANCODE_MASK] = (event.type == SDL_KEYDOWN);
-
+            const bool down = (event.type == SDL_KEYDOWN);
+            int key = (event.key.keysym.sym);
+            static bool gImGuiCapsLockDown = false;
+            if (key==SDLK_CAPSLOCK) gImGuiCapsLockDown = down;
+            else if (key>=SDLK_a && key<=SDLK_z && (io.KeyShift || gImGuiCapsLockDown)) key-= ((const int)'a'-(const int)'A');
+            if (key>=SDLK_F1 && key<=SDLK_F12) {
+                const int i = key-SDLK_F1;
+                const bool prevState = gImGuiFunctionKeyDown[i];
+                gImGuiFunctionKeyDown[i] = down;
+                if (down!=prevState)    {
+                    if (down) gImGuiFunctionKeyPressed[i] = true;
+                    else gImGuiFunctionKeyReleased[i] = true;
+                }
+                //fprintf(stderr,"%d) D:%d P:%d R:%d\n",i,(int)gImGuiFunctionKeyDown[i],(int)gImGuiFunctionKeyPressed[i],(int)gImGuiFunctionKeyReleased[i]);
+            }
+            key&=~SDLK_SCANCODE_MASK;
+            if (key>=0 && key<512)  io.KeysDown[key] = down;
         }
             break;
             //case SDL_TEXTEDITING:   break;
@@ -285,12 +299,15 @@ static void ImImplMainLoopFrame(void* pDone)	{
     if (deltaTime<=0) deltaTime=1.0f/60.0f;
     time = current_time;
 
-    if (!gImGuiPaused) {
+    // Start the frame
+    {
         io.DeltaTime = deltaTime;
-        ImGui::NewFrame();
-        for (size_t i = 0; i < 5; i++) {
-            io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
+        if (!gImGuiPaused) ImGui::NewFrame();
+        else {
+            ImImpl_NewFramePaused();    // Enables some ImGui queries regardless ImGui::NewFrame() not being called.
+            gImGuiCapturesInput = false;
         }
+        for (size_t i = 0; i < 5; i++) io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
     }
 
 
@@ -312,19 +329,16 @@ static void ImImplMainLoopFrame(void* pDone)	{
         }
         if (gImGuiWereOutsideImGui) curFramesDelay = -1;
 
-#       ifdef IMGUIBINDINGS_RESTORE_GL_STATE
-        GLint oldViewport[4];glGetIntegerv(GL_VIEWPORT, oldViewport);
-#       endif //IMGUIBINDINGS_RESTORE_GL_STATE
-        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
         ImGui::Render();
-#       ifdef IMGUIBINDINGS_RESTORE_GL_STATE
-        glViewport(oldViewport[0], oldViewport[1], (GLsizei)oldViewport[2], (GLsizei)oldViewport[3])
-#       endif //IMGUIBINDINGS_RESTORE_GL_STATE
     }
     else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
     SDL_GL_SwapWindow(window);
 
+    // Reset additional special keys composed states (mandatory):
+    for (int i=0;i<12;i++) {gImGuiFunctionKeyPressed[i] = gImGuiFunctionKeyReleased[i]= false;}
+
+    // Handle clamped FPS:
     if (gImGuiAppIsIconified) {WaitFor(500);/*printf("Minimized\n");fflush(stdout);*/}
     else if (curFramesDelay>=0 && ++curFramesDelay>numFramesDelay) WaitFor(200);     // 200 = 5 FPS - frame rate when ImGui is inactive
     else {

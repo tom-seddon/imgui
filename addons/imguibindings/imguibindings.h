@@ -111,6 +111,9 @@ extern bool gImGuiDynamicFPSInsideImGui;                   // Dynamic FPS inside
 extern bool gImGuiCapturesInput;             // When false the input events can be directed somewhere else
 extern bool gImGuiWereOutsideImGui;
 extern bool gImGuiBindingMouseDblClicked[5];
+extern bool gImGuiFunctionKeyDown[12];
+extern bool gImGuiFunctionKeyPressed[12];
+extern bool gImGuiFunctionKeyReleased[12];
 // --------------------------------------------------------------------------------------------------------------
 
 struct ImImpl_InitParams	{
@@ -315,6 +318,8 @@ extern GLuint ImImpl_CompileShadersFromFile(const char* vertexShaderFilePath, co
 extern "C" void GLDebugMessageCallback(GLenum source, GLenum type,
     GLuint id, GLenum severity,GLsizei length, const GLchar *msg,const void *userParam);
 #endif //IMIMPL_FORCE_DEBUG_CONTEXT
+
+extern void ImImpl_NewFramePaused();
 
 
 #endif //IMGUIBINDINGS_H_

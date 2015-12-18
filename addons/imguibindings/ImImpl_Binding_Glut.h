@@ -4,6 +4,7 @@
 #include "imguibindings.h"
 
 static ImVec2 mousePosScale(1.0f, 1.0f);
+static const int specialCharMapAddend = 128;    // to prevent some special chars from clashing into ImGui normal chars
 
 // NB: ImGui already provide OS clipboard support for Windows so this isn't needed if you are using Windows only.
 #ifndef _WIN32
@@ -84,7 +85,17 @@ static inline void GlutSpecialUpDown(int key,int x,int y,bool down)   {
     io.KeyAlt = (mods&GLUT_ACTIVE_ALT) != 0;
     io.MousePos.x = x;io.MousePos.y = y;
 
-    if (key>=0 && key<512) io.KeysDown[key] = down;
+    if (key>=GLUT_KEY_F1 && key<=GLUT_KEY_F12) {
+        const int i = key-GLUT_KEY_F1;
+        const bool prevState = gImGuiFunctionKeyDown[i];
+        gImGuiFunctionKeyDown[i] = down;
+        if (down!=prevState)    {
+            if (down) gImGuiFunctionKeyPressed[i] = true;
+            else gImGuiFunctionKeyReleased[i] = true;
+        }
+        //fprintf(stderr,"%d) D:%d P:%d R:%d\n",i,(int)gImGuiFunctionKeyDown[i],(int)gImGuiFunctionKeyPressed[i],(int)gImGuiFunctionKeyReleased[i]);
+    }
+    else if (key>=0 && key<512) io.KeysDown[key+specialCharMapAddend] = down;
 }
 static void GlutSpecial(int key,int x,int y)   {
     GlutSpecialUpDown(key,x,y,true);
@@ -192,6 +203,8 @@ static void GlutDrawGL()    {
     time = current_time;
     if (deltaTime<=0) deltaTime = (1.0f/60.0f);
 
+    // Start the frame
+    io.DeltaTime = deltaTime;    
     if (!gImGuiPaused)	{
         static ImGuiMouseCursor oldCursor = ImGuiMouseCursor_Arrow;
         static bool oldMustHideCursor = io.MouseDrawCursor;
@@ -219,13 +232,13 @@ static void GlutDrawGL()    {
             }
         }
 
-        io.DeltaTime = deltaTime;
-        // Start the frame
         ImGui::NewFrame();
-        for (size_t i = 0; i < 5; i++) {
-            io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
-        }
     }
+    else {
+        ImImpl_NewFramePaused();    // Enables some ImGui queries regardless ImGui::NewFrame() not being called.
+        gImGuiCapturesInput = false;
+    }
+    for (size_t i = 0; i < 5; i++) io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
 
     DrawGL();
 
@@ -245,20 +258,17 @@ static void GlutDrawGL()    {
         if (gImGuiWereOutsideImGui) curFramesDelay = -1;
 
         // Rendering
-#       ifdef IMGUIBINDINGS_RESTORE_GL_STATE
-        GLint oldViewport[4];glGetIntegerv(GL_VIEWPORT, oldViewport);
-#       endif //IMGUIBINDINGS_RESTORE_GL_STATE
-        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
         ImGui::Render();
-#       ifdef IMGUIBINDINGS_RESTORE_GL_STATE
-        glViewport(oldViewport[0], oldViewport[1], (GLsizei)oldViewport[2], (GLsizei)oldViewport[3])
-#       endif //IMGUIBINDINGS_RESTORE_GL_STATE
     }
     else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
     glutSwapBuffers();
     if (!gImGuiPaused)	for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
 
+    // Reset additional special keys composed states (mandatory):
+    for (int i=0;i<12;i++) {gImGuiFunctionKeyPressed[i] = gImGuiFunctionKeyReleased[i]= false;}
+
+    // Handle clamped FPS:
     if (curFramesDelay>=0 && ++curFramesDelay>numFramesDelay) WaitFor(200);     // 200 = 5 FPS - frame rate when ImGui is inactive
     else {
         const float& inverseFPSClamp = gImGuiWereOutsideImGui ? gImGuiInverseFPSClampOutsideImGui : gImGuiInverseFPSClampInsideImGui;
@@ -294,14 +304,16 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)    {
     // Set up ImGui
     io.KeyMap[ImGuiKey_Tab] = 9;    // tab (ascii)
 
-    io.KeyMap[ImGuiKey_LeftArrow] =     GLUT_KEY_LEFT;    // Left
-    io.KeyMap[ImGuiKey_RightArrow] =    GLUT_KEY_RIGHT;   // Right
-    io.KeyMap[ImGuiKey_UpArrow] =       GLUT_KEY_UP;      // Up
-    io.KeyMap[ImGuiKey_DownArrow] =     GLUT_KEY_DOWN;    // Down
-    io.KeyMap[ImGuiKey_PageUp] =        GLUT_KEY_PAGE_UP;    // Prior
-    io.KeyMap[ImGuiKey_PageDown] =      GLUT_KEY_PAGE_DOWN;  // Next
-    io.KeyMap[ImGuiKey_Home] =          GLUT_KEY_HOME;    // Home
-    io.KeyMap[ImGuiKey_End] =           GLUT_KEY_END;     // End
+    // These are returned from glutSpecial:----
+    io.KeyMap[ImGuiKey_LeftArrow] =     specialCharMapAddend + GLUT_KEY_LEFT;    // Left
+    io.KeyMap[ImGuiKey_RightArrow] =    specialCharMapAddend + GLUT_KEY_RIGHT;   // Right
+    io.KeyMap[ImGuiKey_UpArrow] =       specialCharMapAddend + GLUT_KEY_UP;      // Up
+    io.KeyMap[ImGuiKey_DownArrow] =     specialCharMapAddend + GLUT_KEY_DOWN;    // Down
+    io.KeyMap[ImGuiKey_PageUp] =        specialCharMapAddend + GLUT_KEY_PAGE_UP;    // Prior
+    io.KeyMap[ImGuiKey_PageDown] =      specialCharMapAddend + GLUT_KEY_PAGE_DOWN;  // Next
+    io.KeyMap[ImGuiKey_Home] =          specialCharMapAddend + GLUT_KEY_HOME;    // Home
+    io.KeyMap[ImGuiKey_End] =           specialCharMapAddend + GLUT_KEY_END;     // End
+    // -----------------------------------------
 
     io.KeyMap[ImGuiKey_Delete] =    127;      // Delete  (ascii) (0x006F)
     io.KeyMap[ImGuiKey_Backspace] = 8;        // Backspace  (ascii)
