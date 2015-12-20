@@ -420,13 +420,13 @@ struct NodeGraphEditor	{
     }
     void clear() {
         if (linkCallback)   {
-            for (int i=links.size()-1;i>0;i--)  {
+            for (int i=links.size()-1;i>=0;i--)  {
                 const NodeLink& link = links[i];
                 linkCallback(link,LS_DELETED,*this);
             }
         }
         links.clear();
-        for (int i=nodes.size()-1;i>0;i--)  {
+        for (int i=nodes.size()-1;i>=0;i--)  {
             Node*& node = nodes[i];
             if (node)   {
                 if (nodeCallback) nodeCallback(node,NS_DELETED,*this);

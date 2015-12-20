@@ -48,6 +48,14 @@ namespace ImGuiFs {
 const int MAX_FILENAME_BYTES = FILENAME_MAX+1;
 const int MAX_PATH_BYTES = PATH_MAX+1;
 
+/*#ifndef NO_IMGUISTRING
+typedef ImVectorEx<char[MAX_FILENAME_BYTES]>	FilenameStringVector;
+typedef ImVectorEx<char[MAX_PATH_BYTES]>	PathStringVector;
+#else // NO_IMGUISTRING*/
+typedef ImVector<char[MAX_FILENAME_BYTES]>	FilenameStringVector;
+typedef ImVector<char[MAX_PATH_BYTES]>		PathStringVector;
+//#endif // NO_IMGUISTRING
+
 enum Sorting {
     SORT_ORDER_ALPHABETIC=0,
     SORT_ORDER_ALPHABETIC_INVERSE=1,
@@ -60,6 +68,8 @@ enum Sorting {
     SORT_ORDER_COUNT
 };
 #endif //IMGUIFS_NO_EXTRA_METHODS
+
+
 
 // Definitions of some helper classes (String,Path,SortingHelper,Directory). Better not expose them in the header file----------
 /*
@@ -84,13 +94,15 @@ class String    {
 protected:
     String() {}
 public:
-    inline static void PushBack(ImVector<char[MAX_FILENAME_BYTES]>& rv,const char* s)    {
+    inline static void PushBack(FilenameStringVector& rv,const char* s)    {	
+	if (rv.Size == rv.Capacity) rv.reserve(rv._grow_capacity(rv.Size+1));	// optional optimization from ImVector<>::push_back()
+										// <-- VALGRIND TODO: Fix memory leak (49164 bytes)
         const size_t sz = rv.size();
-        rv.resize(sz+1);
+	rv.resize(sz+1);				// <-- VALGRIND TODO: Fix memory leak (49164 bytes) [This gets moved above at rv.reserve() when that line is present]
         strcpy(&rv[sz][0], s ? s : "\0");
     }
 #   if (FILENAME_MAX!=PATH_MAX)    // Will this work ? (I don't want to use templates)
-    inline static void PushBack(ImVector<char[MAX_PATH_BYTES]>& rv,const char* s)    {
+    inline static void PushBack(PathStringVector& rv,const char* s)    {
         const size_t sz = rv.size();
         rv.resize(sz+1);
         strcpy(&rv[sz][0], s ? s : "\0");
@@ -134,7 +146,7 @@ public:
             c=tolower(c);
         }
     }
-    inline static void Split(const char* text,ImVector<char[MAX_FILENAME_BYTES]>& rv,const char c=' ')  {
+    inline static void Split(const char* text,FilenameStringVector& rv,const char c=' ')  {
         rv.clear();
         if (!text) return;
         const int len = (int)strlen(text);
@@ -332,7 +344,7 @@ public:
         while (size>0 && (rv[size-1]=='\\' || rv[size-1]=='/')) {rv[size-1]='\0';--size;}
         if (size==0 || rv[size-1]==':') strcat(rv,"/");
     }
-    static void Split(const char* path,ImVector<char[MAX_FILENAME_BYTES]>& rv,bool leaveIntermediateTrailingSlashes=true) {
+    static void Split(const char* path,FilenameStringVector& rv,bool leaveIntermediateTrailingSlashes=true) {
         rv.clear();
         static char tex[MAX_PATH_BYTES];
         String::Replace(path,'\\','/',tex);
@@ -452,7 +464,7 @@ struct stat SortingHelper::stat1;
 struct stat SortingHelper::stat2;
 class Directory {
 public:
-    static void GetDirectories(const char* directoryName,ImVector<char[MAX_PATH_BYTES]>& result,ImVector<char[MAX_FILENAME_BYTES]>* pOptionalNamesOut=NULL,Sorting sorting= SORT_ORDER_ALPHABETIC)   {
+    static void GetDirectories(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut=NULL,Sorting sorting= SORT_ORDER_ALPHABETIC)   {
         result.clear();if (pOptionalNamesOut) pOptionalNamesOut->clear();
         static char tempString[MAX_PATH_BYTES];size_t sz;
         struct dirent **eps = NULL;
@@ -470,23 +482,26 @@ public:
         else strcpy(directoryNameWithoutSlash,directoryName);
 
         if (n >= 0) {
-            result.reserve((size_t)n);if (pOptionalNamesOut) pOptionalNamesOut->reserve((size_t)n);
+	    //result.reserve((size_t)n);					    // <-- VALGRIND TODO: Fix memory leak ?
+	    //if (pOptionalNamesOut) pOptionalNamesOut->reserve((size_t)n);   // <-- VALGRIND TODO: Fix memory leak (8194 bytes)
             for (int cnt = 0; cnt < n; ++cnt)    {
                 const char* pName = &eps[cnt]->d_name[0];
                 sz = strlen(pName);
-                if (sz==0) continue;
-                if (strcmp(pName,".")!=0 && strcmp(pName,"..")!=0 && pName[0]!='.' && pName[sz-1]!='~')    {
-                    strcpy(tempString,directoryNameWithoutSlash);
-                    strcat(tempString,"/");
-                    strcat(tempString,pName);
-                    String::PushBack(result,tempString);
-                    if (pOptionalNamesOut) String::PushBack(*pOptionalNamesOut,pName);
-                }
+		if (sz>0) {
+		    if (strcmp(pName,".")!=0 && strcmp(pName,"..")!=0 && pName[0]!='.' && pName[sz-1]!='~')    {
+			strcpy(tempString,directoryNameWithoutSlash);
+			strcat(tempString,"/");
+			strcat(tempString,pName);
+			String::PushBack(result,tempString);
+			if (pOptionalNamesOut) String::PushBack(*pOptionalNamesOut,pName);
+		    }
+		}
+		free(eps[cnt]);
             }
         }
         if (eps) {free(eps);eps=NULL;}
     }
-    static void GetFiles(const char* directoryName,ImVector<char[MAX_PATH_BYTES]>& result,ImVector<char[MAX_FILENAME_BYTES]>* pOptionalNamesOut=NULL, Sorting sorting= SORT_ORDER_ALPHABETIC)    {
+    static void GetFiles(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut=NULL, Sorting sorting= SORT_ORDER_ALPHABETIC)    {
         result.clear();if (pOptionalNamesOut) pOptionalNamesOut->clear();
         static char tempString[MAX_PATH_BYTES];size_t sz;
         struct dirent **eps = NULL;
@@ -504,27 +519,30 @@ public:
         else strcpy(directoryNameWithoutSlash,directoryName);
 
         if (n >= 0) {
-            result.reserve((size_t)n);if (pOptionalNamesOut) pOptionalNamesOut->reserve((size_t)n);
+	    //result.reserve((size_t)n);		// <-- VALGRIND TODO: Fix memory leak (65632 bytes)
+	    //if (pOptionalNamesOut) pOptionalNamesOut->reserve((size_t)n);
             for (int cnt = 0; cnt < n; ++cnt)    {
                 const char* pName = &eps[cnt]->d_name[0];
-                sz = strlen(pName);
-                if (sz==0) continue;
-                if (pName[0]!='.' && pName[sz-1]!='~')    {
-                    strcpy(tempString,directoryNameWithoutSlash);
-                    strcat(tempString,"/");
-                    strcat(tempString,pName);
-                    String::PushBack(result,tempString);
-                    if (pOptionalNamesOut) String::PushBack(*pOptionalNamesOut,pName);
-                }
+		sz = strlen(pName);
+		if (sz>0) {
+		    if (pName[0]!='.' && pName[sz-1]!='~')    {
+			strcpy(tempString,directoryNameWithoutSlash);
+			strcat(tempString,"/");
+			strcat(tempString,pName);
+			String::PushBack(result,tempString);
+			if (pOptionalNamesOut) String::PushBack(*pOptionalNamesOut,pName);
+		    }
+		}
+		free(eps[cnt]);
             }
         }
         if (eps) {free(eps);eps=NULL;}
     }
 
     // e.g. ".txt;.jpg;.png". To use unwantedExtensions, set wantedExtensions="".
-    static void GetFiles(const char* path,ImVector<char[MAX_PATH_BYTES]>& files,const char* wantedExtensions,const char* unwantedExtensions=NULL,ImVector<char[MAX_FILENAME_BYTES]>* pOptionalNamesOut=NULL,Sorting sorting= SORT_ORDER_ALPHABETIC)    {
-        ImVector<char[MAX_PATH_BYTES]> filesIn;
-        ImVector<char[MAX_FILENAME_BYTES]> namesIn;
+    static void GetFiles(const char* path,PathStringVector& files,const char* wantedExtensions,const char* unwantedExtensions=NULL,FilenameStringVector* pOptionalNamesOut=NULL,Sorting sorting= SORT_ORDER_ALPHABETIC)    {
+	PathStringVector filesIn;
+	FilenameStringVector namesIn;
         GetFiles(path,filesIn,&namesIn,sorting);
         if ((wantedExtensions==0 || strlen(wantedExtensions)==0) && (unwantedExtensions==0 || strlen(unwantedExtensions)==0)) {files = filesIn;return;}
         files.clear();if (pOptionalNamesOut) pOptionalNamesOut->clear();
@@ -534,8 +552,9 @@ public:
 
         char ext[MAX_PATH_BYTES];
         if (wantedExtensions && strlen(wantedExtensions)>0)	{
-            files.reserve(filesIn.size());if (pOptionalNamesOut) pOptionalNamesOut->reserve(namesIn.size());
-            ImVector<char[MAX_FILENAME_BYTES]> wExts;String::Split(wext,wExts,';');
+	    //files.reserve(filesIn.size());					// <-- VALGRIND TODO: Fix memory leak (24582 bytes)
+	    //if (pOptionalNamesOut) pOptionalNamesOut->reserve(namesIn.size());	// <-- VALGRIND TODO: Fix memory leak (24582 bytes)
+	    FilenameStringVector wExts;String::Split(wext,wExts,';');
             const size_t wExtsSize = wExts.size();
             if (wExtsSize>0)	{
                 for (size_t i = 0,sz = filesIn.size();i<sz;i++)	{
@@ -551,8 +570,8 @@ public:
             else return;
         }
         else if (unwantedExtensions && strlen(unwantedExtensions)>0) {
-            files.reserve(filesIn.size());if (pOptionalNamesOut) pOptionalNamesOut->reserve(namesIn.size());
-            ImVector<char[MAX_FILENAME_BYTES]> woExts;String::Split(woext,woExts,';');
+	    //files.reserve(filesIn.size());if (pOptionalNamesOut) pOptionalNamesOut->reserve(namesIn.size());
+	    FilenameStringVector woExts;String::Split(woext,woExts,';');
             const size_t woExtsSize = woExts.size();
             if (woExts.size()==0) {files = filesIn;return;}
             bool match;
@@ -592,11 +611,11 @@ public:
         struct stat statbuf;
         return (stat(path, &statbuf) != -1 && S_ISDIR(statbuf.st_mode));
     }
-    inline static const ImVector<char[MAX_PATH_BYTES]> &GetUserKnownDirectories(const ImVector<char[MAX_FILENAME_BYTES]> **pOptionalUserKnownDirectoryDisplayNamesOut,const int** pOptionalNumberKnownUserDirectoriesExceptDrives=NULL,bool forceUpdate=false)  {
+    inline static const PathStringVector &GetUserKnownDirectories(const FilenameStringVector **pOptionalUserKnownDirectoryDisplayNamesOut,const int** pOptionalNumberKnownUserDirectoriesExceptDrives=NULL,bool forceUpdate=false)  {
         static bool init = false;
-        static ImVector<char[MAX_PATH_BYTES]> rv;
-        static ImVector<char[MAX_FILENAME_BYTES]> dn;
-        static ImVector<char[MAX_PATH_BYTES]> mediaFolders;
+	static PathStringVector rv;
+	static FilenameStringVector dn;
+	static PathStringVector mediaFolders;
         static int numberKnownUserDirectoriesExceptDrives = 0;
         if (pOptionalUserKnownDirectoryDisplayNamesOut) *pOptionalUserKnownDirectoryDisplayNamesOut = &dn;
         if (pOptionalNumberKnownUserDirectoriesExceptDrives) *pOptionalNumberKnownUserDirectoriesExceptDrives = &numberKnownUserDirectoriesExceptDrives;
@@ -835,7 +854,7 @@ struct UnZipFileImpl {
         }
     };
 
-    bool getFilesOrDirectories(bool fileMode,const char* directoryName,ImVector<char[MAX_PATH_BYTES]>& result,ImVector<char[MAX_FILENAME_BYTES]>* pOptionalNamesOut,Sorting sorting,bool prefixResultWithTheFullPathOfTheZipFile) const  {
+    bool getFilesOrDirectories(bool fileMode,const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut,Sorting sorting,bool prefixResultWithTheFullPathOfTheZipFile) const  {
         result.clear();if (pOptionalNamesOut) pOptionalNamesOut->clear();
         if (!uf) return false;
         char dirName[MAX_PATH_BYTES];
@@ -1051,10 +1070,10 @@ bool UnZipFile::isValid() const {
 void UnZipFile::close() {
     if (im->uf) {unzClose(im->uf);im->uf=NULL;}
 }
-bool UnZipFile::getDirectories(const char* directoryName,ImVector<char[MAX_PATH_BYTES]>& result,ImVector<char[MAX_FILENAME_BYTES]>* pOptionalNamesOut,Sorting sorting,bool prefixResultWithTheFullPathOfTheZipFile) const  {
+bool UnZipFile::getDirectories(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut,Sorting sorting,bool prefixResultWithTheFullPathOfTheZipFile) const  {
     return im->getFilesOrDirectories(false,directoryName,result,pOptionalNamesOut,sorting,prefixResultWithTheFullPathOfTheZipFile);
 }
-bool UnZipFile::getFiles(const char* directoryName,ImVector<char[MAX_PATH_BYTES]>& result,ImVector<char[MAX_FILENAME_BYTES]>* pOptionalNamesOut,Sorting sorting,bool prefixResultWithTheFullPathOfTheZipFile) const  {
+bool UnZipFile::getFiles(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut,Sorting sorting,bool prefixResultWithTheFullPathOfTheZipFile) const  {
     return im->getFilesOrDirectories(true,directoryName,result,pOptionalNamesOut,sorting,prefixResultWithTheFullPathOfTheZipFile);
 }
 unsigned int UnZipFile::getFileSize(const char* filePath) const   {
@@ -1227,13 +1246,13 @@ struct FolderInfo    {
     char fullFolder[MAX_PATH_BYTES];
     char currentFolder[MAX_PATH_BYTES];
     int splitPathIndex;
-    static ImVector<char[MAX_FILENAME_BYTES]> SplitPath;    // tmp field used internally
+    static FilenameStringVector SplitPath;    // tmp field used internally
     int splitPathIndexOfZipFile;
 
     void display() const {
         fprintf(stderr,"fullFolder=\"%s\" currentFolder=\"%s\" splitPathIndex=%d splitPathIndexOfZipFile=%d\n",fullFolder,currentFolder,splitPathIndex,splitPathIndexOfZipFile);
     }
-    void getSplitPath(ImVector<char[MAX_FILENAME_BYTES]>& splitPath) const   {
+    void getSplitPath(FilenameStringVector& splitPath) const   {
         Path::Split(fullFolder,splitPath);
     }
     const FolderInfo& operator=(const FolderInfo& o) {
@@ -1259,7 +1278,7 @@ struct FolderInfo    {
             splitPathIndexOfZipFile = GetSplitPathIndexOfZipFile(SplitPath);
         }
     }
-    inline static int GetSplitPathIndexOfZipFile(const ImVector<char[MAX_FILENAME_BYTES]>& SplitPath) {
+    inline static int GetSplitPathIndexOfZipFile(const FilenameStringVector& SplitPath) {
             int splitPathIndexOfZipFile = -1;
 #           ifdef IMGUI_USE_MINIZIP
             const char* lower = ".zip";const char* upper = ".ZIP";const int numCharsToMath = (int)strlen(lower);int gc=0;
@@ -1330,7 +1349,7 @@ struct FolderInfo    {
         return true;
     }
 };
-ImVector<char[MAX_FILENAME_BYTES]> FolderInfo::SplitPath;   // tmp field used internally
+FilenameStringVector FolderInfo::SplitPath;   // tmp field used internally
 struct History {
 protected:
     ImVector<FolderInfo> info;
@@ -1344,7 +1363,7 @@ public:
     }
     void reset() {info.clear();currentInfoIndex=-1;}
     History() {reset();}
-
+    ~History() {info.clear();}
     // -------------------------------------------------------------------------------------------------
     void goBack()   {
         if (canGoBack()) --currentInfoIndex;
@@ -1356,8 +1375,8 @@ public:
         if (!currentFolder || strlen(currentFolder)==0) return false;
         if (currentInfoIndex<0) {
             ++currentInfoIndex;
-            info.resize(currentInfoIndex+1);
-            FolderInfo& fi = info[currentInfoIndex];
+	    info.resize(currentInfoIndex+1);		// <-- VALGRIND TODO: Fix memory leak (65632 bytes)
+	    FolderInfo& fi = info[currentInfoIndex];
             fi.fromCurrentFolder(currentFolder);
             //fprintf(stderr,"switchTo 1 %d\n",fi.splitPathIndexOfZipFile);
             return true;
@@ -1368,13 +1387,13 @@ public:
             const int splitPathIndexInsideLastInfo = lastInfo.getSplitPathIndexFor(currentFolder);
             ++currentInfoIndex;
             info.resize(currentInfoIndex+1);
-            FolderInfo& fi = info[currentInfoIndex];
+	    FolderInfo& fi = info[currentInfoIndex];
             if (splitPathIndexInsideLastInfo==-1)   {
                 fi.fromCurrentFolder(currentFolder);
                 //fprintf(stderr,"switchTo 2a: %d (%s)\n",fi.splitPathIndexOfZipFile,currentFolder);
             }
             else {
-                fi = lastInfo;
+		fi = lastInfo;
                 fi.splitPathIndex = splitPathIndexInsideLastInfo;
                 strcpy(fi.currentFolder,currentFolder);
 
@@ -1391,7 +1410,7 @@ public:
         }
         ++currentInfoIndex;
         info.resize(currentInfoIndex+1);
-        info[currentInfoIndex] = fi;
+	info[currentInfoIndex] = fi;
         //fprintf(stderr,"switchTo 3 %d\n",fi.splitPathIndexOfZipFile);
         return true;
     }
@@ -1400,7 +1419,7 @@ public:
     inline bool isValid() const {return (currentInfoIndex>=0 && currentInfoIndex<(int)info.size());}
     const FolderInfo* getCurrentFolderInfo() const {return isValid() ? &info[currentInfoIndex] : NULL;}
     const char* getCurrentFolder() const {return isValid() ? &info[currentInfoIndex].currentFolder[0] : NULL;}
-    bool getCurrentSplitPath(ImVector<char[MAX_FILENAME_BYTES]>& rv) const {
+    bool getCurrentSplitPath(FilenameStringVector& rv) const {
         if (isValid()) {
             info[currentInfoIndex].getSplitPath(rv);
             return true;
@@ -1412,8 +1431,8 @@ public:
 };
 
 struct Internal {
-    ImVector<char[MAX_PATH_BYTES]> dirs,files;
-    ImVector<char[MAX_FILENAME_BYTES]> dirNames,fileNames,currentSplitPath;
+    PathStringVector dirs,files;
+    FilenameStringVector dirNames,fileNames,currentSplitPath;
     char currentFolder[MAX_PATH_BYTES];
     bool forceRescan;
     bool open;
@@ -1455,6 +1474,11 @@ struct Internal {
     bool editLocationCheckButtonPressed;
     char editLocationInputText[MAX_PATH_BYTES];
 
+    ~Internal() {
+	dirs.clear();files.clear();
+	dirNames.clear();fileNames.clear();
+	currentSplitPath.clear();
+    }
 
     void resetVariables() {
         strcpy(currentFolder,"./");
@@ -1547,9 +1571,9 @@ Dialog::Dialog(bool noKnownDirectoriesSection,bool noCreateDirectorySection,bool
 }
 Dialog::~Dialog()   {
     if (internal) {
-        ImGui::MemFree(internal);
-        //delete internal;
-        internal = NULL;
+	internal->~Internal();
+	ImGui::MemFree(internal);
+	internal = NULL;
     }
 }
 const char* Dialog::getChosenPath() const {return internal->chosenPath;}
@@ -1579,8 +1603,8 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
     bool& allowDirectoryCreation = I.allowDirectoryCreation = I.forbidDirectoryCreation ? false : (isSelectFolderDialog || isSaveFileDialog);
     //----------------------------------------------------------
     static const int* pNumberKnownUserDirectoriesExceptDrives=NULL;
-    static const ImVector<char[MAX_FILENAME_BYTES]>* pUserKnownDirectoryDisplayNames=NULL;
-    static const ImVector<char[MAX_PATH_BYTES]>* pUserKnownDirectories = &Directory::GetUserKnownDirectories(&pUserKnownDirectoryDisplayNames,&pNumberKnownUserDirectoriesExceptDrives);
+    static const FilenameStringVector* pUserKnownDirectoryDisplayNames=NULL;
+    static const PathStringVector* pUserKnownDirectories = &Directory::GetUserKnownDirectories(&pUserKnownDirectoryDisplayNames,&pNumberKnownUserDirectoriesExceptDrives);
     //----------------------------------------------------------
     const ImGuiStyle& style = ImGui::GetStyle();
     ImVec4 dummyButtonColor(0.0f,0.0f,0.0f,0.5f);     // Only the alpha is twickable from here
@@ -2004,7 +2028,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
 #                   endif // IMGUI_USE_MINIZIP
                 }
                 if (mustSwitchSplitPath) {
-                    FolderInfo mfi;
+		    FolderInfo mfi;
                     fi.getFolderInfoForSplitPathIndex(newSelectedTab,mfi);
                     I.history.switchTo(mfi);
                     I.forceRescan = true;
@@ -2148,7 +2172,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
                         char saveFileNameExtension[MAX_FILENAME_BYTES];Path::GetExtension(I.saveFileName,saveFileNameExtension);
                         const bool saveFileNameHasExtension = strlen(saveFileNameExtension)>0;
                         //-------------------------------------------------------------------
-                        ImVector<char[MAX_FILENAME_BYTES]> wExts;String::Split(fileFilterExtensionString,wExts,';');
+			FilenameStringVector wExts;String::Split(fileFilterExtensionString,wExts,';');
                         const size_t wExtsSize = wExts.size();
                         if (!saveFileNameHasExtension)   {
                             if (wExtsSize==0) pathOk = true;    // Bad situation, better allow this case
@@ -2423,9 +2447,9 @@ void PathGetDirectoryName(const char *filePath, char *rv)    {Path::GetDirectory
 void PathGetFileName(const char *filePath, char *rv) {Path::GetFileName(filePath,rv);}
 void PathGetExtension(const char* filePath,char *rv) {Path::GetExtension(filePath,rv);}
 void PathAppend(const char* directory,char* rv) {Path::Append(directory,rv);}
-void PathSplit(const char* path,ImVector<char[MAX_FILENAME_BYTES]>& rv,bool leaveIntermediateTrailingSlashes) {Path::Split(path,rv,leaveIntermediateTrailingSlashes);}
-void DirectoryGetDirectories(const char* directoryName,ImVector<char[MAX_PATH_BYTES]>& result,ImVector<char[MAX_FILENAME_BYTES]>* pOptionalNamesOut,Sorting sorting) {Directory::GetDirectories(directoryName,result,pOptionalNamesOut,sorting);}
-void DirectoryGetFiles(const char* directoryName,ImVector<char[MAX_PATH_BYTES]>& result,ImVector<char[MAX_FILENAME_BYTES]>* pOptionalNamesOut, Sorting sorting) {Directory::GetFiles(directoryName,result,pOptionalNamesOut,sorting);}
+void PathSplit(const char* path,FilenameStringVector& rv,bool leaveIntermediateTrailingSlashes) {Path::Split(path,rv,leaveIntermediateTrailingSlashes);}
+void DirectoryGetDirectories(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut,Sorting sorting) {Directory::GetDirectories(directoryName,result,pOptionalNamesOut,sorting);}
+void DirectoryGetFiles(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut, Sorting sorting) {Directory::GetFiles(directoryName,result,pOptionalNamesOut,sorting);}
 void DirectoryCreate(const char* directoryName) {Directory::Create(directoryName);}
 bool PathExists(const char* path) {
     struct stat statbuf;return (stat(path, &statbuf) != -1 && (S_ISDIR(statbuf.st_mode) || S_ISREG(statbuf.st_mode)));

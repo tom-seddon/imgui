@@ -109,7 +109,14 @@ struct Dialog {
 // Extra methods: completely optional, undocumented and NOT guarateed to work as expected:
 #ifndef IMGUIFS_NO_EXTRA_METHODS
 // all the strings should be MAX_PATH_BYTES long
-
+/*#ifndef NO_IMGUISTRING
+typedef ImVectorEx<char[MAX_FILENAME_BYTES]>	FilenameStringVector;
+typedef ImVectorEx<char[MAX_PATH_BYTES]>        PathStringVector;
+#else // NO_IMGUISTRING*/
+// Mmmh, Valgrind gives me leaks when I resize these vectors. Why ?
+typedef ImVector<char[MAX_FILENAME_BYTES]>      FilenameStringVector;
+typedef ImVector<char[MAX_PATH_BYTES]>          PathStringVector;
+//#endif // NO_IMGUISTRING
 
 extern bool PathExists(const char* path);
 extern void PathGetAbsolute(const char *path, char *rv);
@@ -117,7 +124,7 @@ extern void PathGetDirectoryName(const char *filePath, char *rv);
 extern void PathGetFileName(const char *filePath, char *rv);
 extern void PathGetExtension(const char* filePath,char *rv);
 extern void PathAppend(const char* directory,char* rv);
-extern void PathSplit(const char* path,ImVector<char[MAX_FILENAME_BYTES]>& rv,bool leaveIntermediateTrailingSlashes=true);
+extern void PathSplit(const char* path,FilenameStringVector& rv,bool leaveIntermediateTrailingSlashes=true);
 
 enum Sorting {
     SORT_ORDER_ALPHABETIC=0,
@@ -132,8 +139,8 @@ enum Sorting {
 };
 extern bool DirectoryExists(const char* path);
 extern void DirectoryCreate(const char* directoryName);
-extern void DirectoryGetDirectories(const char* directoryName,ImVector<char[MAX_PATH_BYTES]>& result,ImVector<char[MAX_FILENAME_BYTES]>* pOptionalNamesOut=NULL,Sorting sorting= SORT_ORDER_ALPHABETIC);
-extern void DirectoryGetFiles(const char* directoryName,ImVector<char[MAX_PATH_BYTES]>& result,ImVector<char[MAX_FILENAME_BYTES]>* pOptionalNamesOut=NULL, Sorting sorting= SORT_ORDER_ALPHABETIC);
+extern void DirectoryGetDirectories(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut=NULL,Sorting sorting= SORT_ORDER_ALPHABETIC);
+extern void DirectoryGetFiles(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut=NULL, Sorting sorting= SORT_ORDER_ALPHABETIC);
 extern bool FileExists(const char* path);
 extern bool FileGetContent(const char* path,ImVector<unsigned char>& bufferOut,const char* password=NULL);  // password is used if it's a file inside a zip path when IMGUI_USE_MINIZIP is defined (e.g. path="C://MyDocuments/myzipfile.zip/myzipFile/something.txt")
 #ifdef IMGUI_USE_MINIZIP
@@ -146,8 +153,8 @@ bool isValid() const;
 void close();
 
 // All these paths are inside the zip file (without the "zipFilePath" prefix)
-bool getDirectories(const char* directoryName,ImVector<char[MAX_PATH_BYTES]>& result,ImVector<char[MAX_FILENAME_BYTES]>* pOptionalNamesOut=NULL,Sorting sorting= SORT_ORDER_ALPHABETIC,bool prefixResultWithTheFullPathOfTheZipFile=false) const;
-bool getFiles(const char* directoryName,ImVector<char[MAX_PATH_BYTES]>& result,ImVector<char[MAX_FILENAME_BYTES]>* pOptionalNamesOut=NULL,Sorting sorting= SORT_ORDER_ALPHABETIC,bool prefixResultWithTheFullPathOfTheZipFile=false) const;
+bool getDirectories(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut=NULL,Sorting sorting= SORT_ORDER_ALPHABETIC,bool prefixResultWithTheFullPathOfTheZipFile=false) const;
+bool getFiles(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut=NULL,Sorting sorting= SORT_ORDER_ALPHABETIC,bool prefixResultWithTheFullPathOfTheZipFile=false) const;
 unsigned int getFileSize(const char* filePath) const;
 bool getFileContent(const char* filePath,ImVector<unsigned char>& bufferOut,const char* password=NULL) const;
 bool exists(const char* pathInsideZip, bool reportOnlyFiles=false, bool reportOnlyDirectories=false) const;

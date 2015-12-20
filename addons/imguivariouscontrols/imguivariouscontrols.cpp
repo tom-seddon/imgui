@@ -654,8 +654,11 @@ bool InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu(const char *la
                 // Delete chars
                 if (!mustCopy) {
                     //if (mustPaste) {fprintf(stderr,"Deleting before pasting: %d  %d.\n",selectionStart,selectionEnd);}
-                    strncpy(&buf[selectionStart],&buf[selectionEnd],buf_size-selectionEnd);
-                    for (int i=selectionStart+buf_size-selectionEnd;i<buf_size;i++) buf[i]='\0';
+
+		    //strncpy(&buf[selectionStart],&buf[selectionEnd],buf_size-selectionEnd);				// Valgrind complains here, but I KNOW that source and destination overlap: I just want to shift chars to the left!
+		    for (int i=0,isz=buf_size-selectionEnd;i<isz;i++) buf[i+selectionStart]=buf[i+selectionEnd];// I do it manually, so Valgrind is happy
+
+		    for (int i=selectionStart+buf_size-selectionEnd;i<buf_size;i++) buf[i]='\0';		// This is mandatory at the end
                 }
                 popup_open = false;
             }
