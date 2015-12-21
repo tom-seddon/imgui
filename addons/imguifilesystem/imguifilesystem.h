@@ -79,6 +79,9 @@ const int MAX_PATH_BYTES = PATH_MAX+1;
 #else //IMGUIFS_NO_EXTRA_METHODS
 extern const int MAX_FILENAME_BYTES;
 extern const int MAX_PATH_BYTES;
+#   ifdef IMGUI_USE_MINIZIP
+#   error Please undefine IMGUIFS_NO_EXTRA_METHODS for IMGUI_USE_MINIZIP to work
+#   endif //IMGUI_USE_MINIZIP
 #endif //IMGUIFS_NO_EXTRA_METHODS
 
 struct Dialog {
@@ -101,6 +104,11 @@ struct Dialog {
     // returns the last directory browsed by the user using this class (internally stored). Can be passed as "directory" parameter in the methods above to reuse last used directory.
     const char* getLastDirectory() const;
 
+    // static variables that are usually OK as they are
+    static bool WrapMode;       // (true)
+    static ImVec2 WindowSize; // (600,400) [initial window size when not defined in argument "windowSize"]
+    static ImVec2 WindowOffset;// (0,0)    [untested, but it might turn useful when using toolbars]
+
     private:
     struct Internal* internal;
     friend const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _isFolderChooserDialog,const bool _isSaveFileDialog,const char* _saveFileName,const char* fileFilterExtensionString,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha);
@@ -108,16 +116,14 @@ struct Dialog {
 
 // Extra methods: completely optional, undocumented and NOT guarateed to work as expected:
 #ifndef IMGUIFS_NO_EXTRA_METHODS
-// all the strings should be MAX_PATH_BYTES long
-/*#ifndef NO_IMGUISTRING
-typedef ImVectorEx<char[MAX_FILENAME_BYTES]>	FilenameStringVector;
-typedef ImVectorEx<char[MAX_PATH_BYTES]>        PathStringVector;
-#else // NO_IMGUISTRING*/
-// Mmmh, Valgrind gives me leaks when I resize these vectors. Why ?
-typedef ImVector<char[MAX_FILENAME_BYTES]>      FilenameStringVector;
-typedef ImVector<char[MAX_PATH_BYTES]>          PathStringVector;
-//#endif // NO_IMGUISTRING
+// A bit dangerous typedefs:
+typedef char FilenameString[MAX_FILENAME_BYTES];
+typedef char PathString[MAX_PATH_BYTES];
+// Handy typedefs:
+typedef ImVector<FilenameString>      FilenameStringVector;
+typedef ImVector<PathString>          PathStringVector;
 
+// all the strings should be MAX_PATH_BYTES long
 extern bool PathExists(const char* path);
 extern void PathGetAbsolute(const char *path, char *rv);
 extern void PathGetDirectoryName(const char *filePath, char *rv);

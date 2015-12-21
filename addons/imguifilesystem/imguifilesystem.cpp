@@ -47,14 +47,12 @@ namespace ImGuiFs {
 #ifdef IMGUIFS_NO_EXTRA_METHODS
 const int MAX_FILENAME_BYTES = FILENAME_MAX+1;
 const int MAX_PATH_BYTES = PATH_MAX+1;
-
-/*#ifndef NO_IMGUISTRING
-typedef ImVectorEx<char[MAX_FILENAME_BYTES]>	FilenameStringVector;
-typedef ImVectorEx<char[MAX_PATH_BYTES]>	PathStringVector;
-#else // NO_IMGUISTRING*/
-typedef ImVector<char[MAX_FILENAME_BYTES]>	FilenameStringVector;
-typedef ImVector<char[MAX_PATH_BYTES]>		PathStringVector;
-//#endif // NO_IMGUISTRING
+// A bit dangerous typedefs:
+typedef char FilenameString[MAX_FILENAME_BYTES];
+typedef char PathString[MAX_PATH_BYTES];
+// Handy typedefs:
+typedef ImVector<FilenameString>	FilenameStringVector;
+typedef ImVector<PathString>		PathStringVector;
 
 enum Sorting {
     SORT_ORDER_ALPHABETIC=0,
@@ -95,10 +93,9 @@ protected:
     String() {}
 public:
     inline static void PushBack(FilenameStringVector& rv,const char* s)    {	
-	if (rv.Size == rv.Capacity) rv.reserve(rv._grow_capacity(rv.Size+1));	// optional optimization from ImVector<>::push_back()
-										// <-- VALGRIND TODO: Fix memory leak (49164 bytes)
+        if (rv.Size == rv.Capacity) rv.reserve(rv._grow_capacity(rv.Size+1));	// optional optimization from ImVector<>::push_back()
         const size_t sz = rv.size();
-	rv.resize(sz+1);				// <-- VALGRIND TODO: Fix memory leak (49164 bytes) [This gets moved above at rv.reserve() when that line is present]
+        rv.resize(sz+1);
         strcpy(&rv[sz][0], s ? s : "\0");
     }
 #   if (FILENAME_MAX!=PATH_MAX)    // Will this work ? (I don't want to use templates)
@@ -482,8 +479,8 @@ public:
         else strcpy(directoryNameWithoutSlash,directoryName);
 
         if (n >= 0) {
-	    //result.reserve((size_t)n);					    // <-- VALGRIND TODO: Fix memory leak ?
-	    //if (pOptionalNamesOut) pOptionalNamesOut->reserve((size_t)n);   // <-- VALGRIND TODO: Fix memory leak (8194 bytes)
+        result.reserve((size_t)n);
+        if (pOptionalNamesOut) pOptionalNamesOut->reserve((size_t)n);
             for (int cnt = 0; cnt < n; ++cnt)    {
                 const char* pName = &eps[cnt]->d_name[0];
                 sz = strlen(pName);
@@ -519,8 +516,8 @@ public:
         else strcpy(directoryNameWithoutSlash,directoryName);
 
         if (n >= 0) {
-	    //result.reserve((size_t)n);		// <-- VALGRIND TODO: Fix memory leak (65632 bytes)
-	    //if (pOptionalNamesOut) pOptionalNamesOut->reserve((size_t)n);
+        result.reserve((size_t)n);
+        if (pOptionalNamesOut) pOptionalNamesOut->reserve((size_t)n);
             for (int cnt = 0; cnt < n; ++cnt)    {
                 const char* pName = &eps[cnt]->d_name[0];
 		sz = strlen(pName);
@@ -552,8 +549,8 @@ public:
 
         char ext[MAX_PATH_BYTES];
         if (wantedExtensions && strlen(wantedExtensions)>0)	{
-	    //files.reserve(filesIn.size());					// <-- VALGRIND TODO: Fix memory leak (24582 bytes)
-	    //if (pOptionalNamesOut) pOptionalNamesOut->reserve(namesIn.size());	// <-- VALGRIND TODO: Fix memory leak (24582 bytes)
+        files.reserve(filesIn.size());
+        if (pOptionalNamesOut) pOptionalNamesOut->reserve(namesIn.size());
 	    FilenameStringVector wExts;String::Split(wext,wExts,';');
             const size_t wExtsSize = wExts.size();
             if (wExtsSize>0)	{
@@ -1375,7 +1372,7 @@ public:
         if (!currentFolder || strlen(currentFolder)==0) return false;
         if (currentInfoIndex<0) {
             ++currentInfoIndex;
-	    info.resize(currentInfoIndex+1);		// <-- VALGRIND TODO: Fix memory leak (65632 bytes)
+        info.resize(currentInfoIndex+1);
 	    FolderInfo& fi = info[currentInfoIndex];
             fi.fromCurrentFolder(currentFolder);
             //fprintf(stderr,"switchTo 1 %d\n",fi.splitPathIndexOfZipFile);
@@ -1554,6 +1551,10 @@ struct Internal {
 bool Internal::BrowsingPerRow = false;
 // End Internal Usage-------------------------------------------------------------------------------------
 
+bool Dialog::WrapMode = true;
+ImVec2 Dialog::WindowSize(600,400);
+ImVec2 Dialog::WindowOffset(0,0);
+
 Dialog::Dialog(bool noKnownDirectoriesSection,bool noCreateDirectorySection,bool noFilteringSection,bool detectKnownDirectoriesAtEachOpening,bool addDisplayByOption,bool dontFilterSaveFilePathsEnteredByTheUser)    {
     internal = (Internal*) ImGui::MemAlloc(sizeof(Internal));
     new(internal) Internal();
@@ -1699,17 +1700,17 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
         strcat(I.wndTitle,tmpWndTitleNumber);
         I.wndPos = windowPos;
         I.wndSize = windowSize;
-        if (I.wndSize.x<=0) I.wndSize.x = 400;
-        if (I.wndSize.y<=0) I.wndSize.y = 400;
+	if (I.wndSize.x<=0) I.wndSize.x = Dialog::WindowSize.x;
+	if (I.wndSize.y<=0) I.wndSize.y = Dialog::WindowSize.y;
         const ImVec2 mousePos = ImGui::GetMousePos();//
         ImGui::GetCursorPos();
         if (I.wndPos.x<=0)  I.wndPos.x = mousePos.x - I.wndSize.x*0.5f;
         if (I.wndPos.y<=0)  I.wndPos.y = mousePos.y - I.wndSize.y*0.5f;
         const ImVec2 screenSize = ImGui::GetIO().DisplaySize;
-        if (I.wndPos.x>screenSize.x-I.wndSize.x) I.wndPos.x = screenSize.x-I.wndSize.x;
-        if (I.wndPos.y>screenSize.y-I.wndSize.y) I.wndPos.y = screenSize.y-I.wndSize.y;
-        if (I.wndPos.x < 0) I.wndPos.x = 0;
-        if (I.wndPos.y < 0) I.wndPos.y = 0;
+	if (I.wndPos.x>screenSize.x-I.wndSize.x-Dialog::WindowOffset.x) I.wndPos.x = screenSize.x-I.wndSize.x-Dialog::WindowOffset.x;
+	if (I.wndPos.y>screenSize.y-I.wndSize.y-Dialog::WindowOffset.y) I.wndPos.y = screenSize.y-I.wndSize.y-Dialog::WindowOffset.y;
+	if (I.wndPos.x < Dialog::WindowOffset.x) I.wndPos.x = Dialog::WindowOffset.x;
+	if (I.wndPos.y < Dialog::WindowOffset.y) I.wndPos.y = Dialog::WindowOffset.y;
         //fprintf(stderr,"screenSize = %f,%f mousePos = %f,%f wndPos = %f,%f wndSize = %f,%f\n",screenSize.x,screenSize.y,mousePos.x,mousePos.y,wndPos.x,wndPos.y,wndSize.x,wndSize.y);
         if (I.detectKnownDirectoriesAtEveryOpening) pUserKnownDirectories = &Directory::GetUserKnownDirectories(&pUserKnownDirectoryDisplayNames,&pNumberKnownUserDirectoriesExceptDrives,true);
     }
@@ -1988,9 +1989,13 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
                     else   fprintf(stderr,"%d\n",fi.splitPathIndexOfZipFile);
                 }*/
                 //-------------------
-
+		const bool wrapMode = Dialog::WrapMode;
+                float windowWidth = -1;float sumX = 0;
+                if (wrapMode) {
+                    sumX+=ImGui::GetCursorPosX();
+                    windowWidth=ImGui::GetWindowWidth()-ImGui::GetStyle().WindowPadding.x;
+                }
                 for (int t=0;t<numTabs;t++)	{
-                    if (t>0) ImGui::SameLine(0,0);
                     if (t==fi.splitPathIndex) {
                         const ImVec4* pDummyButtonColor = &dummyButtonColor;
 #                       ifdef IMGUI_USE_MINIZIP
@@ -2008,7 +2013,15 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
                     }
 #                   endif // IMGUI_USE_MINIZIP
                     ImGui::PushID(&I.currentSplitPath[t]);
+                    if (wrapMode) {
+                        sumX+=ImGui::CalcTextSize(I.currentSplitPath[t]).x;
+                        sumX+= 2.*ImGui::GetStyle().FramePadding.x;    // needed ?
+                        if (sumX >= windowWidth) sumX=0;
+                        if (t!=0 && sumX>0) ImGui::SameLine(0,0);
+                    }
+                    else if (t>0) ImGui::SameLine(0,0);
                     const bool pressed = ImGui::Button(I.currentSplitPath[t]);
+                    if (wrapMode && sumX==0)    {sumX = ImGui::GetStyle().WindowPadding.x + ImGui::GetItemRectSize().x;}
                     ImGui::PopID();
                     if (pressed) {
                         if (fi.splitPathIndex!=t && !mustSwitchSplitPath) mustSwitchSplitPath = true;

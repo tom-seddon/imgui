@@ -349,10 +349,18 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
             // Setup inputs (why I didn't use the event loop?)
             BYTE keystate[256];
             ::GetKeyboardState(keystate);
-            for (int i = 0; i < 256; i++)   io.KeysDown[i] = (keystate[i] & 0x80) != 0;
             io.KeyCtrl = (keystate[VK_CONTROL] & 0x80) != 0;
             io.KeyShift = (keystate[VK_SHIFT] & 0x80) != 0;
             io.KeyAlt = (keystate[VK_MENU] & 0x80) != 0;
+            const bool capsLockDown = (keystate[VK_CAPITAL] & 0x80) != 0;
+            const bool lowercaseWithoutCtrl = !io.KeyCtrl && (!(io.KeyShift || capsLockDown));
+            for (int i = 0; i < 256; i++)   io.KeysDown[i] = (keystate[i] & 0x80) != 0;
+            if (lowercaseWithoutCtrl)   {
+                for (int i='A';i<='Z';i++) {
+                    io.KeysDown[i-'A'+'a'] = io.KeysDown[i];
+                    io.KeysDown[i] = false;
+                }
+            }
             for (int key=VK_F1;key<VK_F12;key++)  {
                 const int i = key-VK_F1;
                 const bool prevState = gImGuiFunctionKeyDown[i];
