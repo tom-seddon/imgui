@@ -27,7 +27,7 @@ IMGUI_BASE_PATH=../..
 
 # These are optional definitions that nobody will ever use (all undefined by default):
 #DEFINES+=IMIMPL_SHADER_NONE			    # no shaders at all, and no vertex buffer object as well (minimal implementation).
-DEFINES+=IMIMPL_SHADER_GL3                         # shader uses openGL 3.3 (glsl #version 330)
+#DEFINES+=IMIMPL_SHADER_GL3                         # shader uses openGL 3.3 (glsl #version 330)
 #DEFINES+=IMIMPL_SHADER_GLES                        # shader uses gles (and if IMIMPL_SHADER_GL3 is defined glsl #version 300 es)
 #DEPRECATED: Not supported by new imgui: DEFINES+=IMIMPL_NUM_ROUND_ROBIN_VERTEX_BUFFERS     # undefined (=default) => 1. Memory usage vs performance. When defined MUST BE A VALUE >=1.
 
@@ -35,6 +35,7 @@ DEFINES+=IMIMPL_SHADER_GL3                         # shader uses openGL 3.3 (gls
 #DEFINES+=IMIMPL_FORCE_DEBUG_CONTEXT  # To remove! Implemented only in glfw3
 
 #DEFINES+= IMGUI_WIP	    # to remove (dev only)
+#DEFINES+=IMGUIBINDINGS_RESTORE_GL_STATE
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 

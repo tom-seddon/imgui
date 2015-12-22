@@ -864,12 +864,15 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT /*| GL_DEPTH_BUFFER_BIT*/);
 #   endif //IMGUIBINDINGS_RESTORE_GL_STATE
+
     //glEnable(GL_ALPHA_TEST);glAlphaFunc(GL_GREATER,0.5f);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //glDisable(GL_CULL_FACE);
     glCullFace(GL_FRONT);       // with this I can leave GL_CULL_FACE as it is
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_SCISSOR_TEST);
+
     // Setup texture
     glActiveTexture(GL_TEXTURE0);
     //glBindTexture(GL_TEXTURE_2D, gImImplPrivateParams.fontTex);
@@ -958,11 +961,14 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
 #   endif //IMGUIBINDINGS_RESTORE_GL_STATE
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDisable(GL_CULL_FACE);
+    //glDisable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);       // with this I can leave GL_CULL_FACE as it is
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_SCISSOR_TEST);
+
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
@@ -1015,6 +1021,14 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     glPopMatrix();
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
+
+    // Restore some main common stuff manually (for people not defining IMGUIBINDINGS_RESTORE_GL_STATE)
+    glDisable(GL_BLEND);
+    //glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);       // with this I can leave GL_CULL_FACE as it is
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_SCISSOR_TEST);
+
 #   ifdef IMGUIBINDINGS_RESTORE_GL_STATE
     glPopAttrib();
     glBindTexture(GL_TEXTURE_2D, last_texture);
@@ -1077,4 +1091,6 @@ void ImImpl_NewFramePaused()    {
     g.IO.Framerate = 1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame));
 
     g.IO.WantCaptureKeyboard = g.IO.WantCaptureMouse = g.IO.WantTextInput = false;
+
+
 }

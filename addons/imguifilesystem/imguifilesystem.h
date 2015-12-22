@@ -105,9 +105,9 @@ struct Dialog {
     const char* getLastDirectory() const;
 
     // static variables that are usually OK as they are
-    static bool WrapMode;       // (true)
-    static ImVec2 WindowSize; // (600,400) [initial window size when not defined in argument "windowSize"]
-    static ImVec2 WindowOffset;// (0,0)    [untested, but it might turn useful when using toolbars]
+    static bool WrapMode;           // (true)
+    static ImVec2 WindowSize;       // (600,400) [initial window size when not defined in argument "windowSize"]
+    static ImVec4 WindowLTRBOffsets;// (0,0,0,0)    [it might turn useful when using toolbars]
 
     private:
     struct Internal* internal;

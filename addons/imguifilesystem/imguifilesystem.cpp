@@ -1553,7 +1553,7 @@ bool Internal::BrowsingPerRow = false;
 
 bool Dialog::WrapMode = true;
 ImVec2 Dialog::WindowSize(600,400);
-ImVec2 Dialog::WindowOffset(0,0);
+ImVec4 Dialog::WindowLTRBOffsets(0,0,0,0);
 
 Dialog::Dialog(bool noKnownDirectoriesSection,bool noCreateDirectorySection,bool noFilteringSection,bool detectKnownDirectoriesAtEachOpening,bool addDisplayByOption,bool dontFilterSaveFilePathsEnteredByTheUser)    {
     internal = (Internal*) ImGui::MemAlloc(sizeof(Internal));
@@ -1707,10 +1707,10 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
         if (I.wndPos.x<=0)  I.wndPos.x = mousePos.x - I.wndSize.x*0.5f;
         if (I.wndPos.y<=0)  I.wndPos.y = mousePos.y - I.wndSize.y*0.5f;
         const ImVec2 screenSize = ImGui::GetIO().DisplaySize;
-	if (I.wndPos.x>screenSize.x-I.wndSize.x-Dialog::WindowOffset.x) I.wndPos.x = screenSize.x-I.wndSize.x-Dialog::WindowOffset.x;
-	if (I.wndPos.y>screenSize.y-I.wndSize.y-Dialog::WindowOffset.y) I.wndPos.y = screenSize.y-I.wndSize.y-Dialog::WindowOffset.y;
-	if (I.wndPos.x < Dialog::WindowOffset.x) I.wndPos.x = Dialog::WindowOffset.x;
-	if (I.wndPos.y < Dialog::WindowOffset.y) I.wndPos.y = Dialog::WindowOffset.y;
+    if (I.wndPos.x>screenSize.x-I.wndSize.x-Dialog::WindowLTRBOffsets.z) I.wndPos.x = screenSize.x-I.wndSize.x-Dialog::WindowLTRBOffsets.z;
+    if (I.wndPos.y>screenSize.y-I.wndSize.y-Dialog::WindowLTRBOffsets.w) I.wndPos.y = screenSize.y-I.wndSize.y-Dialog::WindowLTRBOffsets.w;
+	if (I.wndPos.x < Dialog::WindowLTRBOffsets.x) I.wndPos.x = Dialog::WindowLTRBOffsets.x;
+	if (I.wndPos.y < Dialog::WindowLTRBOffsets.y) I.wndPos.y = Dialog::WindowLTRBOffsets.y;
         //fprintf(stderr,"screenSize = %f,%f mousePos = %f,%f wndPos = %f,%f wndSize = %f,%f\n",screenSize.x,screenSize.y,mousePos.x,mousePos.y,wndPos.x,wndPos.y,wndSize.x,wndSize.y);
         if (I.detectKnownDirectoriesAtEveryOpening) pUserKnownDirectories = &Directory::GetUserKnownDirectories(&pUserKnownDirectoryDisplayNames,&pNumberKnownUserDirectoriesExceptDrives,true);
     }
