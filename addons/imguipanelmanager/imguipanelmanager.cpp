@@ -206,10 +206,11 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         // Setup texture, outer clipping rectangle
         window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
+        ImRect fullscreen_rect(GetVisibleRect());
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_ComboBox|ImGuiWindowFlags_Popup)))
-            PushClipRect(parent_window->ClipRect);
+            PushClipRect(parent_window->ClipRect.Min, parent_window->ClipRect.Max, true);
         else
-            PushClipRect(GetVisibleRect());
+            PushClipRect(fullscreen_rect.Min, fullscreen_rect.Max, true);
 
         // New windows appears in front
         if (!window_was_visible)
@@ -366,7 +367,6 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         if (window_pos_center)
         {
             // Center (any sort of window)
-            ImRect fullscreen_rect(GetVisibleRect());
             SetWindowPos(ImMax(style.DisplaySafeAreaPadding, fullscreen_rect.GetCenter() - window->SizeFull * 0.5f));
         }
         else if (flags & ImGuiWindowFlags_ChildMenu)
@@ -456,10 +456,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         // Modal window darkens what is behind them
         if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostModalRootWindow())
-        {
-            ImRect fullscreen_rect = GetVisibleRect();
             window->DrawList->AddRectFilled(fullscreen_rect.Min, fullscreen_rect.Max, GetColorU32(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
-        }
+
 
         // Draw window + handle manual resize
         ImRect title_bar_rect = window->TitleBarRect();
@@ -663,12 +661,14 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
     // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
     const ImRect title_bar_rect = window->TitleBarRect();
-    ImRect clip_rect(title_bar_rect.Min.x+0.5f+window->WindowPadding.x*0.5f, title_bar_rect.Max.y+window->MenuBarHeight()+0.5f, window->Pos.x+window->Size.x+0.5f-window->WindowPadding.x*0.5f, window->Pos.y+window->Size.y+0.5f);
-    if ((flags & ImGuiWindowFlags_ChildWindow) && (flags & ImGuiWindowFlags_ShowBorders))
-        clip_rect.Min += ImVec2(1.0f,1.0f);
-    clip_rect.Max.x -= window->ScrollbarY ? style.ScrollbarSize : 0.0f;
-    clip_rect.Max.y -= window->ScrollbarX ? style.ScrollbarSize : 0.0f;
-    PushClipRect(clip_rect);
+    const float border_size = (flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
+    ImRect clip_rect;
+    clip_rect.Min.x = title_bar_rect.Min.x + 0.5f + ImMax(border_size, window->WindowPadding.x*0.5f);
+    clip_rect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight() + 0.5f + border_size;
+    clip_rect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x - ImMax(border_size, window->WindowPadding.x*0.5f);
+    clip_rect.Max.y = window->Pos.y + window->Size.y - border_size - window->ScrollbarSizes.y;
+
+    PushClipRect(clip_rect.Min, clip_rect.Max, true);
 
     // Clear 'accessed' flag last thing
     if (first_begin_of_the_frame)

@@ -479,7 +479,7 @@ void DrawGL()	// Mandatory
             if (iqs.x>ImGui::GetStyle().WindowMinSize.x && iqs.y>ImGui::GetStyle().WindowMinSize.y) {
                 ImGui::SetNextWindowPos(mgr.getCentralQuadPosition());
                 ImGui::SetNextWindowSize(mgr.getCentralQuadSize());
-                if (ImGui::Begin("Central Window"))    {
+                if (ImGui::Begin("Central Window",NULL,ImGuiWindowFlags_NoScrollbar))    {
 #                   ifndef NO_IMGUITABWINDOW
                     static ImGui::TabWindow tabWindow;
                     if (!tabWindow.isInited()) {

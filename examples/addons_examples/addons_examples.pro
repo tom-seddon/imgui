@@ -9,14 +9,14 @@ DESTDIR = ./
 # START USER EDITABLE AREA -----------------------------------------------------------------------
 
 # When commented out, main.cpp is built, otherwise main2.cpp is built
-CONFIG+= use_main2
+#CONFIG+= use_main2
 #CONFIG+= use_main3  # dev only
 #CONFIG+= use_main4  # dev only
 
 # Only one of these must be active:
-#CONFIG+= use_glfw3
+CONFIG+= use_glfw3
 #CONFIG+= use_glut
-CONFIG+= use_sdl2
+#CONFIG+= use_sdl2
 #CONFIG+= use_winapi
 # Optional, but it might be mandatory for IMGUI_USE_WINAPI (i.e. CONFIG+= use_winapi)
 #CONFIG+= use_glew
