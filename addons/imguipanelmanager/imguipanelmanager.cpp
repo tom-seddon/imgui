@@ -1,6 +1,9 @@
 #include "imguipanelmanager.h"
 //#include <stdio.h> // fprintf
 
+
+bool gImGuiDockpanelManagerExtendedStyle = false;
+
 // Static Helper Methods:
 namespace ImGui {
 
@@ -10,6 +13,19 @@ static ImVec4 ColorDockButtonActive(0.70f, 0.70f, 0.60f, 1.00f);
 
 static ImVec4 ColorDockButtonLines(0.80f, 0.90f, 0.70f, 1.00f);
 static ImVec4 ColorDockButtonLinesHovered(0.85f, 1.f, 0.65f, 1.00f);
+
+static ImVec4 ColorDockButtonIconBg(0.75f, 0.75f, 0.75f, 0.70f);
+static ImVec4 ColorDockButtonIconBgHovered(0.85f, 0.85f, 0.85f, 0.85f);
+static ImVec4 ColorDockButtonIconBgActive(0.70f, 0.70f, 0.70f, 1.00f);
+
+static ImVec4 ColorDockButtonIcon(0.80f, 0.90f, 0.70f, 1.00f);
+static ImVec4 ColorDockButtonIconHovered(0.85f, 1.f, 0.65f, 1.00f);
+
+
+#ifndef NO_IMGUITABWINDOW
+#include "../imguitabwindow/imguitabwindow.h"
+#endif //NO_IMGUITABWINDOW
+
 
 // Upper-right button to close a window.
 static bool DockWindowButton(bool* p_undocked,bool *p_open=NULL)
@@ -25,22 +41,45 @@ static bool DockWindowButton(bool* p_undocked,bool *p_open=NULL)
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held);//, true);
 
-    // Render
-    ImU32 col = GetColorU32((held && hovered) ? ColorDockButtonActive : hovered ? ColorDockButtonHovered : ColorDockButton);
-    window->DrawList->AddRectFilled(bb.Min, bb.Max, col, 0);
-
     if (p_undocked) {
-        col = !hovered ? GetColorU32(ColorDockButtonLines) : GetColorU32(ColorDockButtonLinesHovered);
-        ImRect bb2 = bb;
-        const ImVec2  sz = bb.GetSize();
-        if (*p_undocked)    {
-            bb2.Expand(ImVec2(-.2f*sz.x,-.7*sz.y));
-            window->DrawList->AddRect(bb2.Min,bb2.Max, col, 0);
+#       ifndef NO_IMGUITABWINDOW
+        if (gImGuiDockpanelManagerExtendedStyle && ImGui::TabWindow::DockPanelIconTextureID)    {
+            // Render
+            ImU32 col = GetColorU32((held && hovered) ? ColorDockButtonIconBgActive : hovered ? ColorDockButtonIconBgHovered : ColorDockButtonIconBg);
+            window->DrawList->AddRectFilled(bb.Min, bb.Max, col,2.f);
+
+            col = !hovered ? GetColorU32(ColorDockButtonIcon) : GetColorU32(ColorDockButtonIconHovered);
+            if (*p_undocked)    {
+               window->DrawList->AddImage(ImGui::TabWindow::DockPanelIconTextureID,bb.Min,bb.Max,ImVec2(0.0f,0.75f),ImVec2(0.25f,1.f), col);
+            }
+            else    {
+               window->DrawList->AddImage(ImGui::TabWindow::DockPanelIconTextureID,bb.Min,bb.Max,ImVec2(0.25f,0.75f),ImVec2(0.5f,1.f), col);
+            }
         }
-        else    {
-            bb2.Expand(ImVec2(-.7f*sz.x,-.2*sz.y));
-            window->DrawList->AddRect(bb2.Min,bb2.Max, col, 0);
+        else
+#       endif //NO_IMGUITABWINDOW
+        {
+            // Render
+            ImU32 col = GetColorU32((held && hovered) ? ColorDockButtonActive : hovered ? ColorDockButtonHovered : ColorDockButton);
+            window->DrawList->AddRectFilled(bb.Min, bb.Max, col, 0);
+
+            col = !hovered ? GetColorU32(ColorDockButtonLines) : GetColorU32(ColorDockButtonLinesHovered);
+            ImRect bb2 = bb;
+            const ImVec2  sz = bb.GetSize();
+            if (*p_undocked)    {
+                bb2.Expand(ImVec2(-.2f*sz.x,-.7*sz.y));
+                window->DrawList->AddRect(bb2.Min,bb2.Max, col, 0);
+            }
+            else    {
+                bb2.Expand(ImVec2(-.7f*sz.x,-.2*sz.y));
+                window->DrawList->AddRect(bb2.Min,bb2.Max, col, 0);
+            }
         }
+    }
+    else {
+        // Render
+        ImU32 col = GetColorU32((held && hovered) ? ColorDockButtonActive : hovered ? ColorDockButtonHovered : ColorDockButton);
+        window->DrawList->AddRectFilled(bb.Min, bb.Max, col, 0);
     }
 
     if (p_undocked != NULL && pressed)
@@ -493,8 +532,21 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             }
 
             // Title bar
-            if (!(flags & ImGuiWindowFlags_NoTitleBar))
-                window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32((g.FocusedWindow && window->RootNonPopupWindow == g.FocusedWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, 1|2);
+            if (!(flags & ImGuiWindowFlags_NoTitleBar)) {
+#               if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
+                if (gImGuiDockpanelManagerExtendedStyle)    {
+                    ImU32 col = GetColorU32((g.FocusedWindow && window->RootNonPopupWindow == g.FocusedWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
+                    ImGui::ImDrawListAddRectWithVerticalGradient(window->DrawList,
+                        title_bar_rect.GetTL(), title_bar_rect.GetBR(),col,0.15f,0,
+                        window_rounding, 1|2,1.f,ImGui::GetStyle().AntiAliasedShapes
+                    );
+                }
+                else
+#               endif // (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
+                {
+                    window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32((g.FocusedWindow && window->RootNonPopupWindow == g.FocusedWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, 1|2);
+                }
+            }
 
             // Menu bar
             if (flags & ImGuiWindowFlags_MenuBar)

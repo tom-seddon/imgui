@@ -307,22 +307,23 @@ public:
 private:
 
     // These 2 does not work: should invoke the dstr and cstr, and probably they should not use memmove
-    inline iterator             erase(const_iterator it)        {
-        IM_ASSERT(it >= begin() && it < end());
-        const ptrdiff_t off = it - begin();
+    inline iterator erase(const_iterator it)        {
+        IM_ASSERT(it >= Data && it < Data+Size);
+        const ptrdiff_t off = it - Data;
         memmove(Data + off, Data + off + 1, ((size_t)Size - (size_t)off - 1) * sizeof(value_type));
         Size--;
         return Data + off;
     }
-    inline iterator             insert(const_iterator it, const value_type& v)  {
-        IM_ASSERT(it >= begin() && it <= end());
-        const ptrdiff_t off = it - begin();
+    inline iterator insert(const_iterator it, const value_type& v)  {
+        IM_ASSERT(it >= Data && it <= Data+Size);
+        const ptrdiff_t off = it - Data;
         if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4);
         if (off < (int)Size) memmove(Data + off + 1, Data + off, ((size_t)Size - (size_t)off) * sizeof(value_type));
         Data[off] = v;
         Size++;
         return Data + off;
     }
+
 };
 #endif //ImVectorEx
 

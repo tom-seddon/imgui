@@ -98,7 +98,207 @@ void Text(int fntIndex, const char *fmt,...)    {
     TextV(fntIndex,fmt, args);
     va_end(args);
 }
+
 #endif //NO_IMGUIHELPER_FONT_METHODS
+
+#ifndef NO_IMGUIHELPER_DRAW_METHODS
+inline static void GetVerticalGradientTopAndBottomColors(ImU32 c,float fillColorGradientDeltaIn0_05,ImU32& tc,ImU32& bc)  {
+    if (fillColorGradientDeltaIn0_05<=0) {tc=bc=c;return;}
+    if (fillColorGradientDeltaIn0_05>0.5f) fillColorGradientDeltaIn0_05=0.5f;
+    const ImVec4 cf = ImColor(c);
+    ImVec4 tmp(cf.x+fillColorGradientDeltaIn0_05<=1.f?cf.x+fillColorGradientDeltaIn0_05:1.f,
+               cf.y+fillColorGradientDeltaIn0_05<=1.f?cf.y+fillColorGradientDeltaIn0_05:1.f,
+               cf.z+fillColorGradientDeltaIn0_05<=1.f?cf.z+fillColorGradientDeltaIn0_05:1.f,
+               cf.w+fillColorGradientDeltaIn0_05<=1.f?cf.w+fillColorGradientDeltaIn0_05:1.f);
+    tc = ImColor(tmp);
+    tmp=ImVec4(cf.x-fillColorGradientDeltaIn0_05>0.f?cf.x-fillColorGradientDeltaIn0_05:0.f,
+               cf.y-fillColorGradientDeltaIn0_05>0.f?cf.y-fillColorGradientDeltaIn0_05:0.f,
+               cf.z-fillColorGradientDeltaIn0_05>0.f?cf.z-fillColorGradientDeltaIn0_05:0.f,
+               cf.w-fillColorGradientDeltaIn0_05>0.f?cf.w-fillColorGradientDeltaIn0_05:0.f);
+    bc = ImColor(tmp);
+}
+inline static ImU32 GetVerticalGradient(const ImVec4& ct,const ImVec4& cb,float DH,float H)    {
+    IM_ASSERT(H!=0);
+    const float fa = DH/H;
+    const float fc = (1.f-fa);
+    return ImColor(
+        ct.x * fc + cb.x * fa,
+        ct.y * fc + cb.y * fa,
+        ct.z * fc + cb.z * fa,
+        ct.w * fc + cb.w * fa
+    );
+}
+void ImDrawListAddConvexPolyFilledWithVerticalGradient(ImDrawList *dl, const ImVec2 *points, const int points_count, ImU32 colTop, ImU32 colBot, bool anti_aliased,float miny,float maxy)
+{
+    if (!dl) return;
+    if (colTop==colBot)  {
+        dl->AddConvexPolyFilled(points,points_count,colTop,anti_aliased);
+        return;
+    }
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+    anti_aliased &= GImGui->Style.AntiAliasedShapes;
+    //if (ImGui::GetIO().KeyCtrl) anti_aliased = false; // Debug
+
+    int height=0;
+    if (miny<=0 || maxy<=0) {
+        const float max_float = 999999999999999999.f;
+        miny=max_float;maxy=-max_float;
+        for (int i = 0; i < points_count; i++) {
+            const float h = points[i].y;
+            if (h < miny) miny = h;
+            else if (h > maxy) maxy = h;
+        }
+    }
+    height = maxy-miny;
+    const ImVec4 colTopf = ImColor(colTop);
+    const ImVec4 colBotf = ImColor(colBot);
+
+
+    if (anti_aliased)
+    {
+        // Anti-aliased Fill
+        const float AA_SIZE = 1.0f;
+        //const ImU32 col_trans = col & 0x00ffffff;
+        const ImVec4 colTransTopf(colTopf.x,colTopf.y,colTopf.z,0.f);
+        const ImVec4 colTransBotf(colBotf.x,colBotf.y,colBotf.z,0.f);
+        const int idx_count = (points_count-2)*3 + points_count*6;
+        const int vtx_count = (points_count*2);
+        dl->PrimReserve(idx_count, vtx_count);
+
+        // Add indexes for fill
+        unsigned int vtx_inner_idx = dl->_VtxCurrentIdx;
+        unsigned int vtx_outer_idx = dl->_VtxCurrentIdx+1;
+        for (int i = 2; i < points_count; i++)
+        {
+            dl->_IdxWritePtr[0] = (ImDrawIdx)(vtx_inner_idx); dl->_IdxWritePtr[1] = (ImDrawIdx)(vtx_inner_idx+((i-1)<<1)); dl->_IdxWritePtr[2] = (ImDrawIdx)(vtx_inner_idx+(i<<1));
+            dl->_IdxWritePtr += 3;
+        }
+
+        // Compute normals
+        ImVec2* temp_normals = (ImVec2*)alloca(points_count * sizeof(ImVec2));
+        for (int i0 = points_count-1, i1 = 0; i1 < points_count; i0 = i1++)
+        {
+            const ImVec2& p0 = points[i0];
+            const ImVec2& p1 = points[i1];
+            ImVec2 diff = p1 - p0;
+            diff *= ImInvLength(diff, 1.0f);
+            temp_normals[i0].x = diff.y;
+            temp_normals[i0].y = -diff.x;
+        }
+
+        for (int i0 = points_count-1, i1 = 0; i1 < points_count; i0 = i1++)
+        {
+            // Average normals
+            const ImVec2& n0 = temp_normals[i0];
+            const ImVec2& n1 = temp_normals[i1];
+            ImVec2 dm = (n0 + n1) * 0.5f;
+            float dmr2 = dm.x*dm.x + dm.y*dm.y;
+            if (dmr2 > 0.000001f)
+            {
+                float scale = 1.0f / dmr2;
+                if (scale > 100.0f) scale = 100.0f;
+                dm *= scale;
+            }
+            dm *= AA_SIZE * 0.5f;
+
+            // Add vertices
+            //_VtxWritePtr[0].pos = (points[i1] - dm); _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;        // Inner
+            //_VtxWritePtr[1].pos = (points[i1] + dm); _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col_trans;  // Outer
+            dl->_VtxWritePtr[0].pos = (points[i1] - dm); dl->_VtxWritePtr[0].uv = uv; dl->_VtxWritePtr[0].col = GetVerticalGradient(colTopf,colBotf,points[i1].y-miny,height);        // Inner
+            dl->_VtxWritePtr[1].pos = (points[i1] + dm); dl->_VtxWritePtr[1].uv = uv; dl->_VtxWritePtr[1].col = GetVerticalGradient(colTransTopf,colTransBotf,points[i1].y-miny,height);  // Outer
+            dl->_VtxWritePtr += 2;
+
+            // Add indexes for fringes
+            dl->_IdxWritePtr[0] = (ImDrawIdx)(vtx_inner_idx+(i1<<1)); dl->_IdxWritePtr[1] = (ImDrawIdx)(vtx_inner_idx+(i0<<1)); dl->_IdxWritePtr[2] = (ImDrawIdx)(vtx_outer_idx+(i0<<1));
+            dl->_IdxWritePtr[3] = (ImDrawIdx)(vtx_outer_idx+(i0<<1)); dl->_IdxWritePtr[4] = (ImDrawIdx)(vtx_outer_idx+(i1<<1)); dl->_IdxWritePtr[5] = (ImDrawIdx)(vtx_inner_idx+(i1<<1));
+            dl->_IdxWritePtr += 6;
+        }
+        dl->_VtxCurrentIdx += (ImDrawIdx)vtx_count;
+    }
+    else
+    {
+        // Non Anti-aliased Fill
+        const int idx_count = (points_count-2)*3;
+        const int vtx_count = points_count;
+        dl->PrimReserve(idx_count, vtx_count);
+        for (int i = 0; i < vtx_count; i++)
+        {
+            //_VtxWritePtr[0].pos = points[i]; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;
+            dl->_VtxWritePtr[0].pos = points[i]; dl->_VtxWritePtr[0].uv = uv; dl->_VtxWritePtr[0].col = GetVerticalGradient(colTopf,colBotf,points[i].y-miny,height);
+            dl->_VtxWritePtr++;
+        }
+        for (int i = 2; i < points_count; i++)
+        {
+            dl->_IdxWritePtr[0] = (ImDrawIdx)(dl->_VtxCurrentIdx); dl->_IdxWritePtr[1] = (ImDrawIdx)(dl->_VtxCurrentIdx+i-1); dl->_IdxWritePtr[2] = (ImDrawIdx)(dl->_VtxCurrentIdx+i);
+            dl->_IdxWritePtr += 3;
+        }
+        dl->_VtxCurrentIdx += (ImDrawIdx)vtx_count;
+    }
+}
+void ImDrawListPathFillWithVerticalGradientAndStroke(ImDrawList *dl, const ImU32 &fillColorTop, const ImU32 &fillColorBottom, const ImU32 &strokeColor, bool strokeClosed, float strokeThickness, bool antiAliased,float miny,float maxy)    {
+    if (!dl) return;
+    if ((fillColorTop >> 24) != 0 || (fillColorBottom >> 24) != 0) ImDrawListAddConvexPolyFilledWithVerticalGradient(dl, dl->_Path.Data, dl->_Path.Size, fillColorTop, fillColorBottom, antiAliased,miny,maxy);
+    if ((strokeColor>> 24)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
+    dl->PathClear();
+}
+void ImDrawListPathFillAndStroke(ImDrawList *dl, const ImU32 &fillColor, const ImU32 &strokeColor, bool strokeClosed, float strokeThickness, bool antiAliased)    {
+    if (!dl) return;
+    if ((fillColor >> 24) != 0) dl->AddConvexPolyFilled(dl->_Path.Data, dl->_Path.Size, fillColor, antiAliased);
+    if ((strokeColor>> 24)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
+    dl->PathClear();
+}
+void ImDrawListAddRect(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColor, const ImU32 &strokeColor, float rounding, int rounding_corners, float strokeThickness, bool antiAliased) {
+    if (!dl || (((fillColor >> 24) == 0) && ((strokeColor >> 24) == 0)))  return;
+    dl->PathRect(a, b, rounding, rounding_corners);
+    ImDrawListPathFillAndStroke(dl,fillColor,strokeColor,true,strokeThickness,antiAliased);
+}
+void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColorTop, const ImU32 &fillColorBottom, const ImU32 &strokeColor, float rounding, int rounding_corners, float strokeThickness, bool antiAliased) {
+    if (!dl || (((fillColorTop >> 24) == 0) && ((fillColorBottom >> 24) == 0) && ((strokeColor >> 24) == 0)))  return;
+    dl->PathRect(a, b, rounding, rounding_corners);
+    ImDrawListPathFillWithVerticalGradientAndStroke(dl,fillColorTop,fillColorBottom,strokeColor,true,strokeThickness,antiAliased,a.y,b.y);
+}
+void ImDrawListPathArcTo(ImDrawList *dl, const ImVec2 &centre, const ImVec2 &radii, float amin, float amax, int num_segments)  {
+    if (!dl) return;
+    if (radii.x == 0.0f || radii.y==0) dl->_Path.push_back(centre);
+    dl->_Path.reserve(dl->_Path.Size + (num_segments + 1));
+    for (int i = 0; i <= num_segments; i++)
+    {
+        const float a = amin + ((float)i / (float)num_segments) * (amax - amin);
+        dl->_Path.push_back(ImVec2(centre.x + cosf(a) * radii.x, centre.y + sinf(a) * radii.y));
+    }
+}
+void ImDrawListAddEllipse(ImDrawList *dl, const ImVec2 &centre, const ImVec2 &radii, const ImU32 &fillColor, const ImU32 &strokeColor, int num_segments, float strokeThickness, bool antiAliased)   {
+    if (!dl) return;
+    const float a_max = IM_PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
+    ImDrawListPathArcTo(dl,centre, radii, 0.0f, a_max, num_segments);
+    ImDrawListPathFillAndStroke(dl,fillColor,strokeColor,true,strokeThickness,antiAliased);
+}
+void ImDrawListAddEllipseWithVerticalGradient(ImDrawList *dl, const ImVec2 &centre, const ImVec2 &radii, const ImU32 &fillColorTop, const ImU32 &fillColorBottom, const ImU32 &strokeColor, int num_segments, float strokeThickness, bool antiAliased)   {
+    if (!dl) return;
+    const float a_max = IM_PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
+    ImDrawListPathArcTo(dl,centre, radii, 0.0f, a_max, num_segments);
+    ImDrawListPathFillWithVerticalGradientAndStroke(dl,fillColorTop,fillColorBottom,strokeColor,true,strokeThickness,antiAliased,centre.y-radii.y,centre.y+radii.y);
+}
+void ImDrawListAddCircle(ImDrawList *dl, const ImVec2 &centre, float radius, const ImU32 &fillColor, const ImU32 &strokeColor, int num_segments, float strokeThickness, bool antiAliased)   {
+    if (!dl) return;
+    const ImVec2 radii(radius,radius);
+    const float a_max = IM_PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
+    ImDrawListPathArcTo(dl,centre, radii, 0.0f, a_max, num_segments);
+    ImDrawListPathFillAndStroke(dl,fillColor,strokeColor,true,strokeThickness,antiAliased);
+}
+void ImDrawListAddCircleWithVerticalGradient(ImDrawList *dl, const ImVec2 &centre, float radius, const ImU32 &fillColorTop, const ImU32 &fillColorBottom, const ImU32 &strokeColor, int num_segments, float strokeThickness, bool antiAliased)   {
+    if (!dl) return;
+    const ImVec2 radii(radius,radius);
+    const float a_max = IM_PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
+    ImDrawListPathArcTo(dl,centre, radii, 0.0f, a_max, num_segments);
+    ImDrawListPathFillWithVerticalGradientAndStroke(dl,fillColorTop,fillColorBottom,strokeColor,true,strokeThickness,antiAliased,centre.y-radius,centre.y+radius);
+}
+void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColor, float fillColorGradientDeltaIn0_05, const ImU32 &strokeColor, float rounding, int rounding_corners, float strokeThickness, bool antiAliased)
+{
+    ImU32 fillColorTop,fillColorBottom;GetVerticalGradientTopAndBottomColors(fillColor,fillColorGradientDeltaIn0_05,fillColorTop,fillColorBottom);
+    ImDrawListAddRectWithVerticalGradient(dl,a,b,fillColorTop,fillColorBottom,strokeColor,rounding,rounding_corners,strokeThickness,antiAliased);
+}
+#endif //NO_IMGUIHELPER_DRAW_METHODS
 
 
 } // namespace Imgui

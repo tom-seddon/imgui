@@ -9,13 +9,14 @@ DESTDIR = ./
 # START USER EDITABLE AREA -----------------------------------------------------------------------
 
 # When commented out, main.cpp is built, otherwise main2.cpp is built
-#CONFIG+= use_main2
+CONFIG+= use_main2
 #CONFIG+= use_main3  # dev only
+#CONFIG+= use_main4  # dev only
 
 # Only one of these must be active:
-CONFIG+= use_glfw3
+#CONFIG+= use_glfw3
 #CONFIG+= use_glut
-#CONFIG+= use_sdl2
+CONFIG+= use_sdl2
 #CONFIG+= use_winapi
 # Optional, but it might be mandatory for IMGUI_USE_WINAPI (i.e. CONFIG+= use_winapi)
 #CONFIG+= use_glew
@@ -68,12 +69,18 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguinodegrapheditor/imguinodegrapheditor.h"   \
 	   $$IMGUI_BASE_PATH"/addons/imguicodeeditor/imguicodeeditor.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguicodeeditor/utf8helper.h"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiscintilla/imguiscintilla.h"
+	   $$IMGUI_BASE_PATH"/addons/imguitabwindow/imguitabwindow.h"
 
 SOURCES+=  $$IMGUI_BASE_PATH"/imgui.cpp" \
 	   $$IMGUI_BASE_PATH"/imgui_draw.cpp" \
 	   $$IMGUI_BASE_PATH"/imgui_demo.cpp" \ #\ # optional: for ImGui::ShowTestWindow()
 
+use_main4 {
+SOURCES+=main4.cpp
+TARGET = imgui_addons_example4
+DEFINES+=NO_IMGUISTYLESERIALIZER NO_IMGUIDATECHOOSER NO_IMGUILISTVIEW NO_IMGUIGRAPHEDITOR NO_IMGUITOOLBAR NO_IMGUIPANELMANAGER NO_IMGUIFILESYSTEM NO_IMGUICODEEDITOR
+}  #use_main4
+!use_main4 {
 use_main3 {
 SOURCES+=main3.cpp
 TARGET = imgui_addons_example3
@@ -89,6 +96,7 @@ SOURCES+=main.cpp
 TARGET = imgui_addons_example1
 } #!use_main2
 } #!use_main3
+} #!use_main4
 
 imguifilesystem_supports_zip_files {
 DEFINES+=IMGUI_USE_MINIZIP
@@ -113,7 +121,7 @@ OTHER_FILES+= $$IMGUI_BASE_PATH"/addons/imgui_user.inl"				    \
 	   $$IMGUI_BASE_PATH"/addons/imguistring/imguistring.cpp"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguinodegrapheditor/imguinodegrapheditor.cpp" \
 	   $$IMGUI_BASE_PATH"/addons/imguicodeeditor/imguicodeeditor.cpp"	    \
-	   $$IMGUI_BASE_PATH"/addons/imguiscintilla/imguiscintilla.cpp"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguitabwindow/imguitabwindow.cpp"		    \
 	   README_FIRST.txt
 
 

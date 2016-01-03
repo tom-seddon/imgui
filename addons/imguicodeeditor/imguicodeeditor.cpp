@@ -30,6 +30,7 @@
 
 namespace ImGui {
 
+namespace CodeEditorDrawListHelper {
 // Extensions to ImDrawList:
 static void ImDrawListPathFillAndStroke(ImDrawList* dl,const ImU32& fillColor,const ImU32& strokeColor,bool strokeClosed=false, float strokeThickness = 1.0f, bool antiAliased = true)    {
     if (!dl) return;
@@ -67,7 +68,7 @@ static void ImDrawListAddCircle(ImDrawList* dl,const ImVec2& centre, float radiu
     ImDrawListPathArcTo(dl,centre, radii, 0.0f, a_max, num_segments);
     ImDrawListPathFillAndStroke(dl,fillColor,strokeColor,true,strokeThickness,antiAliased);
 }
-
+} //CodeEditorDrawListHelper
 
 static inline int CountUTF8Chars(const char* text_begin, const char* text_end=NULL)   {
 #   ifndef IMGUICODEEDITOR_USE_UTF8HELPER_H
@@ -2166,7 +2167,7 @@ void CodeEditor::render()   {
                             startPos.x+= windowPos.x - ImGui::GetScrollX() - lineHeight*0.09f;
                             startPos.y+= windowPos.y - ImGui::GetScrollY();
                             ImDrawList* drawList = ImGui::GetWindowDrawList();
-                            ImGui::ImDrawListAddRect(drawList,startPos,ImVec2(startPos.x+regionNameSize.x+lineHeight*0.25f,startPos.y+regionNameSize.y),bgColor,0,0.f,0x0F,0);
+                            ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,startPos,ImVec2(startPos.x+regionNameSize.x+lineHeight*0.25f,startPos.y+regionNameSize.y),bgColor,0,0.f,0x0F,0);
                         }
                         // Normal folding
                         ImGui::Text("%s",line->foldingStartTag->title.c_str());
@@ -2183,7 +2184,7 @@ void CodeEditor::render()   {
                             startPos.x+= windowPos.x - ImGui::GetScrollX() - lineHeight*0.18f;
                             startPos.y+= windowPos.y - ImGui::GetScrollY();
                             ImDrawList* drawList = ImGui::GetWindowDrawList();
-                            ImGui::ImDrawListAddRect(drawList,startPos,ImVec2(startPos.x+regionNameSize.x+lineHeight*0.5f,startPos.y+regionNameSize.y),ImColor(style.color_folded_region_background),ImColor(style.color_syntax_highlighting[sht]),0.f,0x0F,folded_region_contour_thickness);
+                            ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,startPos,ImVec2(startPos.x+regionNameSize.x+lineHeight*0.5f,startPos.y+regionNameSize.y),ImColor(style.color_folded_region_background),ImColor(style.color_syntax_highlighting[sht]),0.f,0x0F,folded_region_contour_thickness);
 
                             // Draw text
                             ImGui::Text("%s",regionName);
@@ -2304,11 +2305,11 @@ void CodeEditor::render()   {
             screenEndPos.y = endPos.y + windowPos.y - ImGui::GetScrollY();
             if (line->attributes&Line::AT_ERROR) {
                 ImDrawList* drawList = ImGui::GetWindowDrawList();
-                ImGui::ImDrawListAddRect(drawList,screenStartPos,screenEndPos,style.color_icon_margin_error,style.color_icon_margin_contour,0.f,0x0F,icon_margin_contour_thickness);
+                ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,screenStartPos,screenEndPos,style.color_icon_margin_error,style.color_icon_margin_contour,0.f,0x0F,icon_margin_contour_thickness);
             }
             else if (line->attributes&Line::AT_WARNING) {
                 ImDrawList* drawList = ImGui::GetWindowDrawList();
-                ImGui::ImDrawListAddRect(drawList,screenStartPos,screenEndPos,style.color_icon_margin_warning,style.color_icon_margin_contour,0.f,0x0F,icon_margin_contour_thickness);
+                ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,screenStartPos,screenEndPos,style.color_icon_margin_warning,style.color_icon_margin_contour,0.f,0x0F,icon_margin_contour_thickness);
             }
             if (line->attributes&Line::AT_BREAKPOINT) {
                 ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -2316,7 +2317,7 @@ void CodeEditor::render()   {
                 const float radius = (screenEndPos.y-screenStartPos.y)*0.4f;
                 //drawList->AddCircleFilled(center,radius,style.color_margin_breakpoint);
                 //drawList->AddCircle(center,radius,style.color_margin_contour);
-                ImGui::ImDrawListAddCircle(drawList,center,radius,style.color_icon_margin_breakpoint,style.color_icon_margin_contour,12,icon_margin_contour_thickness);
+                ImGui::CodeEditorDrawListHelper::ImDrawListAddCircle(drawList,center,radius,style.color_icon_margin_breakpoint,style.color_icon_margin_contour,12,icon_margin_contour_thickness);
 
             }
             if (line->attributes&Line::AT_BOOKMARK) {
@@ -2325,8 +2326,8 @@ void CodeEditor::render()   {
                 const float radius = (screenEndPos.y-screenStartPos.y)*0.25f;
                 const ImVec2 a(center.x-radius,center.y-radius);
                 const ImVec2 b(center.x+radius,center.y+radius);
-                //ImGui::ImDrawListAddRect(drawList,a,b,style.color_margin_bookmark,style.color_margin_contour);
-                ImGui::ImDrawListAddRect(drawList,a,b,style.color_icon_margin_bookmark,style.color_icon_margin_contour,0.f,0x0F,icon_margin_contour_thickness);
+                //ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,a,b,style.color_margin_bookmark,style.color_margin_contour);
+                ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,a,b,style.color_icon_margin_bookmark,style.color_icon_margin_contour,0.f,0x0F,icon_margin_contour_thickness);
             }
             ImGui::SetCursorPos(endPos);
 

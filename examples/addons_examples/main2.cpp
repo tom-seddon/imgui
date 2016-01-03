@@ -3,9 +3,35 @@
 GLuint myImageTextureId = 0;
 GLuint myImageTextureId2 = 0;
 
+#ifndef NO_IMGUITABWINDOW
+void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent,void* userPtr) {
+    // Users will use tab->userPtr here most of the time
+    ImGui::Spacing();ImGui::Separator();
+    if (tab) ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
+    else {ImGui::Text("EMPTY TAB LABEL DOCKING SPACE.");ImGui::Text("PLEASE DRAG AND DROP TAB LABELS HERE!");}
+    ImGui::Separator();ImGui::Spacing();
+}
+void TabLabelPopupMenuProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent,void* userPtr) {
+    if (ImGui::BeginPopup(ImGui::TabWindow::GetTabLabelPopupMenuName()))   {
+        ImGui::PushID(tab->getLabel());
+        ImGui::Text("\"%s\"",tab->getLabel());
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::MenuItem("Entry 1");
+        ImGui::MenuItem("Entry 2");
+        ImGui::MenuItem("Entry 3");
+        ImGui::MenuItem("Entry 4");
+        ImGui::MenuItem("Entry 5");
+        ImGui::PopID();
+        ImGui::EndPopup();
+    }
+
+}
+#endif //NO_IMGUITABWINDOW
+
 void InitGL()	// Mandatory
 {
-
 /*
 if (!ImGui::LoadStyle("./myimgui.style",ImGui::GetStyle()))   {
     fprintf(stderr,"Warning: \"./myimgui.style\" not present.\n");
@@ -14,7 +40,6 @@ if (!ImGui::LoadStyle("./myimgui.style",ImGui::GetStyle()))   {
 
 if (!myImageTextureId) myImageTextureId = ImImpl_LoadTexture("./Tile8x8.png");
 if (!myImageTextureId2) myImageTextureId2 = ImImpl_LoadTexture("./myNumbersTexture.png");
-
 }
 
 static ImGui::PanelManager mgr;
@@ -455,7 +480,23 @@ void DrawGL()	// Mandatory
                 ImGui::SetNextWindowPos(mgr.getCentralQuadPosition());
                 ImGui::SetNextWindowSize(mgr.getCentralQuadSize());
                 if (ImGui::Begin("Central Window"))    {
+#                   ifndef NO_IMGUITABWINDOW
+                    static ImGui::TabWindow tabWindow;
+                    if (!tabWindow.isInited()) {
+                        ImGui::TabWindow::SetWindowContentDrawerCallback(&TabContentProvider,NULL); // Mandatory
+                        ImGui::TabWindow::SetTabLabelPopupMenuDrawerCallback(&TabLabelPopupMenuProvider,NULL);  // Optional (if tou need context-menu)
+
+                        static const char* tabNames[] = {"Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
+                        static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
+                        static const char* tabTooltips[numTabs] = {"Render Tab Tooltip","Layers Tab Tooltip","Scene Tab Tooltip","","Object Tab Tooltip","","","","","Tired to add tooltips...",""};
+                        for (int i=0;i<numTabs;i++) {
+                            tabWindow.addTabLabel(tabNames[i],NULL,tabTooltips[i]); // see additional args to prevent a tab from (MMB) closing
+                        }
+                    }
+                    tabWindow.render(); // Must be called inside "its" window (and sets isInited() to false)
+#                   else // NO_IMGUITABWINDOW
                     ImGui::Text("Example central window");
+#                   endif // NO_IMGUITABWINDOW
                 }
                 ImGui::End();
             }
@@ -473,7 +514,7 @@ void DestroyGL()    // Mandatory
 
 
 
-//#   define USE_ADVANCED_SETUP
+#   define USE_ADVANCED_SETUP
 
 
 // Application code
@@ -525,7 +566,9 @@ int main(int argc, char** argv)
     fontSizeInPixels,
     &ranges[0]
     );
-    gImGuiInitParams.gFpsClamp = 20.0f;                                 // Optional Max allowed FPS (default -1 => unclamped). Useful for editors and to save GPU and CPU power.
+    //gImGuiInitParams.gFpsClampInsideImGui = 30.0f;                                 // Optional Max allowed FPS (default -1 => unclamped). Useful for editors and to save GPU and CPU power.
+    //gImGuiInitParams.gFpsClampOutsideImGui = 15.0f;                                 // Optional Max allowed FPS (default -1 => unclamped). Useful for editors and to save GPU and CPU power.
+
 
     ImImpl_Main(&gImGuiInitParams,argc,argv);
 #   endif //USE_ADVANCED_SETUP

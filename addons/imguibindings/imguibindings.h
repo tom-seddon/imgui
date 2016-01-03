@@ -260,6 +260,7 @@ extern void ImImpl_RenderDrawLists(ImDrawData* draw_data);
 
 
 extern void WaitFor(unsigned int ms);
+extern void ImImpl_FlipTexturesVerticallyOnLoad(bool flag_true_if_should_flip);
 extern GLuint ImImpl_LoadTexture(const char* filename,int req_comp=0,GLenum magFilter=GL_LINEAR,GLenum minFilter=GL_LINEAR_MIPMAP_LINEAR,GLenum wrapS=GL_REPEAT,GLenum wrapT=GL_REPEAT);
 extern GLuint ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory,int filenameInMemorySize,int req_comp=0,GLenum magFilter=GL_LINEAR,GLenum minFilter=GL_LINEAR_MIPMAP_LINEAR,GLenum wrapS=GL_REPEAT,GLenum wrapT=GL_REPEAT);
 

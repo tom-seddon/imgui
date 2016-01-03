@@ -173,6 +173,17 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     ImGui::InitPushFontOverload();  // Allows us to use ImGui::PushFont(fontIndex). Can be called in InitGL() instead and the system is self-inited on the first call to ImGui::PushFont(), but better stay on the safe side.
 #   endif //NO_IMGUIHELPER
 
+
+
+// We overuse this method to load textures from other imgui addons
+#   ifndef NO_IMGUITABWINDOW
+    if (!ImGui::TabWindow::DockPanelIconTextureID)  {
+        int dockPanelImageBufferSize = 0;
+        const unsigned char* dockPanelImageBuffer = ImGui::TabWindow::GetDockPanelIconImagePng(&dockPanelImageBufferSize);
+        ImGui::TabWindow::DockPanelIconTextureID = reinterpret_cast<ImTextureID>(ImImpl_LoadTextureFromMemory(dockPanelImageBuffer,dockPanelImageBufferSize));
+    }
+#   endif //NO_IMGUITABWINDOW
+
 }
 
 void DestroyImGuiFontTexture()	{
@@ -186,6 +197,15 @@ void DestroyImGuiFontTexture()	{
         glDeleteTextures( 1, &gImImplPrivateParams.fontTex );
         gImImplPrivateParams.fontTex = 0;
     }
+
+// We overuse this method to delete textures from other imgui addons
+#   ifndef NO_IMGUITABWINDOW
+    if (ImGui::TabWindow::DockPanelIconTextureID) {
+        GLuint texId = *((GLuint*)(&ImGui::TabWindow::DockPanelIconTextureID)); // just to avoid -permissive
+        glDeleteTextures(1,&texId);
+        ImGui::TabWindow::DockPanelIconTextureID = NULL;
+    }
+#   endif //NO_IMGUITABWINDOW
 }
 
 #ifndef _WIN32
@@ -206,6 +226,10 @@ void WaitFor(unsigned int ms)    {
   }
   if (delta > 0L) usleep(delta);
 #endif
+}
+
+void ImImpl_FlipTexturesVerticallyOnLoad(bool flag_true_if_should_flip)   {
+    stbi_set_flip_vertically_on_load(flag_true_if_should_flip);
 }
 
 GLuint ImImpl_LoadTexture(const char* filename,int req_comp,GLenum magFilter,GLenum minFilter,GLenum wrapS,GLenum wrapT)  {

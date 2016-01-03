@@ -38,6 +38,9 @@
 #ifndef NO_IMGUIHELPER
 #include "./imguihelper/imguihelper.h"
 #endif //NO_IMGUIHELPER
+#ifndef NO_IMGUITABWINDOW
+#include "./imguitabwindow/imguitabwindow.h"
+#endif //NO_IMGUITABWINDOW
 
 #undef IMGUI_USE_AUTO_BINDING
 #if (defined(IMGUI_USE_GLUT_BINDING) || defined(IMGUI_USE_SDL2_BINDING) || defined(IMGUI_USE_GLFW_BINDING) || defined(IMGUI_USE_WINAPI_BINDING))

@@ -24,6 +24,21 @@ void TextV(int fntIndex,const char* fmt, va_list args);
 void Text(int fntIndex,const char* fmt, ...) IM_PRINTFARGS(2);
 #endif //NO_IMGUIHELPER_FONT_METHODS
 
+#ifndef NO_IMGUIHELPER_DRAW_METHODS
+// Extensions to ImDrawList
+void ImDrawListAddConvexPolyFilledWithVerticalGradient(ImDrawList* dl, const ImVec2* points, const int points_count, ImU32 colTop, ImU32 colBot, bool anti_aliased, float miny=-1.f, float maxy=-1.f);
+void ImDrawListPathFillWithVerticalGradientAndStroke(ImDrawList* dl, const ImU32& fillColorTop, const ImU32& fillColorBottom, const ImU32& strokeColor, bool strokeClosed=false, float strokeThickness = 1.0f, bool antiAliased = true, float miny=-1.f, float maxy=-1.f);
+void ImDrawListPathFillAndStroke(ImDrawList* dl,const ImU32& fillColor,const ImU32& strokeColor,bool strokeClosed=false, float strokeThickness = 1.0f, bool antiAliased = true);
+void ImDrawListAddRect(ImDrawList* dl,const ImVec2& a, const ImVec2& b,const ImU32& fillColor,const ImU32& strokeColor,float rounding = 0.0f, int rounding_corners = 0x0F,float strokeThickness = 1.0f,bool antiAliased = true);
+void ImDrawListAddRectWithVerticalGradient(ImDrawList* dl,const ImVec2& a, const ImVec2& b,const ImU32& fillColorTop,const ImU32& fillColorBottom,const ImU32& strokeColor,float rounding = 0.0f, int rounding_corners = 0x0F,float strokeThickness = 1.0f,bool antiAliased = true);
+void ImDrawListAddRectWithVerticalGradient(ImDrawList* dl,const ImVec2& a, const ImVec2& b,const ImU32& fillColor,float fillColorGradientDeltaIn0_05,const ImU32& strokeColor,float rounding = 0.0f, int rounding_corners = 0x0F,float strokeThickness = 1.0f,bool antiAliased = true);
+void ImDrawListPathArcTo(ImDrawList* dl,const ImVec2& centre,const ImVec2& radii, float amin, float amax, int num_segments = 10);
+void ImDrawListAddEllipse(ImDrawList* dl,const ImVec2& centre, const ImVec2& radii,const ImU32& fillColor,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
+void ImDrawListAddEllipseWithVerticalGradient(ImDrawList* dl,const ImVec2& centre, const ImVec2& radii,const ImU32& fillColorTop,const ImU32& fillColorBottom,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
+void ImDrawListAddCircle(ImDrawList* dl,const ImVec2& centre, float radius,const ImU32& fillColor,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
+void ImDrawListAddCircleWithVerticalGradient(ImDrawList* dl,const ImVec2& centre, float radius,const ImU32& fillColorTop,const ImU32& fillColorBottom,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
+#endif //NO_IMGUIHELPER_DRAW_METHODS
+
 #   ifdef IMGUI_USE_ZLIB	// requires linking to library -lZlib
 // Two methods that fill rv and return true on success
 #       ifndef NO_IMGUIHELPER_SERIALIZATION

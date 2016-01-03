@@ -12,6 +12,9 @@
 #ifndef NO_IMGUIHELPER
 #include "./imguihelper/imguihelper.cpp"
 #endif //NO_IMGUIHELPER
+#ifndef NO_IMGUITABWINDOW
+#include "./imguitabwindow/imguitabwindow.cpp"
+#endif //NO_IMGUITABWINDOW
 
 #ifdef IMGUI_USE_AUTO_BINDING	// defined in imgui_user.h
 #	ifdef __EMSCRIPTEN__
