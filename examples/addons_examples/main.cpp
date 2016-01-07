@@ -369,8 +369,6 @@ void DrawGL()	// Mandatory
 #           endif //NO_IMGUISTYLESERIALIZER
 
 
-
-
             // imguifilesystem tests:
             ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguifilesystem");ImGui::Separator();
 #           ifndef NO_IMGUIFILESYSTEM
@@ -527,13 +525,19 @@ void DrawGL()	// Mandatory
             static bool popup_open = false;static int threeStaticInts[3]={0,0,0};
             ImGui::InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu("ITMWHS2", buffer2, 1024, height,popup_open,threeStaticInts);
             ImGui::PopID();
+#           else //NO_IMGUIVARIOUSCONTROLS
+            ImGui::Text("%s","Excluded from this build.\n");
+#           endif //NO_IMGUIVARIOUSCONTROLS
 
+            // TabLabels Test:
+            ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguitabwindow");ImGui::Separator();
+#           ifndef NO_IMGUITABWINDOW
             // Based on the code by krys-spectralpixel (https://github.com/krys-spectralpixel), posted here: https://github.com/ocornut/imgui/issues/261
             ImGui::Spacing();
             ImGui::Text("TabLabels (based on the code by krys-spectralpixel):");
             static const char* tabNames[] = {"Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
             static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
-            static const char* tabTooltips[numTabs] = {"Render Tab Tooltip","This tab cannot be closed with MMB","Scene Tab Tooltip","","Object Tab Tooltip","","","","","Tired to add tooltips...",""};
+            static const char* tabTooltips[numTabs] = {"Render Tab Tooltip","This tab cannot be closed","Scene Tab Tooltip","","Object Tab Tooltip","","","","","Tired to add tooltips...",""};
             static int tabItemOrdering[numTabs] = {0,1,2,3,4,5,6,7,8,9,10,11};
             static int selectedTab = 0;
             static int optionalHoveredTab = 0;
@@ -553,11 +557,9 @@ void DrawGL()	// Mandatory
             ImGui::SameLine();if (ImGui::SmallButton("Reset Tabs")) {for (int i=0;i<numTabs;i++) tabItemOrdering[i] = i;}
             //if (optionalHoveredTab>=0) ImGui::Text("Mouse is hovering Tab Label: \"%s\".\n\n",tabNames[optionalHoveredTab]);
 
-
-#           else //NO_IMGUIVARIOUSCONTROLS
+#           else //NO_IMGUITABWINDOW
             ImGui::Text("%s","Excluded from this build.\n");
-#           endif //NO_IMGUIVARIOUSCONTROLS
-
+#           endif //NO_IMGUITABWINDOW
 
             // ListView Test:
             ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguilistview");ImGui::Separator();

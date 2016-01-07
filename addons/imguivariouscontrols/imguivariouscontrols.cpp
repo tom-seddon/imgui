@@ -691,6 +691,7 @@ bool InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu(const char *la
 }
 
 
+#ifdef NEVER
 // Based on the code by krys-spectralpixel (https://github.com/krys-spectralpixel), posted here: https://github.com/ocornut/imgui/issues/261
 bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const char** tabLabelTooltips, bool wrapMode, int *pOptionalHoveredIndex, int* pOptionalItemOrdering, bool allowTabReorder, bool allowTabClosingThroughMMB, int *pOptionalClosedTabIndex, int *pOptionalClosedTabIndexInsideItemOrdering) {
     ImGuiStyle& style = ImGui::GetStyle();
@@ -859,7 +860,7 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
 
     return selection_changed;
 }
-
+#endif //NEVER
 
 
 /* // Snippet by Omar. To evalutate. But in main.cpp thare's another example that supports correct window resizing.

@@ -2,7 +2,7 @@
 //#include <stdio.h> // fprintf
 
 
-bool gImGuiDockpanelManagerExtendedStyle = false;
+bool gImGuiDockpanelManagerExtendedStyle = true;
 
 // Static Helper Methods:
 namespace ImGui {

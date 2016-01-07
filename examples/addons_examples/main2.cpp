@@ -7,7 +7,24 @@ GLuint myImageTextureId2 = 0;
 void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent,void* userPtr) {
     // Users will use tab->userPtr here most of the time
     ImGui::Spacing();ImGui::Separator();
-    if (tab) ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
+    if (tab) {
+        ImGui::PushID(tab);
+        if (strcmp(tab->getLabel(),"Style")!=0) ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
+        else {
+            ImGui::Spacing();
+            ImGui::Text("Tab Labels:");
+            ImGui::Separator();
+            ImGui::TabLabelStyle::Edit(ImGui::TabLabelStyle::Get());
+            ImGui::Spacing();
+
+            ImGui::Separator();
+            ImGui::Text("TabWindow Splitter:");
+            ImGui::Separator();ImGui::Spacing();
+            ImGui::DragFloat("Splitter Size",&ImGui::TabWindow::SplitterSize,1,4,16,"%1.0f");
+            ImGui::ColorEdit3("Splitter Color",&ImGui::TabWindow::SplitterColor.x);
+        }
+        ImGui::PopID();
+    }
     else {ImGui::Text("EMPTY TAB LABEL DOCKING SPACE.");ImGui::Text("PLEASE DRAG AND DROP TAB LABELS HERE!");}
     ImGui::Separator();ImGui::Spacing();
 }
@@ -486,11 +503,11 @@ void DrawGL()	// Mandatory
                         ImGui::TabWindow::SetWindowContentDrawerCallback(&TabContentProvider,NULL); // Mandatory
                         ImGui::TabWindow::SetTabLabelPopupMenuDrawerCallback(&TabLabelPopupMenuProvider,NULL);  // Optional (if tou need context-menu)
 
-                        static const char* tabNames[] = {"Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
+                        static const char* tabNames[] = {"Style","Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
                         static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
-                        static const char* tabTooltips[numTabs] = {"Render Tab Tooltip","Layers Tab Tooltip","Scene Tab Tooltip","","Object Tab Tooltip","","","","","Tired to add tooltips...",""};
+                        static const char* tabTooltips[numTabs] = {"Edit the look of the tab labels","Render Tab Tooltip","Layers Tab Tooltip","Scene Tab Tooltip","","Object Tab Tooltip","","","","","Tired to add tooltips...",""};
                         for (int i=0;i<numTabs;i++) {
-                            tabWindow.addTabLabel(tabNames[i],NULL,tabTooltips[i]); // see additional args to prevent a tab from (MMB) closing
+                            tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
                         }
                     }
                     tabWindow.render(); // Must be called inside "its" window (and sets isInited() to false)

@@ -252,7 +252,7 @@ bool InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu(const char* la
  * allowTabClosingThroughMMB (requires pOptionalItemOrdering): closes the tabs when MMB is clicked on them, by setting the tab value in pOptionalItemOrdering to -1.
  * pOptionalClosedTabIndex (requires allowTabClosingThroughMMB): out variable (int pointer) that returns the index of the closed tab in last call or -1.
 */
-bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const char** tabLabelTooltips=NULL , bool wrapMode=true, int* pOptionalHoveredIndex=NULL, int* pOptionalItemOrdering=NULL, bool allowTabReorder=true, bool allowTabClosingThroughMMB=true, int* pOptionalClosedTabIndex=NULL,int * pOptionalClosedTabIndexInsideItemOrdering=NULL);
+//bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const char** tabLabelTooltips=NULL , bool wrapMode=true, int* pOptionalHoveredIndex=NULL, int* pOptionalItemOrdering=NULL, bool allowTabReorder=true, bool allowTabClosingThroughMMB=true, int* pOptionalClosedTabIndex=NULL,int * pOptionalClosedTabIndexInsideItemOrdering=NULL);
 
 } // namespace ImGui
 

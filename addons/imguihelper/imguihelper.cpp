@@ -10,7 +10,7 @@
 #ifndef NO_IMGUIHELPER_FONTMETHODS
 static ImVector<ImFont*> gImGuiFonts;
 #endif // NO_IMGUIHELPER_FONTMETHODS
-
+#include <imgui_internal.h>
 
 
 namespace ImGui {
@@ -105,27 +105,27 @@ void Text(int fntIndex, const char *fmt,...)    {
 inline static void GetVerticalGradientTopAndBottomColors(ImU32 c,float fillColorGradientDeltaIn0_05,ImU32& tc,ImU32& bc)  {
     if (fillColorGradientDeltaIn0_05<=0) {tc=bc=c;return;}
     if (fillColorGradientDeltaIn0_05>0.5f) fillColorGradientDeltaIn0_05=0.5f;
-    const ImVec4 cf = ImColor(c);
+    const ImVec4 cf = ColorConvertU32ToFloat4(c);
     ImVec4 tmp(cf.x+fillColorGradientDeltaIn0_05<=1.f?cf.x+fillColorGradientDeltaIn0_05:1.f,
                cf.y+fillColorGradientDeltaIn0_05<=1.f?cf.y+fillColorGradientDeltaIn0_05:1.f,
                cf.z+fillColorGradientDeltaIn0_05<=1.f?cf.z+fillColorGradientDeltaIn0_05:1.f,
                cf.w+fillColorGradientDeltaIn0_05<=1.f?cf.w+fillColorGradientDeltaIn0_05:1.f);
-    tc = ImColor(tmp);
+    tc = ColorConvertFloat4ToU32(tmp);
     tmp=ImVec4(cf.x-fillColorGradientDeltaIn0_05>0.f?cf.x-fillColorGradientDeltaIn0_05:0.f,
                cf.y-fillColorGradientDeltaIn0_05>0.f?cf.y-fillColorGradientDeltaIn0_05:0.f,
                cf.z-fillColorGradientDeltaIn0_05>0.f?cf.z-fillColorGradientDeltaIn0_05:0.f,
                cf.w-fillColorGradientDeltaIn0_05>0.f?cf.w-fillColorGradientDeltaIn0_05:0.f);
-    bc = ImColor(tmp);
+    bc = ColorConvertFloat4ToU32(tmp);
 }
 inline static ImU32 GetVerticalGradient(const ImVec4& ct,const ImVec4& cb,float DH,float H)    {
     IM_ASSERT(H!=0);
     const float fa = DH/H;
     const float fc = (1.f-fa);
-    return ImColor(
+    return ColorConvertFloat4ToU32(ImVec4(
         ct.x * fc + cb.x * fa,
         ct.y * fc + cb.y * fa,
         ct.z * fc + cb.z * fa,
-        ct.w * fc + cb.w * fa
+        ct.w * fc + cb.w * fa)
     );
 }
 void ImDrawListAddConvexPolyFilledWithVerticalGradient(ImDrawList *dl, const ImVec2 *points, const int points_count, ImU32 colTop, ImU32 colBot, bool anti_aliased,float miny,float maxy)
@@ -150,8 +150,8 @@ void ImDrawListAddConvexPolyFilledWithVerticalGradient(ImDrawList *dl, const ImV
         }
     }
     height = maxy-miny;
-    const ImVec4 colTopf = ImColor(colTop);
-    const ImVec4 colBotf = ImColor(colBot);
+    const ImVec4 colTopf = ColorConvertU32ToFloat4(colTop);
+    const ImVec4 colBotf = ColorConvertU32ToFloat4(colBot);
 
 
     if (anti_aliased)
@@ -237,7 +237,8 @@ void ImDrawListAddConvexPolyFilledWithVerticalGradient(ImDrawList *dl, const ImV
 }
 void ImDrawListPathFillWithVerticalGradientAndStroke(ImDrawList *dl, const ImU32 &fillColorTop, const ImU32 &fillColorBottom, const ImU32 &strokeColor, bool strokeClosed, float strokeThickness, bool antiAliased,float miny,float maxy)    {
     if (!dl) return;
-    if ((fillColorTop >> 24) != 0 || (fillColorBottom >> 24) != 0) ImDrawListAddConvexPolyFilledWithVerticalGradient(dl, dl->_Path.Data, dl->_Path.Size, fillColorTop, fillColorBottom, antiAliased,miny,maxy);
+    if (fillColorTop==fillColorBottom) dl->AddConvexPolyFilled(dl->_Path.Data,dl->_Path.Size, fillColorTop, antiAliased);
+    else if ((fillColorTop >> 24) != 0 || (fillColorBottom >> 24) != 0) ImDrawListAddConvexPolyFilledWithVerticalGradient(dl, dl->_Path.Data, dl->_Path.Size, fillColorTop, fillColorBottom, antiAliased,miny,maxy);
     if ((strokeColor>> 24)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
     dl->PathClear();
 }
@@ -299,7 +300,6 @@ void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, cons
     ImDrawListAddRectWithVerticalGradient(dl,a,b,fillColorTop,fillColorBottom,strokeColor,rounding,rounding_corners,strokeThickness,antiAliased);
 }
 #endif //NO_IMGUIHELPER_DRAW_METHODS
-
 
 } // namespace Imgui
 
