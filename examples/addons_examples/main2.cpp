@@ -9,20 +9,20 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
     ImGui::Spacing();ImGui::Separator();
     if (tab) {
         ImGui::PushID(tab);
-        if (strcmp(tab->getLabel(),"Style")!=0) ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
-        else {
+        if (tab->matchLabel("TabLabelStyle"))  {
+            bool changed = false;
             ImGui::Spacing();
             ImGui::Text("Tab Labels:");
             ImGui::Separator();
-            ImGui::TabLabelStyle::Edit(ImGui::TabLabelStyle::Get());
+            changed|=ImGui::TabLabelStyle::Edit(ImGui::TabLabelStyle::Get());
             ImGui::Spacing();
-
             ImGui::Separator();
-            ImGui::Text("TabWindow Splitter:");
-            ImGui::Separator();ImGui::Spacing();
-            ImGui::DragFloat("Splitter Size",&ImGui::TabWindow::SplitterSize,1,4,16,"%1.0f");
-            ImGui::ColorEdit3("Splitter Color",&ImGui::TabWindow::SplitterColor.x);
+            if (changed) tab->setModified(true);
         }
+        else if (tab->matchLabel("Style"))  {
+            ImGui::ShowStyleEditor();
+        }
+        else ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
         ImGui::PopID();
     }
     else {ImGui::Text("EMPTY TAB LABEL DOCKING SPACE.");ImGui::Text("PLEASE DRAG AND DROP TAB LABELS HERE!");}
@@ -30,11 +30,14 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
 }
 void TabLabelPopupMenuProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent,void* userPtr) {
     if (ImGui::BeginPopup(ImGui::TabWindow::GetTabLabelPopupMenuName()))   {
-        ImGui::PushID(tab->getLabel());
-        ImGui::Text("\"%s\"",tab->getLabel());
-        ImGui::Spacing();
+        ImGui::PushID(tab);
+        ImGui::Text("\"%.*s\" Menu",(int)(strlen(tab->getLabel())-(tab->getModified()?1:0)),tab->getLabel());
         ImGui::Separator();
-        ImGui::Spacing();
+        if (!tab->matchLabel("TabLabelStyle") && !tab->matchLabel("Style"))   {
+            if (tab->getModified()) {if (ImGui::MenuItem("Mark as not modified")) tab->setModified(false);}
+            else                    {if (ImGui::MenuItem("Mark as modified"))     tab->setModified(true);}
+            ImGui::Separator();
+        }
         ImGui::MenuItem("Entry 1");
         ImGui::MenuItem("Entry 2");
         ImGui::MenuItem("Entry 3");
@@ -432,7 +435,7 @@ void DrawGL()	// Mandatory
                         tileNumber=51;uv0=ImVec2((float)(tileNumber%8)/8.f,(float)(tileNumber/8)/8.f);uv1=ImVec2(uv0.x+1.f/8.f,uv0.y+1.f/8.f);
                         pane->addButtonOnly(ImGui::Toolbutton("Show/Hide Main Menu Bar",myImageTextureVoid,uv0,uv1,toggleButtonSize,true,gShowMainMenuBar));  // Here we add a manual toggle button and simply bind it to "gShowMainMenuBar"
                         tileNumber=5;uv0=ImVec2((float)(tileNumber%8)/8.f,(float)(tileNumber/8)/8.f);uv1=ImVec2(uv0.x+1.f/8.f,uv0.y+1.f/8.f);
-                        pane->addButtonOnly(ImGui::Toolbutton("Show/Hide central window",myImageTextureVoid,uv0,uv1,toggleButtonSize,true,false));  // Here we add a manual toggle button that we'll process later
+                        pane->addButtonOnly(ImGui::Toolbutton("Show/Hide central window",myImageTextureVoid,uv0,uv1,toggleButtonSize,true,true));  // Here we add a manual toggle button that we'll process later
 
                     }
                 }
@@ -503,9 +506,9 @@ void DrawGL()	// Mandatory
                         ImGui::TabWindow::SetWindowContentDrawerCallback(&TabContentProvider,NULL); // Mandatory
                         ImGui::TabWindow::SetTabLabelPopupMenuDrawerCallback(&TabLabelPopupMenuProvider,NULL);  // Optional (if tou need context-menu)
 
-                        static const char* tabNames[] = {"Style","Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
+                        static const char* tabNames[] = {"TabLabelStyle","Render","Layers","Style","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
                         static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
-                        static const char* tabTooltips[numTabs] = {"Edit the look of the tab labels","Render Tab Tooltip","Layers Tab Tooltip","Scene Tab Tooltip","","Object Tab Tooltip","","","","","Tired to add tooltips...",""};
+                        static const char* tabTooltips[numTabs] = {"Edit the look of the tab labels","Render Tab Tooltip","Layers Tab Tooltip","Edit the main ImGui style","non-draggable","Object Tab Tooltip","","","","non-draggable","Tired to add tooltips...",""};
                         for (int i=0;i<numTabs;i++) {
                             tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
                         }

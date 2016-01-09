@@ -184,6 +184,9 @@ const char* TabLabelStyle::ColorNames[TabLabelStyle::Col_TabLabel_Count] = {
 "Col_TabLabelSelected","Col_TabLabelSelectedHovered","Col_TabLabelSelectedActive","Col_TabLabelSelectedBorder",
 "Col_TabLabelSelectedText","Col_TabLabelCloseButtonHovered","Col_TabLabelCloseButtonActive","Col_TabLabelCloseButtonBorder","Col_TabLabelCloseButtonTextHovered"
 };
+const char* TabLabelStyle::FontStyleNames[TabLabelStyle::FONT_STYLE_COUNT]={"FONT_STYLE_NORMAL","FONT_STYLE_BOLD","FONT_STYLE_ITALIC","FONT_STYLE_BOLD_ITALIC"};
+const char* TabLabelStyle::TabStateNames[TabLabelStyle::TAB_STATE_COUNT]={"TAB_STATE_NORMAL","TAB_STATE_SELECTED","TAB_STATE_MODIFIED","TAB_STATE_SELECTED_MODIFIED"};
+const ImFont* TabLabelStyle::ImGuiFonts[TabLabelStyle::FONT_STYLE_COUNT]={NULL,NULL,NULL,NULL};
 // These bit operations are probably non-endian independent, but ImGui uses them too and so do I.
 inline static ImU32 ColorMergeWithStyleAlpha(ImU32 c) {
     ImU32 alpha = ((float)(c>>24))*GImGui->Style.Alpha;
@@ -193,19 +196,36 @@ inline static ImU32 ColorMergeWithStyleAlpha(ImU32 c,float alphaMult) {
     ImU32 alpha = ((float)(c>>24))*alphaMult;
     return ((c&0x00FFFFFF)|(alpha<<24));
 }
+inline static ImU32 ColorDarken(ImU32 c,float value,float optionalAlphaToSet=-1.f) {
+    ImVec4 f = ImGui::ColorConvertU32ToFloat4(c);
+    f.x-=value;if (f.x<0) f.x=0;
+    f.y-=value;if (f.y<0) f.y=0;
+    f.z-=value;if (f.z<0) f.z=0;
+    if (optionalAlphaToSet>=0 && optionalAlphaToSet<=1) f.w = optionalAlphaToSet;
+    return ImGui::ColorConvertFloat4ToU32(f);
+}
+inline static ImU32 ColorLighten(ImU32 c,float value,float optionalAlphaToSet=-1.f) {
+    ImVec4 f = ImGui::ColorConvertU32ToFloat4(c);
+    f.x+=value;if (f.x>1) f.x=1;
+    f.y+=value;if (f.y>1) f.y=1;
+    f.z+=value;if (f.z>1) f.z=1;
+    if (optionalAlphaToSet>=0 && optionalAlphaToSet<=1) f.w = optionalAlphaToSet;
+    return ImGui::ColorConvertFloat4ToU32(f);
+}
 TabLabelStyle::TabLabelStyle()    {
+
     colors[Col_TabLabel]                   = ImColor(39,44,48,255);
     colors[Col_TabLabelHovered]            = ImColor(59,64,68,255);
     colors[Col_TabLabelActive]             = ImColor(78,86,82,255);
     colors[Col_TabLabelBorder]             = ImColor(23,27,30,255);
     colors[Col_TabLabelText]               = ImColor(160,164,167,255);
 
-    const float alphaSelected = .35f;
-    colors[Col_TabLabelSelected]           = ColorMergeWithStyleAlpha(colors[Col_TabLabel],alphaSelected);
-    colors[Col_TabLabelSelectedHovered]    = ColorMergeWithStyleAlpha(colors[Col_TabLabelHovered],alphaSelected);
-    colors[Col_TabLabelSelectedActive]     = ColorMergeWithStyleAlpha(colors[Col_TabLabelActive],alphaSelected);
-    colors[Col_TabLabelSelectedBorder]     = ColorMergeWithStyleAlpha(colors[Col_TabLabelBorder],alphaSelected);
-    colors[Col_TabLabelSelectedText]       = ColorMergeWithStyleAlpha(ImColor(130,134,137,225),.7f);
+    const float alphaSelected = 0.725f;
+    colors[Col_TabLabelSelected]           = ColorDarken(colors[Col_TabLabel],.1125f,alphaSelected);
+    colors[Col_TabLabelSelectedHovered]    = ColorLighten(colors[Col_TabLabelSelected],.125f,alphaSelected);
+    colors[Col_TabLabelSelectedActive]     = ColorLighten(colors[Col_TabLabelSelectedHovered],.125f,alphaSelected);
+    colors[Col_TabLabelSelectedBorder]     = ColorDarken(colors[Col_TabLabelBorder],.05f,alphaSelected);
+    colors[Col_TabLabelSelectedText]       = ImColor(130,134,137,150);
 
     colors[Col_TabLabelCloseButtonHovered]       = ImColor(166,0,11,255);
     colors[Col_TabLabelCloseButtonActive]        = ImColor(206,40,51,255);
@@ -220,11 +240,20 @@ TabLabelStyle::TabLabelStyle()    {
     closeButtonBorderWidth = 1.f;
     closeButtonTextWidth = 3.f;
 
-    font = fontSelected = NULL;
+    //for (int i=0;i<TAB_STATE_COUNT;i++) fontStyles[i] = FONT_STYLE_BOLD;    // looks better for me
+    fontStyles[TAB_STATE_NORMAL]            = FONT_STYLE_NORMAL;
+    fontStyles[TAB_STATE_SELECTED]          = FONT_STYLE_BOLD;
+    fontStyles[TAB_STATE_MODIFIED]          = FONT_STYLE_ITALIC;
+    fontStyles[TAB_STATE_SELECTED_MODIFIED] = FONT_STYLE_BOLD_ITALIC;
 
     antialiasing = false;
-}
 
+    tabWindowLabelBackgroundColor        = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    tabWindowLabelShowAreaSeparator      = false;
+    tabWindowSplitterColor               = ImVec4(1,1,1,1);
+    tabWindowSplitterSize                = 8.f;
+
+}
 bool TabLabelStyle::Edit(TabLabelStyle &s)  {
     bool changed = false;
     const float dragSpeed = 0.25f;
@@ -244,13 +273,28 @@ bool TabLabelStyle::Edit(TabLabelStyle &s)  {
     changed|=ImGui::Checkbox("antialiasing",&s.antialiasing);
     ImGui::Spacing();
 
-    static int item=0;
-    ImGui::Combo("Color",&item, &TabLabelStyle::ColorNames[0], TabLabelStyle::Col_TabLabel_Count, -1);
+    ImGui::Text("Colors:");
+    for (int item = 0,itemSz=(int)TabLabelStyle::Col_TabLabel_Count;item<itemSz;item++) {
+        ImVec4 tmp = ImColor(s.colors[item]);
+        const bool color_changed = ImGui::ColorEdit4(TabLabelStyle::ColorNames[item],&tmp.x);
+        if (color_changed) s.colors[item] = ImColor(tmp);
+        changed|=color_changed;
+    }
     ImGui::Spacing();
-    ImVec4 tmp = ImColor(s.colors[item]);
-    const bool color_changed = ImGui::ColorEdit4("color",&tmp.x);
-    if (color_changed) s.colors[item] = ImColor(tmp);
-    changed|=color_changed;
+
+    ImGui::Text("Fonts (needs TabLabelStyle::ImGuiFonts[TAB_STATE_COUNT]):");
+    for (int item = 0,itemSz=(int)TabLabelStyle::TAB_STATE_COUNT;item<itemSz;item++) {
+        changed|=ImGui::Combo(TabStateNames[item],&s.fontStyles[item],&FontStyleNames[0],FONT_STYLE_COUNT);
+    }
+    ImGui::Spacing();
+
+    ImGui::Text("TabWindow:");
+    changed|=ImGui::ColorEdit4("tabWindowLabelBackgroundColor",&s.tabWindowLabelBackgroundColor.x);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","You may need to adjust ImGui::GetStyle().Colors[ImGuiCol_ChildWindowBg]\nto split the user window bg color from the tab label area bg color.");
+    changed|=ImGui::Checkbox("tabWindowLabelShowAreaSeparator",&s.tabWindowLabelShowAreaSeparator);
+    changed|=ImGui::ColorEdit4("tabWindowSplitterColor",&s.tabWindowSplitterColor.x);
+    changed|=ImGui::DragFloat("tabWindowSplitterSize",&s.tabWindowSplitterSize,1,4,16,"%1.0f");
+    ImGui::Spacing();
 
     ImGui::PopID();
     return changed;
@@ -261,7 +305,9 @@ const TabLabelStyle& TabLabelStyle::GetMergedWithWindowAlpha()    {
     if (frameCnt!=ImGui::GetFrameCount())   {
         frameCnt=ImGui::GetFrameCount();
         S = TabLabelStyle::style;
-    for (int i=0;i<Col_TabLabel_Count;i++) S.colors[i] = ColorMergeWithStyleAlpha(style.colors[i]);
+        for (int i=0;i<Col_TabLabel_Count;i++) S.colors[i] = ColorMergeWithStyleAlpha(style.colors[i]);
+        S.tabWindowLabelBackgroundColor.w*=GImGui->Style.Alpha;
+        S.tabWindowSplitterColor.w*=GImGui->Style.Alpha;
     }
     return S;
 }
@@ -270,7 +316,9 @@ inline const TabLabelStyle& TabLabelStyleGetMergedWithAlphaForOverlayUsage()    
     if (frameCnt!=ImGui::GetFrameCount())   {
         frameCnt=ImGui::GetFrameCount();
         S = TabLabelStyle::style;
-    for (int i=0;i<TabLabelStyle::Col_TabLabel_Count;i++) S.colors[i] = ColorMergeWithStyleAlpha(TabLabelStyle::style.colors[i],alpha);
+        for (int i=0;i<TabLabelStyle::Col_TabLabel_Count;i++) S.colors[i] = ColorMergeWithStyleAlpha(TabLabelStyle::style.colors[i],alpha);
+        S.tabWindowLabelBackgroundColor.w*=alpha;
+        S.tabWindowSplitterColor.w*=alpha;
     }
     return S;
 }
@@ -278,7 +326,7 @@ inline const TabLabelStyle& TabLabelStyleGetMergedWithAlphaForOverlayUsage()    
 
 //=======================================================================================
 // Main method to draw the tab label
-// The TabLabelStyle used by this method won't be merged with the Window Alpha (please provide a pOptionalStyleToUseIn using TabLabelStyle::GetMergedWithWIndowAlpha() if needed).
+// The TabLabelStyle used by this method won't be merged with the Window Alpha (please provide a pOptionalStyleToUseIn using TabLabelStyle::GetMergedWithWindowAlpha() if needed).
 static bool TabButton(const char *label, bool selected, bool *pCloseButtonPressedOut=NULL, const char* textOverrideIn=NULL, ImVec2 *pJustReturnItsSizeHereOut=NULL, const TabLabelStyle* pOptionalStyleToUseIn=NULL,ImFont *fontOverride=NULL, ImVec2 *pOptionalJustDrawTabButtonGraphicsUnderMouseWithThisOffset=NULL, ImDrawList *drawListOverride=NULL)  {
     // Based on ImGui::ButtonEx(...)
     bool *pHoveredOut = NULL;           // removed from args (can be queried from outside)
@@ -297,13 +345,13 @@ static bool TabButton(const char *label, bool selected, bool *pCloseButtonPresse
     const ImGuiID id = isFakeControl ? 0 : window->GetID(label);
     if (textOverrideIn) label = textOverrideIn;
 
-    if (!fontOverride) fontOverride = selected ? tabStyle.fontSelected : tabStyle.font;
+    if (!fontOverride) fontOverride = (ImFont*) (selected ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_NORMAL]]);
     if (fontOverride) ImGui::PushFont(fontOverride);
     const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
 
     ImVec2 pos = window ? window->DC.CursorPos : ImVec2(0,0);
     if ((flags & ImGuiButtonFlags_AlignTextBaseLine) && style.FramePadding.y < window->DC.CurrentLineTextBaseOffset)    pos.y += window->DC.CurrentLineTextBaseOffset - style.FramePadding.y;
-    ImVec2 size(label_size.x + style.FramePadding.x * 2.0f, label_size.y + style.FramePadding.y * 2.0f);
+    ImVec2 size(label_size.x + (style.FramePadding.x+tabStyle.borderWidth) * 2.0f, label_size.y + (style.FramePadding.y+tabStyle.borderWidth) * 2.0f);
     float btnWidth = label_size.y*0.75f,btnSpacingX = label_size.y*0.25f;
     float extraWidthForBtn = hasCloseButton ? (btnSpacingX*2.f+btnWidth) : 0;
     if (hasCloseButton) size.x+=extraWidthForBtn;
@@ -440,15 +488,6 @@ struct TabNode  {
             new (ch) TabNode();
             child[i] = ch;
             ch->parent = this;
-            /*if (name) {
-            int sz = strlen(name)+8;
-            ch->name = (char*) ImGui::MemAlloc(sz);
-            strcpy(ch->name,name);
-            strcat(ch->name,".child");
-            sprintf(&ch->name[sz-2],"%d",i);
-            ch->name[sz-1]='\0';
-            //fprintf(stderr,"Added TabNode: \"%s\"\n",ch->name); // "##main.child3"
-        }*/
         }
         assignChildNames(false);
 
@@ -472,7 +511,7 @@ struct TabNode  {
         if (recursive) {
             TabNode * n = NULL;
             for (int i=0;i<2;i++)
-                if ((n=child[i]->findTabLabel(tab,true))) return n;
+                if (child[i] && (n=child[i]->findTabLabel(tab,true))) return n;
         }
         for (int i=0,isz=tabs.size();i<isz;i++)
             if (tabs[i]==tab) return this;
@@ -481,7 +520,7 @@ struct TabNode  {
     TabWindow::TabLabel* findTabLabelFromUserPtr(void* value,TabNode** pOptionalParentNodeOut=NULL)  {
         TabWindow::TabLabel* tab = NULL;
         for (int i=0;i<2;i++)
-            if ((tab=child[i]->findTabLabelFromUserPtr(value,pOptionalParentNodeOut))!=NULL) return tab;
+            if (child[i] && (tab=child[i]->findTabLabelFromUserPtr(value,pOptionalParentNodeOut))!=NULL) return tab;
         for (int i=0,isz=tabs.size();i<isz;i++)
             if (tabs[i]->userPtr==value) {
                 if (pOptionalParentNodeOut) *pOptionalParentNodeOut = this;
@@ -492,7 +531,7 @@ struct TabNode  {
     TabWindow::TabLabel* findTabLabelFromUserText(const char* value,TabNode** pOptionalParentNodeOut=NULL)  {
         TabWindow::TabLabel* tab = NULL;
         for (int i=0;i<2;i++)
-            if ((tab=child[i]->findTabLabelFromUserText(value,pOptionalParentNodeOut))!=NULL) return tab;
+            if (child[i] && (tab=child[i]->findTabLabelFromUserText(value,pOptionalParentNodeOut))!=NULL) return tab;
         for (int i=0,isz=tabs.size();i<isz;i++)
             if (tabs[i]->userText && strcmp(tabs[i]->userText,value)==0) {
                 if (pOptionalParentNodeOut) *pOptionalParentNodeOut = this;
@@ -503,9 +542,20 @@ struct TabNode  {
     TabWindow::TabLabel* findTabLabelFromTooltip(const char* value,TabNode** pOptionalParentNodeOut=NULL)  {
         TabWindow::TabLabel* tab = NULL;
         for (int i=0;i<2;i++)
-            if ((tab=child[i]->findTabLabelFromTooltip(value,pOptionalParentNodeOut))!=NULL) return tab;
+            if (child[i] && (tab=child[i]->findTabLabelFromTooltip(value,pOptionalParentNodeOut))!=NULL) return tab;
         for (int i=0,isz=tabs.size();i<isz;i++)
             if (strcmp(tabs[i]->tooltip,value)==0) {
+                if (pOptionalParentNodeOut) *pOptionalParentNodeOut = this;
+                return tabs[i];
+            }
+        return NULL;
+    }
+    TabWindow::TabLabel* findTabLabelFromLabel(const char* value,TabNode** pOptionalParentNodeOut=NULL)  {
+        TabWindow::TabLabel* tab = NULL;
+        for (int i=0;i<2;i++)
+            if (child[i] && (tab=child[i]->findTabLabelFromLabel(value,pOptionalParentNodeOut))!=NULL) return tab;
+        for (int i=0,isz=tabs.size();i<isz;i++)
+            if (tabs[i]->matchLabel(value)) {
                 if (pOptionalParentNodeOut) *pOptionalParentNodeOut = this;
                 return tabs[i];
             }
@@ -697,7 +747,13 @@ struct TabWindowDragData {
         const TabLabelStyle& tabStyle = TabLabelStyleGetMergedWithAlphaForOverlayUsage();
         ImVec2 start(wp.x+mp.x-draggingTabSrcOffset.x-draggingTabSrcSize.x*0.5f,wp.y+mp.y-draggingTabSrcOffset.y-draggingTabSrcSize.y*0.5f);
         bool mustCloseTab = false;
-        ImGui::TabButton(NULL,false,draggingTabSrc->closable ? &mustCloseTab : NULL,draggingTabSrc->getLabel(),NULL,&tabStyle,draggingTabSrcIsSelected ? tabStyle.fontSelected : tabStyle.font,&start,drawList);
+        const ImFont* fontOverride = (draggingTabSrcIsSelected ? (draggingTabSrc->getModified() ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED_MODIFIED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED]]) :
+        (draggingTabSrc->getModified() ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_MODIFIED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_NORMAL]]));
+        if (!fontOverride) {
+            if (draggingTabSrcIsSelected) fontOverride = TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED]];
+            else if (draggingTabSrc->getModified())  fontOverride = TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_MODIFIED]];
+        }
+        ImGui::TabButton(NULL,false,draggingTabSrc->closable ? &mustCloseTab : NULL,draggingTabSrc->getLabel(),NULL,&tabStyle,(ImFont*)fontOverride,&start,drawList);
     }
     inline void drawProhibitionSign(ImDrawList* drawList,const ImVec2& wp,const ImVec2& pos,float size,float alpha=0.5f)   {
         ImVec2 start(wp.x+pos.x-size*0.5f,wp.y+pos.y-size*0.5f);
@@ -739,9 +795,10 @@ struct MyTabWindowHelperStruct {
         ImGuiStyle& style = ImGui::GetStyle();
         itemSpacing =   style.ItemSpacing;
 
-        splitterColor = ImVec4(TabWindow::SplitterColor.x,TabWindow::SplitterColor.y,TabWindow::SplitterColor.z,0.2f);
-        splitterColorHovered = ImVec4(TabWindow::SplitterColor.x,TabWindow::SplitterColor.y,TabWindow::SplitterColor.z,0.35f);
-        splitterColorActive = ImVec4(TabWindow::SplitterColor.x,TabWindow::SplitterColor.y,TabWindow::SplitterColor.z,0.5f);
+        const TabLabelStyle& ts = TabLabelStyle::Get();
+        splitterColor           = ts.tabWindowSplitterColor;  splitterColor.w *= 0.4f;
+        splitterColorHovered    = ts.tabWindowSplitterColor;  splitterColorHovered.w *= 0.55f;
+        splitterColorActive     = ts.tabWindowSplitterColor;  splitterColorActive.w *= 0.7f;
 
         storeStyleVars();
 
@@ -762,8 +819,6 @@ bool MyTabWindowHelperStruct::LockedDragging = false;
 ImVector<TabWindow::TabLabel*> MyTabWindowHelperStruct::TabsToClose;
 ImVector<TabNode*> MyTabWindowHelperStruct::TabsToCloseNodes;
 ImVector<TabWindow*> MyTabWindowHelperStruct::TabsToCloseParents;
-ImVec4 TabWindow::SplitterColor(1,1,1,1);
-float TabWindow::SplitterSize(8.f);
 TabWindow::TabLabelCallback TabWindow::WindowContentDrawerCb=NULL;
 void* TabWindow::WindowContentDrawerUserPtr=NULL;
 TabWindow::TabLabelCallback TabWindow::TabLabelPopupMenuDrawerCb=NULL;
@@ -774,7 +829,8 @@ TabWindow::TabLabelDeletingCallback TabWindow::TabLabelDeletingCb=NULL;
 
 void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
 {   
-    const float splitterSize = TabWindow::SplitterSize;
+    const TabLabelStyle& tabStyle = TabLabelStyle::GetMergedWithWindowAlpha();  // Or just Get() ?
+    const float splitterSize = tabStyle.tabWindowSplitterSize;
     bool splitterActive = false;
     MyTabWindowHelperStruct& mhs = *ptr;
 
@@ -860,14 +916,16 @@ void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
     // Leaf Node
     IM_ASSERT(!child[1]);
 
+    ImGuiStyle& style = ImGui::GetStyle();
+    const ImVec4 colorChildWindowBg = style.Colors[ImGuiCol_ChildWindowBg];
+    style.Colors[ImGuiCol_ChildWindowBg] = tabStyle.tabWindowLabelBackgroundColor;
     ImGui::BeginChild(name,windowSize,false,ImGuiWindowFlags_NoScrollbar);
 
     //fprintf(stderr,"%s\n",name);
 
-    ImGuiStyle& style = ImGui::GetStyle();
-    const TabLabelStyle& tabStyle = TabLabelStyle::GetMergedWithWindowAlpha();
     ImGuiState& g = *GImGui;
     TabWindowDragData& dd = gDragData;
+    const ImFont* fontOverride = NULL;
 
     //TabWindow::TabLabel* hoveredTab = NULL;
     //----------------------------------------------------------------
@@ -886,10 +944,17 @@ void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
         {
             TabWindow::TabLabel& tab = *tabs[i];
 
+            fontOverride = ((selectedTab == &tab) ? (tab.getModified() ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED_MODIFIED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED]]) :
+                (tab.getModified() ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_MODIFIED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_NORMAL]]));
+            if (!fontOverride) {
+                if (selectedTab == &tab) fontOverride = TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED]];
+                else if (tab.getModified())  fontOverride = TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_MODIFIED]];
+            }
+
             if (sumX > 0.f) {
                 sumX+=style.ItemSpacing.x;   // Maybe we can skip it if we use SameLine(0,0) below
                 //sumX+=ImGui::CalcTextSize(tab.label).x+2.f*style.FramePadding.x;
-                ImGui::TabButton(NULL,selectedTab == &tab,tab.closable ? &mustCloseTab : NULL,tab.getLabel(),&tabButtonSz,&tabStyle);
+                ImGui::TabButton(NULL,selectedTab == &tab,tab.closable ? &mustCloseTab : NULL,tab.getLabel(),&tabButtonSz,&tabStyle,(ImFont*)fontOverride);
                 sumX+=tabButtonSz.x;
                 if (sumX>windowWidth) sumX = 0.f;
                 else ImGui::SameLine();
@@ -898,7 +963,7 @@ void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
             // Draw the button
             mustCloseTab = false;
             ImGui::PushID(&tab);   // otherwise two tabs with the same name would clash.
-            if (ImGui::TabButton("",selectedTab == &tab,tab.closable ? &mustCloseTab : NULL,tab.getLabel(),NULL,&tabStyle))   {
+            if (ImGui::TabButton("",selectedTab == &tab,tab.closable ? &mustCloseTab : NULL,tab.getLabel(),NULL,&tabStyle,(ImFont*)fontOverride))   {
                  selection_changed = (selectedTab != &tab);
                  newSelectedTab = &tab;
                  tab.mustSelectNextFrame = false;
@@ -945,7 +1010,7 @@ void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
                                 sumX-itemSize.x*0.5f-ImGui::GetScrollX(),
                                 ImGui::GetCursorPos().y-itemSize.y*0.5f-ImGui::GetScrollY()
                                 );
-                        ImDrawList* drawList = ImGui::GetWindowDrawList();
+                        ImDrawList* drawList = ImGui::GetWindowDrawList();  // main problem is that the sign is covered by the dragging tab (even if the latter is semi-transparent...)
                         const ImVec2 wp = g.HoveredWindow->Pos;
                         dd.drawProhibitionSign(drawList,wp,itemPos,dd.draggingTabSrcSize.y*1.2f);
                     }
@@ -972,9 +1037,15 @@ void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
         selectedTab = newSelectedTab;
         if (selection_changed) mhs.tabWindow->activeNode = this;
 
+        if (tabStyle.tabWindowLabelShowAreaSeparator) {
+            ImGui::PushStyleColor(ImGuiCol_Border,ImGui::ColorConvertU32ToFloat4(tabStyle.colors[TabLabelStyle::Col_TabLabelText]));
+            ImGui::Separator();
+            ImGui::PopStyleColor();
+        }
         //ImGui::EndGroup();//allTabsSize = ImGui::GetItemRectSize();
         //----------------------------------------------------------------
         mhs.restoreStyleVars();     // needs matching
+        style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
         ImGui::BeginChild("user",ImVec2(0,0),false,selectedTab ? selectedTab->wndFlags : 0);
         if (/*selectedTab &&*/ TabWindow::WindowContentDrawerCb) {
             TabWindow::WindowContentDrawerCb(selectedTab,*mhs.tabWindow,TabWindow::WindowContentDrawerUserPtr);
@@ -990,6 +1061,7 @@ void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
 
     ImGui::EndChild();  // name
 
+
 }
 
 
@@ -1000,9 +1072,9 @@ void TabWindow::render()
     if (!init) {init=true;}
     if (!activeNode) activeNode = mainNode->getFirstLeaftNode();
 
-    ImVec2 windowSize = ImGui::GetWindowSize();   // TabWindow::render() must be called inside a Window ATM
+    ImVec2 windowSize = ImGui::GetWindowSize();
     windowSize.x-=2.f*ImGui::GetStyle().WindowPadding.x;
-    windowSize.y-=2.f*ImGui::GetStyle().WindowPadding.y;
+    windowSize.y-=(2.f*ImGui::GetStyle().WindowPadding.y+ImGui::GetCurrentWindow()->TitleBarHeight());
     TabWindowDragData& dd = gDragData;
 
     static int frameCnt = -1;
@@ -1075,7 +1147,9 @@ void TabWindow::render()
             IM_ASSERT(dd.draggingTabImGuiWindowSrc);
             const ImVec2& mp = ImGui::GetIO().MousePos;
             const ImVec2 wp = dd.draggingTabImGuiWindowSrc->Pos;
-            ImDrawList* drawList = ImGui::GetWindowDrawList();
+            ImDrawList* drawList = //ImGui::GetWindowDrawList();    // This draws the dragging tab under the other tabs, and has OTHER problems with: e.g.: ImGui::GetStyle().Colors[ImGuiCol_ChildWindowBg]=ImVec4(0.4,0.4,0.4,1);ImGui::GetStyle().Alpha = 1.f;
+                                   &g.OverlayDrawList;  // wrong, but it works as expected! [Maybe we can use ChannelsSplit(),ChannelsSetCurrent(),ChannelsMerge(), but that would require modifying code in various spots and it's more error prone]
+
 
             const ImGuiWindow* hoveredWindow = g.HoveredWindow;
             //const ImGuiWindow* hoveredRootWindow = g.HoveredRootWindow;
@@ -1178,7 +1252,6 @@ void TabWindow::render()
                 drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
             }
             // Button -----------------
-            drawList = &g.OverlayDrawList;  // wrong, but otherwise it draws under the other tabs! [Maybe we can use ChannelsSplit(),ChannelsSetCurrent(),ChannelsMerge(), but that would require modifying code in various spots and it's more error prone]
             dd.drawDragButton(drawList,wp,mp);
             // -------------------------------------------------------------------
             ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
@@ -1276,6 +1349,7 @@ void TabWindow::clearNodes() {
 }
 void TabWindow::clear() {mainNode->clear();activeNode=mainNode;}
 
+
 TabWindow::TabWindow() {
     mainNode = (TabNode*) ImGui::MemAlloc(sizeof(TabNode));
     new (mainNode) TabNode();
@@ -1311,6 +1385,9 @@ bool TabWindow::removeTabLabel(TabWindow::TabLabel *tab) {
     return true;
 }
 
+TabWindow::TabLabel *TabWindow::findTabLabelFromLabel(const char *label) const  {
+    return mainNode->findTabLabelFromLabel(label);
+}
 TabWindow::TabLabel *TabWindow::findTabLabelFromTooltip(const char *tooltip) const  {
     return mainNode->findTabLabelFromTooltip(tooltip);
 }
@@ -1319,6 +1396,18 @@ TabWindow::TabLabel *TabWindow::findTabLabelFromUserPtr(void *userPtr) const    
 }
 TabWindow::TabLabel *TabWindow::findTabLabelFromUserText(const char *userText) const    {
     return mainNode->findTabLabelFromUserText(userText);
+}
+TabWindow::TabLabel *TabWindow::FindTabLabelFromLabel(const char *label, const TabWindow *pTabWindows, int numTabWindows, int *pOptionalTabWindowIndexOut)  {
+    IM_ASSERT(pTabWindows && numTabWindows>0);
+    TabLabel* rv = NULL;
+    for (int i=0;i<numTabWindows;i++)   {
+        if ((rv = pTabWindows[i].findTabLabelFromLabel(label))) {
+            if (pOptionalTabWindowIndexOut) *pOptionalTabWindowIndexOut=i;
+            return rv;
+        }
+    }
+    if (pOptionalTabWindowIndexOut) *pOptionalTabWindowIndexOut=-1;
+    return NULL;
 }
 TabWindow::TabLabel *TabWindow::FindTabLabelFromTooltip(const char *tooltip, const TabWindow *pTabWindows, int numTabWindows, int *pOptionalTabWindowIndexOut)    {
     IM_ASSERT(pTabWindows && numTabWindows>0);
@@ -1481,7 +1570,8 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
             //const ImVec2 end(start.x+draggingTabSize.x,start.y+draggingTabSize.y);
             ImDrawList* drawList = ImGui::GetWindowDrawList();
             const TabLabelStyle& tabStyle = TabLabelStyleGetMergedWithAlphaForOverlayUsage();
-            ImGui::TabButton(tabLabels[pOptionalItemOrdering[draggingTabIndex]],false,allowTabClosing ? &mustCloseTab : NULL,NULL,NULL,&tabStyle,draggingTabWasSelected ? tabStyle.fontSelected : tabStyle.font,&start,drawList);
+            ImFont* fontOverride = (ImFont*) (draggingTabWasSelected ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_NORMAL]]);
+            ImGui::TabButton(tabLabels[pOptionalItemOrdering[draggingTabIndex]],false,allowTabClosing ? &mustCloseTab : NULL,NULL,NULL,&tabStyle,fontOverride,&start,drawList);
             ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
 
             if (TabWindow::DockPanelIconTextureID)	{

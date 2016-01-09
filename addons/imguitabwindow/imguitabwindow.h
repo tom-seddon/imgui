@@ -49,7 +49,6 @@
     // Optional Style
     //ImGui::TabLabelStyle& tabStyle = ImGui::TabLabelStyle::Get();
     // ... modify tabStyle ...
-    //ImGui::TabWindow::SplitterSize = ...;ImGui::TabWindow::SplitterColor = ...;   // modify splitter style
 
 3) At deinit time:
 -------------------
@@ -92,7 +91,7 @@ void OnTabLabelDeleting(ImGui::TabWindow::TabLabel* tab) {
 TIPS ABOUT TEXTURE LOADING;
 (*): -> Texture loading/freeing is mandatory only if you're not using an IMGUI_USE_XXX_BINDING, or if you don't know
         what IMGUI_USE_XXX_BINDING is.
-     -> If you prefer to load the texture from an external image, I'll provide it here: https://gist.github.com/Flix01/2cdf1db8d936100628c0
+     -> If you prefer loading the texture from an external image, I'll provide it here: https://gist.github.com/Flix01/2cdf1db8d936100628c0
      -> Since internally we use texcoords, we had to choose a single convention for it. That means that it might be necessary for
         some people to load the image upside down (stb_image has a build-in method to do it).
 
@@ -110,10 +109,6 @@ TIPS ABOUT TEXTURE LOADING;
 -> Add filtering between TabWindows:
    1) TabWindow::isIsolated that prevents any tab label from flying outside
    2) TabWindow::excludeTabWindow(TabWindow& tabWindow) and TabWindow::includeTabWindow(TabWindow& tabWindow) for preventing (or not) tabWindows from exchanging tab labels with each other.
--> In TabLabelStyle:
-   1) Remove all ImFont* fields and add enum values (regular, bold ,italic, bolditalic)
-      for font, fontSelected, fontModified and fontSelectedModified.
-      Then user can assign static TabWindow::ImFont* values for each font enum.
 */
 
 
@@ -154,14 +149,32 @@ float fillColorGradientDeltaIn0_05; // vertical gradient if > 0 (looks nice but 
 float rounding;
 float borderWidth;
 
-ImFont* font;                       // TODO: remove ImFont* and add enum values (regular, bold ,italic, bolditalic)
-ImFont* fontSelected;               // for font, fontSelected, fontModified and fontSelectedModified
-
 float closeButtonRounding;
 float closeButtonBorderWidth;
 float closeButtonTextWidth;
 
 bool antialiasing;
+
+enum FontStyle {
+    FONT_STYLE_NORMAL=0,
+    FONT_STYLE_BOLD,
+    FONT_STYLE_ITALIC,
+    FONT_STYLE_BOLD_ITALIC,
+    FONT_STYLE_COUNT
+};
+enum TabState {
+    TAB_STATE_NORMAL,
+    TAB_STATE_SELECTED,
+    TAB_STATE_MODIFIED,
+    TAB_STATE_SELECTED_MODIFIED,
+    TAB_STATE_COUNT
+};
+int fontStyles[TAB_STATE_COUNT];    // Users should add TabLabelStyle::ImGuiFonts to map them for these to work
+
+ImVec4 tabWindowLabelBackgroundColor;
+bool tabWindowLabelShowAreaSeparator;
+ImVec4 tabWindowSplitterColor;
+float tabWindowSplitterSize;
 
 TabLabelStyle();
 
@@ -175,7 +188,9 @@ inline static TabLabelStyle& Get() {return style;}
 static const TabLabelStyle& GetMergedWithWindowAlpha();
 static TabLabelStyle style;
 static const char* ColorNames[Col_TabLabel_Count];
-
+static const char* FontStyleNames[FONT_STYLE_COUNT];
+static const char* TabStateNames[TAB_STATE_COUNT];
+static const ImFont* ImGuiFonts[FONT_STYLE_COUNT];
 };
 
 class TabWindow {
@@ -195,7 +210,7 @@ protected:
     bool draggable;
     TabLabel(const char* _label=NULL,const char* _tooltip=NULL,bool _closable=true,bool _draggable=true)    {
         label = tooltip = NULL;
-        userPtr = NULL;userText=NULL;
+        userPtr = NULL;userText=NULL;userInt=0;
         setLabel(_label);
         setTooltip(_tooltip);
         closable = _closable;
@@ -213,6 +228,7 @@ protected:
     static void DestroyTabLabel(TabLabel*& tab);
 public:
     inline const char* getLabel() const {return label;}
+    inline bool matchLabel(const char* match) const {return modified ? (strncmp(match,label,strlen(label)-1)==0) : (strcmp(match,label)==0);}
     void setLabel(const char* lbl,bool appendAnAsteriskAndMarkAsModified=false)  {
         if (label) {ImGui::MemFree(label);label=NULL;}
         const char e = '\0';if (!lbl) lbl=&e;
@@ -246,12 +262,13 @@ public:
     }
     inline const char* getUserText() const {return userText;}
     mutable void* userPtr;
+    mutable int userInt;
     mutable bool mustCloseNextFrame;
     mutable bool mustSelectNextFrame;
-    mutable int wndFlags;               // used for the imgui child window that host the tab content
+    mutable int wndFlags;               // used for the imgui child window that hosts the tab content
 
     // This method will be used ONLY if you don't set TabWindow::SetWindowContentDrawerCallback(...),
-    // and you prefer extending from this class
+    // (and you prefer extending from this class)
     virtual void render() {
         ImGui::TextWrapped("Here is the content of tab label: \"%s\". Please consider using ImGui::TabWindow::SetWindowContentDrawerCallback(...) to set a callback for it, or extending TabWindowLabel and implement its render() method. ",getLabel());
     }
@@ -293,9 +310,11 @@ bool removeTabLabel(TabLabel* tab);
 void clear();
 
 // Find methods (untested)
+TabLabel* findTabLabelFromLabel(const char* label) const;   // trimming the last trailing asterisk
 TabLabel* findTabLabelFromTooltip(const char* tooltip) const;
 TabLabel* findTabLabelFromUserPtr(void* userPtr) const;
 TabLabel* findTabLabelFromUserText(const char* userText) const;
+static TabLabel* FindTabLabelFromLabel(const char* label,const TabWindow* pTabWindows,int numTabWindows,int* pOptionalTabWindowIndexOut);   // trimming the last trailing asterisk
 static TabLabel* FindTabLabelFromTooltip(const char* tooltip,const TabWindow* pTabWindows,int numTabWindows,int* pOptionalTabWindowIndexOut);
 static TabLabel* FindTabLabelFromUserPtr(void* userPtr,const TabWindow* pTabWindows,int numTabWindows,int* pOptionalTabWindowIndexOut);
 static TabLabel* FindTabLabelFromUserText(const char* userText,const TabWindow* pTabWindows,int numTabWindows,int* pOptionalTabWindowIndexOut);
@@ -323,9 +342,6 @@ void render();
 static const unsigned char* GetDockPanelIconImagePng(int* bufferSizeOut=NULL); // Manually redrawn based on the ones in https://github.com/dockpanelsuite/dockpanelsuite (that is MIT licensed). So no copyright issues for this AFAIK, but I'm not a lawyer and I cannot guarantee it.
 static ImTextureID DockPanelIconTextureID;  // User must load it (using GetDockPanelIconImagePng) and free it when no IMGUI_USE_XXX_BINDING is used.
 
-// Style
-static ImVec4 SplitterColor;
-static float SplitterSize;
 
 protected:
 
