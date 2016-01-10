@@ -10,13 +10,51 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
     if (tab) {
         ImGui::PushID(tab);
         if (tab->matchLabel("TabLabelStyle"))  {
-            bool changed = false;
-            ImGui::Spacing();
-            ImGui::Text("Tab Labels:");
+            // Color Mode
+            static int colorEditMode = ImGuiColorEditMode_RGB;
+            static const char* btnlbls[2]={"HSV##myColorBtnType1","RGB##myColorBtnType1"};
+            if (colorEditMode!=ImGuiColorEditMode_RGB)  {
+                if (ImGui::SmallButton(btnlbls[0])) {
+                    colorEditMode = ImGuiColorEditMode_RGB;
+                    ImGui::ColorEditMode(colorEditMode);
+                }
+            }
+            else if (colorEditMode!=ImGuiColorEditMode_HSV)  {
+                if (ImGui::SmallButton(btnlbls[1])) {
+                    colorEditMode = ImGuiColorEditMode_HSV;
+                    ImGui::ColorEditMode(colorEditMode);
+                }
+            }
+            ImGui::SameLine(0);ImGui::Text("Color Mode");
             ImGui::Separator();
-            changed|=ImGui::TabLabelStyle::Edit(ImGui::TabLabelStyle::Get());
             ImGui::Spacing();
+            ImGui::ColorEditMode(colorEditMode);
+            bool changed = ImGui::TabLabelStyle::Edit(ImGui::TabLabelStyle::Get());
             ImGui::Separator();
+#if             (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+            const char* saveName = "tabLabelStyle.style";
+#               ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+            if (ImGui::SmallButton("Save##saveGNEStyle1")) {
+                ImGui::TabLabelStyle::Save(ImGui::TabLabelStyle::Get(),saveName);
+                changed = false;tab->setModified(false);
+            }
+            ImGui::SameLine();
+#               endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#               ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+            if (ImGui::SmallButton("Load##loadGNEStyle1")) {
+                ImGui::TabLabelStyle::Load(ImGui::TabLabelStyle::Get(),saveName);
+                changed = false;tab->setModified(false);
+            }
+            ImGui::SameLine();
+#               endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#               endif //NO_IMGUIHELPER_SERIALIZATION
+
+            if (ImGui::SmallButton("Reset##resetGNEStyle1")) {
+                ImGui::TabLabelStyle::Reset(ImGui::TabLabelStyle::Get());
+                changed = false;tab->setModified(false);
+            }
+
+            ImGui::Spacing();
             if (changed) tab->setModified(true);
         }
         else if (tab->matchLabel("Style"))  {

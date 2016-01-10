@@ -9,6 +9,9 @@
 // and is bundled in the "ImGui Addons Branch" here:    https://github.com/Flix01/imgui/tree/2015-10-Addons
 // Wiki about the "ImGui Addons Branch" is here:        https://github.com/Flix01/imgui/wiki/ImGui-Addons-Branch-Home
 
+// COMPILATION: if you use imguitabwindow.h/cpp alone, please define:
+//#define NO_IMGUIHELPER
+
 // USAGE:
 /*
 1) In the main "ImGui loop":
@@ -181,6 +184,16 @@ TabLabelStyle();
 void reset() {Reset(*this);}
 static bool Edit(TabLabelStyle& style);
 static void Reset(TabLabelStyle& style) {style = TabLabelStyle();}
+
+#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+static bool Save(const TabLabelStyle& style,const char* filename);
+#endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+static bool Load(TabLabelStyle& TabLabelStyle,const char* filename);
+#endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#endif //NO_IMGUIHELPER_SERIALIZATION
+
 
 // Gets the default style instance (same as TabLabelStyle::style)
 inline static TabLabelStyle& Get() {return style;}
