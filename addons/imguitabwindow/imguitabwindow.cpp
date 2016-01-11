@@ -188,11 +188,7 @@ const char* TabLabelStyle::FontStyleNames[TabLabelStyle::FONT_STYLE_COUNT]={"FON
 const char* TabLabelStyle::TabStateNames[TabLabelStyle::TAB_STATE_COUNT]={"TAB_STATE_NORMAL","TAB_STATE_SELECTED","TAB_STATE_MODIFIED","TAB_STATE_SELECTED_MODIFIED"};
 const ImFont* TabLabelStyle::ImGuiFonts[TabLabelStyle::FONT_STYLE_COUNT]={NULL,NULL,NULL,NULL};
 // These bit operations are probably non-endian independent, but ImGui uses them too and so do I.
-inline static ImU32 ColorMergeWithStyleAlpha(ImU32 c) {
-    ImU32 alpha = ((float)(c>>24))*GImGui->Style.Alpha;
-    return ((c&0x00FFFFFF)|(alpha<<24));
-}
-inline static ImU32 ColorMergeWithStyleAlpha(ImU32 c,float alphaMult) {
+inline static ImU32 ColorMergeWithAlpha(ImU32 c,float alphaMult) {
     ImU32 alpha = ((float)(c>>24))*alphaMult;
     return ((c&0x00FFFFFF)|(alpha<<24));
 }
@@ -291,7 +287,6 @@ bool TabLabelStyle::Edit(TabLabelStyle &s)  {
 
     ImGui::Text("TabWindow:");
     changed|=ImGui::ColorEdit4("tabWindowLabelBackgroundColor",&s.tabWindowLabelBackgroundColor.x);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","You may need to adjust ImGui::GetStyle().Colors[ImGuiCol_ChildWindowBg]\nto split the user window bg color from the tab label area bg color.");
     changed|=ImGui::Checkbox("tabWindowLabelShowAreaSeparator",&s.tabWindowLabelShowAreaSeparator);
     changed|=ImGui::ColorEdit4("tabWindowSplitterColor",&s.tabWindowSplitterColor.x);
     changed|=ImGui::DragFloat("tabWindowSplitterSize",&s.tabWindowSplitterSize,1,4,16,"%1.0f");
@@ -386,13 +381,14 @@ const TabLabelStyle& TabLabelStyle::GetMergedWithWindowAlpha()    {
     // Actually here I'm just using GImGui->Style.Alpha.
     // I guess there's some per-window alpha I have to multiply...
     static TabLabelStyle S;
-    static int frameCnt=-1;
+    static int frameCnt=-1;    
     if (frameCnt!=ImGui::GetFrameCount())   {
         frameCnt=ImGui::GetFrameCount();
+	const float alpha = GImGui->Style.Alpha * GImGui->Style.WindowFillAlphaDefault;
         S = TabLabelStyle::style;
-        for (int i=0;i<Col_TabLabel_Count;i++) S.colors[i] = ColorMergeWithStyleAlpha(style.colors[i]);
-        S.tabWindowLabelBackgroundColor.w*=GImGui->Style.Alpha;
-        S.tabWindowSplitterColor.w*=GImGui->Style.Alpha;
+	for (int i=0;i<Col_TabLabel_Count;i++) S.colors[i] = ColorMergeWithAlpha(style.colors[i],alpha);
+	S.tabWindowLabelBackgroundColor.w*=alpha;
+	S.tabWindowSplitterColor.w*=alpha;
     }
     return S;
 }
@@ -401,7 +397,7 @@ inline const TabLabelStyle& TabLabelStyleGetMergedWithAlphaForOverlayUsage()    
     if (frameCnt!=ImGui::GetFrameCount())   {
         frameCnt=ImGui::GetFrameCount();
         S = TabLabelStyle::style;
-        for (int i=0;i<TabLabelStyle::Col_TabLabel_Count;i++) S.colors[i] = ColorMergeWithStyleAlpha(TabLabelStyle::style.colors[i],alpha);
+	for (int i=0;i<TabLabelStyle::Col_TabLabel_Count;i++) S.colors[i] = ColorMergeWithAlpha(TabLabelStyle::style.colors[i],alpha);
         S.tabWindowLabelBackgroundColor.w*=alpha;
         S.tabWindowSplitterColor.w*=alpha;
     }
@@ -531,8 +527,9 @@ struct TabNode  {
     char* name;         // (owned)
     float splitterPerc; // in [0,1]
     bool horizontal;
+    ImVec2 allTabsSize;
     TabNode() {tabs.clear();selectedTab=NULL;parent=NULL;for (int i=0;i<2;i++) child[i]=NULL;name=NULL;
-               horizontal=false;splitterPerc=0.5f;}
+	       horizontal=false;splitterPerc=0.5f;allTabsSize.x=allTabsSize.y=0.f;}
     ~TabNode() {
         clear();
         if (name) {ImGui::MemFree(name);name=NULL;}
@@ -657,11 +654,11 @@ struct TabNode  {
         }
         IM_ASSERT(tab);
         IM_ASSERT(this->isLeafNode());
-        for (int i=0,isz=tabs.size();i<isz;i++) {
+        for (int i=0;i<tabs.size();i++) {
             if (tabs[i]==tab) {
                 if (selectedTab == tab) selectedTab = NULL;
                 if (!dontDeleteTabLabel) TabWindow::TabLabel::DestroyTabLabel(tabs[i]);
-                for (int j=i;j<isz-1;j++) tabs[j] = tabs[j+1];
+                for (int j=i;j<tabs.size()-1;j++) tabs[j] = tabs[j+1];
                 tabs.pop_back();
                 if (tabs.size()==0 && parent) {
                     // We must merge this with parent
@@ -859,6 +856,13 @@ struct MyTabWindowHelperStruct {
     bool isASplitterActive;
     static TabWindow::TabLabel* tabLabelPopup;
     static bool tabLabelPopupChanged;
+    static TabWindow* tabLabelPopupTabWindow;   // used by both tabLabelPopup and tabLabelGroupPopup
+    static ImVector<TabWindow::TabLabel*> tabLabelGroupPopup;
+    static bool tabLabelGroupPopupChanged;
+    static TabNode* tabLabelGroupPopupNode;
+
+
+
 
     TabWindow* tabWindow;
 
@@ -901,7 +905,11 @@ struct MyTabWindowHelperStruct {
     }
 };
 TabWindow::TabLabel* MyTabWindowHelperStruct::tabLabelPopup = NULL;
+ImVector<TabWindow::TabLabel*> MyTabWindowHelperStruct::tabLabelGroupPopup;
+TabWindow* MyTabWindowHelperStruct::tabLabelPopupTabWindow = NULL;
 bool  MyTabWindowHelperStruct::tabLabelPopupChanged = false;
+bool  MyTabWindowHelperStruct::tabLabelGroupPopupChanged = false;
+TabNode*  MyTabWindowHelperStruct::tabLabelGroupPopupNode = NULL;
 bool MyTabWindowHelperStruct::isMouseDragging = false;
 bool MyTabWindowHelperStruct::LockedDragging = false;
 ImVector<TabWindow::TabLabel*> MyTabWindowHelperStruct::TabsToClose;
@@ -914,21 +922,26 @@ void* TabWindow::TabLabelPopupMenuDrawerUserPtr=NULL;
 TabWindow::TabLabelClosingCallback TabWindow::TabLabelClosingCb=NULL;
 void* TabWindow::TabLabelClosingUserPtr=NULL;
 TabWindow::TabLabelDeletingCallback TabWindow::TabLabelDeletingCb=NULL;
+TabWindow::TabLabelGroupPopupMenuCallback TabWindow::TabLabelGroupPopupMenuDrawerCb=NULL;
+void* TabWindow::TabLabelGroupPopupMenuDrawerUserPtr=NULL;
 
 void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
 {   
     MyTabWindowHelperStruct& mhs = *ptr;
     const TabLabelStyle& tabStyle = TabLabelStyle::GetMergedWithWindowAlpha();  // Or just Get() ?
+    ImGuiStyle& style = ImGui::GetStyle();
+    const ImVec4 colorChildWindowBg = style.Colors[ImGuiCol_ChildWindowBg];
     const float splitterSize = tabStyle.tabWindowSplitterSize;
     bool splitterActive = false;
-
+    static ImVec4 colorTransparent(0,0,0,0);
 
     IM_ASSERT(name);
     if (child[0])   {
         IM_ASSERT(child[1]);
         IM_ASSERT(tabs.size()==0);
+	style.Colors[ImGuiCol_ChildWindowBg] = colorTransparent;
         ImGui::BeginChild(name,windowSize,false,ImGuiWindowFlags_NoScrollbar);
-
+	style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
         ImVec2 ws = windowSize;
         float splitterPercToPixels = 0.f,splitterDelta = 0.f;
         if (horizontal && ws.y>splitterSize) {
@@ -1004,22 +1017,24 @@ void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
     // Leaf Node
     IM_ASSERT(!child[1]);
 
-    ImGuiStyle& style = ImGui::GetStyle();
-    const ImVec4 colorChildWindowBg = style.Colors[ImGuiCol_ChildWindowBg];
-    style.Colors[ImGuiCol_ChildWindowBg] = tabStyle.tabWindowLabelBackgroundColor;
-    ImGui::BeginChild(name,windowSize,false,ImGuiWindowFlags_NoScrollbar);
-
-    //fprintf(stderr,"%s\n",name);
-
-    ImGuiState& g = *GImGui;
-    TabWindowDragData& dd = gDragData;
-    const ImFont* fontOverride = NULL;
 
     //TabWindow::TabLabel* hoveredTab = NULL;
     //----------------------------------------------------------------
     {
+	style.Colors[ImGuiCol_ChildWindowBg] = colorTransparent;
+	ImGui::BeginChild(name,windowSize,false,ImGuiWindowFlags_NoScrollbar);
+	if (tabStyle.tabWindowLabelBackgroundColor.w!=0)    {
+	    ImGuiWindow* window = ImGui::GetCurrentWindow();
+	    window->DrawList->AddRectFilled(window->Pos, window->Pos+ImVec2(windowSize.x,allTabsSize.y), GetColorU32(tabStyle.tabWindowLabelBackgroundColor), 0);
+	}
+	style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
+	ImGuiState& g = *GImGui;
+	TabWindowDragData& dd = gDragData;
+	const ImFont* fontOverride = NULL;
+
+
 	ImGui::Spacing();	    // Hack to remove when I'll find out why the top border of the tab labels gets clipped out.
-        //ImGui::BeginGroup();
+	ImGui::BeginGroup();
         const int numTabs = tabs.size();
         if (numTabs>0 && !selectedTab) selectedTab = tabs[0];
 
@@ -1027,7 +1042,8 @@ void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
 	windowWidth = windowSize.x;//ImGui::GetWindowWidth();// - style.WindowPadding.x;// - (ImGui::GetScrollMaxY()>0 ? style.ScrollbarSize : 0.f);
         TabWindow::TabLabel* newSelectedTab = selectedTab;
 
-	ImVec2 tabButtonSz(0,0);bool mustCloseTab = false;bool canUseSizeOptimization = false;
+	const bool allowExchangeTabLabels = !dd.draggingTabSrc || (dd.draggingTabWindowSrc && dd.draggingTabWindowSrc->canExchangeTabLabelsWith(mhs.tabWindow));
+    ImVec2 tabButtonSz(0,0);bool mustCloseTab = false;bool canUseSizeOptimization = false;bool isAItemHovered = false;
         bool selection_changed = false;
         for (int i = 0; i < numTabs; i++)
         {
@@ -1069,6 +1085,7 @@ void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
                 mhs.TabsToCloseParents.push_back(mhs.tabWindow);
             }
             else if (ImGui::IsItemHoveredRect()) {
+        isAItemHovered = true;
                 //hoveredTab = &tab;
                 if (tab.tooltip && strlen(tab.tooltip)>0 && &tab!=mhs.tabLabelPopup)  ImGui::SetTooltip("%s",tab.tooltip);                
 
@@ -1093,7 +1110,7 @@ void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
                         //fprintf(stderr,"Hovered Start Window:%s\n",g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
                         }
                     }
-                    else if (dd.draggingTabSrc && !tab.draggable) {
+		    else if (dd.draggingTabSrc && (!tab.draggable || !allowExchangeTabLabels)) {
                         // Prohibition sign-------
                         const ImVec2& itemSize = ImGui::GetItemRectSize();
                         const ImVec2 itemPos =ImVec2(
@@ -1112,12 +1129,18 @@ void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
                     dd.draggingTabWindowDst = mhs.tabWindow;
                 }
 
-                if (mhs.isRMBclicked && TabWindow::TabLabelPopupMenuDrawerCb) {
-                    //ImGuiState& g = *GImGui; while (g.OpenedPopupStack.size() > 0) g.OpenedPopupStack.pop_back();   // Close all existing context-menus
-                    //ImGui::OpenPopup(TabWindow::GetTabLabelPopupMenuName());
-                    mhs.tabLabelPopup = (TabWindow::TabLabel*)&tab;
-                    mhs.tabLabelPopupChanged = true;
-                    // fprintf(stderr,"open popup\n");  // This gets actually called...
+        if (mhs.isRMBclicked) {
+            // select it
+            selection_changed = (selectedTab != &tab);
+            newSelectedTab = &tab;
+            tab.mustSelectNextFrame = false;
+            // see if we need popup menu
+            if (TabWindow::TabLabelPopupMenuDrawerCb)	{
+                mhs.tabLabelPopup = &tab;
+                mhs.tabLabelPopupTabWindow = mhs.tabWindow;
+                mhs.tabLabelPopupChanged = true;
+                // fprintf(stderr,"open popup\n");  // This gets actually called...
+            }
                 }
 
             }
@@ -1132,11 +1155,26 @@ void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
             ImGui::Separator();
             ImGui::PopStyleColor();
         }
-        //ImGui::EndGroup();//allTabsSize = ImGui::GetItemRectSize();
-        //----------------------------------------------------------------
+	ImGui::EndGroup();allTabsSize = ImGui::GetItemRectSize();
+
+    // tab label group popup menu trigger
+    if (TabWindow::TabLabelGroupPopupMenuDrawerCb && mhs.isRMBclicked && !isAItemHovered)	{
+        ImGuiWindow* window = ImGui::GetCurrentWindow();
+        if (ImGui::IsMouseHoveringRect(window->Pos, window->Pos+ImVec2(windowSize.x,allTabsSize.y)))   {
+            mhs.tabLabelGroupPopupChanged = true;
+            mhs.tabLabelGroupPopup.clear();
+            mhs.tabLabelPopupTabWindow = mhs.tabWindow;
+            mhs.tabLabelGroupPopupNode = this;
+            for (int i = 0; i < numTabs; i++) {
+                TabWindow::TabLabel* tab = tabs[i];
+                mhs.tabLabelGroupPopup.push_back(tab);	// should I check against mhs.TabsToClose ?
+            }
+        }
+    }
+
+	//----------------------------------------------------------------
         mhs.restoreStyleVars();     // needs matching
-        style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
-        ImGui::BeginChild("user",ImVec2(0,0),false,selectedTab ? selectedTab->wndFlags : 0);
+	ImGui::BeginChild("user",ImVec2(0,0),false,selectedTab ? selectedTab->wndFlags : 0);
         if (/*selectedTab &&*/ TabWindow::WindowContentDrawerCb) {
             TabWindow::WindowContentDrawerCb(selectedTab,*mhs.tabWindow,TabWindow::WindowContentDrawerUserPtr);
         }
@@ -1146,10 +1184,11 @@ void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
         }
         ImGui::EndChild();  // user
         mhs.storeStyleVars();
+
+	ImGui::EndChild();  // "name"
     }
     //----------------------------------------------------------------
 
-    ImGui::EndChild();  // name
 
 
 }
@@ -1193,6 +1232,15 @@ void TabWindow::render()
                     if (MyTabWindowHelperStruct::tabLabelPopup == tabLabel) MyTabWindowHelperStruct::tabLabelPopup = NULL;
                     if (dd.draggingTabSrc == tabLabel) dd.resetDraggingSrc();
                     if (dd.draggingTabDst == tabLabel) dd.resetDraggingDst();
+                    for (int j=0;j<MyTabWindowHelperStruct::tabLabelGroupPopup.size();j++)  {
+                        if (MyTabWindowHelperStruct::tabLabelGroupPopup[j]==tabLabel)	{
+                            TabLabel* tmp = MyTabWindowHelperStruct::tabLabelGroupPopup[MyTabWindowHelperStruct::tabLabelGroupPopup.size()-1];
+                            MyTabWindowHelperStruct::tabLabelGroupPopup[MyTabWindowHelperStruct::tabLabelGroupPopup.size()-1] = MyTabWindowHelperStruct::tabLabelGroupPopup[j];
+                            MyTabWindowHelperStruct::tabLabelGroupPopup[j] = tmp;
+                            MyTabWindowHelperStruct::tabLabelGroupPopup.pop_back();
+                            j--;
+                        }
+                    }
 
                     if (!node->removeTabLabel(tabLabel,false,&tabWindow->activeNode))   {
                         fprintf(stderr,"Error: Can't delete TabLabel: \"%s\"\n",tabLabel->getLabel());
@@ -1208,15 +1256,29 @@ void TabWindow::render()
                 ImGuiState& g = *GImGui; while (g.OpenedPopupStack.size() > 0) g.OpenedPopupStack.pop_back();   // Close all existing context-menus
                 ImGui::OpenPopup(TabWindow::GetTabLabelPopupMenuName());
             }
-            TabLabelPopupMenuDrawerCb(MyTabWindowHelperStruct::tabLabelPopup,*this,TabLabelPopupMenuDrawerUserPtr);
+            TabLabelPopupMenuDrawerCb(MyTabWindowHelperStruct::tabLabelPopup,*MyTabWindowHelperStruct::tabLabelPopupTabWindow,TabLabelPopupMenuDrawerUserPtr);
+        }
+        if (TabLabelGroupPopupMenuDrawerCb && MyTabWindowHelperStruct::tabLabelGroupPopup.size()>0)    {
+            if (MyTabWindowHelperStruct::tabLabelGroupPopupChanged) {
+                MyTabWindowHelperStruct::tabLabelGroupPopupChanged = false;
+                ImGuiState& g = *GImGui; while (g.OpenedPopupStack.size() > 0) g.OpenedPopupStack.pop_back();   // Close all existing context-menus
+                ImGui::OpenPopup(TabWindow::GetTabLabelGroupPopupMenuName());
+            }
+            TabLabelGroupPopupMenuDrawerCb(MyTabWindowHelperStruct::tabLabelGroupPopup,*MyTabWindowHelperStruct::tabLabelPopupTabWindow,MyTabWindowHelperStruct::tabLabelGroupPopupNode,TabLabelGroupPopupMenuDrawerUserPtr);
         }
         // 3) Display dragging button only if no hover window is present (otherwise we need to draw something under it before, see below)
-        if (!g.HoveredWindow && dd.draggingTabSrc)  {
-            const ImVec2& mp = ImGui::GetIO().MousePos;
-            const ImVec2 wp = dd.draggingTabImGuiWindowSrc->Pos;
-            ImDrawList* drawList = ImGui::GetWindowDrawList();
-            drawList->PushClipRectFullScreen(); // New
-            dd.drawDragButton(drawList,wp,mp);
+	if (!g.HoveredWindow && dd.draggingTabSrc)  {
+	    if (dd.draggingTabWindowSrc->isIsolated()) {
+		dd.resetDraggingSrc();
+		MyTabWindowHelperStruct::LockedDragging = true;	// consume one click before restrt dragging again
+	    }
+	    else {
+		const ImVec2& mp = ImGui::GetIO().MousePos;
+		const ImVec2 wp = dd.draggingTabImGuiWindowSrc->Pos;
+		ImDrawList* drawList = ImGui::GetWindowDrawList();
+		drawList->PushClipRectFullScreen(); // New
+		dd.drawDragButton(drawList,wp,mp);
+	    }
         }
         //----------------------------------------------------------------
         gDragData.resetDraggingDst();
@@ -1271,75 +1333,86 @@ void TabWindow::render()
                                                                      (minDim<MIN_SIZE)?minDim:
                                                                                        (minDim*0.5f)>=MIN_SIZE?(minDim*0.5f):
                                                                                                                MIN_SIZE;
-                const float singleQuadDim = centralQuadDim*0.3333333334f;
-                ImVec2 uv0,uv1;bool hovers;
-                // central quad top
-                uv0=ImVec2(0.22916f,0.f);uv1=ImVec2(0.45834f,0.22916f);
-                start.x = wp.x + (ws.x-singleQuadDim)*0.5f;
-                start.y = wp.y + (ws.y-singleQuadDim)*0.5f-singleQuadDim;
-                end.x = start.x+singleQuadDim;
-                end.y = start.y+singleQuadDim;
-                hovers = ImGui::IsMouseHoveringRect(start,end,false);
-                if (hovers) hoversInt = 3;
-                drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
-                // central quad right
-                uv0=ImVec2(0.45834f,0.22916f);uv1=ImVec2(0.6875f,0.45834f);
-                start.x = wp.x + (ws.x-singleQuadDim)*0.5f + singleQuadDim;
-                start.y = wp.y + (ws.y-singleQuadDim)*0.5f;
-                end.x = start.x+singleQuadDim;
-                end.y = start.y+singleQuadDim;
-                hovers = ImGui::IsMouseHoveringRect(start,end,false);
-                if (hovers) hoversInt = 4;
-                drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
-                // central quad bottom
-                uv0=ImVec2(0.22916f,0.45834f);uv1=ImVec2(0.45834f,0.6875f);
-                start.x = wp.x + (ws.x-singleQuadDim)*0.5f;
-                start.y = wp.y + (ws.y-singleQuadDim)*0.5f+singleQuadDim;
-                end.x = start.x+singleQuadDim;
-                end.y = start.y+singleQuadDim;
-                hovers = ImGui::IsMouseHoveringRect(start,end,false);
-                if (hovers) hoversInt = 5;
-                drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
-                // central quad left
-                uv0=ImVec2(0.0f,0.22916f);uv1=ImVec2(0.22916f,0.45834f);
-                start.x = wp.x + (ws.x-singleQuadDim)*0.5f - singleQuadDim;
-                start.y = wp.y + (ws.y-singleQuadDim)*0.5f;
-                end.x = start.x+singleQuadDim;
-                end.y = start.y+singleQuadDim;
-                hovers = ImGui::IsMouseHoveringRect(start,end,false);
-                if (hovers) hoversInt = 2;
-                drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
-                // central quad center
-                uv0=ImVec2(0.22916f,0.22916f);uv1=ImVec2(0.45834f,0.45834f);
-                start.x = wp.x + (ws.x-singleQuadDim)*0.5f;
-                start.y = wp.y + (ws.y-singleQuadDim)*0.5f;
-                end.x = start.x+singleQuadDim;
-                end.y = start.y+singleQuadDim;
-                hovers = //hoversInt==0;
-                        ImGui::IsMouseHoveringRect(start,end,false);
-                if (hovers) hoversInt = 1;
-                drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
-                // Refinement: draw remaining 4 inert quads
-                uv0=ImVec2(0.f,0.f);uv1=ImVec2(0.22916f,0.22916f);
-                start.x = wp.x + (ws.x-singleQuadDim)*0.5f - singleQuadDim;
-                start.y = wp.y + (ws.y-singleQuadDim)*0.5f - singleQuadDim;
-                end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
-                drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
-                uv0=ImVec2(0.45834f,0.f);uv1=ImVec2(0.6875f,0.22916f);
-                start.x = wp.x + (ws.x-singleQuadDim)*0.5f + singleQuadDim;
-                start.y = wp.y + (ws.y-singleQuadDim)*0.5f - singleQuadDim;
-                end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
-                drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
-                uv0=ImVec2(0.f,0.45834f);uv1=ImVec2(0.22916f,0.6875f);
-                start.x = wp.x + (ws.x-singleQuadDim)*0.5f - singleQuadDim;
-                start.y = wp.y + (ws.y-singleQuadDim)*0.5f + singleQuadDim;
-                end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
-                drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
-                uv0=ImVec2(0.45834f,0.45834f);uv1=ImVec2(0.6875f,0.6875f);
-                start.x = wp.x + (ws.x-singleQuadDim)*0.5f + singleQuadDim;
-                start.y = wp.y + (ws.y-singleQuadDim)*0.5f + singleQuadDim;
-                end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
-                drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
+		ImVec2 uv0,uv1;bool hovers;
+
+		if (dd.draggingTabWindowSrc->canExchangeTabLabelsWith(this))	{
+		    const float singleQuadDim = centralQuadDim*0.3333333334f;
+		    // central quad top
+		    uv0=ImVec2(0.22916f,0.f);uv1=ImVec2(0.45834f,0.22916f);
+		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f;
+		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f-singleQuadDim;
+		    end.x = start.x+singleQuadDim;
+		    end.y = start.y+singleQuadDim;
+		    hovers = ImGui::IsMouseHoveringRect(start,end,false);
+		    if (hovers) hoversInt = 3;
+		    drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
+		    // central quad right
+		    uv0=ImVec2(0.45834f,0.22916f);uv1=ImVec2(0.6875f,0.45834f);
+		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f + singleQuadDim;
+		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f;
+		    end.x = start.x+singleQuadDim;
+		    end.y = start.y+singleQuadDim;
+		    hovers = ImGui::IsMouseHoveringRect(start,end,false);
+		    if (hovers) hoversInt = 4;
+		    drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
+		    // central quad bottom
+		    uv0=ImVec2(0.22916f,0.45834f);uv1=ImVec2(0.45834f,0.6875f);
+		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f;
+		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f+singleQuadDim;
+		    end.x = start.x+singleQuadDim;
+		    end.y = start.y+singleQuadDim;
+		    hovers = ImGui::IsMouseHoveringRect(start,end,false);
+		    if (hovers) hoversInt = 5;
+		    drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
+		    // central quad left
+		    uv0=ImVec2(0.0f,0.22916f);uv1=ImVec2(0.22916f,0.45834f);
+		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f - singleQuadDim;
+		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f;
+		    end.x = start.x+singleQuadDim;
+		    end.y = start.y+singleQuadDim;
+		    hovers = ImGui::IsMouseHoveringRect(start,end,false);
+		    if (hovers) hoversInt = 2;
+		    drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
+		    // central quad center
+		    uv0=ImVec2(0.22916f,0.22916f);uv1=ImVec2(0.45834f,0.45834f);
+		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f;
+		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f;
+		    end.x = start.x+singleQuadDim;
+		    end.y = start.y+singleQuadDim;
+		    hovers = //hoversInt==0;
+			    ImGui::IsMouseHoveringRect(start,end,false);
+		    if (hovers) hoversInt = 1;
+		    drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
+		    // Refinement: draw remaining 4 inert quads
+		    uv0=ImVec2(0.f,0.f);uv1=ImVec2(0.22916f,0.22916f);
+		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f - singleQuadDim;
+		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f - singleQuadDim;
+		    end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
+		    drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
+		    uv0=ImVec2(0.45834f,0.f);uv1=ImVec2(0.6875f,0.22916f);
+		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f + singleQuadDim;
+		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f - singleQuadDim;
+		    end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
+		    drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
+		    uv0=ImVec2(0.f,0.45834f);uv1=ImVec2(0.22916f,0.6875f);
+		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f - singleQuadDim;
+		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f + singleQuadDim;
+		    end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
+		    drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
+		    uv0=ImVec2(0.45834f,0.45834f);uv1=ImVec2(0.6875f,0.6875f);
+		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f + singleQuadDim;
+		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f + singleQuadDim;
+		    end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
+		    drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
+		}
+		else {
+		    hoversInt = 0;
+		    uv0=ImVec2(0.5f,0.75f);uv1=ImVec2(0.75f,1.f);
+		    start.x = wp.x + (ws.x-centralQuadDim)*0.5f;
+		    start.y = wp.y + (ws.y-centralQuadDim)*0.5f;
+		    end.x = start.x+centralQuadDim;end.y = start.y+centralQuadDim;
+		    drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
+		}
             }
             // Button -----------------
             dd.drawDragButton(drawList,wp,mp);
@@ -1348,28 +1421,31 @@ void TabWindow::render()
         }
 
         // Drop tab label onto another
-        if (dd.draggingTabDst && dd.draggingTabDst->draggable) {
+	if (dd.draggingTabDst && dd.draggingTabDst->draggable) {
             // swap draggingTabSrc and draggingTabDst
             IM_ASSERT(dd.isDraggingSrcValid());
             IM_ASSERT(dd.isDraggingDstValid());
             IM_ASSERT(dd.draggingTabSrc!=dd.draggingTabDst);
 
-            if (dd.draggingTabNodeSrc!=dd.draggingTabNodeDst) {
-                bool srcWasSelected = dd.draggingTabNodeSrc->selectedTab == dd.draggingTabSrc;
-                bool dstWasSelected = dd.draggingTabNodeDst->selectedTab == dd.draggingTabDst;
-                if (srcWasSelected) dd.draggingTabNodeSrc->selectedTab = dd.draggingTabDst;
-                if (dstWasSelected) dd.draggingTabNodeDst->selectedTab = dd.draggingTabSrc;
-            }
+	    if (dd.draggingTabWindowSrc->canExchangeTabLabelsWith(this))    {
 
-            const int iSrc = dd.findDraggingSrcIndex();
-            IM_ASSERT(iSrc>=0);
-            const int iDst = dd.findDraggingDstIndex();
-            IM_ASSERT(iDst>=0);
-            dd.draggingTabNodeDst->tabs[iDst] = dd.draggingTabSrc;
-            dd.draggingTabNodeSrc->tabs[iSrc] = dd.draggingTabDst;
+		if (dd.draggingTabNodeSrc!=dd.draggingTabNodeDst) {
+		    bool srcWasSelected = dd.draggingTabNodeSrc->selectedTab == dd.draggingTabSrc;
+		    bool dstWasSelected = dd.draggingTabNodeDst->selectedTab == dd.draggingTabDst;
+		    if (srcWasSelected) dd.draggingTabNodeSrc->selectedTab = dd.draggingTabDst;
+		    if (dstWasSelected) dd.draggingTabNodeDst->selectedTab = dd.draggingTabSrc;
+		}
 
-            dd.reset();
-            //fprintf(stderr,"Drop tab label onto another\n");
+		const int iSrc = dd.findDraggingSrcIndex();
+		IM_ASSERT(iSrc>=0);
+		const int iDst = dd.findDraggingDstIndex();
+		IM_ASSERT(iDst>=0);
+		dd.draggingTabNodeDst->tabs[iDst] = dd.draggingTabSrc;
+		dd.draggingTabNodeSrc->tabs[iSrc] = dd.draggingTabDst;
+
+		dd.reset();
+		//fprintf(stderr,"Drop tab label onto another\n");
+	    }
         }
 
         // Reset draggingTabIndex if necessary
@@ -1449,11 +1525,74 @@ TabWindow::TabWindow() {
 }
 TabWindow::~TabWindow() {clearNodes();}
 
-TabWindow::TabLabel *TabWindow::addTabLabel(const char *label, const char *tooltip,bool closable, bool draggable, void *userPtr, const char *userText,int ImGuiWindowFlagsForContent) {
+void TabWindow::excludeTabWindow(TabWindow &tw)	{
+    for (int i=0,isz=tabWindowsToExclude.size();i<isz;i++)  {
+	if (&tw == tabWindowsToExclude[i]) return;
+    }
+    tabWindowsToExclude.push_back(&tw);
+    for (int i=0,isz=tw.tabWindowsToExclude.size();i<isz;i++)  {
+	if (this == tw.tabWindowsToExclude[i]) return;
+    }
+    tw.tabWindowsToExclude.push_back(this);
+}
+void TabWindow::includeTabWindow(TabWindow &tw)	{
+    for (int i=0,isz=tabWindowsToExclude.size();i<isz;i++)  {
+	if (&tw == tabWindowsToExclude[i]) {
+	    TabWindow* tmp = tabWindowsToExclude[isz-1];
+	    tabWindowsToExclude[isz-1] = tabWindowsToExclude[i];
+	    tabWindowsToExclude[i] = tmp;
+	    tabWindowsToExclude.pop_back();
+	    break;
+	}
+    }
+    for (int i=0,isz=tw.tabWindowsToExclude.size();i<isz;i++)  {
+	if (this == tw.tabWindowsToExclude[i]) {
+	    TabWindow* tmp = tw.tabWindowsToExclude[isz-1];
+	    tw.tabWindowsToExclude[isz-1] = tw.tabWindowsToExclude[i];
+	    tw.tabWindowsToExclude[i] = tmp;
+	    tw.tabWindowsToExclude.pop_back();
+	    break;
+	}
+    }
+}
+bool TabWindow::canExchangeTabLabelsWith(TabWindow *tw)	{
+    if ((tw!=this && (isolatedMode || tw->isIsolated())) || !tw) return false;
+    for (int i=0,isz=tabWindowsToExclude.size();i<isz;i++)  {
+	if (tw == tabWindowsToExclude[i]) return false;
+    }
+    return true;
+}
+
+bool TabWindow::isTabNodeMergeble(TabNode *node)    {
+    return (node && node->isLeafNode() && node->parent);
+}
+bool TabWindow::mergeTabNode(TabNode *node) {
+    if (!node || !isTabNodeMergeble(node)) return false;
+    {TabNode* n = node;while (n->parent) n=n->parent;if (n!=mainNode) return false;} // checks if tabNode belongs to this TabWindow
+    TabNode* parent = node->parent;
+    ImVector<TabLabel*> tabs;int sz=0;
+    while ((sz=node->tabs.size())>0)   {
+        TabLabel* tab = node->tabs[0];
+        tabs.push_back(tab);
+        node->removeTabLabel(tab,false,&activeNode,true);
+        if (sz==1) break;
+    }
+    node = NULL;    // it's invalid now
+    parent = parent->getFirstLeaftNode();
+    for (int i=0,isz = tabs.size();i<isz;i++)   {
+        parent->addTabLabel(tabs[i]);
+    }
+
+    return true;
+}
+
+
+TabWindow::TabLabel *TabWindow::addTabLabel(const char *label, const char *tooltip,bool closable, bool draggable, void *userPtr, const char *userText,int userInt,int ImGuiWindowFlagsForContent) {
     TabLabel* tab = (TabLabel*) ImGui::MemAlloc(sizeof(TabLabel));
     new (tab) TabLabel(label,tooltip,closable,draggable);
     tab->userPtr = userPtr;
     tab->setUserText(userText);
+    tab->userInt =userInt;
     tab->wndFlags = ImGuiWindowFlagsForContent;
     if (!activeNode) activeNode = mainNode->getFirstLeaftNode();
     activeNode = activeNode->addTabLabel(tab);
@@ -1571,25 +1710,27 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
 
     ImVec2 startGroupCursorPos = ImGui::GetCursorPos();
     ImGui::BeginGroup();
-    ImVec2 tabButtonSz(0,0);bool mustCloseTab = false;
+    ImVec2 tabButtonSz(0,0);bool mustCloseTab = false;bool canUseSizeOptimization = false;
     bool selection_changed = false;bool noButtonDrawn = true;
     for (int j = 0,i; j < numTabs; j++)
     {
         i = pOptionalItemOrdering ? pOptionalItemOrdering[j] : j;
         if (i==-1) continue;
 
-        if (!wrapMode) {if (!noButtonDrawn) ImGui::SameLine();}
+	if (!wrapMode) {if (!noButtonDrawn) ImGui::SameLine();canUseSizeOptimization=false;}
         else if (sumX > 0.f) {
             sumX+=style.ItemSpacing.x;   // Maybe we can skip it if we use SameLine(0,0) below
             ImGui::TabButton(tabLabels[i],(i == selectedIndex),allowTabClosing ? &mustCloseTab : NULL,NULL,&tabButtonSz,&tabStyle);
             sumX+=tabButtonSz.x;
             if (sumX>windowWidth) sumX = 0.f;
             else ImGui::SameLine();
+	    canUseSizeOptimization = true;
         }
+	else canUseSizeOptimization = false;
 
         // Draw the button
         ImGui::PushID(i);   // otherwise two tabs with the same name would clash.
-        if (ImGui::TabButton(tabLabels[i],i == selectedIndex,allowTabClosing ? &mustCloseTab : NULL,NULL,NULL,&tabStyle))   {
+	if (ImGui::TabButton(tabLabels[i],i == selectedIndex,allowTabClosing ? &mustCloseTab : NULL,NULL,NULL,&tabStyle,NULL,NULL,NULL,canUseSizeOptimization))   {
             selection_changed = (selectedIndex!=i);
             newSelectedIndex = i;
         }

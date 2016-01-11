@@ -57,9 +57,6 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             ImGui::Spacing();
             if (changed) tab->setModified(true);
         }
-        else if (tab->matchLabel("Style"))  {
-            ImGui::ShowStyleEditor();
-        }
         else ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
         ImGui::PopID();
     }
@@ -85,6 +82,28 @@ void TabLabelPopupMenuProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow&
         ImGui::EndPopup();
     }
 
+}
+// OPTIONAL: This is fired when RMB is clicked on an empty spot in the tab area
+void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,ImGui::TabWindow& parent,ImGui::TabNode* tabNode,void* userPtr) {
+    ImGui::PushStyleColor(ImGuiCol_WindowBg,ImGui::ColorConvertU32ToFloat4(ImGui::TabLabelStyle::Get().colors[ImGui::TabLabelStyle::Col_TabLabel]));
+    ImGui::PushStyleColor(ImGuiCol_Text,ImGui::ColorConvertU32ToFloat4(ImGui::TabLabelStyle::Get().colors[ImGui::TabLabelStyle::Col_TabLabelText]));
+    if (ImGui::BeginPopup(ImGui::TabWindow::GetTabLabelGroupPopupMenuName()))   {
+        ImGui::Text("TabLabel Group Menu");
+        ImGui::Separator();
+        if (parent.isTabNodeMergeble(tabNode) && ImGui::MenuItem("Merge with parent group")) parent.mergeTabNode(tabNode); // Warning: this invalidates "tabNode" after the call
+        if (ImGui::MenuItem("Close all tabs in this group")) {
+            for (int i=0,isz=tabs.size();i<isz;i++) {
+                ImGui::TabWindow::TabLabel* tab = tabs[i];
+                if (tab->isClosable())  // otherwise even non-closable tabs will be closed
+                {
+                    parent.removeTabLabel(tab);
+                    //tab->mustCloseNextFrame = true;  // alternative way...
+                }
+            }
+        }
+        ImGui::EndPopup();
+    }
+    ImGui::PopStyleColor(2);
 }
 #endif //NO_IMGUITABWINDOW
 
@@ -542,11 +561,12 @@ void DrawGL()	// Mandatory
                     static ImGui::TabWindow tabWindow;
                     if (!tabWindow.isInited()) {
                         ImGui::TabWindow::SetWindowContentDrawerCallback(&TabContentProvider,NULL); // Mandatory
-                        ImGui::TabWindow::SetTabLabelPopupMenuDrawerCallback(&TabLabelPopupMenuProvider,NULL);  // Optional (if tou need context-menu)
+                        ImGui::TabWindow::SetTabLabelPopupMenuDrawerCallback(&TabLabelPopupMenuProvider,NULL);  // Optional (if you need context-menu)
+                        ImGui::TabWindow::SetTabLabelGroupPopupMenuDrawerCallback(&TabLabelGroupPopupMenuProvider,NULL);    // Optional (fired when RMB is clicked on an empty spot in the tab area)
 
-                        static const char* tabNames[] = {"TabLabelStyle","Render","Layers","Style","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
+                        static const char* tabNames[] = {"TabLabelStyle","Render","Layers","Capture","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
                         static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
-                        static const char* tabTooltips[numTabs] = {"Edit the look of the tab labels","Render Tab Tooltip","Layers Tab Tooltip","Edit the main ImGui style","non-draggable","Object Tab Tooltip","","","","non-draggable","Tired to add tooltips...",""};
+                        static const char* tabTooltips[numTabs] = {"Edit the look of the tab labels","Render Tab Tooltip","Layers Tab Tooltip","Capture Tab Tooltip","non-draggable","Another Tab Tooltip","","","","non-draggable","Tired to add tooltips...",""};
                         for (int i=0;i<numTabs;i++) {
                             tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
                         }

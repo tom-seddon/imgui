@@ -41,6 +41,8 @@
     ImGui::TabWindow::SetTabLabelPopupMenuDrawerCallback(&TabLabelPopupMenuProvider,NULL);  // Optional (if you need context-menu)
     //ImGui::TabWindow::SetTabLabelClosingCallback(&OnTabLabelClosing,NULL);  // Optional (to fix/modify)
     //ImGui::TabWindow::SetTabLabelDeletingCallback(&OnTabLabelDeleting); // Optional (to delete your userPts)
+    //ImGui::TabWindow::SetTabLabelGroupPopupMenuDrawerCallback(&TabLabelGroupPopupMenuProvider,NULL);  // Optional (if you need context-menu when you right-click on an empty spot in the tab area)
+
 
     // Texture Loading (*)
     if (!ImGui::TabWindow::DockPanelIconTextureID)  {
@@ -66,10 +68,11 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
     else {ImGui::Text("EMPTY TAB LABEL DOCKING SPACE.");ImGui::Text("PLEASE DRAG AND DROP TAB LABELS HERE!");}
     ImGui::Separator();ImGui::Spacing();
 }
+// Optional (tab label context-menu)
 void TabLabelPopupMenuProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent,void* userPtr) {
     if (ImGui::BeginPopup(ImGui::TabWindow::GetTabLabelPopupMenuName()))   {
-        ImGui::PushID(tab->getLabel());
-        ImGui::Text("\"%s\"",tab->getLabel());
+        ImGui::PushID(tab);
+        ImGui::Text("\"%.*s\" Menu",(int)(strlen(tab->getLabel())-(tab->getModified()?1:0)),tab->getLabel());
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
@@ -83,12 +86,36 @@ void TabLabelPopupMenuProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow&
     }
 
 }
+// Optional (filter user-closing tab labels)
 void OnTabLabelClosing(const ImVector<ImGui::TabWindow::TabLabel*>& tabLabels,const ImVector<ImGui::TabWindow*>& parents,ImVector<bool>& forbidClosingOut,void* userPtr) {
     // Set "forbidClosingOut[..] = true" to prevent a tab label from closing. Please do not resize "forbidClosingOut".
     // (TODO: actually this was intented to fire a Modal Dialog, but I guess this can't be done without mods)
 }
+// Optional (delete TabLabel::userPtr when TabLabel gets deleted)
 void OnTabLabelDeleting(ImGui::TabWindow::TabLabel* tab) {
     // Use this callback to delete tab->userPtr if you used it
+}
+// Optional (this is fired when RMB is clicked on an empty spot in the tab area)
+void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,ImGui::TabWindow& parent,ImGui::TabNode* tabNode,void* userPtr) {
+    ImGui::PushStyleColor(ImGuiCol_WindowBg,ImGui::ColorConvertU32ToFloat4(ImGui::TabLabelStyle::Get().colors[ImGui::TabLabelStyle::Col_TabLabel]));
+    ImGui::PushStyleColor(ImGuiCol_Text,ImGui::ColorConvertU32ToFloat4(ImGui::TabLabelStyle::Get().colors[ImGui::TabLabelStyle::Col_TabLabelText]));
+    if (ImGui::BeginPopup(ImGui::TabWindow::GetTabLabelGroupPopupMenuName()))   {
+        ImGui::Text("TabLabel Group Menu");
+        ImGui::Separator();
+        if (parent.isTabNodeMergeble(tabNode) && ImGui::MenuItem("Merge with parent group")) parent.mergeTabNode(tabNode); // Warning: this invalidates "tabNode" after the call
+        if (ImGui::MenuItem("Close all tabs in this group")) {
+            for (int i=0,isz=tabs.size();i<isz;i++) {
+                ImGui::TabWindow::TabLabel* tab = tabs[i];
+                if (tab->isClosable())  // otherwise even non-closable tabs will be closed
+                {
+                    parent.removeTabLabel(tab);
+                    //tab->mustCloseNextFrame = true;  // alternative way...
+                }
+            }
+        }
+        ImGui::EndPopup();
+    }
+    ImGui::PopStyleColor(2);
 }
 
 TIPS ABOUT TEXTURE LOADING;
@@ -103,17 +130,15 @@ TIPS ABOUT TEXTURE LOADING;
 
 // KNOWN BUGS:
 /*
--> If you scale the tab labels (e.g. with CTRL+mouse wheel), the dragged tab is not scaled.
+-> If you scale the tab labels (e.g. with CTRL+mouse wheel), the dragged tab is not scaled. (I'm not sure this will be ever fixed).
 */
-
 
 // ROADMAP:
 /*
--> Add filtering between TabWindows:
-   1) TabWindow::isIsolated that prevents any tab label from flying outside
-   2) TabWindow::excludeTabWindow(TabWindow& tabWindow) and TabWindow::includeTabWindow(TabWindow& tabWindow) for preventing (or not) tabWindows from exchanging tab labels with each other.
+-> Add load/save layout (will require imguihelper.h).
+-> See if we can change the "closing callback" so that we can fire "want closing?" modal dialogs.
+-> consider adding a "mustCloseNextFrameWithoutAsking" boolean to TabWindow::TabLabel.
 */
-
 
 // BETTER ALTERNATIVES:
 /*
@@ -274,6 +299,8 @@ public:
         }
     }
     inline const char* getUserText() const {return userText;}
+    inline bool isClosable() const {return closable;}
+    inline bool isDraggable() const {return draggable;}
     mutable void* userPtr;
     mutable int userInt;
     mutable bool mustCloseNextFrame;
@@ -293,10 +320,14 @@ public:
 typedef void (*TabLabelCallback)(TabLabel* tabLabel,TabWindow& parent,void* userPtr);
 typedef void (*TabLabelClosingCallback)(const ImVector<TabLabel*>& tabLabels,const ImVector<TabWindow*>& parents,ImVector<bool>& forbidClosingOut,void* userPtr);
 typedef void (*TabLabelDeletingCallback)(TabLabel* tabLabel);
+typedef void (*TabLabelGroupPopupMenuCallback)(ImVector<TabLabel*>& tabLabels,TabWindow& parent,struct TabNode* node,void* userPtr);
+
 
 protected:
 struct TabNode* mainNode;   // owned
 struct TabNode* activeNode; // reference
+ImVector<TabWindow*> tabWindowsToExclude;// can't exchange tab labels with these
+bool isolatedMode;  // can't exchange tab labels outside
 bool init;
 void clearNodes();
 
@@ -307,7 +338,8 @@ static void* TabLabelPopupMenuDrawerUserPtr;
 static TabLabelClosingCallback TabLabelClosingCb;
 static void* TabLabelClosingUserPtr;
 static TabLabelDeletingCallback TabLabelDeletingCb;
-
+static TabLabelGroupPopupMenuCallback TabLabelGroupPopupMenuDrawerCb;
+static void* TabLabelGroupPopupMenuDrawerUserPtr;
 
 public:
 TabWindow();
@@ -317,7 +349,7 @@ TabWindow();
 bool isInited() const {return init;}
 
 // Here "label" is NOT used as ImGui ID (you shouldn't worry about it): it's just the text you want to display
-TabLabel* addTabLabel(const char* label,const char* tooltip=NULL,bool closable=true,bool draggable=true,void* userPtr=NULL,const char* userText=NULL,int ImGuiWindowFlagsForContent=0);
+TabLabel* addTabLabel(const char* label,const char* tooltip=NULL,bool closable=true,bool draggable=true,void* userPtr=NULL,const char* userText=NULL,int userInt=0,int ImGuiWindowFlagsForContent=0);
 TabLabel* addTabLabel(TabLabel* tabLabel,bool checkIfAlreadyPresent=true);  // use it only if you extend TabLabel
 bool removeTabLabel(TabLabel* tab);
 void clear();
@@ -341,12 +373,17 @@ static void SetTabLabelPopupMenuDrawerCallback(TabLabelCallback _tabLabelPopupMe
     TabLabelPopupMenuDrawerCb=_tabLabelPopupMenuDrawer;
     TabLabelPopupMenuDrawerUserPtr=userPtr;
 }
+inline static const char* GetTabLabelPopupMenuName() {return "TabWindowTabLabelPopupMenu";}
 static void SetTabLabelClosingCallback(TabLabelClosingCallback _tabLabelClosing,void* userPtr=NULL) {
     TabLabelClosingCb=_tabLabelClosing;
     TabLabelClosingUserPtr=userPtr;
 }
 static void SetTabLabelDeletingCallback(TabLabelDeletingCallback _tabLabelDeleting) {TabLabelDeletingCb=_tabLabelDeleting;}
-inline static const char* GetTabLabelPopupMenuName() {return "TabWindowTabLabelPopupMenu";}
+static void SetTabLabelGroupPopupMenuDrawerCallback(TabLabelGroupPopupMenuCallback _tabLabelGroupPopupMenuDrawer,void* userPtr=NULL) {
+    TabLabelGroupPopupMenuDrawerCb=_tabLabelGroupPopupMenuDrawer;
+    TabLabelGroupPopupMenuDrawerUserPtr=userPtr;
+}
+inline static const char* GetTabLabelGroupPopupMenuName() {return "TabWindowTabLabelGroupPopupMenu";}
 
 // Main method
 void render();
@@ -355,6 +392,16 @@ void render();
 static const unsigned char* GetDockPanelIconImagePng(int* bufferSizeOut=NULL); // Manually redrawn based on the ones in https://github.com/dockpanelsuite/dockpanelsuite (that is MIT licensed). So no copyright issues for this AFAIK, but I'm not a lawyer and I cannot guarantee it.
 static ImTextureID DockPanelIconTextureID;  // User must load it (using GetDockPanelIconImagePng) and free it when no IMGUI_USE_XXX_BINDING is used.
 
+// These are just optional "filtering" methods
+bool isIsolated() const {return isolatedMode;}          // can't exchange tab labels outside
+void setIsolatedMode(bool flag) {isolatedMode=flag;}
+void excludeTabWindow(TabWindow& tw);                   // can't exchange tab labels with...
+void includeTabWindow(TabWindow& tw);                   // removes from the "exclude list"...
+const ImVector<TabWindow*>& getTabWindowsToExclude() const {return tabWindowsToExclude;}
+bool canExchangeTabLabelsWith(TabWindow* tw);
+
+bool isTabNodeMergeble(struct TabNode* node);
+bool mergeTabNode(struct TabNode* node);        // Warning: it invalidates "node" after the call
 
 protected:
 
