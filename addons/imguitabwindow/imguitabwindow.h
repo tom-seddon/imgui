@@ -96,7 +96,7 @@ void OnTabLabelDeleting(ImGui::TabWindow::TabLabel* tab) {
     // Use this callback to delete tab->userPtr if you used it
 }
 // Optional (this is fired when RMB is clicked on an empty spot in the tab area)
-void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,ImGui::TabWindow& parent,ImGui::TabNode* tabNode,void* userPtr) {
+void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,ImGui::TabWindow& parent,ImGui::TabWindowNode* tabNode,void* userPtr) {
     ImGui::PushStyleColor(ImGuiCol_WindowBg,ImGui::ColorConvertU32ToFloat4(ImGui::TabLabelStyle::Get().colors[ImGui::TabLabelStyle::Col_TabLabel]));
     ImGui::PushStyleColor(ImGuiCol_Text,ImGui::ColorConvertU32ToFloat4(ImGui::TabLabelStyle::Get().colors[ImGui::TabLabelStyle::Col_TabLabelText]));
     if (ImGui::BeginPopup(ImGui::TabWindow::GetTabLabelGroupPopupMenuName()))   {
@@ -122,7 +122,7 @@ TIPS ABOUT TEXTURE LOADING;
 (*): -> Texture loading/freeing is mandatory only if you're not using an IMGUI_USE_XXX_BINDING, or if you don't know
         what IMGUI_USE_XXX_BINDING is.
      -> If you prefer loading the texture from an external image, I'll provide it here: https://gist.github.com/Flix01/2cdf1db8d936100628c0
-     -> Since internally we use texcoords, we had to choose a single convention for it. That means that it might be necessary for
+     -> Since internally we use texcoords, we had to choose a single convention for them. That means that it might be necessary for
         some people to load the image upside down (stb_image has a build-in method to do it).
 
 */
@@ -135,9 +135,7 @@ TIPS ABOUT TEXTURE LOADING;
 
 // ROADMAP:
 /*
--> Add load/save layout (will require imguihelper.h).
 -> See if we can change the "closing callback" so that we can fire "want closing?" modal dialogs.
--> consider adding a "mustCloseNextFrameWithoutAsking" boolean to TabWindow::TabLabel.
 */
 
 // BETTER ALTERNATIVES:
@@ -234,7 +232,7 @@ static const ImFont* ImGuiFonts[FONT_STYLE_COUNT];
 class TabWindow {
 public:
 struct TabLabel {
-    friend class TabNode;
+    friend class TabWindowNode;
     friend class TabWindow;
     friend struct TabWindowDragData;
 private:
@@ -313,24 +311,27 @@ public:
         ImGui::TextWrapped("Here is the content of tab label: \"%s\". Please consider using ImGui::TabWindow::SetWindowContentDrawerCallback(...) to set a callback for it, or extending TabWindowLabel and implement its render() method. ",getLabel());
     }
 
-
+    virtual bool saveAs(const char* savePath=NULL) {return true;}
 };
 protected:
 public:
 typedef void (*TabLabelCallback)(TabLabel* tabLabel,TabWindow& parent,void* userPtr);
 typedef void (*TabLabelClosingCallback)(const ImVector<TabLabel*>& tabLabels,const ImVector<TabWindow*>& parents,ImVector<bool>& forbidClosingOut,void* userPtr);
 typedef void (*TabLabelDeletingCallback)(TabLabel* tabLabel);
-typedef void (*TabLabelGroupPopupMenuCallback)(ImVector<TabLabel*>& tabLabels,TabWindow& parent,struct TabNode* node,void* userPtr);
+typedef void (*TabLabelGroupPopupMenuCallback)(ImVector<TabLabel*>& tabLabels,TabWindow& parent,struct TabWindowNode* node,void* userPtr);
+typedef TabLabel* (*TabLabelFactoryCallback)(TabWindow& parent,const char* label,const char* tooltip,bool closable,bool draggable,void* userPtr,const char* userText,int userInt,int ImGuiWindowFlagsForContent);
+typedef bool (*TabLabelFileCallback)(TabLabel* tabLabel,TabWindow& parent,const char* filePath);
 
 
 protected:
-struct TabNode* mainNode;   // owned
-struct TabNode* activeNode; // reference
+struct TabWindowNode* mainNode;   // owned
+struct TabWindowNode* activeNode; // reference
 ImVector<TabWindow*> tabWindowsToExclude;// can't exchange tab labels with these
 bool isolatedMode;  // can't exchange tab labels outside
 bool init;
 void clearNodes();
 
+public:
 static TabLabelCallback WindowContentDrawerCb;
 static void* WindowContentDrawerUserPtr;
 static TabLabelCallback TabLabelPopupMenuDrawerCb;
@@ -340,6 +341,9 @@ static void* TabLabelClosingUserPtr;
 static TabLabelDeletingCallback TabLabelDeletingCb;
 static TabLabelGroupPopupMenuCallback TabLabelGroupPopupMenuDrawerCb;
 static void* TabLabelGroupPopupMenuDrawerUserPtr;
+static TabLabelFactoryCallback TabLabelFactoryCb;
+static TabLabelFileCallback TabLabelSaveCb;
+
 
 public:
 TabWindow();
@@ -349,6 +353,7 @@ TabWindow();
 bool isInited() const {return init;}
 
 // Here "label" is NOT used as ImGui ID (you shouldn't worry about it): it's just the text you want to display
+// If "TabLabelFactoryCb" is present, it will be used in the following method:
 TabLabel* addTabLabel(const char* label,const char* tooltip=NULL,bool closable=true,bool draggable=true,void* userPtr=NULL,const char* userText=NULL,int userInt=0,int ImGuiWindowFlagsForContent=0);
 TabLabel* addTabLabel(TabLabel* tabLabel,bool checkIfAlreadyPresent=true);  // use it only if you extend TabLabel
 bool removeTabLabel(TabLabel* tab);
@@ -384,6 +389,9 @@ static void SetTabLabelGroupPopupMenuDrawerCallback(TabLabelGroupPopupMenuCallba
     TabLabelGroupPopupMenuDrawerUserPtr=userPtr;
 }
 inline static const char* GetTabLabelGroupPopupMenuName() {return "TabWindowTabLabelGroupPopupMenu";}
+static void SetTabLabelFactoryCallback(TabLabelFactoryCallback _tabLabelFactoryCb) {TabLabelFactoryCb=_tabLabelFactoryCb;}
+static void SetTabLabelSaveCallback(TabLabelFileCallback _tabLabelSaveCb) {TabLabelSaveCb=_tabLabelSaveCb;}
+
 
 // Main method
 void render();
@@ -400,13 +408,36 @@ void includeTabWindow(TabWindow& tw);                   // removes from the "exc
 const ImVector<TabWindow*>& getTabWindowsToExclude() const {return tabWindowsToExclude;}
 bool canExchangeTabLabelsWith(TabWindow* tw);
 
-bool isTabNodeMergeble(struct TabNode* node);
-bool mergeTabNode(struct TabNode* node);        // Warning: it invalidates "node" after the call
+bool isMergeble(struct TabWindowNode* node);
+bool merge(struct TabWindowNode* node);        // Warning: it invalidates "node" after the call
+
+mutable void* userPtr;
+
+//-------------------------------------------------------------------------------
+#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+protected:
+        bool save(ImGuiHelper::Serializer& s);
+public:
+        bool save(const char* filename);
+        static bool Save(const char* filename,TabWindow* pTabWindows,int numTabWindows);
+#       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+protected:
+        bool load(ImGuiHelper::Deserializer& d,const char*& amount);
+public:
+        bool load(const char* filename);
+        static bool Load(const char* filename,TabWindow* pTabWindows,int numTabWindows);
+#       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#       endif //NO_IMGUIHELPER_SERIALIZATION
+//--------------------------------------------------------------------------------
 
 protected:
 
+TabLabel* createTabLabel(const char* label,const char* tooltip=NULL,bool closable=true,bool draggable=true,void* userPtr=NULL,const char* userText=NULL,int userInt=0,int ImGuiWindowFlagsForContent=0);
+
 friend struct TabLabel;
-friend struct TabNode;
+friend struct TabWindowNode;
 friend struct TabWindowDragData;
 };
 typedef TabWindow::TabLabel TabWindowLabel;

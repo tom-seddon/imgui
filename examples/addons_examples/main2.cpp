@@ -83,14 +83,13 @@ void TabLabelPopupMenuProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow&
     }
 
 }
-// OPTIONAL: This is fired when RMB is clicked on an empty spot in the tab area
-void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,ImGui::TabWindow& parent,ImGui::TabNode* tabNode,void* userPtr) {
+void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,ImGui::TabWindow& parent,ImGui::TabWindowNode* tabNode,void* userPtr) {
     ImGui::PushStyleColor(ImGuiCol_WindowBg,ImGui::ColorConvertU32ToFloat4(ImGui::TabLabelStyle::Get().colors[ImGui::TabLabelStyle::Col_TabLabel]));
     ImGui::PushStyleColor(ImGuiCol_Text,ImGui::ColorConvertU32ToFloat4(ImGui::TabLabelStyle::Get().colors[ImGui::TabLabelStyle::Col_TabLabelText]));
     if (ImGui::BeginPopup(ImGui::TabWindow::GetTabLabelGroupPopupMenuName()))   {
         ImGui::Text("TabLabel Group Menu");
         ImGui::Separator();
-        if (parent.isTabNodeMergeble(tabNode) && ImGui::MenuItem("Merge with parent group")) parent.mergeTabNode(tabNode); // Warning: this invalidates "tabNode" after the call
+        if (parent.isMergeble(tabNode) && ImGui::MenuItem("Merge with parent group")) parent.merge(tabNode); // Warning: this invalidates "tabNode" after the call
         if (ImGui::MenuItem("Close all tabs in this group")) {
             for (int i=0,isz=tabs.size();i<isz;i++) {
                 ImGui::TabWindow::TabLabel* tab = tabs[i];
@@ -101,6 +100,17 @@ void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,
                 }
             }
         }
+#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+        ImGui::Separator();
+        static const char* saveName = "myTabWindow.layout";
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+        if (ImGui::MenuItem("Save Layout")) parent.save(saveName);
+#       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+        if (ImGui::MenuItem("Load Layout")) parent.load(saveName);
+#       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#       endif //NO_IMGUIHELPER_SERIALIZATION
+
         ImGui::EndPopup();
     }
     ImGui::PopStyleColor(2);
@@ -564,11 +574,20 @@ void DrawGL()	// Mandatory
                         ImGui::TabWindow::SetTabLabelPopupMenuDrawerCallback(&TabLabelPopupMenuProvider,NULL);  // Optional (if you need context-menu)
                         ImGui::TabWindow::SetTabLabelGroupPopupMenuDrawerCallback(&TabLabelGroupPopupMenuProvider,NULL);    // Optional (fired when RMB is clicked on an empty spot in the tab area)
 
-                        static const char* tabNames[] = {"TabLabelStyle","Render","Layers","Capture","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
-                        static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
-                        static const char* tabTooltips[numTabs] = {"Edit the look of the tab labels","Render Tab Tooltip","Layers Tab Tooltip","Capture Tab Tooltip","non-draggable","Another Tab Tooltip","","","","non-draggable","Tired to add tooltips...",""};
-                        for (int i=0;i<numTabs;i++) {
-                            tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
+                        bool loadedFromFile = false;
+#                       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#                       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+                        static const char* saveName = "myTabWindow.layout";
+                        loadedFromFile = tabWindow.load(saveName);
+#                       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#                       endif //NO_IMGUIHELPER
+                        if (!loadedFromFile)    {
+                            static const char* tabNames[] = {"TabLabelStyle","Render","Layers","Capture","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
+                            static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
+                            static const char* tabTooltips[numTabs] = {"Edit the look of the tab labels","Render Tab Tooltip","Layers Tab Tooltip","Capture Tab Tooltip","non-draggable","Another Tab Tooltip","","","","non-draggable","Tired to add tooltips...",""};
+                            for (int i=0;i<numTabs;i++) {
+                                tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
+                            }
                         }
                     }
                     tabWindow.render(); // Must be called inside "its" window (and sets isInited() to false)

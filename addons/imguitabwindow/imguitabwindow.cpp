@@ -515,32 +515,32 @@ void TabWindow::TabLabel::DestroyTabLabel(TabWindow::TabLabel*& tab)  {
     tab=NULL;
 }
 
-struct TabNode  {
+struct TabWindowNode  {
     friend class TabLabel;
     friend class TabWindow;
     friend struct TabWindowDragData;
 
     ImVector<TabWindow::TabLabel* > tabs;   // only in leaf nodes
     TabWindow::TabLabel* selectedTab;
-    TabNode *parent;   // (reference)
-    TabNode *child[2];  // (owned)
+    TabWindowNode *parent;   // (reference)
+    TabWindowNode *child[2];  // (owned)
     char* name;         // (owned)
     float splitterPerc; // in [0,1]
     bool horizontal;
     ImVec2 allTabsSize;
-    TabNode() {tabs.clear();selectedTab=NULL;parent=NULL;for (int i=0;i<2;i++) child[i]=NULL;name=NULL;
+    TabWindowNode() {tabs.clear();selectedTab=NULL;parent=NULL;for (int i=0;i<2;i++) child[i]=NULL;name=NULL;
 	       horizontal=false;splitterPerc=0.5f;allTabsSize.x=allTabsSize.y=0.f;}
-    ~TabNode() {
+    ~TabWindowNode() {
         clear();
         if (name) {ImGui::MemFree(name);name=NULL;}
     }
     inline bool isLeafNode() const {return (!child[0] && !child[1]);}
     void clear()  {
         for (int i=0;i<2;i++) {
-            TabNode*& ch = child[i];
+            TabWindowNode*& ch = child[i];
             if (ch) {
                 ch->clear();  // delete child nodes too
-                ch->~TabNode();
+                ch->~TabWindowNode();
                 ImGui::MemFree(ch);
                 ch=NULL;
             }
@@ -551,7 +551,7 @@ struct TabNode  {
         }
         tabs.clear();
     }
-    TabNode *addTabLabel(TabWindow::TabLabel *tab, int childPosLTRB=-1, int pos=-1)     {
+    TabWindowNode *addTabLabel(TabWindow::TabLabel *tab, int childPosLTRB=-1, int pos=-1)     {
         IM_ASSERT(tab);
         IM_ASSERT(this->isLeafNode());
         IM_ASSERT(!parent || (!parent->isLeafNode() && parent->child[0] && parent->child[1] && parent->tabs.size()==0));
@@ -568,16 +568,16 @@ struct TabNode  {
         const bool spFirst = (childPosLTRB==0 || childPosLTRB==1);
         // create the two child nodes
         for (int i=0;i<2;i++)   {
-            TabNode* ch = child[i];
-            ch = (TabNode*) ImGui::MemAlloc(sizeof(TabNode));
-            new (ch) TabNode();
+            TabWindowNode* ch = child[i];
+            ch = (TabWindowNode*) ImGui::MemAlloc(sizeof(TabWindowNode));
+            new (ch) TabWindowNode();
             child[i] = ch;
             ch->parent = this;
         }
         assignChildNames(false);
 
         // We must move tabs to child[]:
-        TabNode* ch = spFirst ? child[1] : child[0];
+        TabWindowNode* ch = spFirst ? child[1] : child[0];
         ch->tabs.resize(tabs.size());
         for (int i=0,isz=tabs.size();i<isz;i++) {
             TabWindow::TabLabel* tab = tabs[i];
@@ -591,10 +591,10 @@ struct TabNode  {
         ch->selectedTab = tab;
         return ch->addTabLabel(tab,-1,pos);
     }
-    TabNode* findTabLabel(TabWindow::TabLabel* tab,bool recursive=false)  {
+    TabWindowNode* findTabLabel(TabWindow::TabLabel* tab,bool recursive=false)  {
         if (!tab) return NULL;
         if (recursive) {
-            TabNode * n = NULL;
+            TabWindowNode * n = NULL;
             for (int i=0;i<2;i++)
                 if (child[i] && (n=child[i]->findTabLabel(tab,true))) return n;
         }
@@ -602,7 +602,7 @@ struct TabNode  {
             if (tabs[i]==tab) return this;
         return NULL;
     }
-    TabWindow::TabLabel* findTabLabelFromUserPtr(void* value,TabNode** pOptionalParentNodeOut=NULL)  {
+    TabWindow::TabLabel* findTabLabelFromUserPtr(void* value,TabWindowNode** pOptionalParentNodeOut=NULL)  {
         TabWindow::TabLabel* tab = NULL;
         for (int i=0;i<2;i++)
             if (child[i] && (tab=child[i]->findTabLabelFromUserPtr(value,pOptionalParentNodeOut))!=NULL) return tab;
@@ -613,7 +613,7 @@ struct TabNode  {
             }
         return NULL;
     }
-    TabWindow::TabLabel* findTabLabelFromUserText(const char* value,TabNode** pOptionalParentNodeOut=NULL)  {
+    TabWindow::TabLabel* findTabLabelFromUserText(const char* value,TabWindowNode** pOptionalParentNodeOut=NULL)  {
         TabWindow::TabLabel* tab = NULL;
         for (int i=0;i<2;i++)
             if (child[i] && (tab=child[i]->findTabLabelFromUserText(value,pOptionalParentNodeOut))!=NULL) return tab;
@@ -624,7 +624,7 @@ struct TabNode  {
             }
         return NULL;
     }
-    TabWindow::TabLabel* findTabLabelFromTooltip(const char* value,TabNode** pOptionalParentNodeOut=NULL)  {
+    TabWindow::TabLabel* findTabLabelFromTooltip(const char* value,TabWindowNode** pOptionalParentNodeOut=NULL)  {
         TabWindow::TabLabel* tab = NULL;
         for (int i=0;i<2;i++)
             if (child[i] && (tab=child[i]->findTabLabelFromTooltip(value,pOptionalParentNodeOut))!=NULL) return tab;
@@ -635,7 +635,7 @@ struct TabNode  {
             }
         return NULL;
     }
-    TabWindow::TabLabel* findTabLabelFromLabel(const char* value,TabNode** pOptionalParentNodeOut=NULL)  {
+    TabWindow::TabLabel* findTabLabelFromLabel(const char* value,TabWindowNode** pOptionalParentNodeOut=NULL)  {
         TabWindow::TabLabel* tab = NULL;
         for (int i=0;i<2;i++)
             if (child[i] && (tab=child[i]->findTabLabelFromLabel(value,pOptionalParentNodeOut))!=NULL) return tab;
@@ -646,14 +646,15 @@ struct TabNode  {
             }
         return NULL;
     }
-    bool removeTabLabel(TabWindow::TabLabel* tab,bool recursive=false,TabNode** pOptionalActiveTabNodeToChange=NULL,bool dontDeleteTabLabel=false)  {
+    bool removeTabLabel(TabWindow::TabLabel* tab,bool recursive=false,TabWindowNode** pOptionalActiveTabNodeToChange=NULL,bool dontDeleteTabLabel=false)  {
         if (!tab) return false;
         if (recursive) {
-            for (int i=0;i<2;i++)
+            for (int i=0;i<2;i++)   {
                 if (child[i] && child[i]->removeTabLabel(tab,true,pOptionalActiveTabNodeToChange,dontDeleteTabLabel)) return true;
+            }
         }
         IM_ASSERT(tab);
-        IM_ASSERT(this->isLeafNode());
+        IM_ASSERT(tabs.size()>0 ? this->isLeafNode() : true);
         for (int i=0;i<tabs.size();i++) {
             if (tabs[i]==tab) {
                 if (selectedTab == tab) selectedTab = NULL;
@@ -662,7 +663,7 @@ struct TabNode  {
                 tabs.pop_back();
                 if (tabs.size()==0 && parent) {
                     // We must merge this with parent
-                    TabNode* parent = this->parent;
+                    TabWindowNode* parent = this->parent;
                     IM_ASSERT(parent->child[0] && parent->child[1]);
                     IM_ASSERT(parent->child[0]==this || parent->child[1]==this);
                     IM_ASSERT(parent->child[0]!=parent->child[1]);
@@ -670,7 +671,7 @@ struct TabNode  {
                     int id = parent->child[0]==this ? 0 : 1;
                     // delete parent->child[id]: it's empty (Hey! that's me! Am I allowed delete myself?)
                     {
-                        TabNode* ch = parent->child[id];
+                        TabWindowNode* ch = parent->child[id];
                         IM_ASSERT(ch==this);
                         IM_ASSERT(ch->isLeafNode());
                         parent->child[id] = NULL;
@@ -681,7 +682,7 @@ struct TabNode  {
                     // merge the other child with parent
                     id = (id == 1) ? 0 : 1;// other parent child
                     {
-                        TabNode* ch = parent->child[id];
+                        TabWindowNode* ch = parent->child[id];
                         if (ch->isLeafNode())   {
                             if (pOptionalActiveTabNodeToChange && *pOptionalActiveTabNodeToChange==ch) *pOptionalActiveTabNodeToChange=parent;
                             IM_ASSERT(parent->tabs.size()==0);
@@ -716,12 +717,12 @@ struct TabNode  {
                         }
 
                         // delete the other child
-                        ch->~TabNode();
+                        ch->~TabWindowNode();
                         ImGui::MemFree(ch);
                         ch = NULL;
                         // delete me
                         ch = this;
-                        ch->~TabNode();
+                        ch->~TabWindowNode();
                         ImGui::MemFree(ch);
                     }
 
@@ -741,7 +742,7 @@ struct TabNode  {
         }
         return true;
     }
-    TabNode* getFirstLeaftNode() {return isLeafNode() ? this : child[0]->getFirstLeaftNode();}
+    TabWindowNode* getFirstLeaftNode() {return isLeafNode() ? this : child[0]->getFirstLeaftNode();}
     void setName(const char* lbl)  {
         if (name) {ImGui::MemFree(name);name=NULL;}
         const char e = '\0';if (!lbl) lbl=&e;
@@ -751,7 +752,7 @@ struct TabNode  {
     void assignChildNames(bool recursive=false)  {
         const int sz = strlen(name)+8;
         for (int i=0;i<2;i++) {
-            TabNode* ch = child[i];
+            TabWindowNode* ch = child[i];
             if (!ch) continue;
             if (ch->name) {ImGui::MemFree(ch->name);ch->name=NULL;}
             ch->name = (char*) ImGui::MemAlloc(sz);
@@ -764,12 +765,160 @@ struct TabNode  {
     }
 
     void render(const ImVec2& windowSize,struct MyTabWindowHelperStruct *ptr);
+
+#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+    void serialize(ImGuiHelper::Serializer& s,TabWindow* tabWindow) {
+        if (name) s.save(name,"name");
+        s.save(&splitterPerc,"splitterPerc");
+        s.save(&horizontal,"horizontal");
+        if (tabWindow->activeNode==this) {bool a = true;s.save(&a,"isActiveNode");}
+        const bool isLeafNode = this->isLeafNode();
+        s.save(&isLeafNode,"isLeafNode");
+        const int tabSize = tabs.size();s.save(&tabSize,"numTabs");
+        IM_ASSERT(tabSize>0 ? isLeafNode : true);
+        if (!isLeafNode) {
+            for (int i=0;i<2;i++)   child[i]->serialize(s,tabWindow);
+        }
+        else {
+            for (int i=0;i<tabSize;i++) {
+                TabWindow::TabLabel& tl = *tabs[i];
+                if (tl.getLabel()) s.save(tl.getLabel(),"label",(tl.getModified() && strlen(tl.getLabel())>0) ? (strlen(tl.getLabel())-1) : -1);
+                if (tl.tooltip && strlen(tl.tooltip)>0) s.save(tl.getTooltip(),"tooltip");
+                s.save(&tl.closable,"closable");
+                s.save(&tl.draggable,"draggable");
+                if (selectedTab==&tl) {bool a = true;s.save(&a,"selected");}
+                if (tl.userText && strlen(tl.userText)>0) s.save(tl.getUserText(),"userText");
+                s.save(&tl.userInt,"userInt");
+                s.save(&tl.wndFlags,"wndFlags");
+            }
+        }
+    }
+#endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+    struct ParseCallbackStruct {
+        TabWindowNode* node;
+        bool isLeafNode;
+        int numTabs;
+        bool isActiveNode;
+    };
+    static bool ParseCallback(ImGuiHelper::FieldType /*ft*/,int /*numArrayElements*/,void* pValue,const char* name,void* userPtr)    {
+        ParseCallbackStruct& cbs = *((ParseCallbackStruct*)userPtr);
+        TabWindowNode* n = cbs.node;
+        if (strcmp(name,"name")==0) {
+            n->setName((const char*)pValue);
+            //fprintf(stderr,"\"%s\"\n",n->name);
+        }
+        else if (strcmp(name,"splitterPerc")==0) n->splitterPerc = *((float*)pValue);
+        else if (strcmp(name,"horizontal")==0) n->horizontal = *((bool*)pValue);
+        else if (strcmp(name,"isActiveNode")==0) cbs.isActiveNode = *((bool*)pValue);
+        else if (strcmp(name,"isLeafNode")==0) cbs.isLeafNode = *((bool*)pValue);
+        else if (strcmp(name,"numTabs")==0) {cbs.numTabs = *((int*)pValue);return true;}
+        return false;
+    }
+    struct ParseTabLabelCallbackStruct {
+        TabWindow::TabLabel* tab;
+        bool isSelected;
+    };
+    static bool ParseTabLabelCallback(ImGuiHelper::FieldType /*ft*/,int /*numArrayElements*/,void* pValue,const char* name,void* userPtr)    {
+        ParseTabLabelCallbackStruct& tls = *((ParseTabLabelCallbackStruct*)userPtr);
+        TabWindow::TabLabel& tab = *tls.tab;
+        if (strcmp(name,"label")==0) {
+            tab.setLabel((const char*)pValue);
+            //fprintf(stderr,"\"%s\"\n",tab.label);
+        }
+        else if (strcmp(name,"tooltip")==0) tab.setTooltip((const char*)pValue);
+        else if (strcmp(name,"closable")==0) tab.closable = *((bool*)pValue);
+        else if (strcmp(name,"draggable")==0) tab.draggable = *((bool*)pValue);
+        else if (strcmp(name,"selected")==0) tls.isSelected = *((bool*)pValue);
+        else if (strcmp(name,"userText")==0) tab.setUserText((const char*)pValue);
+        else if (strcmp(name,"userInt")==0) tab.userInt = *((int*)pValue);
+        else if (strcmp(name,"wndFlags")==0) {tab.wndFlags = *((int*)pValue);return true;}
+        return false;
+    }
+    void deserialize(ImGuiHelper::Deserializer& d,TabWindowNode* parent,const char*& amount,TabWindow* tabWindow)  {
+        ParseCallbackStruct cbs;cbs.node=this;cbs.isLeafNode=true;cbs.numTabs=0;cbs.isActiveNode=false;
+        amount = d.parse(ParseCallback,(void*)&cbs,amount);
+        this->parent = parent;
+        if (cbs.isActiveNode && tabWindow) {
+            tabWindow->activeNode = this;
+            IM_ASSERT(cbs.isLeafNode);
+        }
+        IM_ASSERT(cbs.numTabs>0 ? cbs.isLeafNode : true);
+        if (!cbs.isLeafNode) {
+            for (int i=0;i<2;i++)   {
+                TabWindowNode* n = (TabWindowNode*) ImGui::MemAlloc(sizeof(TabWindowNode));
+                new (n) TabWindowNode();
+                n->deserialize(d,this,amount,tabWindow);
+                this->child[i] = n;
+            }
+        }
+        else {
+            for (int i=0;i<cbs.numTabs;i++) {
+                TabWindow::TabLabel tl;
+                ParseTabLabelCallbackStruct tls;tls.tab=&tl;tls.isSelected = false;
+                amount = d.parse(ParseTabLabelCallback,(void*)&tls,amount);
+                TabWindow::TabLabel* tab = tabWindow->createTabLabel(tl.getLabel(),tl.getTooltip(),tl.isClosable(),tl.isDraggable(),NULL,tl.userText,tl.userInt,tl.wndFlags);
+                if (tab) {
+                    this->tabs.push_back(tab);
+                    if (tls.isSelected) this->selectedTab = tab;
+                }
+            }
+        }
+        IM_ASSERT(this->tabs.size()>0 ? this->isLeafNode() : true);
+        IM_ASSERT(!this->isLeafNode() ? this->tabs.size()==0 : true);
+    }
+#endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#endif //NO_IMGUIHELPER_SERIALIZATION
+
 };
 
+namespace TabWindowDefaultCallbacks {
+void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,ImGui::TabWindow& parent,ImGui::TabWindowNode* tabNode,void*) {
+    ImGui::PushStyleColor(ImGuiCol_WindowBg,ImGui::ColorConvertU32ToFloat4(ImGui::TabLabelStyle::Get().colors[ImGui::TabLabelStyle::Col_TabLabel]));
+    ImGui::PushStyleColor(ImGuiCol_Text,ImGui::ColorConvertU32ToFloat4(ImGui::TabLabelStyle::Get().colors[ImGui::TabLabelStyle::Col_TabLabelText]));
+    if (ImGui::BeginPopup(ImGui::TabWindow::GetTabLabelGroupPopupMenuName()))   {
+        //ImGui::Text("TabLabel Group Menu");
+        //ImGui::Separator();
+        if (parent.isMergeble(tabNode) && ImGui::MenuItem("Merge")) parent.merge(tabNode); // Warning: this invalidates "tabNode" after the call
+        if (ImGui::MenuItem("Close all")) {
+            for (int i=0,isz=tabs.size();i<isz;i++) {
+                ImGui::TabWindow::TabLabel* tab = tabs[i];
+                if (tab->isClosable())  // otherwise even non-closable tabs will be closed
+                {
+                    parent.removeTabLabel(tab);
+                    //tab->mustCloseNextFrame = true;  // alternative way...
+                }
+            }
+        }
+        ImGui::EndPopup();
+    }
+    ImGui::PopStyleColor(2);
+}
+void TabLabelPopupMenuProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent,void*) {
+    const bool savable = tab && /*tab->isClosable() &&*/ tab->getModified();
+    if (savable && ImGui::BeginPopup(ImGui::TabWindow::GetTabLabelPopupMenuName()))   {
+        ImGui::PushID(tab);
+        //ImGui::Text("\"%.*s\" Menu",(int)(strlen(tab->getLabel())-(tab->getModified()?1:0)),tab->getLabel());
+        //ImGui::Separator();
+        if (ImGui::MenuItem("Save")) {
+            bool ok = false;
+            if (TabWindow::TabLabelSaveCb) ok = TabWindow::TabLabelSaveCb(tab,parent,NULL);
+            else ok = tab->saveAs(NULL);
+            if (ok) tab->setModified(false);
+        }
+        //if (tab->closable && ImGui::MenuItem("Close")) tab->mustCloseNextFrame = true;
+        ImGui::PopID();
+        ImGui::EndPopup();
+    }
+
+}
+
+}   // TabWindowDefaultCallbacks
 
 struct TabWindowDragData {
     TabWindow::TabLabel* draggingTabSrc;
-    TabNode* draggingTabNodeSrc;
+    TabWindowNode* draggingTabNodeSrc;
     ImGuiWindow* draggingTabImGuiWindowSrc;
     TabWindow* draggingTabWindowSrc;
     ImVec2 draggingTabSrcSize;
@@ -777,7 +926,7 @@ struct TabWindowDragData {
     bool draggingTabSrcIsSelected;
 
     TabWindow::TabLabel* draggingTabDst;
-    TabNode* draggingTabNodeDst;
+    TabWindowNode* draggingTabNodeDst;
     ImGuiWindow* draggingTabImGuiWindowDst;
     TabWindow* draggingTabWindowDst;
 
@@ -817,12 +966,12 @@ struct TabWindowDragData {
         }
         return -1;
     }
-    inline static TabNode* FindTabNodeByName(TabNode* firstNode,const char* name,int numCharsToMatch=-1) {
+    inline static TabWindowNode* FindTabNodeByName(TabWindowNode* firstNode,const char* name,int numCharsToMatch=-1) {
         if ((numCharsToMatch==-1 && strcmp(firstNode->name,name)==0)
             || (strncmp(firstNode->name,name,numCharsToMatch)==0)) return firstNode;
-        TabNode* rv = NULL;
+        TabWindowNode* rv = NULL;
         for (int i=0;i<2;i++)   {
-            TabNode* ch = firstNode->child[i];
+            TabWindowNode* ch = firstNode->child[i];
             if (ch && (rv=FindTabNodeByName(ch,name,numCharsToMatch))) return rv;
         }
         return NULL;
@@ -859,7 +1008,7 @@ struct MyTabWindowHelperStruct {
     static TabWindow* tabLabelPopupTabWindow;   // used by both tabLabelPopup and tabLabelGroupPopup
     static ImVector<TabWindow::TabLabel*> tabLabelGroupPopup;
     static bool tabLabelGroupPopupChanged;
-    static TabNode* tabLabelGroupPopupNode;
+    static TabWindowNode* tabLabelGroupPopupNode;
 
 
 
@@ -867,7 +1016,7 @@ struct MyTabWindowHelperStruct {
     TabWindow* tabWindow;
 
     static ImVector<TabWindow::TabLabel*> TabsToClose;
-    static ImVector<TabNode*> TabsToCloseNodes;
+    static ImVector<TabWindowNode*> TabsToCloseNodes;
     static ImVector<TabWindow*> TabsToCloseParents;
 
     ImVec2 itemSpacing;
@@ -909,23 +1058,25 @@ ImVector<TabWindow::TabLabel*> MyTabWindowHelperStruct::tabLabelGroupPopup;
 TabWindow* MyTabWindowHelperStruct::tabLabelPopupTabWindow = NULL;
 bool  MyTabWindowHelperStruct::tabLabelPopupChanged = false;
 bool  MyTabWindowHelperStruct::tabLabelGroupPopupChanged = false;
-TabNode*  MyTabWindowHelperStruct::tabLabelGroupPopupNode = NULL;
+TabWindowNode*  MyTabWindowHelperStruct::tabLabelGroupPopupNode = NULL;
 bool MyTabWindowHelperStruct::isMouseDragging = false;
 bool MyTabWindowHelperStruct::LockedDragging = false;
 ImVector<TabWindow::TabLabel*> MyTabWindowHelperStruct::TabsToClose;
-ImVector<TabNode*> MyTabWindowHelperStruct::TabsToCloseNodes;
+ImVector<TabWindowNode*> MyTabWindowHelperStruct::TabsToCloseNodes;
 ImVector<TabWindow*> MyTabWindowHelperStruct::TabsToCloseParents;
 TabWindow::TabLabelCallback TabWindow::WindowContentDrawerCb=NULL;
 void* TabWindow::WindowContentDrawerUserPtr=NULL;
-TabWindow::TabLabelCallback TabWindow::TabLabelPopupMenuDrawerCb=NULL;
+TabWindow::TabLabelCallback TabWindow::TabLabelPopupMenuDrawerCb=&TabWindowDefaultCallbacks::TabLabelPopupMenuProvider;
 void* TabWindow::TabLabelPopupMenuDrawerUserPtr=NULL;
 TabWindow::TabLabelClosingCallback TabWindow::TabLabelClosingCb=NULL;
 void* TabWindow::TabLabelClosingUserPtr=NULL;
 TabWindow::TabLabelDeletingCallback TabWindow::TabLabelDeletingCb=NULL;
-TabWindow::TabLabelGroupPopupMenuCallback TabWindow::TabLabelGroupPopupMenuDrawerCb=NULL;
+TabWindow::TabLabelGroupPopupMenuCallback TabWindow::TabLabelGroupPopupMenuDrawerCb=&TabWindowDefaultCallbacks::TabLabelGroupPopupMenuProvider;
 void* TabWindow::TabLabelGroupPopupMenuDrawerUserPtr=NULL;
+TabWindow::TabLabelFactoryCallback TabWindow::TabLabelFactoryCb=NULL;
+TabWindow::TabLabelFileCallback TabWindow::TabLabelSaveCb=NULL;
 
-void TabNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
+void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
 {   
     MyTabWindowHelperStruct& mhs = *ptr;
     const TabLabelStyle& tabStyle = TabLabelStyle::GetMergedWithWindowAlpha();  // Or just Get() ?
@@ -1225,7 +1376,7 @@ void TabWindow::render()
             }
             for (int i=0;i<sz;i++) {
                 if (!dontCloseTabLabels[i]) {
-                    TabNode* node = MyTabWindowHelperStruct::TabsToCloseNodes[i];
+                    TabWindowNode* node = MyTabWindowHelperStruct::TabsToCloseNodes[i];
                     TabLabel* tabLabel = MyTabWindowHelperStruct::TabsToClose[i];
                     TabWindow* tabWindow = MyTabWindowHelperStruct::TabsToCloseParents[i];
 
@@ -1507,7 +1658,7 @@ void TabWindow::render()
 
 void TabWindow::clearNodes() {
     if (mainNode)   {
-        mainNode->~TabNode();
+        mainNode->~TabWindowNode();
         ImGui::MemFree(mainNode);
         mainNode=NULL;
     }
@@ -1517,11 +1668,12 @@ void TabWindow::clear() {mainNode->clear();activeNode=mainNode;}
 
 
 TabWindow::TabWindow() {
-    mainNode = (TabNode*) ImGui::MemAlloc(sizeof(TabNode));
-    new (mainNode) TabNode();
+    mainNode = (TabWindowNode*) ImGui::MemAlloc(sizeof(TabWindowNode));
+    new (mainNode) TabWindowNode();
     mainNode->name = (char*) ImGui::MemAlloc(7);strcpy(mainNode->name,"##main");
     activeNode=mainNode;
     init=false;
+    userPtr=NULL;
 }
 TabWindow::~TabWindow() {clearNodes();}
 
@@ -1563,13 +1715,13 @@ bool TabWindow::canExchangeTabLabelsWith(TabWindow *tw)	{
     return true;
 }
 
-bool TabWindow::isTabNodeMergeble(TabNode *node)    {
+bool TabWindow::isMergeble(TabWindowNode *node)    {
     return (node && node->isLeafNode() && node->parent);
 }
-bool TabWindow::mergeTabNode(TabNode *node) {
-    if (!node || !isTabNodeMergeble(node)) return false;
-    {TabNode* n = node;while (n->parent) n=n->parent;if (n!=mainNode) return false;} // checks if tabNode belongs to this TabWindow
-    TabNode* parent = node->parent;
+bool TabWindow::merge(TabWindowNode *node) {
+    if (!node || !isMergeble(node)) return false;
+    {TabWindowNode* n = node;while (n->parent) n=n->parent;if (n!=mainNode) return false;} // checks if tabNode belongs to this TabWindow
+    TabWindowNode* parent = node->parent;
     ImVector<TabLabel*> tabs;int sz=0;
     while ((sz=node->tabs.size())>0)   {
         TabLabel* tab = node->tabs[0];
@@ -1587,15 +1739,78 @@ bool TabWindow::mergeTabNode(TabNode *node) {
 }
 
 
+
+//-------------------------------------------------------------------------------
+#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+bool TabWindow::save(ImGuiHelper::Serializer &s)    {
+    if (!s.isValid()) return false;
+    mainNode->serialize(s,this);
+    return true;
+}
+bool TabWindow::save(const char* filename)  {
+    ImGuiHelper::Serializer s(filename);    
+    return save(s);
+}
+bool TabWindow::Save(const char *filename, TabWindow *pTabWindows, int numTabWindows)   {
+    IM_ASSERT(pTabWindows && numTabWindows>0);
+    ImGuiHelper::Serializer s(filename);
+    bool ok = true;
+    for (int i=0;i<numTabWindows;i++)   {
+        ok|=pTabWindows[i].save(s);
+    }
+    return ok;
+}
+#endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+bool TabWindow::load(ImGuiHelper::Deserializer &d, const char *&amount) {
+    if (!d.isValid()) return false;
+    this->clear();      // Well, shouldn't we ask for modified unclosed tab labels here ?
+
+    mainNode->deserialize(d,NULL,amount,this);
+
+    IM_ASSERT(activeNode && activeNode->isLeafNode());
+
+    return true;
+}
+bool TabWindow::load(const char* filename)  {
+    ImGuiHelper::Deserializer d(filename);
+    const char* amount = 0;
+    return load(d,amount);
+}
+bool TabWindow::Load(const char *filename, TabWindow *pTabWindows, int numTabWindows)   {
+    IM_ASSERT(pTabWindows && numTabWindows>0);
+    for (int i=0;i<numTabWindows;i++)   {
+        pTabWindows[i].clear(); // Well, shouldn't we ask for modified unclosed tab labels here ?
+    }
+    ImGuiHelper::Deserializer d(filename);
+    const char* amount = 0; bool ok = true;
+    for (int i=0;i<numTabWindows;i++)   {
+        ok|=pTabWindows[i].load(d,amount);
+    }
+    return ok;
+}
+#endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#endif //NO_IMGUIHELPER_SERIALIZATION
+//--------------------------------------------------------------------------------
+
+TabWindow::TabLabel *TabWindow::createTabLabel(const char *label, const char *tooltip, bool closable, bool draggable, void *userPtr, const char *userText, int userInt, int ImGuiWindowFlagsForContent) {
+    TabLabel* tab = NULL;
+    if (TabLabelFactoryCb)  tab = TabLabelFactoryCb(*this,label,tooltip,closable,draggable,userPtr,userText,userInt,ImGuiWindowFlagsForContent);
+    else    {
+        tab = (TabLabel*) ImGui::MemAlloc(sizeof(TabLabel));
+        new (tab) TabLabel(label,tooltip,closable,draggable);
+        tab->userPtr = userPtr;
+        tab->setUserText(userText);
+        tab->userInt =userInt;
+        tab->wndFlags = ImGuiWindowFlagsForContent;
+    }
+    return tab;
+}
 TabWindow::TabLabel *TabWindow::addTabLabel(const char *label, const char *tooltip,bool closable, bool draggable, void *userPtr, const char *userText,int userInt,int ImGuiWindowFlagsForContent) {
-    TabLabel* tab = (TabLabel*) ImGui::MemAlloc(sizeof(TabLabel));
-    new (tab) TabLabel(label,tooltip,closable,draggable);
-    tab->userPtr = userPtr;
-    tab->setUserText(userText);
-    tab->userInt =userInt;
-    tab->wndFlags = ImGuiWindowFlagsForContent;
+    TabLabel* tab = createTabLabel(label,tooltip,closable,draggable,userPtr,userText,userInt,ImGuiWindowFlagsForContent);
     if (!activeNode) activeNode = mainNode->getFirstLeaftNode();
-    activeNode = activeNode->addTabLabel(tab);
+    if (tab) activeNode = activeNode->addTabLabel(tab);
     return tab;
 }
 TabWindow::TabLabel *TabWindow::addTabLabel(TabLabel *tabLabel, bool checkIfAlreadyPresent) {
