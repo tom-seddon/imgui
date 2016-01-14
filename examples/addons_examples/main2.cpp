@@ -95,11 +95,21 @@ void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,
                 ImGui::TabWindow::TabLabel* tab = tabs[i];
                 if (tab->isClosable())  // otherwise even non-closable tabs will be closed
                 {
-                    parent.removeTabLabel(tab);
-                    //tab->mustCloseNextFrame = true;  // alternative way...
+                    //parent.removeTabLabel(tab);
+                    tab->mustCloseNextFrame = true;  // alternative way... this asks for saving if file is modified
                 }
             }
         }
+        ImGui::Separator();
+        if (ImGui::MenuItem("Save all tabs in all groups")) {parent.saveAll();}
+        if (ImGui::MenuItem("Close all tabs in all groups")) {
+            // This methods fires a modal dialog if we have unsaved files. To prevent this, we can try calling: parent.saveAll(); before
+            parent.startCloseAllDialog(NULL,true);  // returns true when a modal dialog is stated
+            // Note that modal dialogs in ImGui DON'T return soon with the result.
+            // However we can't prevent their "Cancel" button, so that if we know that it is started (=return value above),
+            // then we can call ImGui::TabWindow::AreSomeDialogsOpen(); and, if the return value is false, it is safe to close the program.
+        }
+
 #       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
         ImGui::Separator();
         static const char* saveName = "myTabWindow.layout";

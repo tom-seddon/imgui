@@ -528,8 +528,9 @@ struct TabWindowNode  {
     float splitterPerc; // in [0,1]
     bool horizontal;
     ImVec2 allTabsSize;
+    int  numClosableTabs;
     TabWindowNode() {tabs.clear();selectedTab=NULL;parent=NULL;for (int i=0;i<2;i++) child[i]=NULL;name=NULL;
-	       horizontal=false;splitterPerc=0.5f;allTabsSize.x=allTabsSize.y=0.f;}
+           horizontal=false;splitterPerc=0.5f;allTabsSize.x=allTabsSize.y=0.f;numClosableTabs=0;}
     ~TabWindowNode() {
         clear();
         if (name) {ImGui::MemFree(name);name=NULL;}
@@ -763,6 +764,19 @@ struct TabWindowNode  {
             if (recursive) ch->assignChildNames(true);
         }
     }
+    void getTabLabels(ImVector<TabWindow::TabLabel*>& tabsOut,bool onlyClosableTabs=false,bool onlyModifiedTabs=false)	{
+        for (int i=0;i<2;i++)   {
+            if (child[i]) child[i]->getTabLabels(tabsOut,onlyClosableTabs,onlyModifiedTabs);
+        }
+        IM_ASSERT(tabs.size()>0 ? this->isLeafNode() : true);
+        for (int i=0,isz=tabs.size();i<isz;i++) {
+            TabWindow::TabLabel* tab = tabs[i];
+            if ((!onlyClosableTabs || tab->isClosable()) && (!onlyModifiedTabs || tab->getModified())) {
+                tabsOut.push_back(tab);
+                //fprintf(stderr,"%s\n",tab->getLabel());
+            }
+        }
+    }
 
     void render(const ImVec2& windowSize,struct MyTabWindowHelperStruct *ptr);
 
@@ -875,25 +889,29 @@ struct TabWindowNode  {
 
 namespace TabWindowDefaultCallbacks {
 void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,ImGui::TabWindow& parent,ImGui::TabWindowNode* tabNode,void*) {
-    ImGui::PushStyleColor(ImGuiCol_WindowBg,ImGui::ColorConvertU32ToFloat4(ImGui::TabLabelStyle::Get().colors[ImGui::TabLabelStyle::Col_TabLabel]));
-    ImGui::PushStyleColor(ImGuiCol_Text,ImGui::ColorConvertU32ToFloat4(ImGui::TabLabelStyle::Get().colors[ImGui::TabLabelStyle::Col_TabLabelText]));
-    if (ImGui::BeginPopup(ImGui::TabWindow::GetTabLabelGroupPopupMenuName()))   {
-        //ImGui::Text("TabLabel Group Menu");
-        //ImGui::Separator();
-        if (parent.isMergeble(tabNode) && ImGui::MenuItem("Merge")) parent.merge(tabNode); // Warning: this invalidates "tabNode" after the call
-        if (ImGui::MenuItem("Close all")) {
-            for (int i=0,isz=tabs.size();i<isz;i++) {
-                ImGui::TabWindow::TabLabel* tab = tabs[i];
-                if (tab->isClosable())  // otherwise even non-closable tabs will be closed
-                {
-                    parent.removeTabLabel(tab);
-                    //tab->mustCloseNextFrame = true;  // alternative way...
+    const int numTabsToClose = parent.getNumClosableTabs(tabNode);  // or parent.getNumTabs(tabNode)
+    const bool isMergeble = parent.isMergeble(tabNode);
+    if (numTabsToClose || isMergeble)  {
+        ImGui::PushStyleColor(ImGuiCol_WindowBg,ImGui::ColorConvertU32ToFloat4(ImGui::TabLabelStyle::Get().colors[ImGui::TabLabelStyle::Col_TabLabel]));
+        ImGui::PushStyleColor(ImGuiCol_Text,ImGui::ColorConvertU32ToFloat4(ImGui::TabLabelStyle::Get().colors[ImGui::TabLabelStyle::Col_TabLabelText]));
+        if (ImGui::BeginPopup(ImGui::TabWindow::GetTabLabelGroupPopupMenuName()))   {
+            //ImGui::Text("TabLabel Group Menu");
+            //ImGui::Separator();
+            if (isMergeble && ImGui::MenuItem("Merge")) parent.merge(tabNode); // Warning: this invalidates "tabNode" after the call
+            if (numTabsToClose && ImGui::MenuItem("Close all")) {
+                for (int i=0,isz=tabs.size();i<isz;i++) {
+                    ImGui::TabWindow::TabLabel* tab = tabs[i];
+                    if (tab->isClosable())  // otherwise even non-closable tabs will be closed [skip if using parent.getNumTabs(tabNode) above]
+                    {
+			//parent.removeTabLabel(tab);
+			tab->mustCloseNextFrame = true;  // alternative way... this asks for closing
+                    }
                 }
             }
+            ImGui::EndPopup();
         }
-        ImGui::EndPopup();
+        ImGui::PopStyleColor(2);
     }
-    ImGui::PopStyleColor(2);
 }
 void TabLabelPopupMenuProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent,void*) {
     const bool savable = tab && /*tab->isClosable() &&*/ tab->getModified();
@@ -1009,15 +1027,18 @@ struct MyTabWindowHelperStruct {
     static ImVector<TabWindow::TabLabel*> tabLabelGroupPopup;
     static bool tabLabelGroupPopupChanged;
     static TabWindowNode* tabLabelGroupPopupNode;
-
-
-
+    bool mustOpenAskForClosingPopup;
 
     TabWindow* tabWindow;
+    bool allowExchangeTabLabels;
 
     static ImVector<TabWindow::TabLabel*> TabsToClose;
-    static ImVector<TabWindowNode*> TabsToCloseNodes;
     static ImVector<TabWindow*> TabsToCloseParents;
+
+    static ImVector<TabWindow::TabLabel*> TabsToAskForClosing;
+    static ImVector<TabWindow*> TabsToAskForClosingParents;
+    static bool TabsToAskForClosingIsUsedJustToSaveTheseTabs;
+    static bool TabsToAskForClosingDontAllowCancel;
 
     ImVec2 itemSpacing;
 
@@ -1032,6 +1053,8 @@ struct MyTabWindowHelperStruct {
         isRMBclicked = ImGui::IsMouseClicked(1);
         isASplitterActive = false;
         tabWindow = _tabWindow;
+        allowExchangeTabLabels = !gDragData.draggingTabSrc || (gDragData.draggingTabWindowSrc && gDragData.draggingTabWindowSrc->canExchangeTabLabelsWith(tabWindow));
+    mustOpenAskForClosingPopup = false;
 
         ImGuiStyle& style = ImGui::GetStyle();
         itemSpacing =   style.ItemSpacing;
@@ -1045,12 +1068,23 @@ struct MyTabWindowHelperStruct {
 
         textHeightWithSpacing = ImGui::GetTextLineHeightWithSpacing();
     }
-    ~MyTabWindowHelperStruct() {restoreStyleVars();}
+    ~MyTabWindowHelperStruct() {
+	restoreStyleVars();
+	if (mustOpenAskForClosingPopup) {
+	    ImGuiState& g = *GImGui; while (g.OpenedPopupStack.size() > 0) g.OpenedPopupStack.pop_back();   // Close all existing context-menus
+	    ImGui::OpenPopup(ImGui::TabWindow::GetTabLabelAskForDeletionModalWindowName());
+	}
+    }
     inline void storeStyleVars() {ImGui::GetStyle().ItemSpacing = ImVec2(1,1);}
     inline void restoreStyleVars() {ImGui::GetStyle().ItemSpacing = itemSpacing;}
 
     inline static void ResetTabsToClose() {
-        TabsToClose.clear();TabsToCloseNodes.clear();TabsToCloseParents.clear();
+	TabsToClose.clear();TabsToCloseParents.clear();
+    }
+    inline static void ResetTabsToAskForClosing() {
+	TabsToAskForClosing.clear();TabsToAskForClosingParents.clear();
+    TabsToAskForClosingIsUsedJustToSaveTheseTabs=false;
+    TabsToAskForClosingDontAllowCancel=false;
     }
 };
 TabWindow::TabLabel* MyTabWindowHelperStruct::tabLabelPopup = NULL;
@@ -1062,14 +1096,17 @@ TabWindowNode*  MyTabWindowHelperStruct::tabLabelGroupPopupNode = NULL;
 bool MyTabWindowHelperStruct::isMouseDragging = false;
 bool MyTabWindowHelperStruct::LockedDragging = false;
 ImVector<TabWindow::TabLabel*> MyTabWindowHelperStruct::TabsToClose;
-ImVector<TabWindowNode*> MyTabWindowHelperStruct::TabsToCloseNodes;
 ImVector<TabWindow*> MyTabWindowHelperStruct::TabsToCloseParents;
+ImVector<TabWindow::TabLabel*> MyTabWindowHelperStruct::TabsToAskForClosing;
+ImVector<TabWindow*> MyTabWindowHelperStruct::TabsToAskForClosingParents;
+bool MyTabWindowHelperStruct::TabsToAskForClosingIsUsedJustToSaveTheseTabs=false;
+bool MyTabWindowHelperStruct::TabsToAskForClosingDontAllowCancel=false;
 TabWindow::TabLabelCallback TabWindow::WindowContentDrawerCb=NULL;
 void* TabWindow::WindowContentDrawerUserPtr=NULL;
 TabWindow::TabLabelCallback TabWindow::TabLabelPopupMenuDrawerCb=&TabWindowDefaultCallbacks::TabLabelPopupMenuProvider;
 void* TabWindow::TabLabelPopupMenuDrawerUserPtr=NULL;
-TabWindow::TabLabelClosingCallback TabWindow::TabLabelClosingCb=NULL;
-void* TabWindow::TabLabelClosingUserPtr=NULL;
+//TabWindow::TabLabelClosingCallback TabWindow::TabLabelClosingCb=NULL;
+//void* TabWindow::TabLabelClosingUserPtr=NULL;
 TabWindow::TabLabelDeletingCallback TabWindow::TabLabelDeletingCb=NULL;
 TabWindow::TabLabelGroupPopupMenuCallback TabWindow::TabLabelGroupPopupMenuDrawerCb=&TabWindowDefaultCallbacks::TabLabelGroupPopupMenuProvider;
 void* TabWindow::TabLabelGroupPopupMenuDrawerUserPtr=NULL;
@@ -1172,33 +1209,34 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
     //TabWindow::TabLabel* hoveredTab = NULL;
     //----------------------------------------------------------------
     {
-	style.Colors[ImGuiCol_ChildWindowBg] = colorTransparent;
-	ImGui::BeginChild(name,windowSize,false,ImGuiWindowFlags_NoScrollbar);
-	if (tabStyle.tabWindowLabelBackgroundColor.w!=0)    {
-	    ImGuiWindow* window = ImGui::GetCurrentWindow();
-	    window->DrawList->AddRectFilled(window->Pos, window->Pos+ImVec2(windowSize.x,allTabsSize.y), GetColorU32(tabStyle.tabWindowLabelBackgroundColor), 0);
-	}
-	style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
-	ImGuiState& g = *GImGui;
-	TabWindowDragData& dd = gDragData;
-	const ImFont* fontOverride = NULL;
+        style.Colors[ImGuiCol_ChildWindowBg] = colorTransparent;
+        ImGui::BeginChild(name,windowSize,false,ImGuiWindowFlags_NoScrollbar);
+        if (tabStyle.tabWindowLabelBackgroundColor.w!=0)    {
+            ImGuiWindow* window = ImGui::GetCurrentWindow();
+            window->DrawList->AddRectFilled(window->Pos, window->Pos+ImVec2(windowSize.x,allTabsSize.y), GetColorU32(tabStyle.tabWindowLabelBackgroundColor), 0);
+        }
+        style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
+        ImGuiState& g = *GImGui;
+        TabWindowDragData& dd = gDragData;
+        const ImFont* fontOverride = NULL;
 
 
-	ImGui::Spacing();	    // Hack to remove when I'll find out why the top border of the tab labels gets clipped out.
-	ImGui::BeginGroup();
+        ImGui::Spacing();	    // Hack to remove when I'll find out why the top border of the tab labels gets clipped out.
+        ImGui::BeginGroup();
         const int numTabs = tabs.size();
         if (numTabs>0 && !selectedTab) selectedTab = tabs[0];
 
         float windowWidth = 0.f,sumX=0.f;
-	windowWidth = windowSize.x;//ImGui::GetWindowWidth();// - style.WindowPadding.x;// - (ImGui::GetScrollMaxY()>0 ? style.ScrollbarSize : 0.f);
+        windowWidth = windowSize.x;//ImGui::GetWindowWidth();// - style.WindowPadding.x;// - (ImGui::GetScrollMaxY()>0 ? style.ScrollbarSize : 0.f);
         TabWindow::TabLabel* newSelectedTab = selectedTab;
-
-	const bool allowExchangeTabLabels = !dd.draggingTabSrc || (dd.draggingTabWindowSrc && dd.draggingTabWindowSrc->canExchangeTabLabelsWith(mhs.tabWindow));
-    ImVec2 tabButtonSz(0,0);bool mustCloseTab = false;bool canUseSizeOptimization = false;bool isAItemHovered = false;
-        bool selection_changed = false;
+        numClosableTabs = 0;
+        ImVec2 tabButtonSz(0,0);bool mustCloseTab = false;bool canUseSizeOptimization = false;bool isAItemHovered = false;
+	bool selection_changed = false;
         for (int i = 0; i < numTabs; i++)
         {
             TabWindow::TabLabel& tab = *tabs[i];
+            if (tab.closable) ++numClosableTabs;
+
 
             fontOverride = ((selectedTab == &tab) ? (tab.getModified() ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED_MODIFIED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED]]) :
                 (tab.getModified() ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_MODIFIED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_NORMAL]]));
@@ -1208,22 +1246,22 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
             }
 
             if (sumX > 0.f) {
-		sumX+=style.ItemSpacing.x;   // Maybe we can skip it if we use SameLine(0,0) below
-		ImGui::TabButton(NULL,selectedTab == &tab,tab.closable ? &mustCloseTab : NULL,tab.getLabel(),&tabButtonSz,&tabStyle,(ImFont*)fontOverride);
+                sumX+=style.ItemSpacing.x;   // Maybe we can skip it if we use SameLine(0,0) below
+                ImGui::TabButton(NULL,selectedTab == &tab,tab.closable ? &mustCloseTab : NULL,tab.getLabel(),&tabButtonSz,&tabStyle,(ImFont*)fontOverride);
                 sumX+=tabButtonSz.x;
                 if (sumX>windowWidth) sumX = 0.f;
                 else ImGui::SameLine();
-		canUseSizeOptimization = true;
+                canUseSizeOptimization = true;
             }
-	    else canUseSizeOptimization = false;
+            else canUseSizeOptimization = false;
 
             // Draw the button
             mustCloseTab = false;
             ImGui::PushID(&tab);   // otherwise two tabs with the same name would clash.
-	    if (ImGui::TabButton("",selectedTab == &tab,tab.closable ? &mustCloseTab : NULL,tab.getLabel(),NULL,&tabStyle,(ImFont*)fontOverride,NULL,NULL,canUseSizeOptimization))   {
-                 selection_changed = (selectedTab != &tab);
-                 newSelectedTab = &tab;
-                 tab.mustSelectNextFrame = false;
+            if (ImGui::TabButton("",selectedTab == &tab,tab.closable ? &mustCloseTab : NULL,tab.getLabel(),NULL,&tabStyle,(ImFont*)fontOverride,NULL,NULL,canUseSizeOptimization))   {
+                selection_changed = (selectedTab != &tab);
+                newSelectedTab = &tab;
+                tab.mustSelectNextFrame = false;
             }
             ImGui::PopID();
 
@@ -1231,43 +1269,49 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
 
             if (tab.mustCloseNextFrame || mustCloseTab) {
                 tab.mustCloseNextFrame = false;
-                mhs.TabsToClose.push_back(&tab);
-                mhs.TabsToCloseNodes.push_back(this);
-                mhs.TabsToCloseParents.push_back(mhs.tabWindow);
+		if (!tab.getModified())	{
+		    mhs.TabsToClose.push_back(&tab);
+		    mhs.TabsToCloseParents.push_back(mhs.tabWindow);
+		}
+		else {
+		    mhs.TabsToAskForClosing.push_back(&tab);
+		    mhs.TabsToAskForClosingParents.push_back(mhs.tabWindow);
+		    mhs.mustOpenAskForClosingPopup = true;
+		}
             }
             else if (ImGui::IsItemHoveredRect()) {
-        isAItemHovered = true;
+                isAItemHovered = true;
                 //hoveredTab = &tab;
-                if (tab.tooltip && strlen(tab.tooltip)>0 && &tab!=mhs.tabLabelPopup)  ImGui::SetTooltip("%s",tab.tooltip);                
+                if (tab.tooltip && strlen(tab.tooltip)>0 && (&tab!=mhs.tabLabelPopup || GImGui->OpenedPopupStack.size()==0) )  ImGui::SetTooltip("%s",tab.tooltip);
 
                 if (mhs.isMouseDragging && !mhs.LockedDragging && !mhs.isASplitterActive) {
                     if (!dd.draggingTabSrc) {
                         if (!tab.draggable) mhs.LockedDragging = true;
                         else    {
-                        dd.draggingTabSrc = &tab;
-                        dd.draggingTabNodeSrc = this;
-                        dd.draggingTabImGuiWindowSrc = g.HoveredWindow;
-                        dd.draggingTabWindowSrc = mhs.tabWindow;
-                        dd.draggingTabSrcIsSelected = (selectedTab == &tab);
+                            dd.draggingTabSrc = &tab;
+                            dd.draggingTabNodeSrc = this;
+                            dd.draggingTabImGuiWindowSrc = g.HoveredWindow;
+                            dd.draggingTabWindowSrc = mhs.tabWindow;
+                            dd.draggingTabSrcIsSelected = (selectedTab == &tab);
 
-                        dd.draggingTabSrcSize = ImGui::GetItemRectSize();
-                        const ImVec2& mp = ImGui::GetIO().MousePos;
-                        const ImVec2 draggingTabCursorPos = ImGui::GetCursorPos();
-                        dd.draggingTabSrcOffset=ImVec2(
-                                    mp.x+dd.draggingTabSrcSize.x*0.5f-sumX+ImGui::GetScrollX(),
-                                    mp.y+dd.draggingTabSrcSize.y*0.5f-draggingTabCursorPos.y+ImGui::GetScrollY()
-                                    );
+                            dd.draggingTabSrcSize = ImGui::GetItemRectSize();
+                            const ImVec2& mp = ImGui::GetIO().MousePos;
+                            const ImVec2 draggingTabCursorPos = ImGui::GetCursorPos();
+                            dd.draggingTabSrcOffset=ImVec2(
+                                        mp.x+dd.draggingTabSrcSize.x*0.5f-sumX+ImGui::GetScrollX(),
+                                        mp.y+dd.draggingTabSrcSize.y*0.5f-draggingTabCursorPos.y+ImGui::GetScrollY()
+                                        );
 
-                        //fprintf(stderr,"Hovered Start Window:%s\n",g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
+                            //fprintf(stderr,"Hovered Start Window:%s\n",g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
                         }
                     }
-		    else if (dd.draggingTabSrc && (!tab.draggable || !allowExchangeTabLabels)) {
+                    else if (dd.draggingTabSrc && (!tab.draggable || !mhs.allowExchangeTabLabels)) {
                         // Prohibition sign-------
                         const ImVec2& itemSize = ImGui::GetItemRectSize();
                         const ImVec2 itemPos =ImVec2(
-                                sumX-itemSize.x*0.5f-ImGui::GetScrollX(),
-                                ImGui::GetCursorPos().y-itemSize.y*0.5f-ImGui::GetScrollY()
-                                );
+                                    sumX-itemSize.x*0.5f-ImGui::GetScrollX(),
+                                    ImGui::GetCursorPos().y-itemSize.y*0.5f-ImGui::GetScrollY()
+                                    );
                         ImDrawList* drawList = ImGui::GetWindowDrawList();  // main problem is that the sign is covered by the dragging tab (even if the latter is semi-transparent...)
                         const ImVec2 wp = g.HoveredWindow->Pos;
                         dd.drawProhibitionSign(drawList,wp,itemPos,dd.draggingTabSrcSize.y*1.2f);
@@ -1280,18 +1324,18 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
                     dd.draggingTabWindowDst = mhs.tabWindow;
                 }
 
-        if (mhs.isRMBclicked) {
-            // select it
-            selection_changed = (selectedTab != &tab);
-            newSelectedTab = &tab;
-            tab.mustSelectNextFrame = false;
-            // see if we need popup menu
-            if (TabWindow::TabLabelPopupMenuDrawerCb)	{
-                mhs.tabLabelPopup = &tab;
-                mhs.tabLabelPopupTabWindow = mhs.tabWindow;
-                mhs.tabLabelPopupChanged = true;
-                // fprintf(stderr,"open popup\n");  // This gets actually called...
-            }
+                if (mhs.isRMBclicked) {
+                    // select it
+                    selection_changed = (selectedTab != &tab);
+                    newSelectedTab = &tab;
+                    tab.mustSelectNextFrame = false;
+                    // see if we need popup menu
+                    if (TabWindow::TabLabelPopupMenuDrawerCb)	{
+                        mhs.tabLabelPopup = &tab;
+                        mhs.tabLabelPopupTabWindow = mhs.tabWindow;
+                        mhs.tabLabelPopupChanged = true;
+                        // fprintf(stderr,"open popup\n");  // This gets actually called...
+                    }
                 }
 
             }
@@ -1306,26 +1350,26 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
             ImGui::Separator();
             ImGui::PopStyleColor();
         }
-	ImGui::EndGroup();allTabsSize = ImGui::GetItemRectSize();
+        ImGui::EndGroup();allTabsSize = ImGui::GetItemRectSize();
 
-    // tab label group popup menu trigger
-    if (TabWindow::TabLabelGroupPopupMenuDrawerCb && mhs.isRMBclicked && !isAItemHovered)	{
-        ImGuiWindow* window = ImGui::GetCurrentWindow();
-        if (ImGui::IsMouseHoveringRect(window->Pos, window->Pos+ImVec2(windowSize.x,allTabsSize.y)))   {
-            mhs.tabLabelGroupPopupChanged = true;
-            mhs.tabLabelGroupPopup.clear();
-            mhs.tabLabelPopupTabWindow = mhs.tabWindow;
-            mhs.tabLabelGroupPopupNode = this;
-            for (int i = 0; i < numTabs; i++) {
-                TabWindow::TabLabel* tab = tabs[i];
-                mhs.tabLabelGroupPopup.push_back(tab);	// should I check against mhs.TabsToClose ?
+        // tab label group popup menu trigger
+        if (TabWindow::TabLabelGroupPopupMenuDrawerCb && mhs.isRMBclicked && !isAItemHovered)	{
+            ImGuiWindow* window = ImGui::GetCurrentWindow();
+            if (ImGui::IsMouseHoveringRect(window->Pos, window->Pos+ImVec2(windowSize.x,allTabsSize.y)))   {
+                mhs.tabLabelGroupPopupChanged = true;
+                mhs.tabLabelGroupPopup.clear();
+                mhs.tabLabelPopupTabWindow = mhs.tabWindow;
+                mhs.tabLabelGroupPopupNode = this;
+                for (int i = 0; i < numTabs; i++) {
+                    TabWindow::TabLabel* tab = tabs[i];
+                    mhs.tabLabelGroupPopup.push_back(tab);	// should I check against mhs.TabsToClose ?
+                }
             }
         }
-    }
 
 	//----------------------------------------------------------------
         mhs.restoreStyleVars();     // needs matching
-	ImGui::BeginChild("user",ImVec2(0,0),false,selectedTab ? selectedTab->wndFlags : 0);
+        ImGui::BeginChild("user",ImVec2(0,0),false,selectedTab ? selectedTab->wndFlags : 0);
         if (/*selectedTab &&*/ TabWindow::WindowContentDrawerCb) {
             TabWindow::WindowContentDrawerCb(selectedTab,*mhs.tabWindow,TabWindow::WindowContentDrawerUserPtr);
         }
@@ -1336,7 +1380,7 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
         ImGui::EndChild();  // user
         mhs.storeStyleVars();
 
-	ImGui::EndChild();  // "name"
+        ImGui::EndChild();  // "name"
     }
     //----------------------------------------------------------------
 
@@ -1345,6 +1389,73 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
 }
 
 
+bool TabWindow::ModalDialogSaveDisplay(const char* dialogName,ImVector<TabWindow::TabLabel*>& TabsToAskFor,ImVector<TabWindow*>& TabsToAskForParents,
+bool closeTabsAfterSaving,bool allowCancel,bool * pMustCloseDialogOut,const char* btnDoNotSaveName,const char* btnSaveName,const char* btnCancelName,
+const char* dialogTitleLine1,const char* dialogTitleLine2) {
+    IM_ASSERT(dialogName && TabsToAskFor.size()>0);
+    bool mustCloseDialog = false;
+    const bool open = ImGui::BeginPopupModal(dialogName, NULL, ImGuiWindowFlags_AlwaysAutoResize);
+    if (open)  {
+    if (dialogTitleLine1) ImGui::Text("%s",dialogTitleLine1);
+    if (dialogTitleLine2) ImGui::Text("%s",dialogTitleLine2);
+    ImGui::Separator();
+    const int sz = TabsToAskFor.size();
+    ImGui::BeginChild("List",ImVec2(0,150),true);
+    for (int i=0;i<sz;i++) {
+        TabWindow::TabLabel* tabLabel = TabsToAskFor[i];
+        ImGui::Text("%.*s",(int)strlen(tabLabel->getLabel())-(tabLabel->getModified() ? 1 : 0),tabLabel->getLabel());
+    }
+    ImGui::EndChild();
+    ImGui::Separator();
+    //const ImGuiStyle& style = ImGui::GetStyle();
+    //ImGui::PushItemWidth(ImGui::GetWindowWidth()-(allowCancel ? ImGui::CalcTextSize(btnCancelName).x : 0)-ImGui::CalcTextSize(btnDoNotSaveName).x-ImGui::CalcTextSize(btnSaveName).x-2.f*style.ItemSpacing.x-6.f*style.FramePadding.x);
+    bool cancel = false;
+    if (allowCancel) {cancel = ImGui::Button(btnCancelName);ImGui::SameLine();}
+    const bool doNotSave = ImGui::Button(btnDoNotSaveName);ImGui::SameLine();
+    const bool save = ImGui::Button(btnSaveName);
+    //ImGui::PopItemWidth();
+    if (cancel) mustCloseDialog = true;
+    else if (doNotSave || save) {
+        for (int i=0;i<sz;i++) {
+        TabWindow::TabLabel* tabLabel = TabsToAskFor[i];
+        TabWindow* tabWindow = TabsToAskForParents[i];
+
+        if (save)   {
+            bool ok = false;
+            if (TabWindow::TabLabelSaveCb) ok = TabWindow::TabLabelSaveCb(tabLabel,*tabWindow,NULL);   // can't we check return value ?
+            else ok = tabLabel->saveAs(NULL);
+        }
+
+        if (closeTabsAfterSaving)   {
+            if (MyTabWindowHelperStruct::tabLabelPopup == tabLabel) MyTabWindowHelperStruct::tabLabelPopup = NULL;
+            if (gDragData.draggingTabSrc == tabLabel) gDragData.resetDraggingSrc();
+            if (gDragData.draggingTabDst == tabLabel) gDragData.resetDraggingDst();
+            for (int j=0;j<MyTabWindowHelperStruct::tabLabelGroupPopup.size();j++)  {
+            if (MyTabWindowHelperStruct::tabLabelGroupPopup[j]==tabLabel)	{
+                TabWindow::TabLabel* tmp = MyTabWindowHelperStruct::tabLabelGroupPopup[MyTabWindowHelperStruct::tabLabelGroupPopup.size()-1];
+                MyTabWindowHelperStruct::tabLabelGroupPopup[MyTabWindowHelperStruct::tabLabelGroupPopup.size()-1] = MyTabWindowHelperStruct::tabLabelGroupPopup[j];
+                MyTabWindowHelperStruct::tabLabelGroupPopup[j] = tmp;
+                MyTabWindowHelperStruct::tabLabelGroupPopup.pop_back();
+                j--;
+            }
+            }
+
+            if (!tabWindow->mainNode->removeTabLabel(tabLabel,true,&tabWindow->activeNode))   {
+            fprintf(stderr,"Error: Can't delete TabLabel: \"%s\"\n",tabLabel->getLabel());
+            }
+        }
+        }
+        mustCloseDialog = true;
+    }
+    ImGui::EndPopup();
+    if (mustCloseDialog) {ImGuiState& g = *GImGui; while (g.OpenedPopupStack.size() > 0) g.OpenedPopupStack.pop_back();}   // Close all existing context-menus
+    //if (cancel) mustCloseDialog = false;
+    }
+    if (pMustCloseDialogOut) *pMustCloseDialogOut = mustCloseDialog;
+    return open;
+}
+
+static bool TabWindowForceTriggerModalDialog = false;
 void TabWindow::render()
 {
     IM_ASSERT(ImGui::GetCurrentWindow());   // Call me inside a window
@@ -1368,16 +1479,8 @@ void TabWindow::render()
         //--------------------------------------------------------------
         if (MyTabWindowHelperStruct::TabsToClose.size()>0)   {
             const int sz = MyTabWindowHelperStruct::TabsToClose.size();
-            ImVector<bool> dontCloseTabLabels;
-            dontCloseTabLabels.resize(sz);
-            for (int i=0;i<sz;i++) dontCloseTabLabels[i]=false;
-            if (TabWindow::TabLabelClosingCb)   {
-                TabWindow::TabLabelClosingCb(MyTabWindowHelperStruct::TabsToClose,MyTabWindowHelperStruct::TabsToCloseParents,dontCloseTabLabels,TabWindow::TabLabelClosingUserPtr);
-            }
-            for (int i=0;i<sz;i++) {
-                if (!dontCloseTabLabels[i]) {
-                    TabWindowNode* node = MyTabWindowHelperStruct::TabsToCloseNodes[i];
-                    TabLabel* tabLabel = MyTabWindowHelperStruct::TabsToClose[i];
+	    for (int i=0;i<sz;i++) {
+		TabLabel* tabLabel = MyTabWindowHelperStruct::TabsToClose[i];
                     TabWindow* tabWindow = MyTabWindowHelperStruct::TabsToCloseParents[i];
 
                     if (MyTabWindowHelperStruct::tabLabelPopup == tabLabel) MyTabWindowHelperStruct::tabLabelPopup = NULL;
@@ -1392,14 +1495,27 @@ void TabWindow::render()
                             j--;
                         }
                     }
-
-                    if (!node->removeTabLabel(tabLabel,false,&tabWindow->activeNode))   {
-                        fprintf(stderr,"Error: Can't delete TabLabel: \"%s\"\n",tabLabel->getLabel());
-                    }
-                }
+		    if (!tabWindow->mainNode->removeTabLabel(tabLabel,true,&tabWindow->activeNode))   {
+			fprintf(stderr,"Error: Can't delete TabLabel: \"%s\"\n",tabLabel->getLabel());
+		    }
             }
+	    MyTabWindowHelperStruct::ResetTabsToClose();
+	}
+
+    if (MyTabWindowHelperStruct::TabsToAskForClosing.size()>0)   {
+        //fprintf(stderr,"Ok: %d\n",MyTabWindowHelperStruct::TabsToAskForClosing.size());
+        if (TabWindowForceTriggerModalDialog)    {
+            ImGuiState& g = *GImGui; while (g.OpenedPopupStack.size() > 0) g.OpenedPopupStack.pop_back();   // Close all existing context-menus
+            ImGui::OpenPopup(TabWindow::GetTabLabelAskForDeletionModalWindowName());
+            TabWindowForceTriggerModalDialog = false;
         }
-        MyTabWindowHelperStruct::ResetTabsToClose();
+        bool mustCloseDialog = false;
+        if (!ModalDialogSaveDisplay(GetTabLabelAskForDeletionModalWindowName(),MyTabWindowHelperStruct::TabsToAskForClosing,MyTabWindowHelperStruct::TabsToAskForClosingParents,
+                    !MyTabWindowHelperStruct::TabsToAskForClosingIsUsedJustToSaveTheseTabs,!MyTabWindowHelperStruct::TabsToAskForClosingDontAllowCancel,&mustCloseDialog))
+            MyTabWindowHelperStruct::ResetTabsToAskForClosing();
+        if (mustCloseDialog) MyTabWindowHelperStruct::ResetTabsToAskForClosing();
+
+    }
         // 2) Display Tab Menu ------------------------------------------
         if (TabLabelPopupMenuDrawerCb && MyTabWindowHelperStruct::tabLabelPopup) {
             if (MyTabWindowHelperStruct::tabLabelPopupChanged) {
@@ -1718,6 +1834,12 @@ bool TabWindow::canExchangeTabLabelsWith(TabWindow *tw)	{
 bool TabWindow::isMergeble(TabWindowNode *node)    {
     return (node && node->isLeafNode() && node->parent);
 }
+int TabWindow::getNumTabs(TabWindowNode *node)  {
+    return node ? node->tabs.size() : 0;
+}
+int TabWindow::getNumClosableTabs(TabWindowNode *node)    {
+    return (node && node->tabs.size()>0) ? node->numClosableTabs : 0;
+}
 bool TabWindow::merge(TabWindowNode *node) {
     if (!node || !isMergeble(node)) return false;
     {TabWindowNode* n = node;while (n->parent) n=n->parent;if (n!=mainNode) return false;} // checks if tabNode belongs to this TabWindow
@@ -1736,6 +1858,92 @@ bool TabWindow::merge(TabWindowNode *node) {
     }
 
     return true;
+}
+
+void TabWindow::GetAllTabLabels(TabWindow *pTabWindowsIn, int numTabWindowsIn, ImVector<TabWindow::TabLabel *> &tabsOut, ImVector<TabWindow *> &parentsOut,bool onlyClosableTabs,bool onlyModifiedTabs) {
+    IM_ASSERT(pTabWindowsIn && numTabWindowsIn>0);
+    tabsOut.clear();parentsOut.clear();
+    for (int i=0;i<numTabWindowsIn;i++)	{
+    TabWindow& tw = pTabWindowsIn[i];
+    const int startTabs = tabsOut.size();
+    tw.mainNode->getTabLabels(tabsOut,onlyClosableTabs,onlyModifiedTabs);
+    if (startTabs!=tabsOut.size())	{
+        parentsOut.resize(tabsOut.size());
+        for (int j=startTabs,jsz=tabsOut.size();j<jsz;j++)	{
+        parentsOut[j] = &tw;
+        }
+    }
+    }
+}
+bool TabWindow::CloseTabLabelsHelper(ImVector<TabWindow::TabLabel *> &tabs, ImVector<TabWindow *> &parents,bool saveAll, bool askForSaving, bool allowCancelDialog,bool dontCloseTabs)    {
+    bool mustStartDialog = false;
+    if (tabs.size()==0) return false;
+    IM_ASSERT(tabs.size()==parents.size());
+    for (int i=0,isz=tabs.size();i<isz;i++) {
+        TabWindow::TabLabel *tab = tabs[i];
+        TabWindow* tw = parents[i];
+        IM_ASSERT(tab && tw);
+        if (saveAll) {
+            if (tab->modified)  {
+                if (askForSaving)   {
+                    if (!mustStartDialog) {
+                        MyTabWindowHelperStruct::ResetTabsToAskForClosing();
+                        MyTabWindowHelperStruct::TabsToAskForClosingDontAllowCancel = !allowCancelDialog;
+                        MyTabWindowHelperStruct::TabsToAskForClosingIsUsedJustToSaveTheseTabs = dontCloseTabs;
+                        mustStartDialog = true;
+                    }
+                    MyTabWindowHelperStruct::TabsToAskForClosing.push_back(tab);
+                    MyTabWindowHelperStruct::TabsToAskForClosingParents.push_back(tw);
+                }
+                else {
+                    bool ok = false;
+                    if (TabWindow::TabLabelSaveCb) ok = TabWindow::TabLabelSaveCb(tab,*tw,NULL);   // can't we check return value ?
+                    else ok = tab->saveAs(NULL);
+                }
+            }
+        }
+        if (!dontCloseTabs) {
+            if (!mustStartDialog || (tab!=MyTabWindowHelperStruct::TabsToAskForClosing[MyTabWindowHelperStruct::TabsToAskForClosing.size()-1]))	{
+                // delete tab
+                //fprintf(stderr,"Deleting tab: %s\n",tab->getLabel());
+                tw->mainNode->removeTabLabel(tab,true,&tw->activeNode,false);
+            }
+        }
+    }
+
+    //----------------------------------------------------------------------------------------------------------------------------------
+    if (mustStartDialog)    {
+        TabWindowForceTriggerModalDialog = true;
+        //fprintf(stderr,"Ok: %d\n",MyTabWindowHelperStruct::TabsToAskForClosing.size());
+    }
+    return mustStartDialog;
+}
+bool TabWindow::AreSomeDialogsOpen()	{return (GImGui->OpenedPopupStack.size() > 0);}
+
+void TabWindow::getAllTabLabels(ImVector<TabWindow::TabLabel *> &tabsOut, bool onlyClosableTabs, bool onlyModifiedTabs)	{tabsOut.clear();mainNode->getTabLabels(tabsOut,onlyClosableTabs,onlyModifiedTabs);}
+void TabWindow::saveAll(ImVector<TabWindow::TabLabel *> *ptabs)	{
+    ImVector<TabWindow::TabLabel *> tabs;
+    if (!ptabs) {
+    getAllTabLabels(tabs,false,true);
+    ptabs = &tabs;
+    }
+    for (int i=0,isz=ptabs->size();i<isz;i++)	{
+    TabWindow::TabLabel *tab = (*ptabs)[i];
+    bool ok = false;
+    if (TabWindow::TabLabelSaveCb) ok = TabWindow::TabLabelSaveCb(tab,*this,NULL);   // can't we check return value ?
+    else ok = tab->saveAs(NULL);
+    }
+}
+bool TabWindow::startCloseAllDialog(ImVector<TabWindow::TabLabel *> *ptabs, bool allowCancelDialog)  {
+    ImVector<TabWindow::TabLabel *> tabs;
+    ImVector<TabWindow *> tws;
+    if (!ptabs) {
+        getAllTabLabels(tabs,false,false);
+        ptabs = &tabs;
+    }
+    tws.resize(ptabs->size());
+    for (int i=0,isz=ptabs->size();i<isz;i++)	{tws[i]=this;}
+    return StartCloseAllDialog(*ptabs,tws,allowCancelDialog);
 }
 
 

@@ -39,7 +39,6 @@
     // Callbacks:
     ImGui::TabWindow::SetWindowContentDrawerCallback(&TabContentProvider,NULL); // If not set TabWindowLabel::render() will be called instead (if you prefer extending TabWindowLabel)
     ImGui::TabWindow::SetTabLabelPopupMenuDrawerCallback(&TabLabelPopupMenuProvider,NULL);  // Optional (if you need context-menu)
-    //ImGui::TabWindow::SetTabLabelClosingCallback(&OnTabLabelClosing,NULL);  // Optional (to fix/modify)
     //ImGui::TabWindow::SetTabLabelDeletingCallback(&OnTabLabelDeleting); // Optional (to delete your userPts)
     //ImGui::TabWindow::SetTabLabelGroupPopupMenuDrawerCallback(&TabLabelGroupPopupMenuProvider,NULL);  // Optional (if you need context-menu when you right-click on an empty spot in the tab area)
 
@@ -86,11 +85,6 @@ void TabLabelPopupMenuProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow&
     }
 
 }
-// Optional (filter user-closing tab labels)
-void OnTabLabelClosing(const ImVector<ImGui::TabWindow::TabLabel*>& tabLabels,const ImVector<ImGui::TabWindow*>& parents,ImVector<bool>& forbidClosingOut,void* userPtr) {
-    // Set "forbidClosingOut[..] = true" to prevent a tab label from closing. Please do not resize "forbidClosingOut".
-    // (TODO: actually this was intented to fire a Modal Dialog, but I guess this can't be done without mods)
-}
 // Optional (delete TabLabel::userPtr when TabLabel gets deleted)
 void OnTabLabelDeleting(ImGui::TabWindow::TabLabel* tab) {
     // Use this callback to delete tab->userPtr if you used it
@@ -133,10 +127,6 @@ TIPS ABOUT TEXTURE LOADING;
 -> If you scale the tab labels (e.g. with CTRL+mouse wheel), the dragged tab is not scaled. (I'm not sure this will be ever fixed).
 */
 
-// ROADMAP:
-/*
--> See if we can change the "closing callback" so that we can fire "want closing?" modal dialogs.
-*/
 
 // BETTER ALTERNATIVES:
 /*
@@ -311,12 +301,15 @@ public:
         ImGui::TextWrapped("Here is the content of tab label: \"%s\". Please consider using ImGui::TabWindow::SetWindowContentDrawerCallback(...) to set a callback for it, or extending TabWindowLabel and implement its render() method. ",getLabel());
     }
 
-    virtual bool saveAs(const char* savePath=NULL) {return true;}
+    virtual bool saveAs(const char* savePath=NULL) {
+        setModified(false);
+        return true;
+    }
 };
 protected:
 public:
 typedef void (*TabLabelCallback)(TabLabel* tabLabel,TabWindow& parent,void* userPtr);
-typedef void (*TabLabelClosingCallback)(const ImVector<TabLabel*>& tabLabels,const ImVector<TabWindow*>& parents,ImVector<bool>& forbidClosingOut,void* userPtr);
+//typedef void (*TabLabelClosingCallback)(const ImVector<TabLabel*>& tabLabels,const ImVector<TabWindow*>& parents,ImVector<bool>& forbidClosingOut,void* userPtr);
 typedef void (*TabLabelDeletingCallback)(TabLabel* tabLabel);
 typedef void (*TabLabelGroupPopupMenuCallback)(ImVector<TabLabel*>& tabLabels,TabWindow& parent,struct TabWindowNode* node,void* userPtr);
 typedef TabLabel* (*TabLabelFactoryCallback)(TabWindow& parent,const char* label,const char* tooltip,bool closable,bool draggable,void* userPtr,const char* userText,int userInt,int ImGuiWindowFlagsForContent);
@@ -336,8 +329,8 @@ static TabLabelCallback WindowContentDrawerCb;
 static void* WindowContentDrawerUserPtr;
 static TabLabelCallback TabLabelPopupMenuDrawerCb;
 static void* TabLabelPopupMenuDrawerUserPtr;
-static TabLabelClosingCallback TabLabelClosingCb;
-static void* TabLabelClosingUserPtr;
+//static TabLabelClosingCallback TabLabelClosingCb;
+//static void* TabLabelClosingUserPtr;
 static TabLabelDeletingCallback TabLabelDeletingCb;
 static TabLabelGroupPopupMenuCallback TabLabelGroupPopupMenuDrawerCb;
 static void* TabLabelGroupPopupMenuDrawerUserPtr;
@@ -379,10 +372,10 @@ static void SetTabLabelPopupMenuDrawerCallback(TabLabelCallback _tabLabelPopupMe
     TabLabelPopupMenuDrawerUserPtr=userPtr;
 }
 inline static const char* GetTabLabelPopupMenuName() {return "TabWindowTabLabelPopupMenu";}
-static void SetTabLabelClosingCallback(TabLabelClosingCallback _tabLabelClosing,void* userPtr=NULL) {
+/*static void SetTabLabelClosingCallback(TabLabelClosingCallback _tabLabelClosing,void* userPtr=NULL) {
     TabLabelClosingCb=_tabLabelClosing;
     TabLabelClosingUserPtr=userPtr;
-}
+}*/
 static void SetTabLabelDeletingCallback(TabLabelDeletingCallback _tabLabelDeleting) {TabLabelDeletingCb=_tabLabelDeleting;}
 static void SetTabLabelGroupPopupMenuDrawerCallback(TabLabelGroupPopupMenuCallback _tabLabelGroupPopupMenuDrawer,void* userPtr=NULL) {
     TabLabelGroupPopupMenuDrawerCb=_tabLabelGroupPopupMenuDrawer;
@@ -391,6 +384,7 @@ static void SetTabLabelGroupPopupMenuDrawerCallback(TabLabelGroupPopupMenuCallba
 inline static const char* GetTabLabelGroupPopupMenuName() {return "TabWindowTabLabelGroupPopupMenu";}
 static void SetTabLabelFactoryCallback(TabLabelFactoryCallback _tabLabelFactoryCb) {TabLabelFactoryCb=_tabLabelFactoryCb;}
 static void SetTabLabelSaveCallback(TabLabelFileCallback _tabLabelSaveCb) {TabLabelSaveCb=_tabLabelSaveCb;}
+inline static const char* GetTabLabelAskForDeletionModalWindowName() {return "Save modified file/s ?##TabWindowTabLabelAskForDeletionModalWindowName";}
 
 
 // Main method
@@ -409,7 +403,18 @@ const ImVector<TabWindow*>& getTabWindowsToExclude() const {return tabWindowsToE
 bool canExchangeTabLabelsWith(TabWindow* tw);
 
 bool isMergeble(struct TabWindowNode* node);
+int getNumTabs(struct TabWindowNode* node);
+int getNumClosableTabs(struct TabWindowNode* node);
 bool merge(struct TabWindowNode* node);        // Warning: it invalidates "node" after the call
+
+static void GetAllTabLabels(TabWindow* pTabWindowsIn, int numTabWindowsIn, ImVector<TabLabel*>& tabsOut, ImVector<TabWindow*>& parentsOut, bool onlyClosableTabs=false, bool onlyModifiedTabs=false);
+inline static void SaveAll(ImVector<TabLabel*>& tabs, ImVector<TabWindow*>& parents) {CloseTabLabelsHelper(tabs,parents,true,false,false,true);}
+inline static bool StartCloseAllDialog(ImVector<TabLabel*>& tabs, ImVector<TabWindow*>& parents,bool allowCancelDialog=true) {return CloseTabLabelsHelper(tabs,parents,true,true,allowCancelDialog,false);}
+static bool AreSomeDialogsOpen();
+
+void getAllTabLabels(ImVector<TabLabel*>& tabsOut,bool onlyClosableTabs=false, bool onlyModifiedTabs=false);
+void saveAll(ImVector<TabLabel*>* ptabs=NULL);
+bool startCloseAllDialog(ImVector<TabLabel*>* ptabs=NULL,bool allowCancelDialog=true);
 
 mutable void* userPtr;
 
@@ -435,10 +440,18 @@ public:
 protected:
 
 TabLabel* createTabLabel(const char* label,const char* tooltip=NULL,bool closable=true,bool draggable=true,void* userPtr=NULL,const char* userText=NULL,int userInt=0,int ImGuiWindowFlagsForContent=0);
+static bool CloseTabLabelsHelper(ImVector<TabLabel*>& tabs, ImVector<TabWindow*>& parents, bool saveAll, bool askForSaving, bool allowCancelDialog, bool dontCloseTabs);
+
 
 friend struct TabLabel;
 friend struct TabWindowNode;
 friend struct TabWindowDragData;
+
+private:
+static bool ModalDialogSaveDisplay(const char* dialogName,ImVector<TabWindow::TabLabel*>& TabsToAskFor,ImVector<TabWindow*>& TabsToAskForParents,
+bool closeTabsAfterSaving,bool allowCancel,bool * pMustCloseDialogOut=NULL,const char* btnDoNotSaveName="Do not save",const char* btnSaveName="Save",const char* btnCancelName="Cancel",
+const char* dialogTitleLine1="The following tab labels have unsaved changes.",const char* dialogTitleLine2="Do you want to save them ?");
+
 };
 typedef TabWindow::TabLabel TabWindowLabel;
 
