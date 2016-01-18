@@ -1027,7 +1027,6 @@ struct MyTabWindowHelperStruct {
     static ImVector<TabWindow::TabLabel*> tabLabelGroupPopup;
     static bool tabLabelGroupPopupChanged;
     static TabWindowNode* tabLabelGroupPopupNode;
-    bool mustOpenAskForClosingPopup;
 
     TabWindow* tabWindow;
     bool allowExchangeTabLabels;
@@ -1039,6 +1038,8 @@ struct MyTabWindowHelperStruct {
     static ImVector<TabWindow*> TabsToAskForClosingParents;
     static bool TabsToAskForClosingIsUsedJustToSaveTheseTabs;
     static bool TabsToAskForClosingDontAllowCancel;
+    static bool MustOpenAskForClosingPopup;
+
 
     ImVec2 itemSpacing;
 
@@ -1054,7 +1055,7 @@ struct MyTabWindowHelperStruct {
         isASplitterActive = false;
         tabWindow = _tabWindow;
         allowExchangeTabLabels = !gDragData.draggingTabSrc || (gDragData.draggingTabWindowSrc && gDragData.draggingTabWindowSrc->canExchangeTabLabelsWith(tabWindow));
-    mustOpenAskForClosingPopup = false;
+    //mustOpenAskForClosingPopup = false;
 
         ImGuiStyle& style = ImGui::GetStyle();
         itemSpacing =   style.ItemSpacing;
@@ -1070,10 +1071,10 @@ struct MyTabWindowHelperStruct {
     }
     ~MyTabWindowHelperStruct() {
 	restoreStyleVars();
-	if (mustOpenAskForClosingPopup) {
+    /*if (mustOpenAskForClosingPopup) {
 	    ImGuiState& g = *GImGui; while (g.OpenedPopupStack.size() > 0) g.OpenedPopupStack.pop_back();   // Close all existing context-menus
 	    ImGui::OpenPopup(ImGui::TabWindow::GetTabLabelAskForDeletionModalWindowName());
-	}
+    }*/
     }
     inline void storeStyleVars() {ImGui::GetStyle().ItemSpacing = ImVec2(1,1);}
     inline void restoreStyleVars() {ImGui::GetStyle().ItemSpacing = itemSpacing;}
@@ -1101,6 +1102,7 @@ ImVector<TabWindow::TabLabel*> MyTabWindowHelperStruct::TabsToAskForClosing;
 ImVector<TabWindow*> MyTabWindowHelperStruct::TabsToAskForClosingParents;
 bool MyTabWindowHelperStruct::TabsToAskForClosingIsUsedJustToSaveTheseTabs=false;
 bool MyTabWindowHelperStruct::TabsToAskForClosingDontAllowCancel=false;
+bool MyTabWindowHelperStruct::MustOpenAskForClosingPopup=false;
 TabWindow::TabLabelCallback TabWindow::WindowContentDrawerCb=NULL;
 void* TabWindow::WindowContentDrawerUserPtr=NULL;
 TabWindow::TabLabelCallback TabWindow::TabLabelPopupMenuDrawerCb=&TabWindowDefaultCallbacks::TabLabelPopupMenuProvider;
@@ -1276,7 +1278,7 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
 		else {
 		    mhs.TabsToAskForClosing.push_back(&tab);
 		    mhs.TabsToAskForClosingParents.push_back(mhs.tabWindow);
-		    mhs.mustOpenAskForClosingPopup = true;
+            mhs.MustOpenAskForClosingPopup = true;
 		}
             }
             else if (ImGui::IsItemHoveredRect()) {
@@ -1455,7 +1457,6 @@ const char* dialogTitleLine1,const char* dialogTitleLine2) {
     return open;
 }
 
-static bool TabWindowForceTriggerModalDialog = false;
 void TabWindow::render()
 {
     IM_ASSERT(ImGui::GetCurrentWindow());   // Call me inside a window
@@ -1504,10 +1505,10 @@ void TabWindow::render()
 
     if (MyTabWindowHelperStruct::TabsToAskForClosing.size()>0)   {
         //fprintf(stderr,"Ok: %d\n",MyTabWindowHelperStruct::TabsToAskForClosing.size());
-        if (TabWindowForceTriggerModalDialog)    {
+        if (MyTabWindowHelperStruct::MustOpenAskForClosingPopup)    {
             ImGuiState& g = *GImGui; while (g.OpenedPopupStack.size() > 0) g.OpenedPopupStack.pop_back();   // Close all existing context-menus
             ImGui::OpenPopup(TabWindow::GetTabLabelAskForDeletionModalWindowName());
-            TabWindowForceTriggerModalDialog = false;
+            MyTabWindowHelperStruct::MustOpenAskForClosingPopup = false;
         }
         bool mustCloseDialog = false;
         if (!ModalDialogSaveDisplay(GetTabLabelAskForDeletionModalWindowName(),MyTabWindowHelperStruct::TabsToAskForClosing,MyTabWindowHelperStruct::TabsToAskForClosingParents,
@@ -1913,7 +1914,7 @@ bool TabWindow::CloseTabLabelsHelper(ImVector<TabWindow::TabLabel *> &tabs, ImVe
 
     //----------------------------------------------------------------------------------------------------------------------------------
     if (mustStartDialog)    {
-        TabWindowForceTriggerModalDialog = true;
+        MyTabWindowHelperStruct::MustOpenAskForClosingPopup = true;
         //fprintf(stderr,"Ok: %d\n",MyTabWindowHelperStruct::TabsToAskForClosing.size());
     }
     return mustStartDialog;

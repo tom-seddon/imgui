@@ -73,6 +73,10 @@
 #include "./imguinodegrapheditor/imguinodegrapheditor.cpp"
 #endif //NO_IMGUIGRAPHEDITOR
 
+#ifdef YES_IMGUIPDFVIEWER
+#include "./imguiyesaddons/imguipdfviewer.cpp"
+#endif //YES_IMGUIPDFVIEWER
+
 
 #endif //IMGUI_USER_ADDONS_INL_
 

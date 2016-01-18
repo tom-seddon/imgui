@@ -79,5 +79,16 @@
 #include "./imguinodegrapheditor/imguinodegrapheditor.h"
 #endif //NO_IMGUIGRAPHEDITOR
 
+#ifdef YES_IMGUIADDONS_ALL
+#	ifndef NO_IMGUIPDFVIEWER
+#		undef YES_IMGUIPDFVIEWER
+#		define YES_IMGUIPDFVIEWER
+#	endif //NO_IMGUIPDFVIEWER
+#endif //YES_IMGUIADDONS_ALL
+
+#ifdef YES_IMGUIPDFVIEWER
+#include "./imguiyesaddons/imguipdfviewer.h"
+#endif //YES_IMGUIPDFVIEWER
+
 #endif //IMGUI_USER_ADDONS_H_
 

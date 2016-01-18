@@ -63,6 +63,19 @@ And in addition:
 Tip: every single imgui "widget" addon listed above (and in some cases even some part of it) CAN BE EXCLUDED from the compilation by defining at the project level something like: NO_IMGUIFILESYSTEM, etc (and the first demo, main.cpp, should always compile).
 
 
+And (for expert programmers only) now there's a new kind of imgui addons, called "yes addons".
+"imgui yes addons":
+-> are all contained in the "./addons/imguiyesaddons/" subfolders.
+-> each one must be explicitely enabled through a project definition (e.g. YES_IMGUIPDFVIEWER).
+-> depend on 3rd party libraries (that are NOT INCLUDED).
+-> they come with no support at all (i.e. no demo, no snippet and no docs [if not present in their header file]).
+That's why I've said "for expert programmers only" above.
+
+Currently "yes addons" are:
+-> imguipdfviewer.h/cpp: depends on "LIBS+= -lpoppler-glib -lpoppler" "PKGCONFIG += glib-2.0 gdk-2.0 cairo". (and probably on STL as well).
+
+
+
 ===========================================
 HOW TO USE IMGUI ADDONS IN YOUR PROJECTS:
 ===========================================

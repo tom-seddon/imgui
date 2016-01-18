@@ -103,7 +103,7 @@ void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,
                 if (tab->isClosable())  // otherwise even non-closable tabs will be closed
                 {
                     parent.removeTabLabel(tab);
-                    //tab->mustCloseNextFrame = true;  // alternative way...
+                    //tab->mustCloseNextFrame = true;  // alternative way... this asks for saving if file is modified
                 }
             }
         }
@@ -119,7 +119,17 @@ TIPS ABOUT TEXTURE LOADING;
      -> Since internally we use texcoords, we had to choose a single convention for them. That means that it might be necessary for
         some people to load the image upside down (stb_image has a build-in method to do it).
 
+ADDITIONAL (OPTIONAL) CALLBACKS:
+static void TabWindow::SetTabLabelFactoryCallback(TabLabelFactoryCallback _tabLabelFactoryCb) {TabLabelFactoryCb=_tabLabelFactoryCb;}
+     -> If present, fired when calling: TabLabel* addTabLabel(const char* label,const char* tooltip=NULL,bool closable=true,bool draggable=true,void* userPtr=NULL,const char* userText=NULL,int userInt=0,int ImGuiWindowFlagsForContent=0);
+        User can use it to append a TabLabel::userPtr or to provide a proper extension from TabWindowLabel.
+        In addition, that method is called on layout deserialization, so that the user can load the content after deserialization (label,tooltip,userInt and userText are the TabLabel fields that are serialized/deserialized).
+static void TabWindow::SetTabLabelSaveCallback(TabLabelFileCallback _tabLabelSaveCb) {TabLabelSaveCb=_tabLabelSaveCb;}
+     -> When a modified file needs to be saved, if set, that method will be called (with NULL argument).
+        Otherwise TabLabel::saveAs(NULL) will be called.
+    If you don't need to save anything, simply never use TabLabel::setModified(true).
 */
+
 
 
 // KNOWN BUGS:
