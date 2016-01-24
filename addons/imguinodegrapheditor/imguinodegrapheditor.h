@@ -27,6 +27,7 @@
 -> DONE - Serialization/Deserialization of the whole NodeGraphEditor + Nodes
 -> Add/Adjust/Fix more FieldTypes. TODO! And test/fix FT_CUSTOM field type too.
 -> Adjust zooming (CTRL + MW when ImGui::GetIO().FontAllowUserScaling = true;)
+-> Add node clipping
 */
 
 

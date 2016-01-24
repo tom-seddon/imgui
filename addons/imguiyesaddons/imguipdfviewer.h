@@ -20,24 +20,30 @@
 #include <imgui.h>
 #endif //IMGUI_API
 
-#include <poppler/glib/poppler.h>   // I wanted to hide it, but my low C++ knowledge makes the namespace ImGui "hide" the forward declareted classes otherwise...
+// Code ported from another one of my projects (used a different GUI and worked like a charm!).
+// Now code is very dirty/buggy/terribly slow.
+// Many features don't work (e.g. text selection) and other are buggy (e.g. find text),
+// other are simply not implemented yet (e.g. 90% of the options in the context-menu).
+
+// But It's too much work for me for now to make it work like it should (these two files could be a stand-alone git repository by themselves!).
 
 namespace ImGui {
+
+class PdfPagePanel;
 
 class PdfViewer {
 public:
     PdfViewer();
-    ~PdfViewer() {destroy();}
+    ~PdfViewer();
 
     bool isInited() const {return init;}
 
-    void loadFromFile(const char* path);
-
-    bool setPage(int pageNum);
+    bool loadFromFile(const char* path);
 
     void destroy();
 
-    void render(const ImVec2 &size=ImVec2(0,0));    // to be called inside an ImGui::Window. Makes isInited() return true;
+    // returns true if some user action has been processed
+    bool render(const ImVec2 &size=ImVec2(0,0));    // to be called inside an ImGui::Window. Makes isInited() return true;
 
     static const double IMAGE_DPI = 150;
     typedef void (*FreeTextureDelegate)(ImTextureID& texid);
@@ -46,24 +52,14 @@ public:
     void setGenerateOrUpdateTextureCallback(GenerateOrUpdateTextureDelegate generateOrUpdateTextureCb) {GenerateOrUpdateTextureCb=generateOrUpdateTextureCb;}
 
 protected:
-    PopplerDocument* document;
-    PopplerPage* page;
+    class PdfPagePanel* pagePanel;
+    bool init;
+    char* filePath;                             // owned = "";
+
     static FreeTextureDelegate FreeTextureCb;
     static GenerateOrUpdateTextureDelegate GenerateOrUpdateTextureCb;
 
-    ImTextureID texid;
-    double TWidth,THeight;
-    float aspectRatio,zoom;
-    ImVec2 zoomCenter;
-
-    mutable ImVec2 uv0;
-    mutable ImVec2 uv1;
-    mutable ImVec2 zoomedImageSize;
-    mutable bool init;
-
-    static void FreePage(PopplerPage*& page);
-    static void FreeDocument(PopplerDocument*& document);
-
+    friend class PdfPagePanel;
 };
 
 
