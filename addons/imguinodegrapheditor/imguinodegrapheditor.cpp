@@ -405,6 +405,8 @@ void NodeGraphEditor::render()
     bool isSomeNodeMoving = false;Node *node_to_fire_edit_callback = NULL,* node_to_paste_from_copy_source = NULL;bool mustDeleteANodeSoon = false;
     ImGui::ColorEditMode(colorEditMode);
 
+    ImRect windowClipRect = ImGui::GetCurrentWindow()->ClipRect;
+    // well we should probably scale and offset this (who remembers?)
 
     static const char* btnNames[3]={"v","^","x"};
     const float textSizeButtonPaste = ImGui::CalcTextSize(btnNames[0]).x;
@@ -413,13 +415,21 @@ void NodeGraphEditor::render()
     for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
     {
         Node* node = nodes[node_idx];
-	if (node->baseWidthOverride>0) {
-	    currentNodeWidth = node->baseWidthOverride*currentFontWindowScale;
-	    ImGui::PushItemWidth(currentNodeWidth);
-	}
-	else currentNodeWidth = baseNodeWidth;
-        ImGui::PushID((const void*) node);
         const ImVec2 nodePos = node->GetPos(currentFontWindowScale);
+
+        // culling attempt
+        /*if (!nodesHaveZeroSize) {
+            const ImRect cullRect(nodePos,node->Size);
+            if (!windowClipRect.Overlaps(cullRect)) continue;   // no way...
+        }*/
+
+        if (node->baseWidthOverride>0) {
+            currentNodeWidth = node->baseWidthOverride*currentFontWindowScale;
+            ImGui::PushItemWidth(currentNodeWidth);
+        }
+        else currentNodeWidth = baseNodeWidth;
+
+        ImGui::PushID((const void*) node);
         ImVec2 node_rect_min = offset + nodePos;
 
         // Display node contents first
@@ -430,7 +440,7 @@ void NodeGraphEditor::render()
         bool nodeInEditMode = false;
         ImGui::BeginGroup(); // Lock horizontal position
         ImGui::SetNextTreeNodeOpened(node->isOpen,ImGuiSetCond_Always);
-        if (ImGui::TreeNode("##justArrowPlease")) {ImGui::TreePop();node->isOpen = true;}
+        if (ImGui::TreeNode(node,"%s","")) {ImGui::TreePop();node->isOpen = true;}
         else node->isOpen = false;
         ImGui::SameLine(0,0);
 
