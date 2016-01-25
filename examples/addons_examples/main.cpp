@@ -262,7 +262,7 @@ void DrawGL()	// Mandatory
                     timer+=delta;
                     //-------------------------------------------------------------------
                     if (io.KeysDown[io.KeyMap[ImGuiKey_RightArrow]]) {printf("Right arrow pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
-                    if (io.MouseDown[2]) {printf("Middle Mouse Button pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
+                    //if (io.MouseDown[2]) {printf("Middle Mouse Button pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
                     //-------------------------------------------------------------------
                 }
             }

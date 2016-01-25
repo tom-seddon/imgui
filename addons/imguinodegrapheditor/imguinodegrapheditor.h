@@ -25,9 +25,10 @@
 -> DONE - Implement a copy/paste functionality for standard Nodes (i.e. nodes that use FieldInfo)
 -> DONE - Load/Save NodeGraphEditor Style.
 -> DONE - Serialization/Deserialization of the whole NodeGraphEditor + Nodes
+-> DONE - Add node clipping: node links are not culled at all, but it's better than nothing.
+
 -> Add/Adjust/Fix more FieldTypes. TODO! And test/fix FT_CUSTOM field type too.
--> Adjust zooming (CTRL + MW when ImGui::GetIO().FontAllowUserScaling = true;)
--> Add node clipping
+-> Adjust zooming (CTRL + MW when ImGui::GetIO().FontAllowUserScaling = true;). DEFERRED (it's probably better to always set ImGui::GetIO().FontAllowUserScaling = false and handle CTRL + mw ourselves)...
 */
 
 
@@ -303,7 +304,8 @@ struct NodeGraphEditor	{
     bool allowOnlyOneLinkPerInputSlot;  // multiple links can still be connected to single output slots
     bool avoidCircularLinkLoopsInOut;   // however multiple paths from a node to another are still allowed (only in-out circuits are prevented)
     //bool isAContextMenuOpen;            // to fix a bug
-    float oldFontWindowScale;           // to fix zooming (CTRL+mouseWheel)
+    float oldFontWindowScale;           // to fix zooming (CTRL+mouseWheel)    
+    float maxConnectorNameWidth;        //used to enlarge node culling space to include connector names
 
     // Node types here are supposed to be zero-based and contiguous
     const char** pNodeTypeNames; // NOT OWNED! -> Must point to a static reference
@@ -415,6 +417,7 @@ struct NodeGraphEditor	{
         //isAContextMenuOpen = false;
         oldFontWindowScale = 0.f;
         nodesBaseWidth = 120.f;
+        maxConnectorNameWidth = 0;
     }
     virtual ~NodeGraphEditor() {
         clear();
@@ -458,6 +461,8 @@ struct NodeGraphEditor	{
 
     Node* addNode(int nodeType,const ImVec2& Pos=ImVec2(0,0))  {
         if (!nodeFactoryFunctionPtr) return NULL;
+        //const float fontWindowScale = oldFontWindowScale==0 ? 1.f : oldFontWindowScale;
+        // Just to say that I've tried all the combinations of Pos, fontWindowScale and scrolling, at it just does not work to adjust Pos to zooming/scrolling.
         return addNode(nodeFactoryFunctionPtr(nodeType,Pos));
     }
     bool deleteNode(Node* node) {

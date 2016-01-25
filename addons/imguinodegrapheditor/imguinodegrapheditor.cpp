@@ -332,6 +332,7 @@ void NodeGraphEditor::render()
             node->Size = ImVec2(0,0);   // we must reset the size
         }
         oldFontWindowScale = currentFontWindowScale;
+        maxConnectorNameWidth = 0.f;
     }
 
     const float NODE_SLOT_RADIUS = style.node_slots_radius*currentFontWindowScale;
@@ -344,18 +345,19 @@ void NodeGraphEditor::render()
     float currentNodeWidth = baseNodeWidth;
     ImGui::PushItemWidth(currentNodeWidth);
 
-    ImVec2 offset = ImGui::GetCursorScreenPos() - scrolling;
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     draw_list->ChannelsSplit(2);
+
+    ImVec2 offset = ImGui::GetCursorScreenPos() - scrolling;
+    ImVec2 offset2 = ImGui::GetCursorPos() - scrolling;
+    ImVec2 win_pos = ImGui::GetCursorScreenPos();
+    ImVec2 canvas_sz = ImGui::GetWindowSize();
 
     // Display grid
     if (show_grid)
     {
-        ImVec2 offset2 = ImGui::GetCursorPos() - scrolling;
-        const ImU32& GRID_COLOR = style.color_grid;
+	const ImU32& GRID_COLOR = style.color_grid;
         const float& GRID_SZ = style.grid_size;
-        ImVec2 win_pos = ImGui::GetCursorScreenPos();
-        ImVec2 canvas_sz = ImGui::GetWindowSize();
 	const float grid_Line_width = currentFontWindowScale * style.grid_line_width;
 	for (float x = fmodf(offset2.x,GRID_SZ); x < canvas_sz.x; x += GRID_SZ)
 	    draw_list->AddLine(ImVec2(x,0.0f)+win_pos, ImVec2(x,canvas_sz.y)+win_pos, GRID_COLOR,grid_Line_width);
@@ -405,8 +407,14 @@ void NodeGraphEditor::render()
     bool isSomeNodeMoving = false;Node *node_to_fire_edit_callback = NULL,* node_to_paste_from_copy_source = NULL;bool mustDeleteANodeSoon = false;
     ImGui::ColorEditMode(colorEditMode);
 
-    ImRect windowClipRect = ImGui::GetCurrentWindow()->ClipRect;
-    // well we should probably scale and offset this (who remembers?)
+    // Clipping Data
+    const float windowClipHalfExtraWidth = NODE_SLOT_RADIUS + (show_connection_names ? maxConnectorNameWidth : 0.f);  // Otherwise node names are culled too early
+    const ImVec2 windowClipRect0(win_pos.x-offset.x-windowClipHalfExtraWidth,win_pos.y-offset.y);
+    ImVec2 windowClipRect1 = windowClipRect0 + canvas_sz;windowClipRect1.x+=2.f*windowClipHalfExtraWidth;
+    const ImRect windowClipRect(windowClipRect0,windowClipRect1);
+    int numberOfCulledNodes = 0;
+    const bool enableNodeCulling = true;
+    // End Clipping data
 
     static const char* btnNames[3]={"v","^","x"};
     const float textSizeButtonPaste = ImGui::CalcTextSize(btnNames[0]).x;
@@ -418,10 +426,13 @@ void NodeGraphEditor::render()
         const ImVec2 nodePos = node->GetPos(currentFontWindowScale);
 
         // culling attempt
-        /*if (!nodesHaveZeroSize) {
-            const ImRect cullRect(nodePos,node->Size);
-            if (!windowClipRect.Overlaps(cullRect)) continue;   // no way...
-        }*/
+	if (enableNodeCulling && !nodesHaveZeroSize) {
+	    const ImRect cullRect(nodePos,nodePos+node->Size);
+	    if (!windowClipRect.Overlaps(cullRect)) {
+		++numberOfCulledNodes;
+		continue;
+	    }
+	}
 
         if (node->baseWidthOverride>0) {
             currentNodeWidth = node->baseWidthOverride*currentFontWindowScale;
@@ -552,6 +563,7 @@ void NodeGraphEditor::render()
         const bool mustDeleteLinkIfSlotIsHovered = canDeleteLinks && io.MouseDoubleClicked[0];
         const bool mustDetectIfSlotIsHoveredForDragNDrop = !cantDragAnything && !isSomeNodeMoving && (!isDragNodeValid || isLMBDraggingForMakingLinks);
         ImGui::PushStyleColor(ImGuiCol_Text,style.color_node_input_slots_names);
+        ImVec2 connectorNameSize(0,0);
         for (int slot_idx = 0; slot_idx < node->InputsCount; slot_idx++)    {
             connectorScreenPos = offset + node->GetInputSlotPos(slot_idx,currentFontWindowScale);
             draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, style.color_node_input_slots);
@@ -563,7 +575,9 @@ void NodeGraphEditor::render()
             if (show_connection_names && node->InputNames[slot_idx][0]!='\0')   {
                 const char* name = node->InputNames[slot_idx];
                 if (name)   {
-                    ImGui::SetCursorScreenPos(offset + node->GetInputSlotPos(slot_idx,currentFontWindowScale)-ImVec2(NODE_SLOT_RADIUS,0)-ImGui::CalcTextSize(name));
+                    connectorNameSize = ImGui::CalcTextSize(name);
+                    if (maxConnectorNameWidth<connectorNameSize.x) maxConnectorNameWidth = connectorNameSize.x;
+                    ImGui::SetCursorScreenPos(offset + node->GetInputSlotPos(slot_idx,currentFontWindowScale)-ImVec2(NODE_SLOT_RADIUS,0)-connectorNameSize);
                     ImGui::Text("%s",name);
                 }
             }
@@ -637,7 +651,9 @@ void NodeGraphEditor::render()
             if (show_connection_names && node->OutputNames[slot_idx][0]!='\0')   {
                 const char* name = node->OutputNames[slot_idx];
                 if (name)   {
-                    ImGui::SetCursorScreenPos(offset + node->GetOutputSlotPos(slot_idx,currentFontWindowScale)+ImVec2(NODE_SLOT_RADIUS,0)-ImVec2(0,ImGui::CalcTextSize(name).y));
+                    connectorNameSize = ImGui::CalcTextSize(name);
+                    if (maxConnectorNameWidth<connectorNameSize.x) maxConnectorNameWidth = connectorNameSize.x;
+                    ImGui::SetCursorScreenPos(offset + node->GetOutputSlotPos(slot_idx,currentFontWindowScale)+ImVec2(NODE_SLOT_RADIUS,0)-ImVec2(0,connectorNameSize.y));
                     ImGui::Text("%s",name);
                 }
             }
@@ -710,6 +726,16 @@ void NodeGraphEditor::render()
     }
     ImGui::PopStyleColor(3);
     draw_list->ChannelsMerge();
+
+//#   define DEBUG_NODE_CULLING
+#   ifdef DEBUG_NODE_CULLING
+    static int lastNumberOfCulledNodes=0;
+    if (numberOfCulledNodes!=lastNumberOfCulledNodes) {
+	lastNumberOfCulledNodes = numberOfCulledNodes;
+	fprintf(stderr,"numberOfCulledNodes: %d\n",numberOfCulledNodes);
+    }
+#   undef DEBUG_NODE_CULLING
+#   endif //DEBUG_NODE_CULLING
 
     // Open context menu
     if (!open_context_menu && selectedNode && (selectedNode==node_hovered_in_list || selectedNode==node_hovered_in_scene) && ((ImGui::IsKeyReleased(io.KeyMap[ImGuiKey_Delete]) && !ImGui::GetIO().WantTextInput) || mustDeleteANodeSoon)) {
@@ -1492,10 +1518,13 @@ bool FieldInfo::render(int nodeWidth)   {
         float width = nodeWidth;
         if (flags<0) {
             //ImVec2 pos = ImGui::GetCursorScreenPos();
-            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + width);
-            ImGui::Text(txtField, width);
-            //ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), 0xFF00FFFF);
-            ImGui::PopTextWrapPos();
+            const float startPos = ImGui::GetCursorPos().x + width;
+            if (startPos>0)    {
+                ImGui::PushTextWrapPos(startPos);
+                ImGui::Text(txtField, width);
+                //ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), 0xFF00FFFF);
+                ImGui::PopTextWrapPos();
+            }
         }
         else if (!multiline) {
             const bool addBrowseButton = (f.minValue==-500);
@@ -1705,6 +1734,7 @@ bool NodeGraphEditor::load(const char* filename)    {
     for (int i=0,isz=nodes.size();i<isz;i++) {
 	nodes[i]->onLoaded();
     }
+    maxConnectorNameWidth = 0;
     //--------------------------------------------
     return true;
     //--------------------------------------------
