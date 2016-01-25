@@ -1032,7 +1032,13 @@ bool PdfPagePanel::imageZoomAndPan(const ImVec2& size)
                         }
                         break;
                         case POPPLER_ACTION_URI:
-                        if (aw.uri) fprintf(stderr,"Must open URI: \"%s\"\n",aw.uri);
+                        if (aw.uri && strlen(aw.uri)>0) {
+#                           ifndef NO_IMGUIHELPER
+                            ImGui::OpenWithDefaultApplication((const char*) aw.uri);
+#                           else //NO_IMGUIHELPER
+                            fprintf(stderr,"Must open URI: \"%s\"\n",aw.uri);
+#                           endif //NO_IMGUIHELPER
+                        }
                         break;
                         default:
                         break;

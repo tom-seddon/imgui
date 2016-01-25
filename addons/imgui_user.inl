@@ -77,6 +77,5 @@
 #include "./imguiyesaddons/imguipdfviewer.cpp"
 #endif //YES_IMGUIPDFVIEWER
 
-
 #endif //IMGUI_USER_ADDONS_INL_
 

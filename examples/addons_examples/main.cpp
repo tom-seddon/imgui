@@ -304,6 +304,7 @@ void DrawGL()	// Mandatory
 #           endif //NO_IMGUITOOLBAR
 #           ifndef NO_IMGUINODEGRAPHEDITOR
             show_node_graph_editor_window ^= ImGui::Button("Another Window With NodeGraphEditor");
+            if (!ImGui::GetIO().FontAllowUserScaling && ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Warning: it needs: ImGui::GetIO().FontAllowUserScaling = true\nfor zooming to work properly.");
 #           endif //NO_IMGUINODEGRAPHEDITOR
             show_splitter_test_window ^= ImGui::Button("Show splitter test window");
 #           ifdef IMGUISCINTILLA_ACTIVATED
@@ -340,6 +341,11 @@ void DrawGL()	// Mandatory
             }
             else gImGuiInverseFPSClampInsideImGui = -1.f;
             ImGui::Checkbox("Use dynamic FPS when \"inside\" ImGui.",&gImGuiDynamicFPSInsideImGui);
+
+            ImGui::Text("\n");ImGui::Separator();ImGui::Text("Font options");ImGui::Separator();
+            ImGui::Checkbox("Font Allow User Scaling", &ImGui::GetIO().FontAllowUserScaling);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","If true, CTRL + mouse wheel scales the window\n(or just its font size if child window).");
+            ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.2f"); // scale everything
 
 
             // imguistyleserializer test
@@ -525,6 +531,13 @@ void DrawGL()	// Mandatory
             static bool popup_open = false;static int threeStaticInts[3]={0,0,0};
             ImGui::InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu("ITMWHS2", buffer2, 1024, height,popup_open,threeStaticInts);
             ImGui::PopID();
+
+            ImGui::Spacing();
+            ImGui::Text("Image with zoom (CTRL+MW) and pan (RMB drag):");
+            ImGui::TextColored(halfTextColor,"(Problem: zooming interfencee with GetIO().FontAllowUserScaling).");
+            static float zoom = 1.f;static ImVec2 pan(.5f,.5f);
+            // This requires     ImGui::GetIO().FontAllowUserScaling = false;
+            ImGui::ImageZoomAndPan(reinterpret_cast<ImTextureID>(myImageTextureId2),ImVec2(0,150),1.f,zoom,pan);    // aspect ratio can be aero for stretch mode
 #           else //NO_IMGUIVARIOUSCONTROLS
             ImGui::Text("%s","Excluded from this build.\n");
 #           endif //NO_IMGUIVARIOUSCONTROLS

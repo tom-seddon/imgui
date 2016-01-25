@@ -331,6 +331,10 @@ void NodeGraphEditor::render()
             Node* node = nodes[i];
             node->Size = ImVec2(0,0);   // we must reset the size
         }
+        // These two lines makes the scaling work around the mouse position AFAICS
+        const ImVec2 delta = (io.MousePos-ImGui::GetCursorScreenPos());//-ImGui::GetWindowSize()*.5f));
+        scrolling+=delta*currentFontWindowScale-delta*oldFontWindowScale;
+        //------------------------------------------------------------------------
         oldFontWindowScale = currentFontWindowScale;
         maxConnectorNameWidth = 0.f;
     }
@@ -783,7 +787,7 @@ void NodeGraphEditor::render()
     }
     else if (ImGui::BeginPopup("context_menu"))  {
         Node* node = selectedNode;
-        ImVec2 scene_pos = ImGui::GetMousePosOnOpeningCurrentPopup() - offset;
+        ImVec2 scene_pos = (ImGui::GetMousePosOnOpeningCurrentPopup() - offset)/currentFontWindowScale;
         if (node)   {
             ImGui::Text("Node '%s'", node->Name);
             ImGui::Separator();
