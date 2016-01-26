@@ -61,7 +61,7 @@ namespace ImStl {
             for (int i=0,isz=dst.size();i<isz;i++) {dst[i].~T();}
             dst.clear();dst.resize(src.size());
             for (int i=0,isz=dst.size();i<isz;i++) {
-                new (&dst[i]) T();
+                IM_PLACEMENT_NEW (&dst[i]) T();
                 dst[i] = src[i];
             }
         }
@@ -1104,9 +1104,6 @@ bool PdfPagePanel::imageZoomAndPan(const ImVec2& size)
 }
 
 
-
-
-
 bool PdfPagePanel::render(const ImVec2& size,bool renderTopPanelToo) {
     bool rv = false;
     if (renderTopPanelToo) rv|=renderTopPanelOnly();
@@ -1158,7 +1155,7 @@ bool PdfPagePanel::render(const ImVec2& size,bool renderTopPanelToo) {
         if (ImGui::BeginPopup(ContextMenuName)) {
             //ImGui::MenuItem("My pdf popup menu here");
             if (ContextMenuData.hoverImageId>=0 && ContextMenuData.contextMenuParent->page)  {
-                if (ImGui::MenuItem("Save Image To Pdf")) {
+                if (ImGui::MenuItem("Save Image As Png")) {
                     PdfPagePanel* panel = ContextMenuData.contextMenuParent;
                     cairo_surface_t* surf = panel->pageToCairo(CAIRO_FORMAT_ARGB32,poppler_page_get_index(panel->page),&ContextMenuData.hoverImageRectInPdfPageCoords);
                     if (surf)   {
@@ -1441,7 +1438,7 @@ const char* PdfPagePanel::getSelectedText() const {
 
 PdfViewer::PdfViewer()  {
     pagePanel = (PdfPagePanel*) ImGui::MemAlloc(sizeof(PdfPagePanel));
-    new (pagePanel) PdfPagePanel();
+    IM_PLACEMENT_NEW (pagePanel) PdfPagePanel();
     filePath = NULL;
     init = false;
 }

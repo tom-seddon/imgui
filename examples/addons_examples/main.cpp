@@ -109,7 +109,7 @@ inline void MyTestListView() {
             ti.bg_col.x=ti.bg_col.y=ti.bg_col.z=1;ti.bg_col.w=1;  // bg color (used in transparent pixels of the image)
 
             item = (MyListViewItem*) ImGui::MemAlloc(sizeof(MyListViewItem));                       // MANDATORY (ImGuiListView::~ImGuiListView() will delete these with ImGui::MemFree(...))
-            new (item) MyListViewItem(
+            IM_PLACEMENT_NEW(item) MyListViewItem(
                         ti,
                         i,
                         "My '  ' Dummy Path",
@@ -118,7 +118,7 @@ inline void MyTestListView() {
                         ImVec4((float)(i*30)/2.7345672,(float)(i%30)/2.7345672,(float)(i*5)/1.34,1.f),  // ImVec3 does not exist... so we use an ImVec4 to initialize a float[3]
                         ImVec4((float)i/(float)(isz-1),0.8f,1.0f-(float)i/(float)(isz-1),1.0f),         // HT_COLOR
                         i%3
-            );    // MANDATORY even with blank ctrs. Requires: #include <new>. Reason: ImVector does not call ctrs/dctrs on items.
+            );    // MANDATORY even with blank ctrs. Reason: ImVector does not call ctrs/dctrs on items.
             item->path[4]=(char) (33+(i%64));   //just to test sorting on strings
             item->path[5]=(char) (33+(i/127));  //just to test sorting on strings
             lv.items[i] = item;
@@ -168,7 +168,7 @@ void InitGL()	// Mandatory
 
 
 //  Optional CTRL + MW to zoom
-    ImGui::GetIO().FontAllowUserScaling = true;
+    //ImGui::GetIO().FontAllowUserScaling = true;
 
 //#define TEST_SERIALIZER // development only: but I definitely need to perform some tests...
 #ifdef TEST_SERIALIZER
@@ -343,8 +343,8 @@ void DrawGL()	// Mandatory
             ImGui::Checkbox("Use dynamic FPS when \"inside\" ImGui.",&gImGuiDynamicFPSInsideImGui);
 
             ImGui::Text("\n");ImGui::Separator();ImGui::Text("Font options");ImGui::Separator();
-            ImGui::Checkbox("Font Allow User Scaling", &ImGui::GetIO().FontAllowUserScaling);
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","If true, CTRL + mouse wheel scales the window\n(or just its font size if child window).");
+            //ImGui::Checkbox("Font Allow User Scaling", &ImGui::GetIO().FontAllowUserScaling);
+            //if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","If true, CTRL + mouse wheel scales the window\n(or just its font size if child window).");
             ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.2f"); // scale everything
 
 

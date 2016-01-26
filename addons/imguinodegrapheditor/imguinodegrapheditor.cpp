@@ -142,7 +142,7 @@ bool NodeGraphEditor::Style::Load(NodeGraphEditor::Style &style, const char *fil
 
 void NodeGraphEditor::render()
 {
-    if (!inited) init();
+    if (!inited) inited=true;
     static const ImVec4 transparent = ImVec4(1,1,1,0);
 
     const ImGuiIO io = ImGui::GetIO();
@@ -316,7 +316,19 @@ void NodeGraphEditor::render()
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1,1));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.color_background);
-    ImGui::BeginChild("scrolling_region", ImVec2(0,0), true, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoMove);
+    ImGui::BeginChild("scrolling_region", ImVec2(0,0), true, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollWithMouse);
+
+    if (!io.FontAllowUserScaling && io.MouseWheel && ImGui::GetCurrentWindow()==GImGui->HoveredWindow)   {
+	// Zoom / Scale window
+	ImGuiState& g = *GImGui;
+	ImGuiWindow* window = ImGui::GetCurrentWindow();
+	float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
+	float scale = new_font_scale / window->FontWindowScale;
+	if (scale!=1)	{
+	    scrolling=scrolling*scale;
+	    window->FontWindowScale = new_font_scale;
+	}
+    }
 
     // fixes zooming just a bit
     bool nodesHaveZeroSize = false;
@@ -324,6 +336,7 @@ void NodeGraphEditor::render()
     if (oldFontWindowScale==0.f) {
         oldFontWindowScale = currentFontWindowScale;
         nodesHaveZeroSize = true;   // at start or after clear()
+	scrolling = ImGui::GetWindowSize()*.5f;
     }
     else if (oldFontWindowScale!=currentFontWindowScale) {
         nodesHaveZeroSize = true;
@@ -332,9 +345,16 @@ void NodeGraphEditor::render()
             node->Size = ImVec2(0,0);   // we must reset the size
         }
         // These two lines makes the scaling work around the mouse position AFAICS
-        const ImVec2 delta = (io.MousePos-ImGui::GetCursorScreenPos());//-ImGui::GetWindowSize()*.5f));
-        scrolling+=delta*currentFontWindowScale-delta*oldFontWindowScale;
-        //------------------------------------------------------------------------
+	if (io.FontAllowUserScaling)	{
+	    const ImVec2 delta = (io.MousePos-ImGui::GetCursorScreenPos());//-ImGui::GetWindowSize()*.5f));
+	    scrolling+=(delta*currentFontWindowScale-delta*oldFontWindowScale)/currentFontWindowScale;
+	    /*ImGuiWindow* window = ImGui::GetCurrentWindow();
+	    float scale = currentFontWindowScale / oldFontWindowScale;
+	    ImVec2 oldWindowSize = window->Size/scale;
+	    const ImVec2 offset = window->Size * (1.0f - scale) * (io.MousePos - window->Pos) / window->Size;
+	    */
+	    //------------------------------------------------------------------------
+	}
         oldFontWindowScale = currentFontWindowScale;
         maxConnectorNameWidth = 0.f;
     }
@@ -352,10 +372,12 @@ void NodeGraphEditor::render()
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     draw_list->ChannelsSplit(2);
 
-    ImVec2 offset = ImGui::GetCursorScreenPos() - scrolling;
+    ImVec2 canvasSize = ImGui::GetWindowSize();
+    ImVec2 effectiveScrolling = scrolling - canvasSize*.5f;
+    ImVec2 offset = ImGui::GetCursorScreenPos() - effectiveScrolling;
     ImVec2 offset2 = ImGui::GetCursorPos() - scrolling;
     ImVec2 win_pos = ImGui::GetCursorScreenPos();
-    ImVec2 canvas_sz = ImGui::GetWindowSize();
+
 
     // Display grid
     if (show_grid)
@@ -363,12 +385,11 @@ void NodeGraphEditor::render()
 	const ImU32& GRID_COLOR = style.color_grid;
         const float& GRID_SZ = style.grid_size;
 	const float grid_Line_width = currentFontWindowScale * style.grid_line_width;
-	for (float x = fmodf(offset2.x,GRID_SZ); x < canvas_sz.x; x += GRID_SZ)
-	    draw_list->AddLine(ImVec2(x,0.0f)+win_pos, ImVec2(x,canvas_sz.y)+win_pos, GRID_COLOR,grid_Line_width);
-        for (float y = fmodf(offset2.y,GRID_SZ); y < canvas_sz.y; y += GRID_SZ)
-	    draw_list->AddLine(ImVec2(0.0f,y)+win_pos, ImVec2(canvas_sz.x,y)+win_pos, GRID_COLOR,grid_Line_width);
+	for (float x = fmodf(offset2.x,GRID_SZ); x < canvasSize.x; x += GRID_SZ)
+	    draw_list->AddLine(ImVec2(x,0.0f)+win_pos, ImVec2(x,canvasSize.y)+win_pos, GRID_COLOR,grid_Line_width);
+	for (float y = fmodf(offset2.y,GRID_SZ); y < canvasSize.y; y += GRID_SZ)
+	    draw_list->AddLine(ImVec2(0.0f,y)+win_pos, ImVec2(canvasSize.x,y)+win_pos, GRID_COLOR,grid_Line_width);
     }
-
 
     // Display links
     draw_list->ChannelsSetCurrent(0); // Background
@@ -414,7 +435,7 @@ void NodeGraphEditor::render()
     // Clipping Data
     const float windowClipHalfExtraWidth = NODE_SLOT_RADIUS + (show_connection_names ? maxConnectorNameWidth : 0.f);  // Otherwise node names are culled too early
     const ImVec2 windowClipRect0(win_pos.x-offset.x-windowClipHalfExtraWidth,win_pos.y-offset.y);
-    ImVec2 windowClipRect1 = windowClipRect0 + canvas_sz;windowClipRect1.x+=2.f*windowClipHalfExtraWidth;
+    ImVec2 windowClipRect1 = windowClipRect0 + canvasSize;windowClipRect1.x+=2.f*windowClipHalfExtraWidth;
     const ImRect windowClipRect(windowClipRect0,windowClipRect1);
     int numberOfCulledNodes = 0;
     const bool enableNodeCulling = true;
@@ -427,7 +448,7 @@ void NodeGraphEditor::render()
     for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
     {
         Node* node = nodes[node_idx];
-        const ImVec2 nodePos = node->GetPos(currentFontWindowScale);
+	const ImVec2 nodePos = node->GetPos(currentFontWindowScale);
 
         // culling attempt
 	if (enableNodeCulling && !nodesHaveZeroSize) {
@@ -471,7 +492,7 @@ void NodeGraphEditor::render()
 	const bool canCopy = node->canBeCopied();
 	if (node->Size.x!=0)    {
 	    if (!node->isOpen) ImGui::SameLine();
-            else ImGui::SameLine(-scrolling.x+nodePos.x+node->Size.x-textSizeButtonX-10
+	    else ImGui::SameLine(-effectiveScrolling.x+nodePos.x+node->Size.x-textSizeButtonX-10
                                  -(show_node_copy_paste_buttons ?
                                        (
 					   (canCopy?(textSizeButtonCopy+2):0) +
@@ -553,7 +574,7 @@ void NodeGraphEditor::render()
         bool node_moving_active = !isMouseDraggingForScrolling && !nodeInEditMode && ImGui::IsItemActive();
         if (node_widgets_active || node_moving_active)  selectedNode = node;
         if (node_moving_active && !isDragNodeValid && ImGui::IsMouseDragging(0, 8.0f)) {
-            node->Pos = node->Pos + io.MouseDelta;isSomeNodeMoving=true;
+	    node->Pos = node->Pos + io.MouseDelta/currentFontWindowScale;isSomeNodeMoving=true;
         }
 
         const ImU32& node_bg_color = (node_hovered_in_list == node || node_hovered_in_scene == node) ? style.color_node_hovered :
@@ -1739,6 +1760,7 @@ bool NodeGraphEditor::load(const char* filename)    {
 	nodes[i]->onLoaded();
     }
     maxConnectorNameWidth = 0;
+    oldFontWindowScale = 0;
     //--------------------------------------------
     return true;
     //--------------------------------------------
@@ -1806,8 +1828,8 @@ class ColorNode : public Node {
     static ThisClass* Create(const ImVec2& pos) {
         // 1) allocation
         // MANDATORY (NodeGraphEditor::~NodeGraphEditor() will delete these with ImGui::MemFree(...))
-        // MANDATORY even with blank ctrs. Requires: #include <new>. Reason: ImVector does not call ctrs/dctrs on items.
-        ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));new (node) ThisClass();
+	// MANDATORY even with blank ctrs. Reason: ImVector does not call ctrs/dctrs on items.
+	ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));IM_PLACEMENT_NEW (node) ThisClass();
 
         // 2) main init
         node->init("ColorNode",pos,"","r;g;b;a",TYPE);
@@ -1843,8 +1865,8 @@ class CombineNode : public Node {
     static ThisClass* Create(const ImVec2& pos) {
         // 1) allocation
         // MANDATORY (NodeGraphEditor::~NodeGraphEditor() will delete these with ImGui::MemFree(...))
-        // MANDATORY even with blank ctrs. Requires: #include <new>. Reason: ImVector does not call ctrs/dctrs on items.
-        ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));new (node) ThisClass();
+	// MANDATORY even with blank ctrs. Reason: ImVector does not call ctrs/dctrs on items.
+	ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));IM_PLACEMENT_NEW(node) ThisClass();
 
         // 2) main init
         node->init("CombineNode",pos,"in1;in2","out",TYPE);
@@ -1887,8 +1909,8 @@ class CommentNode : public Node {
     static ThisClass* Create(const ImVec2& pos) {
 	// 1) allocation
 	// MANDATORY (NodeGraphEditor::~NodeGraphEditor() will delete these with ImGui::MemFree(...))
-	// MANDATORY even with blank ctrs. Requires: #include <new>. Reason: ImVector does not call ctrs/dctrs on items.
-	ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));new (node) ThisClass();
+	// MANDATORY even with blank ctrs. Reason: ImVector does not call ctrs/dctrs on items.
+	ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));IM_PLACEMENT_NEW(node) ThisClass();
 
 	// 2) main init
 	node->init("CommentNode",pos,"","",TYPE);
@@ -1948,8 +1970,8 @@ class ComplexNode : public Node {
     static ThisClass* Create(const ImVec2& pos) {
         // 1) allocation
         // MANDATORY (NodeGraphEditor::~NodeGraphEditor() will delete these with ImGui::MemFree(...))
-        // MANDATORY even with blank ctrs. Requires: #include <new>. Reason: ImVector does not call ctrs/dctrs on items.
-        ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));new (node) ThisClass();
+	// MANDATORY even with blank ctrs.  Reason: ImVector does not call ctrs/dctrs on items.
+	ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));IM_PLACEMENT_NEW(node) ThisClass();
 
         // 2) main init
         node->init("ComplexNode",pos,"in1;in2;in3","out1;out2",TYPE);
@@ -2003,8 +2025,9 @@ class TextureNode : public Node {
     static ThisClass* Create(const ImVec2& pos) {
 	// 1) allocation
 	// MANDATORY (NodeGraphEditor::~NodeGraphEditor() will delete these with ImGui::MemFree(...))
-	// MANDATORY even with blank ctrs. Requires: #include <new>. Reason: ImVector does not call ctrs/dctrs on items.
-	ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));new (node) ThisClass();
+	// MANDATORY even with blank ctrs.  Reason: ImVector does not call ctrs/dctrs on items.
+	ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));
+	IM_PLACEMENT_NEW(node) ThisClass();
 
 	// 2) main init
 	node->init("TextureNode",pos,"","r;g;b;a",TYPE);
@@ -2106,9 +2129,8 @@ static Node* MyNodeFactory(int nt,const ImVec2& pos) {
 }
 void TestNodeGraphEditor()  {
     static ImGui::NodeGraphEditor nge;
-    if (nge.mustInit())	{
-        nge.init(); // So nge.mustInit() returns false next time [currently it's optional, since render() calls it anyway]
-        // This adds entries to the "add node" context menu
+    if (nge.isInited())	{
+	// This adds entries to the "add node" context menu
         nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,NULL,-1); // last 2 args can be used to add only a subset of nodes (or to sort their order inside the context menu)
 
         // Optional: starting nodes and links (TODO: load from file instead):-----------

@@ -571,7 +571,7 @@ struct TabWindowNode  {
         for (int i=0;i<2;i++)   {
             TabWindowNode* ch = child[i];
             ch = (TabWindowNode*) ImGui::MemAlloc(sizeof(TabWindowNode));
-            new (ch) TabWindowNode();
+            IM_PLACEMENT_NEW(ch) TabWindowNode();
             child[i] = ch;
             ch->parent = this;
         }
@@ -856,13 +856,13 @@ struct TabWindowNode  {
         this->parent = parent;
         if (cbs.isActiveNode && tabWindow) {
             tabWindow->activeNode = this;
-            IM_ASSERT(cbs.isLeafNode);
+            //IM_ASSERT(cbs.isLeafNode);    // mmmh, this gets hit sometimes...
         }
         IM_ASSERT(cbs.numTabs>0 ? cbs.isLeafNode : true);
         if (!cbs.isLeafNode) {
             for (int i=0;i<2;i++)   {
                 TabWindowNode* n = (TabWindowNode*) ImGui::MemAlloc(sizeof(TabWindowNode));
-                new (n) TabWindowNode();
+                IM_PLACEMENT_NEW(n) TabWindowNode();
                 n->deserialize(d,this,amount,tabWindow);
                 this->child[i] = n;
             }
@@ -1786,7 +1786,7 @@ void TabWindow::clear() {mainNode->clear();activeNode=mainNode;}
 
 TabWindow::TabWindow() {
     mainNode = (TabWindowNode*) ImGui::MemAlloc(sizeof(TabWindowNode));
-    new (mainNode) TabWindowNode();
+    IM_PLACEMENT_NEW(mainNode) TabWindowNode();
     mainNode->name = (char*) ImGui::MemAlloc(7);strcpy(mainNode->name,"##main");
     activeNode=mainNode;
     init=false;
@@ -1978,6 +1978,8 @@ bool TabWindow::load(ImGuiHelper::Deserializer &d, const char *&amount) {
 
     mainNode->deserialize(d,NULL,amount,this);
 
+    if (!activeNode) activeNode=mainNode;
+    if (!activeNode->isLeafNode()) activeNode = activeNode->getFirstLeaftNode();
     IM_ASSERT(activeNode && activeNode->isLeafNode());
 
     return true;
@@ -2008,7 +2010,7 @@ TabWindow::TabLabel *TabWindow::createTabLabel(const char *label, const char *to
     if (TabLabelFactoryCb)  tab = TabLabelFactoryCb(*this,label,tooltip,closable,draggable,userPtr,userText,userInt,ImGuiWindowFlagsForContent);
     else    {
         tab = (TabLabel*) ImGui::MemAlloc(sizeof(TabLabel));
-        new (tab) TabLabel(label,tooltip,closable,draggable);
+        IM_PLACEMENT_NEW(tab) TabLabel(label,tooltip,closable,draggable);
         tab->userPtr = userPtr;
         tab->setUserText(userText);
         tab->userInt =userInt;

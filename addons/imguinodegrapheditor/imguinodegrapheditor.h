@@ -26,9 +26,11 @@
 -> DONE - Load/Save NodeGraphEditor Style.
 -> DONE - Serialization/Deserialization of the whole NodeGraphEditor + Nodes
 -> DONE - Add node clipping: node links are not culled at all, but it's better than nothing.
+-> DONE - Adjust zooming (CTRL + MW when ImGui::GetIO().FontAllowUserScaling = true;).
+          NOW ZOOMING WORKS PROPERLY ONLY IF ImGui::GetIO().FontAllowUserScaling = false,
+          (otherwise there's a BAD fallback).
 
 -> Add/Adjust/Fix more FieldTypes. TODO! And test/fix FT_CUSTOM field type too.
--> Adjust zooming (CTRL + MW when ImGui::GetIO().FontAllowUserScaling = true;). DEFERRED (it's probably better to always set ImGui::GetIO().FontAllowUserScaling = false and handle CTRL + mw ourselves)...
 */
 
 
@@ -450,8 +452,7 @@ struct NodeGraphEditor	{
         oldFontWindowScale = 0.f;
     }
 
-    bool mustInit() const {return !inited;}
-    void init() {inited=true;}
+    bool isInited() const {return !inited;}
 
     bool isEmpty() const {return nodes.size()==0;}
 

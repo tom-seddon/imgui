@@ -36,7 +36,6 @@
 #include <ctype.h>  // tolower,...
 #include <string.h> // strcmp
 #include <stdio.h>  // FILENAME_MAX
-#include <new>      // operator new
 
 
 
@@ -1557,7 +1556,7 @@ ImVec4 Dialog::WindowLTRBOffsets(0,0,0,0);
 
 Dialog::Dialog(bool noKnownDirectoriesSection,bool noCreateDirectorySection,bool noFilteringSection,bool detectKnownDirectoriesAtEachOpening,bool addDisplayByOption,bool dontFilterSaveFilePathsEnteredByTheUser)    {
     internal = (Internal*) ImGui::MemAlloc(sizeof(Internal));
-    new(internal) Internal();
+    IM_PLACEMENT_NEW(internal) Internal();
 
     internal->resetVariables();
     static int un = 0;

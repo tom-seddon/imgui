@@ -26,6 +26,14 @@
 #	endif
 #endif//IMGUI_NO_INLINE
 
+// Defining a custom placement new() with a dummy parameter allows us to bypass including <new> which on some platforms complains when user has disabled exceptions.
+#ifndef IM_PLACEMENT_NEW
+struct ImImplPlacementNewDummy {};
+inline void* operator new(size_t, ImImplPlacementNewDummy, void* ptr) { return ptr; }
+inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
+#define IM_PLACEMENT_NEW(_PTR)  new(ImImplPlacementNewDummy() ,_PTR)
+#endif //IM_PLACEMENT_NEW
+
 #ifdef IMGUI_USE_MINIZIP	// requires linking to library -lZlib
 #   ifndef IMGUI_USE_ZLIB
 #   define IMGUI_USE_ZLIB	// requires linking to library -lZlib

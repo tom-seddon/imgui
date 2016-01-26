@@ -23,6 +23,13 @@
 #	endif
 #endif//IMGUI_FORCE_INLINE
 
+#ifndef IM_PLACEMENT_NEW
+struct ImImplPlacementNewDummy {};
+inline void* operator new(size_t, ImImplPlacementNewDummy, void* ptr) { return ptr; }
+inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
+#define IM_PLACEMENT_NEW(_PTR)  new(ImImplPlacementNewDummy() ,_PTR)
+#endif //IM_PLACEMENT_NEW
+
 #ifndef ImString
 // A string implementation based on ImVector<char>
 class ImString : public ImVector<char> {
@@ -215,7 +222,6 @@ inline const ImString operator+(ImString v1, const ImString& v2 ) {return v1+=(v
 
 
 #ifndef ImVectorEx
-#include <new>
 // Attempt to make ImVector call ctr/dstr on elements and to make them proper copy (without using memcpy/memmove):
 template<typename T>
 class ImVectorEx
@@ -261,7 +267,7 @@ public:
     void                        resize(int new_size)            {
         if (new_size > Capacity) {
             reserve(_grow_capacity(new_size));
-            for (int i=Size;i<new_size;i++) {new(&Data[i]) T();}
+            for (int i=Size;i<new_size;i++) {IM_PLACEMENT_NEW(&Data[i]) T();}
         }
         if (new_size < Size)   {for (int i=new_size;i<Size;i++) Data[i].~T();}
         Size = new_size;
@@ -271,7 +277,7 @@ public:
         if (new_capacity <= Capacity) return;
         T* new_data = (value_type*)ImGui::MemAlloc((size_t)new_capacity * sizeof(value_type));
         for (int i=0;i<Size;i++) {
-            new(&new_data[i]) T();       // Is this dstr/ctr pair really needed or can I just copy...?
+            IM_PLACEMENT_NEW(&new_data[i]) T();       // Is this dstr/ctr pair really needed or can I just copy...?
             new_data[i] = Data[i];
             Data[i].~T();
         }
@@ -283,7 +289,7 @@ public:
 
     inline void                 push_back(const value_type& v)  {
         if (Size == Capacity) reserve(_grow_capacity(Size+1));
-        new(&Data[Size]) T();
+        IM_PLACEMENT_NEW(&Data[Size]) T();
         Data[Size++] = v;
     }
     inline void                 pop_back()                      {
@@ -364,7 +370,7 @@ template <typename K> struct ImHashMapDestructorFunctionDummy {
     IMGUI_FORCE_INLINE void operator()(K& ) const {}
 };
 template <typename K> struct ImHashMapConstructorFunctionDefault {
-    IMGUI_FORCE_INLINE void operator()(K& k) const {new (&k) K();}
+    IMGUI_FORCE_INLINE void operator()(K& k) const {IM_PLACEMENT_NEW (&k) K();}
 };
 template <typename K> struct ImHashMapDestructorFunctionDefault {
     IMGUI_FORCE_INLINE void operator()(K& k) const {k.~K();}
@@ -437,7 +443,7 @@ public:
         if (!node) {
             // key not found
             node = (HashNode*) ImGui::MemAlloc(sizeof(HashNode));   // items MUST be free by the user using ImGui::MemFree(...)
-            //new (node) HashNode(key,value);                         // ImVector does not call it
+            //IM_PLACEMENT_NEW (node) HashNode(key,value);                         // ImVector does not call it
             constructorKFunc(node->key);    assignKFunc(node->key,key);
             constructorVFunc(node->value);  assignVFunc(node->value,value);
             node->next=NULL;

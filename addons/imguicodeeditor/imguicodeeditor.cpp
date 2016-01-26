@@ -24,7 +24,7 @@
 #   include "utf8helper.h"         // not sure if it's necessary to count UTF8 chars
 #endif //IMGUICODEEDITOR_USE_UTF8HELPER_H
 
-#define IMGUI_NEW(type)         new (ImGui::MemAlloc(sizeof(type) ) ) type
+#define IMGUI_NEW(type)         IM_PLACEMENT_NEW (ImGui::MemAlloc(sizeof(type) ) ) type
 #define IMGUI_DELETE(type, obj) reinterpret_cast<type*>(obj)->~type(), ImGui::MemFree(obj)
 
 
@@ -2060,6 +2060,22 @@ void CodeEditor::render()   {
 
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.color_background);  // The line below is just to set the bg color....
     ImGui::BeginChild("CodeEditorChild", ImVec2(0,0), true, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_HorizontalScrollbar);
+
+    if (!io.FontAllowUserScaling && io.MouseWheel && ImGui::GetCurrentWindow()==GImGui->HoveredWindow)   {
+        // Zoom / Scale window
+        ImGuiState& g = *GImGui;
+        ImGuiWindow* window = ImGui::GetCurrentWindow();//g.HoveredWindow;
+        float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
+        float scale = new_font_scale / window->FontWindowScale;
+        window->FontWindowScale = new_font_scale;
+
+        const ImVec2 offset = (g.IO.MousePos - window->Pos) * (1.0f - scale);
+        window->Pos += offset;
+        window->PosFloat += offset;
+        // these two don't affect child windows AFAIK
+        //window->Size *= scale;
+        //window->SizeFull *= scale;
+    }
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
 

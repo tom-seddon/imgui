@@ -732,7 +732,7 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
                 if (io.MouseWheel < 0) {zoom/=zoomStep;if (zoom<zoomMin) zoom=zoomMin;}
                 else {zoom*=zoomStep;if (zoom>zoomMax) zoom=zoomMax;}
                 rv = true;
-                if (io.FontAllowUserScaling) {
+                /*if (io.FontAllowUserScaling) {
                     // invert effect:
                     // Zoom / Scale window
                     ImGuiState& g = *GImGui;
@@ -746,7 +746,7 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
                     window->PosFloat += offset;
                     window->Size *= scale;
                     window->SizeFull *= scale;
-                }
+                }*/
             }
             else  {
                 const bool scrollDown = io.MouseWheel <= 0;
