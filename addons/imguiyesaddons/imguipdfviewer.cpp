@@ -66,6 +66,30 @@ namespace ImStl {
             }
         }
     }
+    template <typename T> inline static void AddRange(ImVector<T>& v,const ImVector<T>& toBeAdded)    {
+        const int vSize = (int) v.size();
+        const int toBeAddedSize = (int) toBeAdded.size();
+        v.resize(vSize+toBeAddedSize);
+        for (int i=0;i<toBeAddedSize;i++)   {
+            v[vSize+i] = toBeAdded[i];
+        }
+    }
+    template <typename T> inline static void InsertRange(ImVector<T>& v,int insertionPoint,const ImVector<T>& toBeAdded)    {
+        if (insertionPoint<0 || insertionPoint>=(int)v.size())   {
+            AddRange(v,toBeAdded);
+            return;
+        }
+        const int vSize = (int) v.size();
+        const int toBeAddedSize = (int) toBeAdded.size();
+        v.resize(vSize+toBeAddedSize);
+        for (int i=vSize-1;i>=insertionPoint;i--)   {
+            v[i+toBeAddedSize] = v[i];
+        }
+        for (int i=insertionPoint;i<insertionPoint+toBeAddedSize;i++)   {
+            v[i] = toBeAdded[i-insertionPoint];
+        }
+
+    }
 } // namespace ImSTL
 
 
@@ -496,21 +520,20 @@ public:
     }
 
     // UserSelectionRectangles stuff-----------------------------------------------------------------------------------------
-    struct UserSelectionRectanglesComparer  {
-    public:
-        inline bool operator() (const ImStl::Pair<int,cairo_rectangle_t>& a, const ImStl::Pair<int,cairo_rectangle_t>& b) const
-        {
-            int apg = a.first;
-            int bpg = b.first;
-            if (apg == bpg) {
-                const cairo_rectangle_t& ar = a.second;
-                const cairo_rectangle_t& br = b.second;
-                if (ar.y == br.y) return  (ar.x < br.x ? -1 : 1);
-                return (ar.y < br.y ? -1 : 1);
-            }
-            return (apg < bpg ? -1 : 1);
+    static int UserSelectionRectanglesComparer(const void* pa,const void* pb)   {
+        const ImStl::Pair<int,cairo_rectangle_t>& a = *((const ImStl::Pair<int,cairo_rectangle_t>*)pa);
+        const ImStl::Pair<int,cairo_rectangle_t>& b = *((const ImStl::Pair<int,cairo_rectangle_t>*)pb);
+        int apg = a.first;
+        int bpg = b.first;
+        if (apg == bpg) {
+            const cairo_rectangle_t& ar = a.second;
+            const cairo_rectangle_t& br = b.second;
+            if (ar.y == br.y) return  (ar.x < br.x ? -1 : 1);
+            return (ar.y < br.y ? -1 : 1);
         }
-    };
+        return (apg < bpg ? -1 : 1);
+    }
+
     void setUserSelectionRectangles(const ImVector<ImStl::Pair<int,cairo_rectangle_t> >& value) {
         ImStl::VecCpy(userSelectionRectangles,value);
         updateUserSelectionRectanglesExtraStuff();
@@ -881,12 +904,14 @@ bool PdfPagePanel::imageZoomAndPan(const ImVec2& size)
 
     bool pageChanged = false;
 
-    static bool wasDragging = false;
+    static bool wasRMBDragging = false;
+    static bool wasLMBDragging = false;
     const bool isDragging = ImGui::IsMouseDragging(panMouseButtonDrag,3.f);
-    bool isRMBclickedForContextMenu = !isDragging && !wasDragging && ImGui::IsMouseReleased(panMouseButtonDrag);
-    wasDragging = isDragging;
-    bool isHovered = false;
-    if ((isHovered=ImGui::IsItemHovered())) {
+    const bool isLMBMouseDragging = ImGui::IsMouseDragging(0,1.f);
+    bool isRMBclickedForContextMenu = !isDragging && !wasRMBDragging && ImGui::IsMouseReleased(panMouseButtonDrag);
+    wasRMBDragging = isDragging;
+    bool isHovered = false, isHoveredRect = false;
+    if ((isHovered=isHoveredRect=ImGui::IsItemHovered())) {
         if (io.MouseWheel!=0) {
             if (io.KeyCtrl) {
                 const float zoomStep = zoomMaxAndZoomStep.y;
@@ -938,7 +963,8 @@ bool PdfPagePanel::imageZoomAndPan(const ImVec2& size)
             ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
         }
     }
-    else if (isRMBclickedForContextMenu && !ImGui::IsItemHoveredRect()) isRMBclickedForContextMenu = false;
+    else if (isRMBclickedForContextMenu) {if (!(isHoveredRect=ImGui::IsItemHoveredRect())) isRMBclickedForContextMenu = false;}
+    else if (isLMBMouseDragging) isHoveredRect=ImGui::IsItemHoveredRect();
 
     const float zoomFactor = .5/zoom;
     if (rv) {
@@ -1007,10 +1033,102 @@ bool PdfPagePanel::imageZoomAndPan(const ImVec2& size)
             ContextMenuData.hoverImageId = -1;
         }
     }
-    if (isHovered) {
-        bool isSelectingText = ImGui::IsMouseDragging(0,1.f);
+
+    // Display user selected text:
+    {
+            static const ImU32 selectedTextCol = ImGui::ColorConvertFloat4ToU32(ImVec4(0.f,0.7f,1.f,.25f));
+
+            // Possible opt: pretransform all this stuff per page
+            const int npage = poppler_page_get_index(page);
+            double width,height;poppler_page_get_size(page,&width,&height);
+            ImVec2 st(0,0),en(0,0);
+            ImRect clipRect = window->ClipRect;
+            clipRect.Min.y+=topPanelHeight;
+            if (firstUserRectangleOfCurrentPageIndex!=-1)   {
+                for (int i=firstUserRectangleOfCurrentPageIndex,isz=userSelectionRectangles.size();i<isz;i++)	{
+                    if (userSelectionRectangles[i].first!=npage) break;
+
+                    const cairo_rectangle_t& r = userSelectionRectangles[i].second;
+
+                    st = pdfRelativeToMouseCoords(ImVec2(r.x/width,r.y/height));
+                    en = pdfRelativeToMouseCoords(ImVec2((r.x+r.width)/width,(r.y+r.height)/height));
+
+                    // Manual clipping: if (clipRect.Overlaps(rect)) then draw
+                    if (clipRect.Min.y < en.y  && clipRect.Max.y > st.y  && clipRect.Min.x < en.x && clipRect.Max.x > st.x)
+                        window->DrawList->AddRectFilled(st,en,selectedTextCol,0);
+
+                }
+            }
+            for (int i=0,isz=temporaryUserSelection.size();i<isz;i++)	{
+                const cairo_rectangle_t& r = temporaryUserSelection[i];
+
+                st = pdfRelativeToMouseCoords(ImVec2(r.x/width,r.y/height));
+                en = pdfRelativeToMouseCoords(ImVec2((r.x+r.width)/width,(r.y+r.height)/height));
+
+                // Manual clipping: if (clipRect.Overlaps(rect)) then draw
+                if (clipRect.Min.y < en.y  && clipRect.Max.y > st.y  && clipRect.Min.x < en.x && clipRect.Max.x > st.x)
+                    window->DrawList->AddRectFilled(st,en,selectedTextCol,0);
+            }
+    }
+
+    if (isHovered || isHoveredRect) {
+        //ImGui::SetTooltip("%s",isLMBMouseDragging?"true":"false");
+        bool isSelectingText = isLMBMouseDragging;
         bool isLMBClicked = io.MouseClicked[0] && !isSelectingText;
         if (!isSelectingText) {
+            // Fix temporary user selection
+            if (wasLMBDragging) performSelectModeStep(io.MousePos.x,io.MousePos.y);
+            if (temporaryUserSelection.size()>0)    {
+                //---Finalize it by copying temporaryUserSelection into userSelectionRectangles
+                int npage = poppler_page_get_index(page);
+                ImVector< ImStl::Pair<int,cairo_rectangle_t> > toBeInserted;
+                toBeInserted.reserve(temporaryUserSelection.size());
+                for (int i=0,sz=temporaryUserSelection.size();i<sz;i++)  {
+                    const cairo_rectangle_t& item = temporaryUserSelection[i];
+                    toBeInserted.resize(toBeInserted.size()+1);
+                    toBeInserted[toBeInserted.size()-1] = ImStl::Pair<int,cairo_rectangle_t>(npage,item);
+                }
+
+                if (userSelectionRectangles.size()==0) {
+                    ImStl::AddRange(userSelectionRectangles,toBeInserted);
+                    firstUserRectangleOfCurrentPageIndex=0;
+                }
+                else {
+                    int index = 0;bool done = false;
+                    while (index < (int)userSelectionRectangles.size()) {
+                        const ImStl::Pair<int,cairo_rectangle_t>& tpl = userSelectionRectangles[index];
+                        int pg = tpl.first;
+                        if (pg>=npage)	{
+                            firstUserRectangleOfCurrentPageIndex = pg==npage ? index : index-1;
+                            if (firstUserRectangleOfCurrentPageIndex<0) firstUserRectangleOfCurrentPageIndex=0;
+                            int possiblyPrevPage = userSelectionRectangles[firstUserRectangleOfCurrentPageIndex].first;
+                            bool needsSorting = possiblyPrevPage==npage || pg==npage;
+                            ImStl::InsertRange(userSelectionRectangles,firstUserRectangleOfCurrentPageIndex,toBeInserted);
+                            if (needsSorting)	{
+                                int start = firstUserRectangleOfCurrentPageIndex;
+                                int end = userSelectionRectangles.size();
+                                int cur = start;
+                                while (cur < end && userSelectionRectangles[cur].first==npage) ++cur;
+                                int cnt = cur-start;
+                                //std::sort(userSelectionRectangles.begin()+start,userSelectionRectangles.begin()+(start+cnt),UserSelectionRectanglesComparer());	//We could just sort items in renge (firstUserRectangleOfCurrentPageIndex,....) of the same page...
+                                qsort(&userSelectionRectangles[firstUserRectangleOfCurrentPageIndex],cnt,sizeof(ImStl::Pair<int,cairo_rectangle_t>),&UserSelectionRectanglesComparer);
+                            }
+                            //updateUserSelectionRectanglesExtraStuff();	//Needed ?
+                            done = true;
+                            break;
+                        }
+                        ++index;
+                    }
+                    if (!done)	{
+                        firstUserRectangleOfCurrentPageIndex=userSelectionRectangles.size();
+                        ImStl::AddRange(userSelectionRectangles,toBeInserted);
+                    }
+                }
+                temporaryUserSelection.clear ();	// clear it
+                //Console.WriteLine ("userSelectionRectangles.size() = "+userSelectionRectangles.size());
+            }
+
+            // Check links under mouse
             const float processorBreathInterval = isLMBClicked ? .0f : (io.MouseDelta.x==0.f && io.MouseDelta.y==0) ? .25f : .5f;
             {
                 // Check to see if there's a link under the mouse
@@ -1064,9 +1182,19 @@ bool PdfPagePanel::imageZoomAndPan(const ImVec2& size)
         }
         else {
             ImGui::SetMouseCursor(ImGuiMouseCursor_TextInput);
+            // TODO: select text
+            // when pressing is started:
+            if (!wasLMBDragging)    {
+                if (!io.KeyCtrl) {
+                    userSelectionRectangles.clear ();
+                    updateUserSelectionRectanglesExtraStuff();
+                }
+                else temporaryUserSelection.clear ();
+            }
+            performSelectModeStep(io.MousePos.x,io.MousePos.y);
         }
 
-        // Highlight search entry
+        // Highlight search entries
         if (!pageChanged && firstRectangleOfCurrentPageIndex!=-1)   {
             static const ImU32 searchMatchCol = ImGui::ColorConvertFloat4ToU32(ImVec4(0.7,1.,0,.25f));
             static const ImU32 currentSearchMatchCol = ImGui::ColorConvertFloat4ToU32(ImVec4(1,0.7,0,.25f));
@@ -1098,6 +1226,7 @@ bool PdfPagePanel::imageZoomAndPan(const ImVec2& size)
 
     }
 
+    wasLMBDragging = isLMBMouseDragging;
 
 
     return rv;
@@ -1152,26 +1281,146 @@ bool PdfPagePanel::render(const ImVec2& size,bool renderTopPanelToo) {
             PdfPagePanel::ContextMenuData.mustOpenContextMenu = false;
         }
         // Here we could use a callback, but for now:------
-        if (ImGui::BeginPopup(ContextMenuName)) {
+        if (ContextMenuData.contextMenuParent && ContextMenuData.contextMenuParent->document && ContextMenuData.contextMenuParent->page && ImGui::BeginPopup(ContextMenuName)) {
             //ImGui::MenuItem("My pdf popup menu here");
-            if (ContextMenuData.hoverImageId>=0 && ContextMenuData.contextMenuParent->page)  {
+            PdfPagePanel* pagePanel = ContextMenuData.contextMenuParent;
+            if (ContextMenuData.hoverImageId>=0)    {
                 if (ImGui::MenuItem("Save Image As Png")) {
-                    PdfPagePanel* panel = ContextMenuData.contextMenuParent;
-                    cairo_surface_t* surf = panel->pageToCairo(CAIRO_FORMAT_ARGB32,poppler_page_get_index(panel->page),&ContextMenuData.hoverImageRectInPdfPageCoords);
+                    cairo_surface_t* surf = pagePanel->pageToCairo(CAIRO_FORMAT_ARGB32,poppler_page_get_index(pagePanel->page),&ContextMenuData.hoverImageRectInPdfPageCoords);
                     if (surf)   {
                         //TODO: Generate name based on path file name and ContextMenuData.hoverImageId
                         Cairo::SaveToPng(surf,"mySavedPdfImage.png");
                         cairo_surface_destroy (surf);
                         surf=NULL;
                     }
-
+                }
+                ImGui::Separator();
+            }
+            if (pagePanel->userSelectionRectangles.size()>0)    {
+                if (ImGui::MenuItem("Copy Selected Text"))	{
+                    ImGui::SetClipboardText(pagePanel->getSelectedText());
+                }
+                ImGui::Separator();
+            }
+            if (ImGui::MenuItem("Copy All Page Text"))	{
+                char* array = poppler_page_get_text(pagePanel->page);
+                if (array)  {
+                    ImGui::SetClipboardText(array);
+                    g_free(array);
                 }
             }
+            if (ImGui::MenuItem("Copy All Document Text"))	{
+                PopplerDocument* document = pagePanel->document;
+                const int npages = poppler_document_get_n_pages(document);
+                ImVector<char> text;text.resize(1);text[0]='\0';
+                for (int i=0;i<npages;i++)	{
+                    PopplerPage* page = poppler_document_get_page(document,i);
+                    int sz=0,txtSz=0;
+                    if (page)   {
+                        char* array= poppler_page_get_text(page);
+                        if (array) {
+                            sz=strlen(array);
+                            txtSz=text.size()-1;
+                            text.resize(text.size()+sz);
+                            strcpy(&text[txtSz],array);
+                            text[text.size()-1]='\0';
+                            g_free(array);
+                        }
+                        g_object_unref(page);
+                    }
+                }
+                ImGui::SetClipboardText(&text[0]);
+            }
+            ImGui::Separator();
+            /*
+            if (ImGui::MenuItem("Save All Page Images"))	{
+                Glib::ustring initialPath = GetDirectoryName(get_file_path());
+
+                Gtk::FileChooserDialog dialog("Please Choose The Save Image Folder",Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER);
+                SetAutoTransientFor(&dialog,this,true);
+                dialog.add_button(Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL);
+                dialog.add_button("Select", Gtk::RESPONSE_OK);
+                dialog.set_current_folder(initialPath);
+                if (dialog.run() != Gtk::RESPONSE_OK || dialog.get_filenames().size()==0 || dialog.get_filenames()[0].size()==0) return;
+
+                Glib::ustring baseImageName = GetFileNameWithoutExtension (get_file_path())+"_pdf_page_"+ToString(pagePanel->getPageIndex()+1)+"_image.png";
+                Glib::ustring fullPath = Combine(dialog.get_filenames()[0],baseImageName);
+                Cairo::RefPtr<Cairo::ImageSurface> fullPageImage = pagePanel->pageToCairo (Cairo::FORMAT_RGB24,-1);
+                if (!fullPageImage) return;
+                Cairo::RefPtr<Cairo::ImageSurface> image;
+                const std::vector<std::pair<Cairo::Rectangle,int> >& list = pagePanel->getImageMapping();
+                for (int i=(int)list.size()-1;i>=0;i--) {
+                    const std::pair<Cairo::Rectangle,int>& pr = list[i];
+                    image = Cairo::Extract(fullPageImage,pr.first);
+                    if (image) {
+                        Cairo::SaveToPdf(image,GetNonExistingPath(fullPath,false,"_"));
+                        image.clear();
+                    }
+                }
+                fullPageImage.clear();
+            }
+            if (ImGui::MenuItem("Save All Document Images"))    {
+                const int npages = poppler_document_get_n_pages(document);
+
+                Glib::ustring initialPath = GetDirectoryName(get_file_path());
+                Gtk::FileChooserDialog dialog("Please Choose The Save Image Folder",Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER);
+                SetAutoTransientFor(&dialog,this,true);
+                dialog.add_button(Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL);
+                dialog.add_button("Select", Gtk::RESPONSE_OK);
+                dialog.set_current_folder(initialPath);
+                if (dialog.run() != Gtk::RESPONSE_OK || dialog.get_filenames().size()==0 || dialog.get_filenames()[0].size()==0) return;
+
+                Glib::ustring filename = dialog.get_filenames()[0];
+                Cairo::RefPtr<Cairo::ImageSurface> fullPageImage;
+                for (int i=0;i<npages;i++)	{
+                    PopplerPage* page = poppler_document_get_page(document,i);
+                    if (page)   {
+                        Glib::ustring baseImageName = GetFileNameWithoutExtension (get_file_path())+"_pdf_page_"+ToString(poppler_page_get_index(page)+1)+"_image.png";
+                        Glib::ustring fullPath = Combine(filename,baseImageName);
+                        const std::vector<std::pair<Cairo::Rectangle,int> > list = Poppler::GetImageMapping(page);
+                        fullPageImage = Poppler::PageToCairo(page,Cairo::FORMAT_RGB24);
+                        if (!fullPageImage) continue;
+                        Cairo::RefPtr<Cairo::ImageSurface> image;
+                        for (int i=(int)list.size()-1;i>=0;i--) {
+                            const std::pair<Cairo::Rectangle,int>& pr = list[i];
+                            image = Cairo::Extract(fullPageImage,pr.first);
+                            if (image) {
+                                Cairo::SaveToPdf(image,GetNonExistingPath(fullPath,false,"_"));
+                                image.clear();
+                            }
+                        }
+                        fullPageImage.clear();
+                        g_object_unref(page);page=NULL;
+                    }
+                }
+            }
+            */
+            //----------------------------------------------------------
             ImGui::EndPopup();
         }
         //-------------------------------------------------
     }
     // =====================================================
+
+/*
+static Glib::ustring GetNonExistingPath(const Glib::ustring& path,bool isDirectory=false,const Glib::ustring& numberSeparator=".")	{
+    bool (*exists)(const Glib::ustring&) = &FileExists;
+    if (isDirectory)    exists = &DirectoryExists;
+    if (!exists (path)) return path;
+
+    const Glib::ustring parentFolder = GetDirectoryName (path);
+    const Glib::ustring filenameWE = isDirectory ? GetFileName(path): GetFileNameWithoutExtension (path);
+    const Glib::ustring ext = isDirectory ? "" : GetExtension (path);
+    int cnt = 2;
+
+    Glib::ustring newPath = path;
+    while (exists(newPath)) {
+        newPath = Combine (parentFolder,filenameWE+numberSeparator+ToString(cnt++));
+        if (!isDirectory) newPath += ext;
+    }
+    return newPath;
+}
+*/
 
     return rv;
 }

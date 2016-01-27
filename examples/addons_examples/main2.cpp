@@ -57,6 +57,15 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             ImGui::Spacing();
             if (changed) tab->setModified(true);
         }
+        /*else if (tab->matchLabel("Render")) {
+            // Just some experiments here
+            ImGui::BeginChild("MyChildWindow",ImVec2(0,50),true);
+            //if (ImGui::IsMouseDragging(0,1.f)) ImGui::SetTooltip("%s","Mouse Dragging");
+            ImGui::EndChild();
+            ImGui::BeginChild("MyChildWindow2",ImVec2(0,0),true);
+            ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
+            ImGui::EndChild();
+        }*/
         else ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
         ImGui::PopID();
     }

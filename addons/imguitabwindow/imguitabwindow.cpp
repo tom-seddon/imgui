@@ -744,6 +744,31 @@ struct TabWindowNode  {
         return true;
     }
     TabWindowNode* getFirstLeaftNode() {return isLeafNode() ? this : child[0]->getFirstLeaftNode();}
+    TabWindowNode* getRootNode() {return parent ? parent->getRootNode() : this;}
+    bool mergeToParent(TabWindowNode** pOptionalActiveTabNodeToChange=NULL) {
+	if (!isLeafNode() || !parent) return false;
+	ImVector<TabWindow::TabLabel*> nodetabs;int sz=0;
+	TabWindowNode* parent = this->parent;
+	while ((sz=tabs.size())>0)   {
+	    TabWindow::TabLabel* tab = tabs[0];
+	    nodetabs.push_back(tab);
+	    removeTabLabel(tab,false,pOptionalActiveTabNodeToChange,true);
+	    if (sz==1) break;
+	}
+	// "this" it's invalid now: after having removed all its TabLabels the node we're in has been deleted...
+	parent = parent->getFirstLeaftNode();
+	for (int i=0,isz = nodetabs.size();i<isz;i++)   {
+	    parent->addTabLabel(nodetabs[i]);
+	}
+	return true;
+    }
+    void mergeEmptyLeafNodes(TabWindowNode** pOptionalActiveTabNodeToChange=NULL)   {
+	for (int i=0;i<2;i++) {
+	    if (child[i])  child[i]->mergeEmptyLeafNodes(pOptionalActiveTabNodeToChange);
+	}
+	if (isLeafNode() && tabs.size()==0) mergeToParent(pOptionalActiveTabNodeToChange);
+    }
+
     void setName(const char* lbl)  {
         if (name) {ImGui::MemFree(name);name=NULL;}
         const char e = '\0';if (!lbl) lbl=&e;
@@ -1556,6 +1581,9 @@ void TabWindow::render()
     MyTabWindowHelperStruct mhs(this);
     mainNode->render(windowSize,&mhs);
 
+
+    static const ImGuiWindow* HoveredCorrectChildWindow = NULL;
+
     // Draw dragging stuff and Apply drag logic -------------------------------------------
     if (g.HoveredRootWindow==ImGui::GetCurrentWindow())
     {
@@ -1568,120 +1596,152 @@ void TabWindow::render()
             const ImVec2& mp = ImGui::GetIO().MousePos;
             const ImVec2 wp = dd.draggingTabImGuiWindowSrc->Pos;
             ImDrawList* drawList = //ImGui::GetWindowDrawList();    // This draws the dragging tab under the other tabs, and has OTHER problems with: e.g.: ImGui::GetStyle().Colors[ImGuiCol_ChildWindowBg]=ImVec4(0.4,0.4,0.4,1);ImGui::GetStyle().Alpha = 1.f;
-                                   &g.OverlayDrawList;  // wrong, but it works as expected! [Maybe we can use ChannelsSplit(),ChannelsSetCurrent(),ChannelsMerge(), but that would require modifying code in various spots and it's more error prone]
+                    &g.OverlayDrawList;  // wrong, but it works as expected! [Maybe we can use ChannelsSplit(),ChannelsSetCurrent(),ChannelsMerge(), but that would require modifying code in various spots and it's more error prone]
 
 
             const ImGuiWindow* hoveredWindow = g.HoveredWindow;
             //const ImGuiWindow* hoveredRootWindow = g.HoveredRootWindow;
             int hoveredWindowNameSz = 0;
+            //-------------------------
+            const char* match = NULL;
             // Window -----------------
             if (hoveredWindow && hoveredWindow!=dd.draggingTabImGuiWindowSrc
-                    && (hoveredWindowNameSz=strlen(hoveredWindow->Name))>4 && strcmp(&hoveredWindow->Name[hoveredWindowNameSz-4],"user")==0
+                    && (hoveredWindowNameSz=strlen(hoveredWindow->Name))>4 &&
+                    //strcmp(&hoveredWindow->Name[hoveredWindowNameSz-4],"user")==0
+                    (match=strstr(hoveredWindow->Name,"user"))
                     //&& strncmp(g.ActiveIdWindow->Name,hoveredWindow->Name,hoveredWindowNameSz-5)!=0 // works for g.ActiveIdWindow or g.FocusedWindow
                     )
             {
+                const int matchLen = match-hoveredWindow->Name+4;
+                if (matchLen==hoveredWindowNameSz) {
+                    HoveredCorrectChildWindow = hoveredWindow;
+                    //ImGui::SetTooltip("good: \"%s\"",hoveredWindow->Name);
+                }
+                else {
+                    if (HoveredCorrectChildWindow && strncmp(HoveredCorrectChildWindow->Name,hoveredWindow->Name,matchLen)==0 && (int)strlen(HoveredCorrectChildWindow->Name)==matchLen) {
+                        //ImGui::SetTooltip("good (reused): \"%s\" for \"%s\"",HoveredCorrectChildWindow->Name,hoveredWindow->Name);
+                    }
+                    else {
+                        HoveredCorrectChildWindow = NULL;
+                        for (int i=0,isz=g.Windows.size();i<isz;i++)    {
+                            const ImGuiWindow* wnd = g.Windows[i];
+                            if (strncmp(wnd->Name,hoveredWindow->Name,matchLen)==0 && (int)strlen(wnd->Name)==matchLen) {
+                                HoveredCorrectChildWindow = wnd;
+                                break;
+                            }
+                        }
+                        //if (HoveredCorrectChildWindow)  ImGui::SetTooltip("recalculated: \"%s\" for \"%s\"",HoveredCorrectChildWindow->Name,hoveredWindow->Name);
+                        //else ImGui::SetTooltip("bad: \"%s\"",hoveredWindow->Name);
+                    }
+                }
+                if (HoveredCorrectChildWindow)  {
+                    hoveredWindow = HoveredCorrectChildWindow;  // Mandatory
+                    //---------------------------------------------
 
-                // Background
-                const ImVec2 wp = hoveredWindow->Pos;
-                const ImVec2 ws = hoveredWindow->Size;
-                ImVec2 start(wp.x,wp.y);
-                ImVec2 end(start.x+ws.x,start.y+ws.y);
-                const float draggedBtnAlpha = 0.35f;
-                const ImVec4& bgColor = style.Colors[ImGuiCol_TitleBg];
-                drawList->AddRectFilled(start,end,ImColor(bgColor.x,bgColor.y,bgColor.z,bgColor.w*draggedBtnAlpha),style.FrameRounding);
+                    // Background
+                    const ImVec2 wp = hoveredWindow->Pos;
+                    const ImVec2 ws = hoveredWindow->Size;
+                    ImVec2 start(wp.x,wp.y);
+                    ImVec2 end(start.x+ws.x,start.y+ws.y);
+                    const float draggedBtnAlpha = 0.35f;
+                    const ImVec4& bgColor = style.Colors[ImGuiCol_TitleBg];
+                    drawList->AddRectFilled(start,end,ImColor(bgColor.x,bgColor.y,bgColor.z,bgColor.w*draggedBtnAlpha),style.FrameRounding);
 
-                // central quad
-                const float defaultQuadAlpha = 0.75f;
-                const ImTextureID tid = DockPanelIconTextureID;
-                ImU32 quadCol = ImColor(1.f,1.f,1.f,defaultQuadAlpha);
-                ImU32 quadColHovered = ImColor(0.5f,0.5f,1.f,1.f);
-                const float minDim = ws.x < ws.y ? ws.x : ws.y;
-                const float MIN_SIZE = 75.f;
-                const float centralQuadDim =(minDim*0.25f)>=MIN_SIZE?(minDim*0.25f):
-                                                                     (minDim<MIN_SIZE)?minDim:
-                                                                                       (minDim*0.5f)>=MIN_SIZE?(minDim*0.5f):
-                                                                                                               MIN_SIZE;
-		ImVec2 uv0,uv1;bool hovers;
+                    // central quad
+                    const float defaultQuadAlpha = 0.75f;
+                    const ImTextureID tid = DockPanelIconTextureID;
+                    ImU32 quadCol = ImColor(1.f,1.f,1.f,defaultQuadAlpha);
+                    ImU32 quadColHovered = ImColor(0.5f,0.5f,1.f,1.f);
+                    const float minDim = ws.x < ws.y ? ws.x : ws.y;
+                    const float MIN_SIZE = 75.f;
+                    const float centralQuadDim =(minDim*0.25f)>=MIN_SIZE?(minDim*0.25f):
+                                                                         (minDim<MIN_SIZE)?minDim:
+                                                                                           (minDim*0.5f)>=MIN_SIZE?(minDim*0.5f):
+                                                                                                                   MIN_SIZE;
+                    ImVec2 uv0,uv1;bool hovers;
 
-		if (dd.draggingTabWindowSrc->canExchangeTabLabelsWith(this))	{
-		    const float singleQuadDim = centralQuadDim*0.3333333334f;
-		    // central quad top
-		    uv0=ImVec2(0.22916f,0.f);uv1=ImVec2(0.45834f,0.22916f);
-		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f;
-		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f-singleQuadDim;
-		    end.x = start.x+singleQuadDim;
-		    end.y = start.y+singleQuadDim;
-		    hovers = ImGui::IsMouseHoveringRect(start,end,false);
-		    if (hovers) hoversInt = 3;
-		    drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
-		    // central quad right
-		    uv0=ImVec2(0.45834f,0.22916f);uv1=ImVec2(0.6875f,0.45834f);
-		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f + singleQuadDim;
-		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f;
-		    end.x = start.x+singleQuadDim;
-		    end.y = start.y+singleQuadDim;
-		    hovers = ImGui::IsMouseHoveringRect(start,end,false);
-		    if (hovers) hoversInt = 4;
-		    drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
-		    // central quad bottom
-		    uv0=ImVec2(0.22916f,0.45834f);uv1=ImVec2(0.45834f,0.6875f);
-		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f;
-		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f+singleQuadDim;
-		    end.x = start.x+singleQuadDim;
-		    end.y = start.y+singleQuadDim;
-		    hovers = ImGui::IsMouseHoveringRect(start,end,false);
-		    if (hovers) hoversInt = 5;
-		    drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
-		    // central quad left
-		    uv0=ImVec2(0.0f,0.22916f);uv1=ImVec2(0.22916f,0.45834f);
-		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f - singleQuadDim;
-		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f;
-		    end.x = start.x+singleQuadDim;
-		    end.y = start.y+singleQuadDim;
-		    hovers = ImGui::IsMouseHoveringRect(start,end,false);
-		    if (hovers) hoversInt = 2;
-		    drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
-		    // central quad center
-		    uv0=ImVec2(0.22916f,0.22916f);uv1=ImVec2(0.45834f,0.45834f);
-		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f;
-		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f;
-		    end.x = start.x+singleQuadDim;
-		    end.y = start.y+singleQuadDim;
-		    hovers = //hoversInt==0;
-			    ImGui::IsMouseHoveringRect(start,end,false);
-		    if (hovers) hoversInt = 1;
-		    drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
-		    // Refinement: draw remaining 4 inert quads
-		    uv0=ImVec2(0.f,0.f);uv1=ImVec2(0.22916f,0.22916f);
-		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f - singleQuadDim;
-		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f - singleQuadDim;
-		    end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
-		    drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
-		    uv0=ImVec2(0.45834f,0.f);uv1=ImVec2(0.6875f,0.22916f);
-		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f + singleQuadDim;
-		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f - singleQuadDim;
-		    end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
-		    drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
-		    uv0=ImVec2(0.f,0.45834f);uv1=ImVec2(0.22916f,0.6875f);
-		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f - singleQuadDim;
-		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f + singleQuadDim;
-		    end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
-		    drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
-		    uv0=ImVec2(0.45834f,0.45834f);uv1=ImVec2(0.6875f,0.6875f);
-		    start.x = wp.x + (ws.x-singleQuadDim)*0.5f + singleQuadDim;
-		    start.y = wp.y + (ws.y-singleQuadDim)*0.5f + singleQuadDim;
-		    end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
-		    drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
-		}
-		else {
-		    hoversInt = 0;
-		    uv0=ImVec2(0.5f,0.75f);uv1=ImVec2(0.75f,1.f);
-		    start.x = wp.x + (ws.x-centralQuadDim)*0.5f;
-		    start.y = wp.y + (ws.y-centralQuadDim)*0.5f;
-		    end.x = start.x+centralQuadDim;end.y = start.y+centralQuadDim;
-		    drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
-		}
+                    if (dd.draggingTabWindowSrc->canExchangeTabLabelsWith(this))	{
+                        const float singleQuadDim = centralQuadDim*0.3333333334f;
+                        // central quad top
+                        uv0=ImVec2(0.22916f,0.f);uv1=ImVec2(0.45834f,0.22916f);
+                        start.x = wp.x + (ws.x-singleQuadDim)*0.5f;
+                        start.y = wp.y + (ws.y-singleQuadDim)*0.5f-singleQuadDim;
+                        end.x = start.x+singleQuadDim;
+                        end.y = start.y+singleQuadDim;
+                        hovers = ImGui::IsMouseHoveringRect(start,end,false);
+                        if (hovers) hoversInt = 3;
+                        drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
+                        // central quad right
+                        uv0=ImVec2(0.45834f,0.22916f);uv1=ImVec2(0.6875f,0.45834f);
+                        start.x = wp.x + (ws.x-singleQuadDim)*0.5f + singleQuadDim;
+                        start.y = wp.y + (ws.y-singleQuadDim)*0.5f;
+                        end.x = start.x+singleQuadDim;
+                        end.y = start.y+singleQuadDim;
+                        hovers = ImGui::IsMouseHoveringRect(start,end,false);
+                        if (hovers) hoversInt = 4;
+                        drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
+                        // central quad bottom
+                        uv0=ImVec2(0.22916f,0.45834f);uv1=ImVec2(0.45834f,0.6875f);
+                        start.x = wp.x + (ws.x-singleQuadDim)*0.5f;
+                        start.y = wp.y + (ws.y-singleQuadDim)*0.5f+singleQuadDim;
+                        end.x = start.x+singleQuadDim;
+                        end.y = start.y+singleQuadDim;
+                        hovers = ImGui::IsMouseHoveringRect(start,end,false);
+                        if (hovers) hoversInt = 5;
+                        drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
+                        // central quad left
+                        uv0=ImVec2(0.0f,0.22916f);uv1=ImVec2(0.22916f,0.45834f);
+                        start.x = wp.x + (ws.x-singleQuadDim)*0.5f - singleQuadDim;
+                        start.y = wp.y + (ws.y-singleQuadDim)*0.5f;
+                        end.x = start.x+singleQuadDim;
+                        end.y = start.y+singleQuadDim;
+                        hovers = ImGui::IsMouseHoveringRect(start,end,false);
+                        if (hovers) hoversInt = 2;
+                        drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
+                        // central quad center
+                        uv0=ImVec2(0.22916f,0.22916f);uv1=ImVec2(0.45834f,0.45834f);
+                        start.x = wp.x + (ws.x-singleQuadDim)*0.5f;
+                        start.y = wp.y + (ws.y-singleQuadDim)*0.5f;
+                        end.x = start.x+singleQuadDim;
+                        end.y = start.y+singleQuadDim;
+                        hovers = //hoversInt==0;
+                                ImGui::IsMouseHoveringRect(start,end,false);
+                        if (hovers) hoversInt = 1;
+                        drawList->AddImage(tid,start,end,uv0,uv1,hovers ? quadColHovered : quadCol);
+                        // Refinement: draw remaining 4 inert quads
+                        uv0=ImVec2(0.f,0.f);uv1=ImVec2(0.22916f,0.22916f);
+                        start.x = wp.x + (ws.x-singleQuadDim)*0.5f - singleQuadDim;
+                        start.y = wp.y + (ws.y-singleQuadDim)*0.5f - singleQuadDim;
+                        end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
+                        drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
+                        uv0=ImVec2(0.45834f,0.f);uv1=ImVec2(0.6875f,0.22916f);
+                        start.x = wp.x + (ws.x-singleQuadDim)*0.5f + singleQuadDim;
+                        start.y = wp.y + (ws.y-singleQuadDim)*0.5f - singleQuadDim;
+                        end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
+                        drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
+                        uv0=ImVec2(0.f,0.45834f);uv1=ImVec2(0.22916f,0.6875f);
+                        start.x = wp.x + (ws.x-singleQuadDim)*0.5f - singleQuadDim;
+                        start.y = wp.y + (ws.y-singleQuadDim)*0.5f + singleQuadDim;
+                        end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
+                        drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
+                        uv0=ImVec2(0.45834f,0.45834f);uv1=ImVec2(0.6875f,0.6875f);
+                        start.x = wp.x + (ws.x-singleQuadDim)*0.5f + singleQuadDim;
+                        start.y = wp.y + (ws.y-singleQuadDim)*0.5f + singleQuadDim;
+                        end.x = start.x+singleQuadDim;end.y = start.y+singleQuadDim;
+                        drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
+                    }
+                    else {
+                        hoversInt = 0;
+                        uv0=ImVec2(0.5f,0.75f);uv1=ImVec2(0.75f,1.f);
+                        start.x = wp.x + (ws.x-centralQuadDim)*0.5f;
+                        start.y = wp.y + (ws.y-centralQuadDim)*0.5f;
+                        end.x = start.x+centralQuadDim;end.y = start.y+centralQuadDim;
+                        drawList->AddImage(tid,start,end,uv0,uv1,quadCol);
+                    }
+
+                }
             }
+            else HoveredCorrectChildWindow = NULL;
             // Button -----------------
             dd.drawDragButton(drawList,wp,mp);
             // -------------------------------------------------------------------
@@ -1689,63 +1749,63 @@ void TabWindow::render()
         }
 
         // Drop tab label onto another
-	if (dd.draggingTabDst && dd.draggingTabDst->draggable) {
+        if (dd.draggingTabDst && dd.draggingTabDst->draggable) {
             // swap draggingTabSrc and draggingTabDst
             IM_ASSERT(dd.isDraggingSrcValid());
             IM_ASSERT(dd.isDraggingDstValid());
             IM_ASSERT(dd.draggingTabSrc!=dd.draggingTabDst);
 
-	    if (dd.draggingTabWindowSrc->canExchangeTabLabelsWith(this))    {
+            if (dd.draggingTabWindowSrc->canExchangeTabLabelsWith(this))    {
 
-		if (dd.draggingTabNodeSrc!=dd.draggingTabNodeDst) {
-		    bool srcWasSelected = dd.draggingTabNodeSrc->selectedTab == dd.draggingTabSrc;
-		    bool dstWasSelected = dd.draggingTabNodeDst->selectedTab == dd.draggingTabDst;
-		    if (srcWasSelected) dd.draggingTabNodeSrc->selectedTab = dd.draggingTabDst;
-		    if (dstWasSelected) dd.draggingTabNodeDst->selectedTab = dd.draggingTabSrc;
-		}
+                if (dd.draggingTabNodeSrc!=dd.draggingTabNodeDst) {
+                    bool srcWasSelected = dd.draggingTabNodeSrc->selectedTab == dd.draggingTabSrc;
+                    bool dstWasSelected = dd.draggingTabNodeDst->selectedTab == dd.draggingTabDst;
+                    if (srcWasSelected) dd.draggingTabNodeSrc->selectedTab = dd.draggingTabDst;
+                    if (dstWasSelected) dd.draggingTabNodeDst->selectedTab = dd.draggingTabSrc;
+                }
 
-		const int iSrc = dd.findDraggingSrcIndex();
-		IM_ASSERT(iSrc>=0);
-		const int iDst = dd.findDraggingDstIndex();
-		IM_ASSERT(iDst>=0);
-		dd.draggingTabNodeDst->tabs[iDst] = dd.draggingTabSrc;
-		dd.draggingTabNodeSrc->tabs[iSrc] = dd.draggingTabDst;
+                const int iSrc = dd.findDraggingSrcIndex();
+                IM_ASSERT(iSrc>=0);
+                const int iDst = dd.findDraggingDstIndex();
+                IM_ASSERT(iDst>=0);
+                dd.draggingTabNodeDst->tabs[iDst] = dd.draggingTabSrc;
+                dd.draggingTabNodeSrc->tabs[iSrc] = dd.draggingTabDst;
 
-		dd.reset();
-		//fprintf(stderr,"Drop tab label onto another\n");
-	    }
+                dd.reset();
+                //fprintf(stderr,"Drop tab label onto another\n");
+            }
         }
 
         // Reset draggingTabIndex if necessary
         if (!MyTabWindowHelperStruct::isMouseDragging) {
-            if (hoversInt && dd.draggingTabSrc && dd.draggingTabImGuiWindowSrc && dd.draggingTabImGuiWindowSrc!=g.HoveredWindow)
+            if (hoversInt && HoveredCorrectChildWindow && dd.draggingTabSrc && dd.draggingTabImGuiWindowSrc && dd.draggingTabImGuiWindowSrc!=g.HoveredWindow && dd.draggingTabImGuiWindowSrc!=HoveredCorrectChildWindow)
             {
                 // Drop tab label onto a window portion
-                int nameSz = strlen(g.HoveredWindow->Name);
+                int nameSz = strlen(HoveredCorrectChildWindow->Name);
                 static const char trailString[] = ".user";
                 static const int trailStringSz = (int) strlen(trailString);
                 IM_ASSERT(nameSz>=trailStringSz);
-                IM_ASSERT(strcmp(&g.HoveredWindow->Name[nameSz-trailStringSz],trailString)==0);
-                const char* startMatchCh = strstr(g.HoveredWindow->Name,".##main"),*startMatchCh2 = NULL;
+                IM_ASSERT(strcmp(&HoveredCorrectChildWindow->Name[nameSz-trailStringSz],trailString)==0);
+                const char* startMatchCh = strstr(HoveredCorrectChildWindow->Name,".##main"),*startMatchCh2 = NULL;
                 if (startMatchCh)   {
-                    while ((startMatchCh2 = strstr(&g.HoveredWindow->Name[(int)(startMatchCh-g.HoveredWindow->Name)+7],".##main"))) {
+                    while ((startMatchCh2 = strstr(&HoveredCorrectChildWindow->Name[(int)(startMatchCh-HoveredCorrectChildWindow->Name)+7],".##main"))) {
                         startMatchCh = startMatchCh2;
                     }
                 }
-                const int startMatchIndex = startMatchCh ? ((int)(startMatchCh-g.HoveredWindow->Name)+1) : 0;
+                const int startMatchIndex = startMatchCh ? ((int)(startMatchCh-HoveredCorrectChildWindow->Name)+1) : 0;
                 IM_ASSERT(nameSz>=trailStringSz-startMatchIndex);
 
                 ImVector<char> tmp;tmp.resize(nameSz);
-                strncpy(&tmp[0],&g.HoveredWindow->Name[startMatchIndex],nameSz-trailStringSz-startMatchIndex);
+                strncpy(&tmp[0],&HoveredCorrectChildWindow->Name[startMatchIndex],nameSz-trailStringSz-startMatchIndex);
                 tmp[nameSz-trailStringSz-startMatchIndex]='\0';
                 //fprintf(stderr,"\"%s\"\n",&tmp[0]);
                 dd.draggingTabNodeDst = TabWindowDragData::FindTabNodeByName(mainNode,&tmp[0]);
 
-                //fprintf(stderr,"Item: \"%s\" dragged to window:\"%s\" at pos: %d\n",dd.draggingTabSrc->label,g.HoveredWindow ? g.HoveredWindow->Name : "NULL",hoversInt);
+		//fprintf(stderr,"Item: \"%s\" dragged to window:\"%s\" at pos: %d\n",dd.draggingTabSrc->label,HoveredCorrectChildWindow ? HoveredCorrectChildWindow->Name : "NULL",hoversInt);
                 //if (dd.draggingTabNodeDst)  fprintf(stderr,"dd.draggingTabNodeDst->tabs.size()=%d\n",(int)dd.draggingTabNodeDst->tabs.size());
                 //else fprintf(stderr,"No dd.draggingTabNodeDst.\n");
                 //TODO: move dd.draggingTabSrc and delete the src node if empty------------
-                // How can I find dd.draggingTabNodeDst from g.HoveredWindow->Name?
+		// How can I find dd.draggingTabNodeDst from HoveredCorrectChildWindow?
                 // I must strip ".HorizontalStrip.content.user" and then seek TabNode::Name
                 //-------------------------------------------------------------------------
                 if (dd.draggingTabNodeDst) {
@@ -1844,7 +1904,11 @@ int TabWindow::getNumClosableTabs(TabWindowNode *node)    {
 bool TabWindow::merge(TabWindowNode *node) {
     if (!node || !isMergeble(node)) return false;
     {TabWindowNode* n = node;while (n->parent) n=n->parent;if (n!=mainNode) return false;} // checks if tabNode belongs to this TabWindow
-    TabWindowNode* parent = node->parent;
+
+    if (!node->mergeToParent(&activeNode)) return false;
+    node = NULL;    // it's invalid now
+
+    /*TabWindowNode* parent = node->parent;
     ImVector<TabLabel*> tabs;int sz=0;
     while ((sz=node->tabs.size())>0)   {
         TabLabel* tab = node->tabs[0];
@@ -1856,7 +1920,7 @@ bool TabWindow::merge(TabWindowNode *node) {
     parent = parent->getFirstLeaftNode();
     for (int i=0,isz = tabs.size();i<isz;i++)   {
         parent->addTabLabel(tabs[i]);
-    }
+    }*/
 
     return true;
 }
@@ -1978,6 +2042,7 @@ bool TabWindow::load(ImGuiHelper::Deserializer &d, const char *&amount) {
 
     mainNode->deserialize(d,NULL,amount,this);
 
+    mainNode->mergeEmptyLeafNodes(&activeNode);	// optional, but should fix hierarchy problems
     if (!activeNode) activeNode=mainNode;
     if (!activeNode->isLeafNode()) activeNode = activeNode->getFirstLeaftNode();
     IM_ASSERT(activeNode && activeNode->isLeafNode());
