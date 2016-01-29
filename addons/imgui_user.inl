@@ -42,6 +42,16 @@
 //}
 #endif //IMGUI_USE_MINIZIP
 
+#ifdef __EMSCRIPTEN__
+#   ifndef NO_IMGUIEMSCRIPTEN
+#       include "./imguiemscripten/imguiemscripten.cpp"
+#   endif //NO_IMGUIEMSCRIPTEN
+#else //__EMSCRIPTEN__
+#   undef NO_IMGUIEMSCRIPTEN
+#   define NO_IMGUIEMSCRIPTEN
+#endif //__EMSCRIPTEN__
+
+
 #ifndef NO_IMGUILISTVIEW
 #include "./imguilistview/imguilistview.cpp"
 #endif //NO_IMGUILISTVIEW

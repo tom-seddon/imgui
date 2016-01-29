@@ -802,7 +802,7 @@ inline void TestListView() {
         MyListViewItem* item;
         for (int i=0,isz=(int)lv.items.size();i<isz;i++) {
             item = (MyListViewItem*) ImGui::MemAlloc(sizeof(MyListViewItem));                       // MANDATORY (ImGuiListView::~ImGuiListView() will delete these with ImGui::MemFree(...))
-            IM_PLACEMENT_NEW(item) MyListViewItem(
+            IMIMPL_PLACEMENT_NEW(item) MyListViewItem(
                         i,
                         "My '  ' Dummy Path",
                         i*3,

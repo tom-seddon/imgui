@@ -1971,15 +1971,27 @@ void CodeEditor::render()   {
                 ImGui::Separator();
 #if             (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
                 const char* saveName = "codeEditor.ce.style";
+                const char* saveNamePersistent = "/persistent_folder/codeEditor.ce.style";
+                const char* pSaveName = saveName;
 #               ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
                 if (ImGui::SmallButton("Save##saveGNEStyle")) {
-                    Style::Save(this->style,saveName);
+#                   ifndef NO_IMGUIEMSCRIPTEN
+                    pSaveName = saveNamePersistent;
+#                   endif //NO_IMGUIEMSCRIPTEN
+                    if (Style::Save(this->style,pSaveName)) {
+#                   ifndef NO_IMGUIEMSCRIPTEN
+                    ImGui::EmscriptenFileSystemHelper::Sync();
+#                   endif //NO_IMGUIEMSCRIPTEN
+                    }
                 }
                 ImGui::SameLine();
 #               endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #               ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
                 if (ImGui::SmallButton("Load##loadGNEStyle")) {
-                    Style::Load(this->style,saveName);
+#                   ifndef NO_IMGUIEMSCRIPTEN
+                    if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
+#                   endif //NO_IMGUIEMSCRIPTEN
+                    Style::Load(this->style,pSaveName);
                 }
                 ImGui::SameLine();
 #               endif //NO_IMGUIHELPER_SERIALIZATION_LOAD

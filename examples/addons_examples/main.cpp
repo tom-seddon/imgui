@@ -109,7 +109,7 @@ inline void MyTestListView() {
             ti.bg_col.x=ti.bg_col.y=ti.bg_col.z=1;ti.bg_col.w=1;  // bg color (used in transparent pixels of the image)
 
             item = (MyListViewItem*) ImGui::MemAlloc(sizeof(MyListViewItem));                       // MANDATORY (ImGuiListView::~ImGuiListView() will delete these with ImGui::MemFree(...))
-            IM_PLACEMENT_NEW(item) MyListViewItem(
+            IMIMPL_PLACEMENT_NEW(item) MyListViewItem(
                         ti,
                         i,
                         "My '  ' Dummy Path",
@@ -155,14 +155,19 @@ extern float gImGuiInverseFPSClampInsideImGui;
 extern float gImGuiInverseFPSClampOutsideImGui;
 //------------------------------------------------------------------------------------
 
+static const char* styleFileName = "./myimgui.style";
+static const char* styleFileNamePersistent = "./persistent_folder/myimgui.style";   // Needed by Emscripten only
+
+
 void InitGL()	// Mandatory
 {
     if (!myImageTextureId2) myImageTextureId2 = ImImpl_LoadTexture("./myNumbersTexture.png");
 
 //  Optional: loads a style
 #   if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_LOAD_STYLE))
-    if (!ImGui::LoadStyle("./myimgui.style",ImGui::GetStyle()))   {
-        fprintf(stderr,"Warning: \"./myimgui.style\" not present.\n");
+    const char* pStyleFileName = styleFileName;
+    if (!ImGui::LoadStyle(pStyleFileName,ImGui::GetStyle()))   {
+        fprintf(stderr,"Warning: \"%s\" not present.\n",pStyleFileName);
     }
 #   endif //NO_IMGUISTYLESERIALIZER
 
@@ -307,9 +312,6 @@ void DrawGL()	// Mandatory
             if (!ImGui::GetIO().FontAllowUserScaling && ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Warning: it needs: ImGui::GetIO().FontAllowUserScaling = true\nfor zooming to work properly.");
 #           endif //NO_IMGUINODEGRAPHEDITOR
             show_splitter_test_window ^= ImGui::Button("Show splitter test window");
-#           ifdef IMGUISCINTILLA_ACTIVATED
-            show_scintilla_test_window ^= ImGui::Button("A Scintilla window");
-#           endif //IMGUISCINTILLA_ACTIVATED
 
             // Calculate and show framerate
             ImGui::Text("\n");ImGui::Separator();ImGui::Text("Frame rate options");
@@ -359,14 +361,26 @@ void DrawGL()	// Mandatory
             loadCurrentStyle = ImGui::Button("Load Saved Style");
             saveCurrentStyle = ImGui::Button("Save Current Style");
             resetCurrentStyle = ImGui::Button("Reset Current Style");
+            const char* pStyleFileName =  styleFileName;    // defined globally
             if (loadCurrentStyle)   {
-                if (!ImGui::LoadStyle("./myimgui.style",ImGui::GetStyle()))   {
-                    fprintf(stderr,"Warning: \"./myimgui.style\" not present.\n");
+#               if (!defined(NO_IMGUIEMSCRIPTEN) && !defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
+                if (ImGuiHelper::FileExists(styleFileNamePersistent)) pStyleFileName = styleFileNamePersistent;
+#               endif //NO_IMGUIEMSCRIPTEN & C
+                if (!ImGui::LoadStyle(pStyleFileName,ImGui::GetStyle()))   {
+                    fprintf(stderr,"Warning: \"%s\" not present.\n",pStyleFileName);
                 }
             }
             if (saveCurrentStyle)   {
-                if (!ImGui::SaveStyle("./myimgui.style",ImGui::GetStyle()))   {
-                    fprintf(stderr,"Warning: \"./myimgui.style\" cannot be saved.\n");
+#               ifndef NO_IMGUIEMSCRIPTEN
+                pStyleFileName = styleFileNamePersistent;
+#               endif //NO_IMGUIEMSCRIPTEN
+                if (!ImGui::SaveStyle(pStyleFileName,ImGui::GetStyle()))   {
+                    fprintf(stderr,"Warning: \"%s\" cannot be saved.\n",pStyleFileName);
+                }
+                else {
+#                   ifndef NO_IMGUIEMSCRIPTEN
+                    ImGui::EmscriptenFileSystemHelper::Sync();
+#                   endif //NO_IMGUIEMSCRIPTEN
                 }
             }
             if (resetCurrentStyle)  ImGui::GetStyle() = ImGuiStyle();
@@ -776,6 +790,7 @@ void DrawGL()	// Mandatory
 #ifndef IMGUI_USE_WINAPI_BINDING
 int main(int argc, char** argv)
 {
+
 #   ifndef USE_ADVANCED_SETUP
     // Basic
     ImImpl_Main(NULL,argc,argv);

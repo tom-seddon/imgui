@@ -76,8 +76,10 @@ namespace ImGuiHelper {
 typedef ImGui::FieldType FieldType;
 
 #ifndef NO_IMGUIHELPER_SERIALIZATION
+
 #ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
 bool GetFileContent(const char* filePath,ImVector<char>& contentOut,bool clearContentOutBeforeUsage=true,const char* modes="rb",bool appendTrailingZeroIfModesIsNotBinary=true);
+bool FileExists(const char* filePath);
 
 class Deserializer {
     char* f_data;

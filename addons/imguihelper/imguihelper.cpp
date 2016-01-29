@@ -586,6 +586,13 @@ bool GetFileContent(const char *filePath, ImVector<char> &contentOut, bool clear
 //----------------------------------------------------
     return true;
 }
+bool FileExists(const char *filePath)   {
+    if (!filePath || strlen(filePath)==0) return false;
+    FILE* f = fopen(filePath, "rb");
+    if (!f) return false;
+    fclose(f);f=NULL;
+    return true;
+}
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 void Serializer::clear() {if (f) {fclose(f);f=NULL;}}
@@ -687,6 +694,9 @@ bool Serializer::saveCustomFieldTypeHeader(const char* name, int numTextLines) {
     fprintf(f, ":%s]\n",name);
     return true;
 }
+
+
+
 #endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 
 } //namespace ImGuiHelper

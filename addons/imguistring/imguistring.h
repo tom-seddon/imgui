@@ -23,12 +23,12 @@
 #	endif
 #endif//IMGUI_FORCE_INLINE
 
-#ifndef IM_PLACEMENT_NEW
+#ifndef IMIMPL_PLACEMENT_NEW
 struct ImImplPlacementNewDummy {};
 inline void* operator new(size_t, ImImplPlacementNewDummy, void* ptr) { return ptr; }
 inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
-#define IM_PLACEMENT_NEW(_PTR)  new(ImImplPlacementNewDummy() ,_PTR)
-#endif //IM_PLACEMENT_NEW
+#define IMIMPL_PLACEMENT_NEW(_PTR)  new(ImImplPlacementNewDummy() ,_PTR)
+#endif //IMIMPL_PLACEMENT_NEW
 
 #ifndef ImString
 // A string implementation based on ImVector<char>
@@ -267,7 +267,7 @@ public:
     void                        resize(int new_size)            {
         if (new_size > Capacity) {
             reserve(_grow_capacity(new_size));
-            for (int i=Size;i<new_size;i++) {IM_PLACEMENT_NEW(&Data[i]) T();}
+            for (int i=Size;i<new_size;i++) {IMIMPL_PLACEMENT_NEW(&Data[i]) T();}
         }
         if (new_size < Size)   {for (int i=new_size;i<Size;i++) Data[i].~T();}
         Size = new_size;
@@ -277,7 +277,7 @@ public:
         if (new_capacity <= Capacity) return;
         T* new_data = (value_type*)ImGui::MemAlloc((size_t)new_capacity * sizeof(value_type));
         for (int i=0;i<Size;i++) {
-            IM_PLACEMENT_NEW(&new_data[i]) T();       // Is this dstr/ctr pair really needed or can I just copy...?
+            IMIMPL_PLACEMENT_NEW(&new_data[i]) T();       // Is this dstr/ctr pair really needed or can I just copy...?
             new_data[i] = Data[i];
             Data[i].~T();
         }
@@ -289,7 +289,7 @@ public:
 
     inline void                 push_back(const value_type& v)  {
         if (Size == Capacity) reserve(_grow_capacity(Size+1));
-        IM_PLACEMENT_NEW(&Data[Size]) T();
+        IMIMPL_PLACEMENT_NEW(&Data[Size]) T();
         Data[Size++] = v;
     }
     inline void                 pop_back()                      {
@@ -370,7 +370,7 @@ template <typename K> struct ImHashMapDestructorFunctionDummy {
     IMGUI_FORCE_INLINE void operator()(K& ) const {}
 };
 template <typename K> struct ImHashMapConstructorFunctionDefault {
-    IMGUI_FORCE_INLINE void operator()(K& k) const {IM_PLACEMENT_NEW (&k) K();}
+    IMGUI_FORCE_INLINE void operator()(K& k) const {IMIMPL_PLACEMENT_NEW (&k) K();}
 };
 template <typename K> struct ImHashMapDestructorFunctionDefault {
     IMGUI_FORCE_INLINE void operator()(K& k) const {k.~K();}

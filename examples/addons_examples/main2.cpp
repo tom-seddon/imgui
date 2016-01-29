@@ -30,19 +30,30 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             ImGui::Spacing();
             ImGui::ColorEditMode(colorEditMode);
             bool changed = ImGui::TabLabelStyle::Edit(ImGui::TabLabelStyle::Get());
-            ImGui::Separator();
+            ImGui::Separator();         
 #if             (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
             const char* saveName = "tabLabelStyle.style";
+            const char* saveNamePersistent = "/persistent_folder/tabLabelStyle.style";
+            const char* pSaveName = saveName;
 #               ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
             if (ImGui::SmallButton("Save##saveGNEStyle1")) {
-                ImGui::TabLabelStyle::Save(ImGui::TabLabelStyle::Get(),saveName);
+#               ifndef NO_IMGUIEMSCRIPTEN
+                pSaveName = saveNamePersistent;
+#               endif //NO_IMGUIEMSCRIPTEN
+                ImGui::TabLabelStyle::Save(ImGui::TabLabelStyle::Get(),pSaveName);
+#               ifndef NO_IMGUIEMSCRIPTEN
+                ImGui::EmscriptenFileSystemHelper::Sync();
+#               endif //NO_IMGUIEMSCRIPTEN
                 changed = false;tab->setModified(false);
             }
             ImGui::SameLine();
 #               endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #               ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
             if (ImGui::SmallButton("Load##loadGNEStyle1")) {
-                ImGui::TabLabelStyle::Load(ImGui::TabLabelStyle::Get(),saveName);
+#               ifndef NO_IMGUIEMSCRIPTEN
+                if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
+#               endif //NO_IMGUIEMSCRIPTEN
+                ImGui::TabLabelStyle::Load(ImGui::TabLabelStyle::Get(),pSaveName);
                 changed = false;tab->setModified(false);
             }
             ImGui::SameLine();
@@ -122,11 +133,27 @@ void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,
 #       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
         ImGui::Separator();
         static const char* saveName = "myTabWindow.layout";
+        const char* saveNamePersistent = "/persistent_folder/myTabWindow.layout";
+        const char* pSaveName = saveName;
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-        if (ImGui::MenuItem("Save Layout")) parent.save(saveName);
+        if (ImGui::MenuItem("Save Layout")) {
+#           ifndef NO_IMGUIEMSCRIPTEN
+            pSaveName = saveNamePersistent;
+#           endif //NO_IMGUIEMSCRIPTEN
+            if (parent.save(pSaveName)) {
+#               ifndef NO_IMGUIEMSCRIPTEN
+                ImGui::EmscriptenFileSystemHelper::Sync();
+#               endif //NO_IMGUIEMSCRIPTEN
+            }
+        }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-        if (ImGui::MenuItem("Load Layout")) parent.load(saveName);
+        if (ImGui::MenuItem("Load Layout")) {
+#           ifndef NO_IMGUIEMSCRIPTEN
+            if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
+#           endif //NO_IMGUIEMSCRIPTEN
+            parent.load(pSaveName);
+        }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 
@@ -135,6 +162,7 @@ void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,
     ImGui::PopStyleColor(2);
 }
 #endif //NO_IMGUITABWINDOW
+
 
 void InitGL()	// Mandatory
 {

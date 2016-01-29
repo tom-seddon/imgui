@@ -69,7 +69,10 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguinodegrapheditor/imguinodegrapheditor.h"   \
 	   $$IMGUI_BASE_PATH"/addons/imguicodeeditor/imguicodeeditor.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguicodeeditor/utf8helper.h"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguitabwindow/imguitabwindow.h"
+	   $$IMGUI_BASE_PATH"/addons/imguitabwindow/imguitabwindow.h"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguiemscripten/imguiemscripten.h"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguipdfviewer.h"
+
 
 SOURCES+=  $$IMGUI_BASE_PATH"/imgui.cpp" \
 	   $$IMGUI_BASE_PATH"/imgui_draw.cpp" \
@@ -122,6 +125,8 @@ OTHER_FILES+= $$IMGUI_BASE_PATH"/addons/imgui_user.inl"				    \
 	   $$IMGUI_BASE_PATH"/addons/imguinodegrapheditor/imguinodegrapheditor.cpp" \
 	   $$IMGUI_BASE_PATH"/addons/imguicodeeditor/imguicodeeditor.cpp"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguitabwindow/imguitabwindow.cpp"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguiemscripten/imguiemscripten.cpp"	    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguipdfviewer.cpp"		    \
 	   README_FIRST.txt
 
 
