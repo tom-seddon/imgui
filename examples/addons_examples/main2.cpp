@@ -1,7 +1,7 @@
 #include <imgui.h>
 
-GLuint myImageTextureId = 0;
-GLuint myImageTextureId2 = 0;
+ImTextureID myImageTextureId = 0;
+ImTextureID myImageTextureId2 = 0;
 
 #ifndef NO_IMGUITABWINDOW
 void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent,void* userPtr) {
@@ -411,8 +411,7 @@ if (wd.isToggleWindow) ImGui::End();
 void DrawGL()	// Mandatory
 {
 
-        glClearColor(0.8f, 0.6f, 0.6f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        ImImpl_ClearColorBuffer(ImVec4(0.8f, 0.6f, 0.6f, 1.0f));    // Warning: it does not clear depth buffer
 
         if (gShowMainMenuBar) ShowExampleMenuBar(true);
 
@@ -651,8 +650,8 @@ void DrawGL()	// Mandatory
 }
 void DestroyGL()    // Mandatory
 {
-    if (myImageTextureId) {glDeleteTextures(1,&myImageTextureId);myImageTextureId=0;}
-    if (myImageTextureId2) {glDeleteTextures(1,&myImageTextureId2);myImageTextureId2=0;}
+    if (myImageTextureId) {ImImpl_FreeTexture(myImageTextureId);}
+    if (myImageTextureId2) {ImImpl_FreeTexture(myImageTextureId2);}
 
 }
 

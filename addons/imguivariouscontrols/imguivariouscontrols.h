@@ -244,6 +244,49 @@ bool InputTextMultilineWithHorizontalScrolling(const char* label, char* buf, siz
 */
 bool InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu(const char* label, char* buf, int buf_size, float height,bool& staticBoolVar, int* staticArrayOfThreeIntegersHere, ImGuiInputTextFlags flags=0, bool*pOptionalHoveredOut=NULL,float SCROLL_WIDTH=2000.f,const char* copyName=NULL, const char* cutName=NULL, const char *pasteName=NULL);
 
+// label is used as id
+// <0 frame_padding uses default frame padding settings. 0 for no padding
+bool ImageButtonWithText(ImTextureID texId,const char* label,const ImVec2& imageSize=ImVec2(0,0), const ImVec2& uv0 = ImVec2(0,0),  const ImVec2& uv1 = ImVec2(1,1), int frame_padding = -1, const ImVec4& bg_col = ImVec4(0,0,0,0), const ImVec4& tint_col = ImVec4(1,1,1,1));
+
+#ifndef NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
+// One instance per image can feed multiple widgets
+struct AnimatedImage {
+    // TODO: load still images as fallback and load gifs from memory
+    public:
+    typedef void (*FreeTextureDelegate)(ImTextureID& texid);
+    typedef void (*GenerateOrUpdateTextureDelegate)(ImTextureID& imtexid,int width,int height,int channels,const unsigned char* pixels,bool useMipmapsIfPossible,bool wraps,bool wrapt);
+    void SetFreeTextureCallback(FreeTextureDelegate freeTextureCb) {FreeTextureCb=freeTextureCb;}
+    void SetGenerateOrUpdateTextureCallback(GenerateOrUpdateTextureDelegate generateOrUpdateTextureCb) {GenerateOrUpdateTextureCb=generateOrUpdateTextureCb;}
+
+    AnimatedImage(char const *filename,bool useHoverModeIfSupported=false); // 'hoverMode' is supported only if all frames fit 'MaxPersistentTextureSize'
+    AnimatedImage(ImTextureID myTexId,int animationImageWidth,int animationImageHeight,int numFrames,int numFramesPerRowInTexture,int numFramesPerColumnInTexture,float delayBetweenFramesInCs,bool useHoverMode=false); // 'hoverMode' always available. 'myTexId' is yours.
+    AnimatedImage();    // You'll need to manually call 'load' o 'create'
+    ~AnimatedImage();   // calls 'clear'
+    void clear();   // releases the textures that are created inside the class
+
+    // Main methods
+    void render(ImVec2 size=ImVec2(0,0), const ImVec2& uv0=ImVec2(0,0), const ImVec2& uv1=ImVec2(1,1), const ImVec4& tint_col=ImVec4(1,1,1,1), const ImVec4& border_col=ImVec4(0,0,0,0)) const;
+    bool renderAsButton(const char* label,ImVec2 size=ImVec2(0,0), const ImVec2& uv0 = ImVec2(0,0),  const ImVec2& uv1 = ImVec2(1,1), int frame_padding = -1, const ImVec4& bg_col = ImVec4(0,0,0,0), const ImVec4& tint_col = ImVec4(1,1,1,1));    // <0 frame_padding uses default frame padding settings. 0 for no padding
+
+    // Less useful methods
+    bool load(char const *filename,bool useHoverModeIfSupported=false); // 'hoverMode' is supported only if all frames fit 'MaxPersistentTextureSize'
+    bool create(ImTextureID myTexId,int animationImageWidth,int animationImageHeight,int numFrames,int numFramesPerRowInTexture,int numFramesPerColumnInTexture,float delayBetweenFramesInCs,bool useHoverMode=false); // 'hoverMode' always available. 'myTexId' is yours.
+    int getWidth() const;
+    int getHeight() const;
+    int getNumFrames() const;
+    bool areAllFramesInASingleTexture() const;  // when true, 'hoverMode' was available in ctr/load/create (but it can't change at runtime)
+
+    static ImVec2 MaxPersistentTextureSize;   // 2048,2048 (Enlarge the buffer if needed for 'hoverMode': but using smaller animated images and less frames is better)
+
+    private:
+    AnimatedImage(const AnimatedImage& ) {}     // Actually maybe we could allow some of these for containers...
+    void operator=(const AnimatedImage& ) {}
+    static FreeTextureDelegate FreeTextureCb;
+    static GenerateOrUpdateTextureDelegate GenerateOrUpdateTextureCb;
+    friend struct AnimatedImageInternal;
+    struct AnimatedImageInternal* ptr;
+};
+#endif //NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
 
 // zoomCenter is panning in [(0,0),(1,1)]
 // returns true if some user interaction have been processed

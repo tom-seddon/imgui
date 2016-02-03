@@ -45,8 +45,7 @@ void DrawGL()	// Mandatory
 {
     ImGuiIO& io = ImGui::GetIO();
 
-    glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    ImImpl_ClearColorBuffer(ImVec4(0.5f, 0.5f, 0.5f, 1.0f));    // Warning: it does not clear depth buffer
 
     static bool open = true;
     ImGui::Begin("imguicodeeditor (WIP: UNUSABLE)", &open, ImVec2(800,600));

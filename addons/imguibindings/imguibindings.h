@@ -260,9 +260,13 @@ extern void ImImpl_RenderDrawLists(ImDrawData* draw_data);
 
 
 extern void WaitFor(unsigned int ms);
+extern void ImImpl_FreeTexture(ImTextureID& imtexid);
+extern void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,int channels,const unsigned char* pixels,bool useMipmapsIfPossible=false,bool wraps=true,bool wrapt=true);
+extern void ImImpl_ClearColorBuffer(const ImVec4& bgColor=ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+
 extern void ImImpl_FlipTexturesVerticallyOnLoad(bool flag_true_if_should_flip);
-extern GLuint ImImpl_LoadTexture(const char* filename,int req_comp=0,GLenum magFilter=GL_LINEAR,GLenum minFilter=GL_LINEAR_MIPMAP_LINEAR,GLenum wrapS=GL_REPEAT,GLenum wrapT=GL_REPEAT);
-extern GLuint ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory,int filenameInMemorySize,int req_comp=0,GLenum magFilter=GL_LINEAR,GLenum minFilter=GL_LINEAR_MIPMAP_LINEAR,GLenum wrapS=GL_REPEAT,GLenum wrapT=GL_REPEAT);
+extern ImTextureID ImImpl_LoadTexture(const char* filename,int req_comp=0,bool useMipmapsIfPossible=false,bool wraps=true,bool wrapt=true);
+extern ImTextureID ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory, int filenameInMemorySize, int req_comp=0, bool useMipmapsIfPossible=false,bool wraps=true,bool wrapt=true);
 
 #ifndef IMIMPL_SHADER_NONE
 class ImImpl_CompileShaderStruct {

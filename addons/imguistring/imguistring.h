@@ -23,12 +23,13 @@
 #	endif
 #endif//IMGUI_FORCE_INLINE
 
-#ifndef IMIMPL_PLACEMENT_NEW
+#ifndef IMIMPL_HAS_PLACEMENT_NEW
+#define IMIMPL_HAS_PLACEMENT_NEW
 struct ImImplPlacementNewDummy {};
 inline void* operator new(size_t, ImImplPlacementNewDummy, void* ptr) { return ptr; }
 inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #define IMIMPL_PLACEMENT_NEW(_PTR)  new(ImImplPlacementNewDummy() ,_PTR)
-#endif //IMIMPL_PLACEMENT_NEW
+#endif //IMIMPL_HAS_PLACEMENT_NEW
 
 #ifndef ImString
 // A string implementation based on ImVector<char>

@@ -8,7 +8,7 @@
 #endif //IMGUISCINTILLA_ACTIVATED
 
 // Helper stuff we'll use later ----------------------------------------------------
-GLuint myImageTextureId2 = 0;
+ImTextureID myImageTextureId2 = 0;
 static ImVec2 gMainMenuBarSize(0,0);
 static void ShowExampleAppMainMenuBar() {
     if (ImGui::BeginMainMenuBar())  {
@@ -156,18 +156,33 @@ extern float gImGuiInverseFPSClampOutsideImGui;
 //------------------------------------------------------------------------------------
 
 static const char* styleFileName = "./myimgui.style";
-static const char* styleFileNamePersistent = "./persistent_folder/myimgui.style";   // Needed by Emscripten only
+static const char* styleFileNamePersistent = "/persistent_folder/myimgui.style";   // Needed by Emscripten only
 
 
 void InitGL()	// Mandatory
 {
     if (!myImageTextureId2) myImageTextureId2 = ImImpl_LoadTexture("./myNumbersTexture.png");
 
+
 //  Optional: loads a style
 #   if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_LOAD_STYLE))
     const char* pStyleFileName = styleFileName;
+//#define TEST_TO_DELETE
+#ifdef TEST_TO_DELETE
+    ImGuiFs::PathStringVector dirs;
+    ImGuiFs::DirectoryGetDirectories("/",dirs);
+    for (int i=0;i<dirs.size();i++) printf("%s\n",dirs[i]);
+    fflush(stdout);
+#undef TEST_TO_DELETE
+#endif //TEST_TO_DELETE
+#   if (!defined(NO_IMGUIEMSCRIPTEN) && !defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
+    //ImGui::EmscriptenFileSystemHelper::Init();
+    //while (!ImGui::EmscriptenFileSystemHelper::IsInSync()) {WaitFor(1500);}   // No way this ends...
+    //if (ImGuiHelper::FileExists(styleFileNamePersistent)) pStyleFileName = styleFileNamePersistent; // Never...
+    //else {printf("\"%s\" does not exist yet\n",styleFileNamePersistent);fflush(stdout);}
+#   endif //NO_IMGUIEMSCRIPTEN & C
     if (!ImGui::LoadStyle(pStyleFileName,ImGui::GetStyle()))   {
-        fprintf(stderr,"Warning: \"%s\" not present.\n",pStyleFileName);
+        printf("Warning: \"%s\" not present.\n",pStyleFileName);fflush(stdout);
     }
 #   endif //NO_IMGUISTYLESERIALIZER
 
@@ -214,14 +229,12 @@ void ResizeGL(int /*w*/,int /*h*/)	// Mandatory
 }
 void DestroyGL()    // Mandatory
 {
-    if (myImageTextureId2) {glDeleteTextures(1,&myImageTextureId2);myImageTextureId2=0;}
+    if (myImageTextureId2) {ImImpl_FreeTexture(myImageTextureId2);}
 
 }
 void DrawGL()	// Mandatory
 {
-
-        glClearColor(0.8f, 0.6f, 0.6f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        ImImpl_ClearColorBuffer(ImVec4(0.5f, 0.5f, 0.5f, 1.0f));    // Warning: it does not clear depth buffer
 
         // Pause/Resume ImGui and process input as usual
         if (!ImGui::GetIO().WantCaptureKeyboard)    {
@@ -292,7 +305,7 @@ void DrawGL()	// Mandatory
             // [Please remember that double clicking the titlebar of a window minimizes it]
             // No problem with full frame rates.
             static bool open = true;
-            ImGui::Begin("Debug ", &open, ImVec2(450,300));  // Try using 10 FPS and replacing the title with "Debug"...
+            ImGui::Begin("Debug ", &open, ImVec2(450,300),-1.f,ImGuiWindowFlags_ShowBorders);  // Try using 10 FPS and replacing the title with "Debug"...
 
             ImGui::Text("\n");ImGui::Separator();ImGui::Text("Pause/Resume ImGui and process input as usual");ImGui::Separator();
             ImGui::Text("Press F1 (or lowercase 'h') to turn ImGui on and off.");
@@ -309,7 +322,6 @@ void DrawGL()	// Mandatory
 #           endif //NO_IMGUITOOLBAR
 #           ifndef NO_IMGUINODEGRAPHEDITOR
             show_node_graph_editor_window ^= ImGui::Button("Another Window With NodeGraphEditor");
-            if (!ImGui::GetIO().FontAllowUserScaling && ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Warning: it needs: ImGui::GetIO().FontAllowUserScaling = true\nfor zooming to work properly.");
 #           endif //NO_IMGUINODEGRAPHEDITOR
             show_splitter_test_window ^= ImGui::Button("Show splitter test window");
 
@@ -545,6 +557,18 @@ void DrawGL()	// Mandatory
             static bool popup_open = false;static int threeStaticInts[3]={0,0,0};
             ImGui::InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu("ITMWHS2", buffer2, 1024, height,popup_open,threeStaticInts);
             ImGui::PopID();
+
+            ImGui::Spacing();
+            ImGui::ImageButtonWithText(reinterpret_cast<ImTextureID>(myImageTextureId2),"MyImageButtonWithText",ImVec2(16,16),ImVec2(0,0),ImVec2(0.33334f,0.33334f));
+
+#           ifndef NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
+            // One instance per image, but it can feed multiple widgets
+            static ImGui::AnimatedImage gif(myImageTextureId2,64,64,9,3,3,30,true);
+            ImGui::SameLine();
+            gif.render();
+            ImGui::SameLine();
+            gif.renderAsButton("myButton123",ImVec2(-.5f,-.5f));    // Negative size multiplies the 'native' gif size
+#           endif //NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
 
             ImGui::Spacing();
             ImGui::Text("Image with zoom (CTRL+MW) and pan (RMB drag):");

@@ -35,13 +35,13 @@ struct ImImpl_PrivateParams  {
     GLint attrLocUV;
     GLint attrLocColour;
     // font texture
-    GLuint fontTex;
+    ImTextureID fontTex;
     ImImpl_PrivateParams() :program(0),uniLocOrthoMatrix(-1),uniLocTexture(-1),
         attrLocPosition(-1),attrLocUV(-1),attrLocColour(-1),fontTex(0)
     {for (int i=0;i<IMIMPL_NUM_ROUND_ROBIN_VERTEX_BUFFERS;i++) {vertexBuffers[i]=0;indexBuffers[i]=0;}}
 #else //IMIMPL_SHADER_NONE
     // font texture
-    GLuint fontTex;
+    ImTextureID fontTex;
     ImImpl_PrivateParams() :fontTex(0) {}
 #endif //IMIMPL_SHADER_NONE
 };
@@ -55,6 +55,46 @@ static ImImpl_PrivateParams gImImplPrivateParams;
 #endif //STBI_INCLUDE_STB_IMAGE_H
 
 
+void ImImpl_FreeTexture(ImTextureID& imtexid) {
+    GLuint& texid = reinterpret_cast<GLuint&>(imtexid);
+    if (texid) {glDeleteTextures(1,&texid);texid=0;}
+}
+void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,int channels,const unsigned char* pixels,bool useMipmapsIfPossible,bool wraps,bool wrapt) {
+    IM_ASSERT(pixels);
+    IM_ASSERT(channels>0 && channels<=4);
+    GLuint& texid = reinterpret_cast<GLuint&>(imtexid);
+    if (texid==0) glGenTextures(1, &texid);
+
+    glBindTexture(GL_TEXTURE_2D, texid);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,wraps ? GL_REPEAT : GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,wrapt ? GL_REPEAT : GL_CLAMP);
+    //const GLfloat borderColor[]={0.f,0.f,0.f,1.f};glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR,borderColor);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if (useMipmapsIfPossible)   {
+#       ifdef NO_IMGUI_OPENGL_GLGENERATEMIPMAP
+#           ifndef GL_GENERATE_MIPMAP
+#               define GL_GENERATE_MIPMAP 0x8191
+#           endif //GL_GENERATE_MIPMAP
+        // I guess this is compilable, even if it's not supported:
+        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);    // This call must be done before glTexImage2D(...) // GL_GENERATE_MIPMAP can't be used with NPOT if there are not supported by the hardware of GL_ARB_texture_non_power_of_two.
+#       endif //NO_IMGUI_OPENGL_GLGENERATEMIPMAP
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, useMipmapsIfPossible ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    const GLenum ifmt = channels==1 ? GL_ALPHA : channels==2 ? GL_LUMINANCE_ALPHA : channels==3 ? GL_RGB : GL_RGBA;  // channels == 1 could be GL_LUMINANCE, GL_ALPHA, GL_RED ...
+    const GLenum fmt = ifmt;
+    glTexImage2D(GL_TEXTURE_2D, 0, ifmt, width, height, 0, fmt, GL_UNSIGNED_BYTE, pixels);
+
+#       ifndef NO_IMGUI_OPENGL_GLGENERATEMIPMAP
+    if (useMipmapsIfPossible) glGenerateMipmap(GL_TEXTURE_2D);
+#       endif //NO_IMGUI_OPENGL_GLGENERATEMIPMAP
+}
+void ImImpl_ClearColorBuffer(const ImVec4& bgColor)  {
+    glClearColor(bgColor.x,bgColor.y,bgColor.z,bgColor.w);
+    glClear(GL_COLOR_BUFFER_BIT);
+}
 
 void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     ImGuiIO& io = ImGui::GetIO();
@@ -152,15 +192,11 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     //fprintf(stderr,"Loading font texture\n");
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
-    glGenTextures(1, &gImImplPrivateParams.fontTex);
-    glBindTexture(GL_TEXTURE_2D, gImImplPrivateParams.fontTex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, pixels);
+
+    ImImpl_GenerateOrUpdateTexture(gImImplPrivateParams.fontTex,width,height,4,pixels,false,true,true);
 
     // Store our identifier
-    io.Fonts->TexID = (void *)(intptr_t)gImImplPrivateParams.fontTex;
+    io.Fonts->TexID = gImImplPrivateParams.fontTex;
 
 #   ifdef IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON
     // Cleanup (don't clear the input data if you want to append new fonts later)    
@@ -180,7 +216,7 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     if (!ImGui::TabWindow::DockPanelIconTextureID)  {
         int dockPanelImageBufferSize = 0;
         const unsigned char* dockPanelImageBuffer = ImGui::TabWindow::GetDockPanelIconImagePng(&dockPanelImageBufferSize);
-        ImGui::TabWindow::DockPanelIconTextureID = reinterpret_cast<ImTextureID>(ImImpl_LoadTextureFromMemory(dockPanelImageBuffer,dockPanelImageBufferSize));
+        ImGui::TabWindow::DockPanelIconTextureID = ImImpl_LoadTextureFromMemory(dockPanelImageBuffer,dockPanelImageBufferSize);
     }
 #   endif //NO_IMGUITABWINDOW
 
@@ -194,15 +230,14 @@ void DestroyImGuiFontTexture()	{
         if (io.Fonts) io.Fonts->ClearInputData();
         if (io.Fonts) io.Fonts->ClearTexData();
 #       endif //IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON
-        glDeleteTextures( 1, &gImImplPrivateParams.fontTex );
+        ImImpl_FreeTexture(gImImplPrivateParams.fontTex);
         gImImplPrivateParams.fontTex = 0;
     }
 
 // We overuse this method to delete textures from other imgui addons
 #   ifndef NO_IMGUITABWINDOW
     if (ImGui::TabWindow::DockPanelIconTextureID) {
-        GLuint texId = *((GLuint*)(&ImGui::TabWindow::DockPanelIconTextureID)); // just to avoid -permissive
-        glDeleteTextures(1,&texId);
+        ImImpl_FreeTexture(ImGui::TabWindow::DockPanelIconTextureID);
         ImGui::TabWindow::DockPanelIconTextureID = NULL;
     }
 #   endif //NO_IMGUITABWINDOW
@@ -228,11 +263,12 @@ void WaitFor(unsigned int ms)    {
 #endif
 }
 
+
 void ImImpl_FlipTexturesVerticallyOnLoad(bool flag_true_if_should_flip)   {
     stbi_set_flip_vertically_on_load(flag_true_if_should_flip);
 }
 
-GLuint ImImpl_LoadTexture(const char* filename,int req_comp,GLenum magFilter,GLenum minFilter,GLenum wrapS,GLenum wrapT)  {
+ImTextureID ImImpl_LoadTexture(const char* filename, int req_comp, bool useMipmapsIfPossible, bool wraps, bool wrapt)  {
     int w,h,n;
     unsigned char* pixels = stbi_load(filename,&w,&h,&n,req_comp);
     if (!pixels) {
@@ -240,31 +276,16 @@ GLuint ImImpl_LoadTexture(const char* filename,int req_comp,GLenum magFilter,GLe
         return 0;
     }
     if (req_comp>0 && req_comp<=4) n = req_comp;
-    GLuint texId=0;
 
-    glGenTextures(1, &texId);
-    glBindTexture(GL_TEXTURE_2D, texId);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,wrapT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,wrapS);
-
-    const int byteAlignement = 1;
-    glPixelStorei(GL_UNPACK_ALIGNMENT, byteAlignement);
-
-    const GLenum ifmt = n==1 ? GL_ALPHA : n==2 ? GL_LUMINANCE_ALPHA : n==3 ? GL_RGB : GL_RGBA;
-    const GLenum fmt = ifmt;
-    glTexImage2D(GL_TEXTURE_2D, 0, ifmt, w, h, 0, fmt, GL_UNSIGNED_BYTE, pixels);
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, pixels);
-    if (minFilter==GL_NEAREST_MIPMAP_NEAREST || minFilter==GL_NEAREST_MIPMAP_LINEAR || minFilter==GL_LINEAR_MIPMAP_NEAREST || minFilter==GL_LINEAR_MIPMAP_LINEAR)
-        glGenerateMipmap(GL_TEXTURE_2D);
+    ImTextureID texId = NULL;
+    ImImpl_GenerateOrUpdateTexture(texId,w,h,n,pixels,useMipmapsIfPossible,wraps,wrapt);
 
     stbi_image_free(pixels);
 
     return texId;
 }
 
-GLuint ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory,int filenameInMemorySize,int req_comp,GLenum magFilter,GLenum minFilter,GLenum wrapS,GLenum wrapT)  {
+ImTextureID ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory,int filenameInMemorySize,int req_comp,bool useMipmapsIfPossible,bool wraps,bool wrapt)  {
     int w,h,n;
     unsigned char* pixels = stbi_load_from_memory(filenameInMemory,filenameInMemorySize,&w,&h,&n,req_comp);
     if (!pixels) {
@@ -272,29 +293,16 @@ GLuint ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory,int fi
         return 0;
     }
     if (req_comp>0 && req_comp<=4) n = req_comp;
-    GLuint texId=0;
 
-    glGenTextures(1, &texId);
-    glBindTexture(GL_TEXTURE_2D, texId);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,wrapT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,wrapS);
-
-    const int byteAlignement = 1;
-    glPixelStorei(GL_UNPACK_ALIGNMENT, byteAlignement);
-
-    const GLenum ifmt = n==1 ? GL_ALPHA : n==2 ? GL_LUMINANCE_ALPHA : n==3 ? GL_RGB : GL_RGBA;
-    const GLenum fmt = ifmt;
-    glTexImage2D(GL_TEXTURE_2D, 0, ifmt, w, h, 0, fmt, GL_UNSIGNED_BYTE, pixels);
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, pixels);
-    if (minFilter==GL_NEAREST_MIPMAP_NEAREST || minFilter==GL_NEAREST_MIPMAP_LINEAR || minFilter==GL_LINEAR_MIPMAP_NEAREST || minFilter==GL_LINEAR_MIPMAP_LINEAR)
-        glGenerateMipmap(GL_TEXTURE_2D);
+    ImTextureID texId = NULL;
+    ImImpl_GenerateOrUpdateTexture(texId,w,h,n,pixels,useMipmapsIfPossible,wraps,wrapt);
 
     stbi_image_free(pixels);
 
     return texId;
 }
+
+
 
 #ifndef IMIMPL_SHADER_NONE
 #ifndef NO_IMGUISTRING

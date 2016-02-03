@@ -2022,7 +2022,7 @@ class TextureNode : public Node {
     typedef Node Base;  //Base Class
     typedef TextureNode ThisClass;
     TextureNode() : Base() {}
-    virtual ~TextureNode() {if (textureID) {glDeleteTextures(1,&textureID);textureID=0;}}
+    virtual ~TextureNode() {if (textureID) {ImImpl_FreeTexture(textureID);}}
     static const int TYPE = MNT_TEXTURE_NODE;
     static const int TextBufferSize =
 #   ifndef NO_IMGUIFILESYSTEM
@@ -2031,7 +2031,7 @@ class TextureNode : public Node {
     2049;
 #   endif
 
-    GLuint textureID;
+    ImTextureID textureID;
     char imagePath[TextBufferSize];				// field 1 (= the only one that is copied/serialized/handled by the Node)
     char lastValidImagePath[TextBufferSize];    // The path for which "textureID" was created
     bool startBrowseDialogNextFrame;
@@ -2099,7 +2099,7 @@ class TextureNode : public Node {
     void processPath(const char* filePath)  {
         if (!filePath || strcmp(filePath,lastValidImagePath)==0) return;
         if (!ValidateImagePath(filePath)) return;
-        if (textureID) {glDeleteTextures(1,&textureID);textureID=0;}
+        if (textureID) {ImImpl_FreeTexture(textureID);}
         textureID = ImImpl_LoadTexture(filePath);
         if (textureID) strcpy(lastValidImagePath,filePath);
     }

@@ -349,50 +349,15 @@ static gchar* GetSelectedText(PopplerPage* page,const cairo_rectangle_t& selecti
 namespace ImGui {
 
 // Callbacks
-// Consider moving this to imguibindings.cpp
-static void FreeTexture(ImTextureID& imtexid) {
-    GLuint& texid = reinterpret_cast<GLuint&>(imtexid);
-    if (texid) {glDeleteTextures(1,&texid);texid=0;}
-}
-// Consider moving this to imguibindings.cpp
-static void GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,int channels,unsigned char* pixels,bool useMipmapsIfPossible,bool wraps=true,bool wrapt=true) {
-        IM_ASSERT(pixels);
-        IM_ASSERT(channels>=3 && channels<=4);  // For now we exclude channels == 1, because it could be GL_LUMINANCE, GL_ALPHA, GL_RED ...
-        GLuint& texid = reinterpret_cast<GLuint&>(imtexid);
-        if (texid==0) glGenTextures(1, &texid);
-
-        glBindTexture(GL_TEXTURE_2D, texid);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,wraps ? GL_REPEAT : GL_CLAMP);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,wrapt ? GL_REPEAT : GL_CLAMP);
-        //const GLfloat borderColor[]={0.f,0.f,0.f,1.f};glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR,borderColor);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        if (useMipmapsIfPossible)   {
-#       ifdef NO_IMGUI_OPENGL_GLGENERATEMIPMAP
-#           ifndef GL_GENERATE_MIPMAP
-#               define GL_GENERATE_MIPMAP 0x8191
-#           endif //GL_GENERATE_MIPMAP
-            // I guess this is compilable, even if it's not supported:
-            glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);    // This call must be done before glTexImage2D(...) // GL_GENERATE_MIPMAP can't be used with NPOT if there are not supported by the hardware of GL_ARB_texture_non_power_of_two.
-#       endif //NO_IMGUI_OPENGL_GLGENERATEMIPMAP
-        }
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, useMipmapsIfPossible ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
-
-        GLenum type = channels==3 ? GL_RGB : GL_RGBA;
-        glTexImage2D(GL_TEXTURE_2D,0,type,width,height,0,type,GL_UNSIGNED_BYTE,pixels);
-
-#       ifndef NO_IMGUI_OPENGL_GLGENERATEMIPMAP
-        if (useMipmapsIfPossible) glGenerateMipmap(GL_TEXTURE_2D);
-#       endif //NO_IMGUI_OPENGL_GLGENERATEMIPMAP
-    }
 PdfViewer::FreeTextureDelegate PdfViewer::FreeTextureCb =
 #ifdef IMGUI_USE_AUTO_BINDING
-&FreeTexture;
+&ImImpl_FreeTexture;
 #else //IMGUI_USE_AUTO_BINDING
 NULL;
 #endif //IMGUI_USE_AUTO_BINDING
 PdfViewer::GenerateOrUpdateTextureDelegate PdfViewer::GenerateOrUpdateTextureCb =
 #ifdef IMGUI_USE_AUTO_BINDING
-&GenerateOrUpdateTexture;
+&ImImpl_GenerateOrUpdateTexture;
 #else //IMGUI_USE_AUTO_BINDING
 NULL;
 #endif //IMGUI_USE_AUTO_BINDING
@@ -1717,3 +1682,5 @@ bool PdfViewer::render(const ImVec2 &size)  {
 
 
 } // namespace ImGui
+
+

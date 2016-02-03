@@ -79,9 +79,9 @@
 #ifdef IMGUISCINTILLA_ACTIVATED
 #include "./imguiscintilla/imguiscintilla.cpp"
 #endif //IMGUISCINTILLA_ACTIVATED
-#ifndef NO_IMGUIGRAPHEDITOR
+#ifndef NO_IMGUINODEGRAPHEDITOR
 #include "./imguinodegrapheditor/imguinodegrapheditor.cpp"
-#endif //NO_IMGUIGRAPHEDITOR
+#endif //NO_IMGUINODEGRAPHEDITOR
 
 #ifdef YES_IMGUIPDFVIEWER
 #include "./imguiyesaddons/imguipdfviewer.cpp"

@@ -1,5 +1,34 @@
 #include "imguivariouscontrols.h"
 
+#ifndef NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
+#ifndef IMGUI_USE_AUTO_BINDING
+#ifndef STBI_INCLUDE_STB_IMAGE_H
+#define STB_IMAGE_STATIC
+#define STB_IMAGE_IMPLEMENTATION
+#include "../imguibindings/stb_image.h"
+#endif //STBI_INCLUDE_STB_IMAGE_H
+#endif //IMGUI_USE_AUTO_BINDING
+#ifdef __cplusplus
+extern "C" {
+#endif //__cplusplus
+struct gif_result : stbi__gif {
+    unsigned char *data;
+    struct gif_result *next;
+};
+#ifdef __cplusplus
+}
+#endif //__cplusplus
+//#define DEBUG_OUT_TEXTURE
+#ifdef DEBUG_OUT_TEXTURE
+#ifndef STBI_INCLUDE_STB_IMAGE_WRITE_H
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_STATIC
+#include "./addons/imguibindings/stb_image_write.h"
+#endif //DEBUG_OUT_TEXTURE
+#endif //STBI_INCLUDE_STB_IMAGE_WRITE_H
+#endif //NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
+
+
 namespace ImGui {
 static float GetWindowFontScale() {
     //ImGuiState& g = *GImGui;
@@ -690,6 +719,544 @@ bool InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu(const char *la
     return changed;
 }
 
+
+bool ImageButtonWithText(ImTextureID texId,const char* label,const ImVec2& imageSize, const ImVec2 &uv0, const ImVec2 &uv1, int frame_padding, const ImVec4 &bg_col, const ImVec4 &tint_col) {
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+    return false;
+
+    ImVec2 size = imageSize;
+    if (size.x<=0 && size.y<=0) {size.x=size.y=ImGui::GetTextLineHeightWithSpacing();}
+    else {
+        if (size.x<=0)          size.x=size.y;
+        else if (size.y<=0)     size.y=size.x;
+        size*=window->FontWindowScale*ImGui::GetIO().FontGlobalScale;
+    }
+
+    ImGuiState& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+
+    const ImGuiID id = window->GetID(label);
+    const ImVec2 textSize = ImGui::CalcTextSize(label,NULL,true);
+    const bool hasText = textSize.x>0;
+
+    const float innerSpacing = hasText ? ((frame_padding >= 0) ? (float)frame_padding : (style.ItemInnerSpacing.x)) : 0.f;
+    const ImVec2 padding = (frame_padding >= 0) ? ImVec2((float)frame_padding, (float)frame_padding) : style.FramePadding;
+    const ImVec2 totalSizeWithoutPadding(size.x+innerSpacing+textSize.x,size.y>textSize.y ? size.y : textSize.y);
+    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + totalSizeWithoutPadding + padding*2);
+    ImVec2 start(0,0);
+    start = window->DC.CursorPos + padding;if (size.y<textSize.y) start.y+=(textSize.y-size.y)*.5f;
+    const ImRect image_bb(start, start + size);
+    start = window->DC.CursorPos + padding;start.x+=size.x+innerSpacing;if (size.y>textSize.y) start.y+=(size.y-textSize.y)*.5f;
+    ItemSize(bb);
+    if (!ItemAdd(bb, &id))
+    return false;
+
+    bool hovered=false, held=false;
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+
+    // Render
+    const ImU32 col = GetColorU32((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+    RenderFrame(bb.Min, bb.Max, col, true, ImClamp((float)ImMin(padding.x, padding.y), 0.0f, style.FrameRounding));
+    if (bg_col.w > 0.0f)
+    window->DrawList->AddRectFilled(image_bb.Min, image_bb.Max, GetColorU32(bg_col));
+
+    window->DrawList->AddImage(texId, image_bb.Min, image_bb.Max, uv0, uv1, GetColorU32(tint_col));
+
+    if (textSize.x>0) ImGui::RenderText(start,label);
+    return pressed;
+}
+
+#ifndef NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
+struct AnimatedImageInternal {
+    protected:
+
+    int w,h,frames;
+    ImVector<unsigned char> buffer;
+    ImVector<float> delays;
+    ImTextureID persistentTexId;              // This will be used when all frames can fit into a single texture (very good for performance and memory)
+    int numFramesPerRowInPersistentTexture,numFramesPerColInPersistentTexture;
+    bool hoverModeIfSupported;
+    bool persistentTexIdIsNotOwned;
+    mutable bool isAtLeastOneWidgetInHoverMode;  // internal
+
+    mutable  int lastFrameNum;
+    mutable float delay;
+    mutable float timer;
+    mutable ImTextureID texId;
+    mutable ImVec2 uvFrame0,uvFrame1;   // used by persistentTexId
+    mutable int lastImGuiFrameUpdate;
+
+    inline void updateTexture() const   {
+        // fix updateTexture() to use persistentTexID when necessary
+        IM_ASSERT(AnimatedImage::GenerateOrUpdateTextureCb!=NULL);	// Please use ImGui::AnimatedGif::SetGenerateOrUpdateTextureCallback(...) before calling this method
+        if (frames<=0) return;
+        else if (frames==1) {
+            if (!texId) AnimatedImage::GenerateOrUpdateTextureCb(texId,w,h,4,&buffer[0],false,false,false);
+            return;
+        }
+
+        // These two lines sync animation in multiple items:
+        if (texId && lastImGuiFrameUpdate==ImGui::GetFrameCount()) return;
+        lastImGuiFrameUpdate=ImGui::GetFrameCount();
+        if (hoverModeIfSupported && !isAtLeastOneWidgetInHoverMode) {
+            // reset animation here:
+            timer=-1.f;lastFrameNum=-1;delay=0;
+            //calculateTexCoordsForFrame(0,uvFrame0,uvFrame1);
+        }
+        isAtLeastOneWidgetInHoverMode = false;
+
+        float lastDelay = delay;
+        if (timer>0) {
+            delay = ImGui::GetTime()*100.f-timer;
+            if (delay<0) timer = -1.f;
+        }
+        if (timer<0) {timer = ImGui::GetTime()*100.f;delay=0.f;}
+
+        const int imageSz = 4 * w * h;
+        IM_ASSERT(sizeof(unsigned short)==2*sizeof(unsigned char));
+        bool changed = false;
+        float frameTime=0.f;
+        bool forceUpdate = false;
+        if (lastFrameNum<0) {forceUpdate=true;lastFrameNum=0;}
+        for (int i=lastFrameNum;i<frames;i++)   {
+            frameTime = delays[i];
+            //fprintf(stderr,"%d/%d) %1.2f\n",i,frames,frameTime);
+            if (delay <= lastDelay+frameTime) {
+                changed = (i!=lastFrameNum || !texId);
+                lastFrameNum = i;
+                if (changed || forceUpdate)    {
+                    if (!persistentTexId) AnimatedImage::GenerateOrUpdateTextureCb(texId,w,h,4,&buffer[imageSz*i],false,false,false);
+                    else {
+                        texId = persistentTexId;
+                        // calculate uvFrame0 and uvFrame1 here based on 'i' and numFramesPerRowInPersistentTexture,numFramesPerColInPersistentTexture
+                        calculateTexCoordsForFrame(i,uvFrame0,uvFrame1);
+                    }
+                }
+                //fprintf(stderr,"%d/%d) %1.2f %1.2f %1.2f\n",i,frames,frameTime,delay,lastDelay);
+                delay = lastDelay;
+                return;
+            }
+            lastDelay+=frameTime;
+            if (i==frames-1) i=-1;
+        }
+
+    }
+
+    public:
+    AnimatedImageInternal()  {persistentTexIdIsNotOwned=false;texId=persistentTexId=NULL;clear();}
+    ~AnimatedImageInternal()  {texId=persistentTexId=NULL;clear();persistentTexIdIsNotOwned=false;}
+    AnimatedImageInternal(char const *filename,bool useHoverModeIfSupported=false)  {persistentTexIdIsNotOwned = false;texId=persistentTexId=NULL;load(filename,useHoverModeIfSupported);}
+    AnimatedImageInternal(ImTextureID myTexId,int animationImageWidth,int animationImageHeight,int numFrames,int numFramesPerRowInTexture,int numFramesPerColumnInTexture,float delayDetweenFramesInCs,bool useHoverMode=false) {
+        persistentTexIdIsNotOwned = false;texId=persistentTexId=NULL;
+        create(myTexId,animationImageWidth,animationImageHeight,numFrames,numFramesPerRowInTexture,numFramesPerColumnInTexture,delayDetweenFramesInCs,useHoverMode);
+    }
+    void clear() {
+        w=h=frames=lastFrameNum=0;delay=0.f;timer=-1.f;buffer.clear();delays.clear();
+        numFramesPerRowInPersistentTexture = numFramesPerColInPersistentTexture = 0;
+        uvFrame0.x=uvFrame0.y=0;uvFrame1.x=uvFrame1.y=1;
+        lastImGuiFrameUpdate = -1;hoverModeIfSupported=isAtLeastOneWidgetInHoverMode = false;
+        if (texId || persistentTexId) IM_ASSERT(AnimatedImage::FreeTextureCb!=NULL);   // Please use ImGui::AnimatedGif::SetFreeTextureCallback(...)
+        if (texId) {if (texId!=persistentTexId) AnimatedImage::FreeTextureCb(texId);texId=NULL;}
+        if (persistentTexId)  {if (!persistentTexIdIsNotOwned) AnimatedImage::FreeTextureCb(persistentTexId);persistentTexId=NULL;}
+    }
+
+    bool load(char const *filename,bool useHoverModeIfSupported=false)  {
+        ImGui::AnimatedImageInternal& ag = *this;
+
+        // Code based on:
+        // https://gist.github.com/urraka/685d9a6340b26b830d49
+
+        FILE *f;
+        stbi__context s;
+        ag.clear();
+        ag.persistentTexIdIsNotOwned = false;
+        bool ok = false;
+
+        if (!(f = stbi__fopen(filename, "rb"))) {
+            stbi__errpuc("can't fopen", "Unable to open file");
+            return false;
+        }
+
+        stbi__start_file(&s, f);
+
+        if (stbi__gif_test(&s))
+        {
+            ok =true;
+            int c;
+            stbi__gif g;
+            gif_result head;
+            gif_result *prev = 0, *gr = &head;
+
+            memset(&g, 0, sizeof(g));
+            memset(&head, 0, sizeof(head));
+
+            ag.frames = 0;
+
+            while ((gr->data = stbi__gif_load_next(&s, &g, &c, 4)))
+            {
+                STBI_FREE(gr->out);gr->out=NULL;
+                if (gr->data == (unsigned char*)&s)
+                {
+                    gr->data = 0;
+                    break;
+                }
+
+                if (prev) prev->next = gr;
+                gr->delay = g.delay;
+                prev = gr;
+                gr = (gif_result*) stbi__malloc(sizeof(gif_result));
+                memset(gr, 0, sizeof(gif_result));
+                ++ag.frames;
+            }
+
+            STBI_FREE(gr->out);gr->out=NULL;
+            if (gr != &head)    {
+                STBI_FREE(gr);
+            }
+
+            if (ag.frames > 0)
+            {
+                ag.w = g.w;
+                ag.h = g.h;
+            }
+
+            if (ag.frames==1) {
+                ag.buffer.resize(ag.w*ag.h*4);
+                memcpy(&ag.buffer[0],head.data,ag.buffer.size());
+                STBI_FREE(head.data);
+            }
+
+
+            if (ag.frames > 1)
+            {
+                unsigned int size = 4 * g.w * g.h;
+                unsigned char *p = 0;
+                float *pd = 0;
+
+                ag.buffer.resize(ag.frames * size);//(size + 2));
+                ag.delays.resize(ag.frames);
+                gr = &head;
+                p = &ag.buffer[0];
+                pd = &ag.delays[0];
+
+                IM_ASSERT(sizeof(unsigned short)==2*sizeof(unsigned char));	// Not sure that this is necessary
+                unsigned short tmp = 0;
+                unsigned char* pTmp = (unsigned char*) &tmp;
+                while (gr)
+                {
+                    prev = gr;
+                    memcpy(p, gr->data, size);
+                    p += size;
+                    tmp = 0;
+                    // We should invert these two lines for big-endian machines:
+                    pTmp[0] = gr->delay & 0xFF;
+                    pTmp[1] = (gr->delay & 0xFF00) >> 8;
+                    *pd++ = (float) tmp;
+                    gr = gr->next;
+
+                    STBI_FREE(prev->data);
+                    if (prev != &head) STBI_FREE(prev);
+                }
+
+                if (AnimatedImage::MaxPersistentTextureSize.x>0 && AnimatedImage::MaxPersistentTextureSize.y>0)	{
+                    // code path that checks 'MaxPersistentTextureSize' and puts all into a single texture (rearranging the buffer)
+                    ImVec2 textureSize = AnimatedImage::MaxPersistentTextureSize;
+                    int maxNumFramesPerRow = (int)textureSize.x/(int)ag.w;
+                    int maxNumFramesPerCol = (int)textureSize.y/(int)ag.h;
+                    int maxNumFramesInATexture = maxNumFramesPerRow * maxNumFramesPerCol;
+                    int cnt = 0;
+                    ImVec2 lastValidTextureSize(0,0);
+                    while (maxNumFramesInATexture>=ag.frames)	{
+                        // Here we just halve the 'textureSize', so that, if it fits, we save further texture space
+                        lastValidTextureSize = textureSize;
+                        if (cnt%2==0) textureSize.y = textureSize.y/2;
+                        else textureSize.x = textureSize.x/2;
+                        maxNumFramesPerRow = (int)textureSize.x/(int)ag.w;
+                        maxNumFramesPerCol = (int)textureSize.y/(int)ag.h;
+                        maxNumFramesInATexture = maxNumFramesPerRow * maxNumFramesPerCol;
+                        ++cnt;
+                    }
+                    if (cnt>0)  {
+                        textureSize=lastValidTextureSize;
+                        maxNumFramesPerRow = (int)textureSize.x/(int)ag.w;
+                        maxNumFramesPerCol = (int)textureSize.y/(int)ag.h;
+                        maxNumFramesInATexture = maxNumFramesPerRow * maxNumFramesPerCol;
+                    }
+                    if (maxNumFramesInATexture>=ag.frames)	{
+                        numFramesPerRowInPersistentTexture = maxNumFramesPerRow;
+                        numFramesPerColInPersistentTexture = maxNumFramesPerCol;
+
+                        rearrangeBufferForPersistentTexture();
+
+                        // generate persistentTexture,delete buffer
+                        IM_ASSERT(AnimatedImage::GenerateOrUpdateTextureCb!=NULL);	// Please use ImGui::AnimatedGif::SetGenerateOrUpdateTextureCallback(...) before calling this method
+                        AnimatedImage::GenerateOrUpdateTextureCb(persistentTexId,ag.w*maxNumFramesPerRow,ag.h*maxNumFramesPerCol,4,&buffer[0],false,false,false);
+                        buffer.clear();
+
+                        hoverModeIfSupported = useHoverModeIfSupported;
+                        //fprintf(stderr,"%d x %d (%d x %d)\n",numFramesPerRowInPersistentTexture,numFramesPerColInPersistentTexture,(int)textureSize.x,(int)textureSize.y);
+
+                    }
+                }
+            }
+        }
+        else
+        {
+            ok = false;
+            // TODO: Here we could load other image formats...
+        }
+
+        fclose(f);
+        return ok;
+    }
+    bool create(ImTextureID myTexId,int animationImageWidth,int animationImageHeight,int numFrames,int numFramesPerRowInTexture,int numFramesPerColumnInTexture,float delayDetweenFramesInCs,bool useHoverMode=false)   {
+        clear();
+        persistentTexIdIsNotOwned = false;
+        IM_ASSERT(myTexId);
+        IM_ASSERT(animationImageWidth>0 && animationImageHeight>0);
+        IM_ASSERT(numFrames>0);
+        IM_ASSERT(delayDetweenFramesInCs>0);
+        IM_ASSERT(numFramesPerRowInTexture*numFramesPerColumnInTexture>=numFrames);
+        if (!myTexId || animationImageWidth<=0 || animationImageHeight<=0
+                || numFrames<=0 || delayDetweenFramesInCs<=0 || (numFramesPerRowInTexture*numFramesPerColumnInTexture<numFrames))
+            return false;
+        persistentTexId = myTexId;
+        persistentTexIdIsNotOwned = true;
+        w = animationImageWidth;
+        h = animationImageHeight;
+        frames = numFrames;
+        numFramesPerRowInPersistentTexture = numFramesPerRowInTexture;
+        numFramesPerColInPersistentTexture = numFramesPerColumnInTexture;
+        delays.resize(frames);
+        for (int i=0;i<frames;i++) delays[i] = delayDetweenFramesInCs;
+        hoverModeIfSupported = useHoverMode;
+        return true;
+    }
+
+    inline bool areAllFramesInASingleTexture() const {return persistentTexId!=NULL;}
+    void render(ImVec2 size=ImVec2(0,0), const ImVec2& uv0=ImVec2(0,0), const ImVec2& uv1=ImVec2(1,1), const ImVec4& tint_col=ImVec4(1,1,1,1), const ImVec4& border_col=ImVec4(0,0,0,0)) const  {
+        ImGuiWindow* window = GetCurrentWindow();
+        if (window->SkipItems)
+            return;
+        if (size.x==0) size.x=w;
+        else if (size.x<0) size.x=-size.x*w;
+        if (size.y==0) size.y=h;
+        else if (size.y<0) size.y=-size.y*h;
+        size*=window->FontWindowScale*ImGui::GetIO().FontGlobalScale;
+
+        ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
+        if (border_col.w > 0.0f)
+            bb.Max += ImVec2(2,2);
+        ItemSize(bb);
+        if (!ItemAdd(bb, NULL))
+            return;
+
+        updateTexture();
+
+        ImVec2 uv_0 = uv0;
+        ImVec2 uv_1 = uv1;
+        if (persistentTexId) {
+            bool hovered = true;	// to fall back when useHoverModeIfSupported == false;
+            if (hoverModeIfSupported) {
+                hovered = ImGui::IsItemHovered();
+                if (hovered) isAtLeastOneWidgetInHoverMode = true;
+            }
+            if (hovered)	{
+                const ImVec2 uvFrameDelta = uvFrame1 - uvFrame0;
+                uv_0 = uvFrame0 + uv0*uvFrameDelta;
+                uv_1 = uvFrame0 + uv1*uvFrameDelta;
+            }
+            else {
+                // We must use frame zero here:
+                ImVec2 uvFrame0,uvFrame1;
+                calculateTexCoordsForFrame(0,uvFrame0,uvFrame1);
+                const ImVec2 uvFrameDelta = uvFrame1 - uvFrame0;
+                uv_0 = uvFrame0 + uv0*uvFrameDelta;
+                uv_1 = uvFrame0 + uv1*uvFrameDelta;
+            }
+        }
+        if (border_col.w > 0.0f)
+        {
+            window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(border_col), 0.0f);
+            window->DrawList->AddImage(texId, bb.Min+ImVec2(1,1), bb.Max-ImVec2(1,1), uv_0, uv_1, GetColorU32(tint_col));
+        }
+        else
+        {
+            window->DrawList->AddImage(texId, bb.Min, bb.Max, uv_0, uv_1, GetColorU32(tint_col));
+        }
+    }
+    bool renderAsButton(const char* label,ImVec2 size=ImVec2(0,0), const ImVec2& uv0 = ImVec2(0,0),  const ImVec2& uv1 = ImVec2(1,1), int frame_padding = -1, const ImVec4& bg_col = ImVec4(0,0,0,0), const ImVec4& tint_col = ImVec4(1,1,1,1)) const {
+        ImGuiWindow* window = GetCurrentWindow();
+        if (window->SkipItems)
+            return false;
+
+        if (size.x==0) size.x=w;
+        else if (size.x<0) size.x=-size.x*w;
+        if (size.y==0) size.y=h;
+        else if (size.y<0) size.y=-size.y*h;
+        size*=window->FontWindowScale*ImGui::GetIO().FontGlobalScale;
+
+        ImGuiState& g = *GImGui;
+        const ImGuiStyle& style = g.Style;
+
+        // Default to using texture ID as ID. User can still push string/integer prefixes.
+        // We could hash the size/uv to create a unique ID but that would prevent the user from animating UV.
+        ImGui::PushID((void *)this);
+        const ImGuiID id = window->GetID(label);
+        ImGui::PopID();
+
+        const ImVec2 textSize = ImGui::CalcTextSize(label,NULL,true);
+        const bool hasText = textSize.x>0;
+
+        const float innerSpacing = hasText ? ((frame_padding >= 0) ? (float)frame_padding : (style.ItemInnerSpacing.x)) : 0.f;
+        const ImVec2 padding = (frame_padding >= 0) ? ImVec2((float)frame_padding, (float)frame_padding) : style.FramePadding;
+        const ImVec2 totalSizeWithoutPadding(size.x+innerSpacing+textSize.x,size.y>textSize.y ? size.y : textSize.y);
+        const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + totalSizeWithoutPadding + padding*2);
+        ImVec2 start(0,0);
+        start = window->DC.CursorPos + padding;if (size.y<textSize.y) start.y+=(textSize.y-size.y)*.5f;
+        const ImRect image_bb(start, start + size);
+        start = window->DC.CursorPos + padding;start.x+=size.x+innerSpacing;if (size.y>textSize.y) start.y+=(size.y-textSize.y)*.5f;
+        ItemSize(bb);
+        if (!ItemAdd(bb, &id))
+            return false;
+
+        bool hovered=false, held=false;
+        bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+
+        updateTexture();
+
+        ImVec2 uv_0 = uv0;
+        ImVec2 uv_1 = uv1;
+        if (hovered && hoverModeIfSupported) isAtLeastOneWidgetInHoverMode = true;
+        if ((persistentTexId && hoverModeIfSupported && hovered) || !persistentTexId || !hoverModeIfSupported) {
+            const ImVec2 uvFrameDelta = uvFrame1 - uvFrame0;
+            uv_0 = uvFrame0 + uv0*uvFrameDelta;
+            uv_1 = uvFrame0 + uv1*uvFrameDelta;
+        }
+        else {
+            // We must use frame zero here:
+            ImVec2 uvFrame0,uvFrame1;
+            calculateTexCoordsForFrame(0,uvFrame0,uvFrame1);
+            const ImVec2 uvFrameDelta = uvFrame1 - uvFrame0;
+            uv_0 = uvFrame0 + uv0*uvFrameDelta;
+            uv_1 = uvFrame0 + uv1*uvFrameDelta;
+        }
+
+
+        // Render
+        const ImU32 col = GetColorU32((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+        RenderFrame(bb.Min, bb.Max, col, true, ImClamp((float)ImMin(padding.x, padding.y), 0.0f, style.FrameRounding));
+        if (bg_col.w > 0.0f)
+            window->DrawList->AddRectFilled(image_bb.Min, image_bb.Max, GetColorU32(bg_col));
+
+        window->DrawList->AddImage(texId, image_bb.Min, image_bb.Max, uv_0, uv_1, GetColorU32(tint_col));
+
+        if (hasText) ImGui::RenderText(start,label);
+        return pressed;
+    }
+
+
+    inline int getWidth() const {return w;}
+    inline int getHeight() const {return h;}
+    inline int getNumFrames() const {return frames;}
+    inline ImTextureID getTexture() const {return texId;}
+
+    private:
+    AnimatedImageInternal(const AnimatedImageInternal& ) {}
+    void operator=(const AnimatedImageInternal& ) {}
+    void rearrangeBufferForPersistentTexture()  {
+        const int newBufferSize = w*numFramesPerRowInPersistentTexture*h*numFramesPerColInPersistentTexture*4;
+
+        // BUFFER: frames images one below each other: size: 4*w x (h*frames)
+        // TMP:    frames images numFramesPerRowInPersistentTexture * (4*w) x (h*numFramesPerColInPersistentTexture)
+
+        const int strideSz = w*4;
+        const int frameSz = strideSz*h;
+        ImVector<unsigned char> tmp;tmp.resize(newBufferSize);
+
+        unsigned char* pw=&tmp[0];
+        const unsigned char* pr=&buffer[0];
+
+        int frm=0,colSz=0;
+        while (frm<frames)	{
+            for (int y = 0; y<h;y++)    {
+                pr=&buffer[frm*frameSz + y*strideSz];
+                colSz = numFramesPerRowInPersistentTexture>(frames-frm)?(frames-frm):numFramesPerRowInPersistentTexture;
+                for (int col = 0; col<colSz;col++)    {
+                    memcpy(pw,pr,strideSz);
+                    pr+=frameSz;
+                    pw+=strideSz;
+                }
+                if (colSz<numFramesPerRowInPersistentTexture) {
+                    for (int col = colSz;col<numFramesPerRowInPersistentTexture;col++)    {
+                        memset(pw,0,strideSz);
+                        pw+=strideSz;
+                    }
+                }
+            }
+            frm+=colSz;
+        }
+
+        //-----------------------------------------------------------------------
+        buffer.swap(tmp);
+
+#       ifdef DEBUG_OUT_TEXTURE
+        stbi_write_png("testOutputPng.png", w*numFramesPerRowInPersistentTexture,h*numFramesPerColInPersistentTexture, 4, &buffer[0], w*numFramesPerRowInPersistentTexture*4);
+#       undef DEBUG_OUT_TEXTURE
+#       endif //DEBUG_OUT_TEXTURE
+    }
+    void calculateTexCoordsForFrame(int frm,ImVec2& uv0Out,ImVec2& uv1Out) const    {
+        uv0Out=ImVec2((float)(frm%numFramesPerRowInPersistentTexture)/(float)numFramesPerRowInPersistentTexture,(float)(frm/numFramesPerRowInPersistentTexture)/(float)numFramesPerColInPersistentTexture);
+        uv1Out=ImVec2(uv0Out.x+1.f/(float)numFramesPerRowInPersistentTexture,uv0Out.y+1.f/(float)numFramesPerColInPersistentTexture);
+    }
+
+};
+
+AnimatedImage::FreeTextureDelegate AnimatedImage::FreeTextureCb =
+#ifdef IMGUI_USE_AUTO_BINDING
+    &ImImpl_FreeTexture;
+#else //IMGUI_USE_AUTO_BINDING
+    NULL;
+#endif //IMGUI_USE_AUTO_BINDING
+AnimatedImage::GenerateOrUpdateTextureDelegate AnimatedImage::GenerateOrUpdateTextureCb =
+#ifdef IMGUI_USE_AUTO_BINDING
+    &ImImpl_GenerateOrUpdateTexture;
+#else //IMGUI_USE_AUTO_BINDING
+    NULL;
+#endif //IMGUI_USE_AUTO_BINDING
+
+ImVec2 AnimatedImage::MaxPersistentTextureSize(2048,2048);
+
+AnimatedImage::AnimatedImage(const char *filename, bool useHoverModeIfSupported)    {
+    ptr = (AnimatedImageInternal*) ImGui::MemAlloc(sizeof(AnimatedImageInternal));
+    IM_PLACEMENT_NEW(ptr) AnimatedImageInternal(filename,useHoverModeIfSupported);
+}
+AnimatedImage::AnimatedImage(ImTextureID myTexId, int animationImageWidth, int animationImageHeight, int numFrames, int numFramesPerRowInTexture, int numFramesPerColumnInTexture, float delayBetweenFramesInCs, bool useHoverMode) {
+    ptr = (AnimatedImageInternal*) ImGui::MemAlloc(sizeof(AnimatedImageInternal));
+    IM_PLACEMENT_NEW(ptr) AnimatedImageInternal(myTexId,animationImageWidth,animationImageHeight,numFrames,numFramesPerRowInTexture,numFramesPerColumnInTexture,delayBetweenFramesInCs,useHoverMode);
+}
+AnimatedImage::AnimatedImage()  {
+    ptr = (AnimatedImageInternal*) ImGui::MemAlloc(sizeof(AnimatedImageInternal));
+    IM_PLACEMENT_NEW(ptr) AnimatedImageInternal();
+}
+AnimatedImage::~AnimatedImage() {
+    clear();
+    ptr->~AnimatedImageInternal();
+    ImGui::MemFree(ptr);ptr=NULL;
+}
+void AnimatedImage::clear() {ptr->clear();}
+void AnimatedImage::render(ImVec2 size, const ImVec2 &uv0, const ImVec2 &uv1, const ImVec4 &tint_col, const ImVec4 &border_col) const   {ptr->render(size,uv0,uv1,tint_col,border_col);}
+bool AnimatedImage::renderAsButton(const char *label, ImVec2 size, const ImVec2 &uv0, const ImVec2 &uv1, int frame_padding, const ImVec4 &bg_col, const ImVec4 &tint_col)   {return ptr->renderAsButton(label,size,uv0,uv1,frame_padding,bg_col,tint_col);}
+bool AnimatedImage::load(const char *filename, bool useHoverModeIfSupported)    {return ptr->load(filename,useHoverModeIfSupported);}
+bool AnimatedImage::create(ImTextureID myTexId, int animationImageWidth, int animationImageHeight, int numFrames, int numFramesPerRowInTexture, int numFramesPerColumnInTexture, float delayBetweenFramesInCs, bool useHoverMode)   {return ptr->create(myTexId,animationImageWidth,animationImageHeight,numFrames,numFramesPerRowInTexture,numFramesPerColumnInTexture,delayBetweenFramesInCs,useHoverMode);}
+int AnimatedImage::getWidth() const {return ptr->getWidth();}
+int AnimatedImage::getHeight() const    {return ptr->getHeight();}
+int AnimatedImage::getNumFrames() const {return ptr->getNumFrames();}
+bool AnimatedImage::areAllFramesInASingleTexture() const    {return ptr->areAllFramesInASingleTexture();}
+#endif //NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
+
+
 /*
     inline ImVec2 mouseToPdfRelativeCoords(const ImVec2 &mp) const {
        return ImVec2((mp.x+cursorPosAtStart.x-startPos.x)*(uv1.x-uv0.x)/zoomedImageSize.x+uv0.x,
@@ -835,6 +1402,7 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
 
     return rv;
 }
+
 
 
 /* // Snippet by Omar. To evalutate. But in main.cpp thare's another example that supports correct window resizing.
