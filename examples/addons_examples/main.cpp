@@ -3,9 +3,6 @@
 #include <time.h>   // very common plain c header file used only by DateChooser
 #endif //NO_IMGUIDATECHOOSER
 
-#ifdef IMGUISCINTILLA_ACTIVATED
-#include <addons/imguiscintilla/imguiscintilla.h>
-#endif //IMGUISCINTILLA_ACTIVATED
 
 // Helper stuff we'll use later ----------------------------------------------------
 ImTextureID myImageTextureId2 = 0;
@@ -304,8 +301,8 @@ void DrawGL()	// Mandatory
             // They work, but for some strange reasons only with windows properly set up through ImGui::Begin(...) and ImGui::End(...) (and whose name is NOT 'Debug').
             // [Please remember that double clicking the titlebar of a window minimizes it]
             // No problem with full frame rates.
-            static bool open = true;
-            ImGui::Begin("Debug ", &open, ImVec2(450,300),-1.f,ImGuiWindowFlags_ShowBorders);  // Try using 10 FPS and replacing the title with "Debug"...
+            static bool open = true;static bool no_border = false;static float bg_alpha = -1.f;
+            ImGui::Begin("Debug ", &open, ImVec2(450,300),bg_alpha,no_border ? 0 : ImGuiWindowFlags_ShowBorders);  // Try using 10 FPS and replacing the title with "Debug"...
 
             ImGui::Text("\n");ImGui::Separator();ImGui::Text("Pause/Resume ImGui and process input as usual");ImGui::Separator();
             ImGui::Text("Press F1 (or lowercase 'h') to turn ImGui on and off.");
@@ -360,6 +357,14 @@ void DrawGL()	// Mandatory
             //ImGui::Checkbox("Font Allow User Scaling", &ImGui::GetIO().FontAllowUserScaling);
             //if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","If true, CTRL + mouse wheel scales the window\n(or just its font size if child window).");
             ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.2f"); // scale everything
+
+            // Some options ported from imgui_demo.cpp
+            ImGui::Text("\n");ImGui::Separator();ImGui::Text("Window options");ImGui::Separator();
+            ImGui::Checkbox("No border", &no_border);
+            ImGui::SameLine(0,25);
+            ImGui::PushItemWidth(100);
+            ImGui::DragFloat("Window Fill Alpha", &bg_alpha, 0.005f, -0.01f, 1.0f, bg_alpha < 0.0f ? "(default)" : "%.3f"); // Not exposing zero here so user doesn't "close" the UI (zero alpha clips all widgets). But application code could have a toggle to switch between zero and non-zero.
+            ImGui::PopItemWidth();
 
 
             // imguistyleserializer test
@@ -734,15 +739,6 @@ void DrawGL()	// Mandatory
 
             ImGui::End();
         }
-#       ifdef IMGUISCINTILLA_ACTIVATED
-        if (show_scintilla_test_window) {
-            if (ImGui::Begin("Example: Scintilla Editor", &show_scintilla_test_window,ImVec2(700,600))){
-                ScintillaEditor* sci = ImGuiScintilla("Scintilla Editor");  // However we sould destroy it in destroyGL() with ScintillaEditor::destroy(sci); AFAIK
-                //sci->setText("Buonasera");
-                ImGui::End();
-            }
-        }
-#       endif //IMGUISCINTILLA_ACTIVATED
 
         // imguitoolbar test 2: two global toolbars one at the top and one at the left
 #       ifndef NO_IMGUITOOLBAR

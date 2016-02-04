@@ -20,12 +20,18 @@ bool ImGui::ListViewBase::render(float listViewHeight, const ImVector<int> *pOpt
 
     static ImColor transparentColor(1,1,1,0);
     const bool useFullHeight = listViewHeight <0;
+    const ImGuiStyle& style = ImGui::GetStyle();
 
     // Column headers
     float columnWidthSum = 0;
+    ImGui::PushStyleColor(ImGuiCol_Border,style.Colors[ImGuiCol_Column]);
     ImGui::Separator();
+    ImGui::PopStyleColor();
     ImGui::Columns(maxNumColumnToDisplay);
-    ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);bool mustDisplayTooltip=false;
+    ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);
+    ImGui::PushStyleColor(ImGuiCol_Border,transparentColor);
+    ImGui::PushStyleColor(ImGuiCol_BorderShadow,transparentColor);
+    bool mustDisplayTooltip=false;
     for (int colID=0;colID<maxNumColumnToDisplay;colID++)   {
         col = pOptionalColumnReorderVector ? (*pOptionalColumnReorderVector)[colID] : colID;
         HeaderData& hd = m_headerData[col];
@@ -53,16 +59,17 @@ bool ImGui::ListViewBase::render(float listViewHeight, const ImVector<int> *pOpt
                     hd.reset();
                     getHeaderData(col,hd);  // Needed because we must update "hd.sorting.sortingAscending"
                 }
-                const ImGuiStyle& style = ImGui::GetStyle();
                 ImGui::SameLine(0,ImGui::GetColumnWidth(colID)-ImGui::CalcTextSize(hd.name).x-ImGui::CalcTextSize(hd.sorting.sortingAscending ? " v" : " ^").x-style.FramePadding.x*2.0-style.ItemSpacing.x);
                 ImGui::Text(hd.sorting.sortingAscending ? "v" : "^");
             }
         }
         if (colID!=maxNumColumnToDisplay-1) ImGui::NextColumn();
     }
-    ImGui::PopStyleColor();
+    ImGui::PopStyleColor(3);
     ImGui::Columns(1);
+    ImGui::PushStyleColor(ImGuiCol_Border,style.Colors[ImGuiCol_Column]);
     ImGui::Separator();
+    ImGui::PopStyleColor();
 
     // Rows
     bool rowSelectionChanged = false;bool colSelectionChanged = false;  // The latter is not exposed but might turn useful
@@ -365,7 +372,10 @@ bool ImGui::ListViewBase::render(float listViewHeight, const ImVector<int> *pOpt
         firstTimeDrawingRows = false;
     }   // skipDisplaying
     if (!useFullHeight) ImGui::EndChild();
+
+    ImGui::PushStyleColor(ImGuiCol_Border,style.Colors[ImGuiCol_Column]);
     ImGui::Separator();
+    ImGui::PopStyleColor();
 
 
     ImGui::PopID();

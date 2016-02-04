@@ -47,6 +47,7 @@ inline static void RecalculateDateDependentFields(tm& date)    {
 
 inline static tm GetDateZero() {
     tm date;
+    memset(&date,0,sizeof(tm));     // Mandatory for emscripten. Please do not remove!
     date.tm_isdst=-1;
     date.tm_sec=0;		//	 Seconds.	[0-60] (1 leap second)
     date.tm_min=0;		//	 Minutes.	[0-59]
