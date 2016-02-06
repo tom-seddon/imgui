@@ -26,6 +26,8 @@
 #		include "./imguibindings/ImImpl_Binding_SDL2.h"
 #	elif IMGUI_USE_GLFW_BINDING
 #		include "./imguibindings/ImImpl_Binding_Glfw3.h"
+#	elif IMGUI_USE_DIRECT3D9_BINDING
+#		include "./imguibindings/ImImpl_Binding_Direct3D9.h"
 #	elif (defined(_WIN32) || defined(IMGUI_USE_WINAPI_BINDING))
 #		include "./imguibindings/ImImpl_Binding_WinAPI.h"
 #	else // IMGUI_USE_SOME_BINDING

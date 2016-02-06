@@ -18,6 +18,7 @@ CONFIG+= use_glfw3
 #CONFIG+= use_glut
 #CONFIG+= use_sdl2
 #CONFIG+= use_winapi
+#CONFIG+= use_direct3d9
 # Optional, but it might be mandatory for IMGUI_USE_WINAPI (i.e. CONFIG+= use_winapi)
 #CONFIG+= use_glew
 
@@ -54,6 +55,7 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/ImImpl_Binding_Glut.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/ImImpl_Binding_SDL2.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/ImImpl_Binding_WinAPI.h"	    \
+	   $$IMGUI_BASE_PATH"/addons/imguibindings/ImImpl_Binding_Direct3D9.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/imguibindings.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/imguistring/imguistring.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguifilesystem/imguifilesystem.h"		    \
@@ -161,7 +163,9 @@ HEADERS+= /usr/include/GL/glew.h
 }
 
 !use_winapi {
+!use_direct3d9	{
 LIBS+= -lpthread  -lGL -lX11 -ldl  #-static-libstdc++ -static-libgcc
+}
 }
 use_winapi    {
 DEFINES+= IMIMPL_USE_WINAPI _WIN32 WIN32 #_MSC_VER
@@ -174,6 +178,19 @@ LIBS+= -L"/usr/i686-w64-mingw32/lib" \
        -L"/usr/lib/gcc/i686-w64-mingw32/4.6"
 
 LIBS+= -lopengl32 -luser32 -lkernel32 -static-libgcc -static-libstdc++
+QT_CXXFLAGS+=--std=c++0x
+}
+use_direct3d9 {
+DEFINES+= IMIMPL_USE_DIRECT3D9 _WIN32 WIN32 #_MSC_VER
+# These paths should be adapted as well:
+INCLUDEPATH+=/usr/i686-w64-mingw32/include		\
+	     /usr/include/c++/4.6/i686-w64-mingw32	\
+	     /usr/include/c++/4.6/i686-w64-mingw32/bits	\
+	     /usr/lib/gcc/i686-w64-mingw32/4.6/include
+LIBS+= -L"/usr/i686-w64-mingw32/lib" \
+       -L"/usr/lib/gcc/i686-w64-mingw32/4.6"
+
+LIBS+= -ld3d9 -luser32 -lkernel32 -static-libgcc -static-libstdc++
 QT_CXXFLAGS+=--std=c++0x
 }
 

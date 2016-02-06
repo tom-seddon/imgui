@@ -21,6 +21,7 @@ bool ImGui::ListViewBase::render(float listViewHeight, const ImVector<int> *pOpt
     static ImColor transparentColor(1,1,1,0);
     const bool useFullHeight = listViewHeight <0;
     const ImGuiStyle& style = ImGui::GetStyle();
+    const float columnHeaderDeltaOffsetX = style.WindowPadding.x;
 
     // Column headers
     float columnWidthSum = 0;
@@ -36,14 +37,14 @@ bool ImGui::ListViewBase::render(float listViewHeight, const ImVector<int> *pOpt
         col = pOptionalColumnReorderVector ? (*pOptionalColumnReorderVector)[colID] : colID;
         HeaderData& hd = m_headerData[col];
         if (mustFetchHeaderData)    {
-            m_columnOffsets[col] = (colID>0 && !useFullHeight) ? (columnWidthSum-8) : columnWidthSum;
+            m_columnOffsets[col] = (colID>0 && !useFullHeight) ? (columnWidthSum-columnHeaderDeltaOffsetX) : columnWidthSum;
             if (hd.formatting.columnWidth>0) {
                 ImGui::SetColumnOffset(colID,m_columnOffsets[col]);
                 columnWidthSum+=hd.formatting.columnWidth;
             }
             else columnWidthSum+=ImGui::GetColumnWidth(colID);
         }
-        else if (!useFullHeight) ImGui::SetColumnOffset(colID,m_columnOffsets[col]+8);//useFullHeight ? 0 : 8);
+        else if (!useFullHeight) ImGui::SetColumnOffset(colID,m_columnOffsets[col]+columnHeaderDeltaOffsetX);//useFullHeight ? 0 : columnHeaderDeltaOffsetX);
         mustDisplayTooltip = hd.formatting.headerTooltip && strlen(hd.formatting.headerTooltip)>0;
         if (!hd.sorting.sortable) {
             ImGui::Text("%s",hd.name);
@@ -74,7 +75,10 @@ bool ImGui::ListViewBase::render(float listViewHeight, const ImVector<int> *pOpt
     // Rows
     bool rowSelectionChanged = false;bool colSelectionChanged = false;  // The latter is not exposed but might turn useful
     bool skipDisplaying = false;
-    if (!useFullHeight) skipDisplaying = !ImGui::BeginChild("##ListViewRows",ImVec2(0,listViewHeight));
+    if (!useFullHeight) {
+        //ImGui::SetNextWindowContentWidth(ImGui::GetWindowContentRegionWidth() + 50);    // Last number is hard-coded! Bad!
+        skipDisplaying = !ImGui::BeginChild("##ListViewRows",ImVec2(0,listViewHeight));//,false,ImGuiWindowFlags_HorizontalScrollbar);
+    }
     if (!skipDisplaying) {
         float itemHeight = ImGui::GetTextLineHeightWithSpacing();
         int displayStart = 0, displayEnd = (int) numRows;

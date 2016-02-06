@@ -73,6 +73,12 @@
 #       include <GLFW/glfw3native.h>    // glfwGetWin32Window(...) used by ImImpl_ImeSetInputScreenPosFn(...)
 #   endif //_WIN32
 //-------------------------------------------------------------------------------
+#elif (defined(IMGUI_USE_DIRECT3D9_BINDING))
+//-------------------------------------------------------------------------------
+#include <d3dx9.h>
+//#define DIRECTINPUT_VERSION 0x0800
+//#include <dinput.h>
+//-------------------------------------------------------------------------------
 #elif (defined(_WIN32) || defined(IMGUI_USE_WINAPI_BINDING))
 //-------------------------------------------------------------------------------
 #   ifndef IMGUI_USE_GLEW
@@ -241,7 +247,7 @@ struct ImImpl_InitParams	{
     }
 };
 
-#ifdef IMGUI_USE_WINAPI_BINDING
+#ifdef IMGUI_USE_AUTO_BINDING_WINDOWS
 extern int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine, int iCmdShow);
 #else //IMGUI_USE_WINAPI_BINDING
 extern int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams=NULL,int argc=0, char** argv=NULL);
@@ -251,11 +257,13 @@ extern int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams=NULL,int arg
 extern void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams=NULL);
 extern void DestroyImGuiFontTexture();
 
+#ifdef IMGUI_USE_AUTO_BINDING_OPENGL
 extern void InitImGuiProgram();
 extern void DestroyImGuiProgram();
 
 extern void InitImGuiBuffer();
 extern void DestroyImGuiBuffer();
+#endif //IMGUI_USE_AUTO_BINDING_OPENGL
 extern void ImImpl_RenderDrawLists(ImDrawData* draw_data);
 
 
@@ -267,6 +275,8 @@ extern void ImImpl_ClearColorBuffer(const ImVec4& bgColor=ImVec4(0.5f, 0.5f, 0.5
 extern void ImImpl_FlipTexturesVerticallyOnLoad(bool flag_true_if_should_flip);
 extern ImTextureID ImImpl_LoadTexture(const char* filename,int req_comp=0,bool useMipmapsIfPossible=false,bool wraps=true,bool wrapt=true);
 extern ImTextureID ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory, int filenameInMemorySize, int req_comp=0, bool useMipmapsIfPossible=false,bool wraps=true,bool wrapt=true);
+
+#ifdef IMGUI_USE_AUTO_BINDING_OPENGL
 
 #ifndef IMIMPL_SHADER_NONE
 class ImImpl_CompileShaderStruct {
@@ -323,6 +333,8 @@ extern GLuint ImImpl_CompileShadersFromFile(const char* vertexShaderFilePath, co
 extern "C" void GLDebugMessageCallback(GLenum source, GLenum type,
     GLuint id, GLenum severity,GLsizei length, const GLchar *msg,const void *userParam);
 #endif //IMIMPL_FORCE_DEBUG_CONTEXT
+
+#endif //IMGUI_USE_AUTO_BINDING_OPENGL
 
 extern void ImImpl_NewFramePaused();
 

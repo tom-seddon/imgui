@@ -61,8 +61,19 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #endif //NO_IMGUITABWINDOW
 
 #undef IMGUI_USE_AUTO_BINDING
-#if (defined(IMGUI_USE_GLUT_BINDING) || defined(IMGUI_USE_SDL2_BINDING) || defined(IMGUI_USE_GLFW_BINDING) || defined(IMGUI_USE_WINAPI_BINDING))
+#undef IMGUI_USE_AUTO_BINDING_OPENGL
+#undef IMGUI_USE_AUTO_BINDING_DIRECT3D
+#undef IMGUI_USE_AUTO_BINDING_WINDOWS
+#if (defined(IMGUI_USE_GLUT_BINDING) || defined(IMGUI_USE_SDL2_BINDING) || defined(IMGUI_USE_GLFW_BINDING) || defined(IMGUI_USE_WINAPI_BINDING) || defined(IMGUI_USE_DIRECT3D9_BINDING))
 #	define IMGUI_USE_AUTO_BINDING
+#   if (!defined(IMGUI_USE_DIRECT3D9_BINDING))
+#   define IMGUI_USE_AUTO_BINDING_OPENGL
+#   else //(!defined(IMGUI_USE_DIRECT3D9_BINDING))
+#   define IMGUI_USE_AUTO_BINDING_DIRECT3D
+#   endif //(!defined(IMGUI_USE_DIRECT3D9_BINDING))
+#   if (defined(IMGUI_USE_WINAPI_BINDING) || defined(IMGUI_USE_DIRECT3D9_BINDING))
+#   define IMGUI_USE_AUTO_BINDING_WINDOWS
+#   endif //
 # 	include "./imguibindings/imguibindings.h"
 #endif //IMGUI_USE_AUTO_BINDING
 

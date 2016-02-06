@@ -661,7 +661,7 @@ void DestroyGL()    // Mandatory
 
 
 // Application code
-#ifndef IMIMPL_USE_WINAPI
+#ifndef IMGUI_USE_AUTO_BINDING_WINDOWS  // IMGUI_USE_AUTO_ definitions get defined automatically (e.g. do NOT touch them!)
 int main(int argc, char** argv)
 {
 #   ifndef USE_ADVANCED_SETUP
@@ -718,7 +718,7 @@ int main(int argc, char** argv)
 
 	return 0;
 }
-#else //IMIMPL_USE_WINAPI
+#else //IMGUI_USE_AUTO_BINDING_WINDOWS
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine, int iCmdShow)   // This branch has made my code less concise (I will consider stripping it)
 {
 #   ifndef USE_ADVANCED_SETUP
@@ -746,7 +746,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
 
     return 0;
 }
-#endif //IMIMPL_USE_WINAPI
+#endif //IMGUI_USE_AUTO_BINDING_WINDOWS
 
 
 

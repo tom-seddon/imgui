@@ -29,12 +29,12 @@ inline void MyTestListView() {
     if (lv.headers.size()==0) {
         lv.headers.push_back(ImGui::ListViewHeader("Icon",NULL,ImGui::ListView::HT_ICON,-1,20));
         lv.headers.push_back(ImGui::ListViewHeader("Index",NULL,ImGui::ListView::HT_INT,-1,30));
-        lv.headers.push_back(ImGui::ListViewHeader("Path",NULL,ImGui::ListView::HT_STRING,-1,110,"","",true,ImGui::ListViewHeaderEditing(true,1024)));
+        lv.headers.push_back(ImGui::ListViewHeader("Path",NULL,ImGui::ListView::HT_STRING,-1,80,"","",true,ImGui::ListViewHeaderEditing(true,1024)));
         lv.headers.push_back(ImGui::ListViewHeader("Offset",NULL,ImGui::ListView::HT_INT,-1,40,"","",true));
         lv.headers.push_back(ImGui::ListViewHeader("Bytes","The number of bytes",ImGui::ListView::HT_UNSIGNED,-1,40));
-        lv.headers.push_back(ImGui::ListViewHeader("Valid","A boolean flag",ImGui::ListView::HT_BOOL,-1,95,"Flag: ","!",true,ImGui::ListViewHeaderEditing(true)));
+        lv.headers.push_back(ImGui::ListViewHeader("Valid","A boolean flag",ImGui::ListView::HT_BOOL,-1,70,"Flag: ","!",true,ImGui::ListViewHeaderEditing(true)));
         lv.headers.push_back(ImGui::ListViewHeader("Length","A float[3] array",ImGui::ListViewHeaderType(ImGui::ListView::HT_FLOAT,3),2,100,""," mt",ImGui::ListViewHeaderSorting(true,1),ImGui::ListViewHeaderEditing(true,3,-180.0,180.0))); // Note that here we use 2 decimals (precision), but 3 when editing; we use an explicit call to "ListViewHeaderType",specifying that the HT_FLOAT is composed by three elements; we have used an explicit call to "ListViewHeaderSorting" specifying that the items must be sorted based on the second float.
-        lv.headers.push_back(ImGui::ListViewHeader("Color",NULL,ImGui::ListView::HT_COLOR,-1,95,"","",true,ImGui::ListViewHeaderEditing(true))); // precision = -1 -> Hex notation; precision > 1 -> float notation; other = undefined behaviour. To display alpha we must use "ListViewHeaderType" explicitely like in the line above, specifying 4.
+        lv.headers.push_back(ImGui::ListViewHeader("Color",NULL,ImGui::ListView::HT_COLOR,-1,70,"","",true,ImGui::ListViewHeaderEditing(true))); // precision = -1 -> Hex notation; precision > 1 -> float notation; other = undefined behaviour. To display alpha we must use "ListViewHeaderType" explicitely like in the line above, specifying 4.
 
         // Warning: old compilers don't like defining classes inside function scopes
         class MyListViewItem : public ImGui::ListView::ItemBase {
@@ -231,7 +231,8 @@ void DestroyGL()    // Mandatory
 }
 void DrawGL()	// Mandatory
 {
-        ImImpl_ClearColorBuffer(ImVec4(0.5f, 0.5f, 0.5f, 1.0f));    // Warning: it does not clear depth buffer
+        static ImVec4 clearColor(0.5f, 0.5f, 0.5f, 1.0f);
+        ImImpl_ClearColorBuffer(clearColor);    // Warning: it does not clear depth buffer
 
         // Pause/Resume ImGui and process input as usual
         if (!ImGui::GetIO().WantCaptureKeyboard)    {
@@ -365,7 +366,11 @@ void DrawGL()	// Mandatory
             ImGui::PushItemWidth(100);
             ImGui::DragFloat("Window Fill Alpha", &bg_alpha, 0.005f, -0.01f, 1.0f, bg_alpha < 0.0f ? "(default)" : "%.3f"); // Not exposing zero here so user doesn't "close" the UI (zero alpha clips all widgets). But application code could have a toggle to switch between zero and non-zero.
             ImGui::PopItemWidth();
-
+            ImGui::PushItemWidth(275);
+            ImGui::ColorEdit3("glClearColor",&clearColor.x);
+            ImGui::PopItemWidth();
+            ImGui::SameLine(0,10);
+            if (ImGui::SmallButton("Reset##glClearColorReset")) clearColor.x=clearColor.y=clearColor.z=.5f;
 
             // imguistyleserializer test
             ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguistyleserializer");ImGui::Separator();
@@ -807,7 +812,7 @@ void DrawGL()	// Mandatory
 //#   define USE_ADVANCED_SETUP   // in-file definition (see below). For now it just adds custom fonts and different FPS settings (please read below).
 
 // Application code
-#ifndef IMGUI_USE_WINAPI_BINDING
+#ifndef IMGUI_USE_AUTO_BINDING_WINDOWS  // IMGUI_USE_AUTO_ definitions get defined automatically (e.g. do NOT touch them!)
 int main(int argc, char** argv)
 {
 
@@ -867,7 +872,7 @@ int main(int argc, char** argv)
 
 	return 0;
 }
-#else //IMGUI_USE_WINAPI_BINDING
+#else //IMGUI_USE_AUTO_BINDING_WINDOWS
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine, int iCmdShow)   // This branch has made my code less concise (I will consider stripping it)
 {
 #   ifndef USE_ADVANCED_SETUP
@@ -921,7 +926,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
 
     return 0;
 }
-#endif //IMGUI_USE_WINAPI_BINDING
+#endif //IMGUI_USE_AUTO_BINDING_WINDOWS
 
 
 

@@ -73,11 +73,11 @@ void DrawGL()	// Mandatory
 
 
 
-#ifndef IMGUI_USE_WINAPI_BINDING
+#ifndef IMGUI_USE_AUTO_BINDING_WINDOWS  // IMGUI_USE_AUTO_ definitions get defined automatically (e.g. do NOT touch them!)
 int main(int argc, char** argv)
-#else // IMGUI_USE_WINAPI_BINDING
+#else // IMGUI_USE_AUTO_BINDING_WINDOWS
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine, int iCmdShow)   // This branch has made my code less concise (I will consider stripping it)
-#endif //IMGUI_USE_WINAPI_BINDING
+#endif //IMGUI_USE_AUTO_BINDING_WINDOWS
 {    
     const float fontSize = 13.f;                        // 13.f allows us to reuse the default ImGui font as NORMAL font if we want.
     const bool useDefaultImGuiFontAsNormalFont = false;
@@ -123,11 +123,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
     gImGuiInitParams.gFpsClampOutsideImGui = 10.f;  // Optional Max allowed FPS (default -1 => unclamped). Useful for setting a different FPS for your main rendering.
 
 
-#ifndef IMGUI_USE_WINAPI_BINDING
+#ifndef IMGUI_USE_AUTO_BINDING_WINDOWS
     ImImpl_Main(&gImGuiInitParams,argc,argv);
-#else // IMGUI_USE_WINAPI_BINDING
+#else // IMGUI_USE_AUTO_BINDING_WINDOWS
     ImImpl_WinMain(&gImGuiInitParams,hInstance,hPrevInstance,lpCmdLine,iCmdShow);
-#endif //IMGUI_USE_WINAPI_BINDING
+#endif //IMGUI_USE_AUTO_BINDING_WINDOWS
 
     return 0;
 }
