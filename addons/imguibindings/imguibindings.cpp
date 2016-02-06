@@ -108,8 +108,27 @@ void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,in
 
     D3DLOCKED_RECT tex_locked_rect;
     if (texid->LockRect(0, &tex_locked_rect, NULL, 0) != D3D_OK) {texid->Release();texid=0;return;}
-    for (int y = 0; y < height; y++)
-        memcpy((unsigned char *)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, pixels + (width * channels) * y, (width * channels));
+    if (channels==3 || channels==4) {
+        unsigned char* pw = (unsigned char *) tex_locked_rect.Pitch;
+        const unsigned char* ppxl = pixels;
+        for (int y = 0; y < height; y++)    {
+            pw = (unsigned char *)tex_locked_rect.pBits + tex_locked_rect.Pitch * y;  // each row has Pitch bytes
+            ppxl = &pixels[y*width*channels];
+            for( int x = 0; x < width; x++ )
+            {
+                *pw++ = ppxl[2];
+                *pw++ = ppxl[1];
+                *pw++ = ppxl[0];
+                if (channels==4) *pw++ = ppxl[3];
+                ppxl+=channels;
+            }
+        }
+    }
+    else {
+        for (int y = 0; y < height; y++)    {
+            memcpy((unsigned char *)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, pixels + (width * channels) * y, (width * channels));
+        }
+    }
     texid->UnlockRect(0);
 
     // Sorry, but I've got no idea on how to set wraps and wrapt in Direct3D9....
