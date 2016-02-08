@@ -4,10 +4,11 @@ HOW TO COMPILE THE ADDON EXAMPLES:
 
 To compile these two examples (main.cpp and main2.cpp), no makefile is present.
 
-Instead three project files are provided:
-->	addons_examples.pro: 				A Qt Creator project file that can be used in Ubuntu only and must be edited to set the paths and to choose the example to compile (handy for Linux and Mac users). This file can be tweaked to use the libraries of your choice (see below).
-->	addons_examples_mingw.cbp: 			A CodeBlocks project file that can be used to compile the first demo for Windows (to compile the second demo simply replace main.cpp with main2.cpp). This demo requires the glew library only to compile.
-->  addons_example_monodevelop.cproj:	A Monodevelop C++ project file that contains both main*.cpp files: however only one has its "Build Action" set to "compile" (this makes it easier to switch between them). It requires the two C++ packages "gl" and "sdl2": their absolute paths are hardcoded for Ubuntu Linux 64bit, but they can be easily reconfigured by the user.
+Instead four project files are provided:
+->	addons_examples.pro: 					A Qt Creator project file that can be used in Ubuntu only and must be edited to set the paths and to choose the example to compile (handy for Linux and Mac users). This file can be tweaked to use the libraries of your choice (see below).
+->	addons_examples_mingw.cbp: 				A CodeBlocks project file that can be used to compile the first demo for Windows (to compile the second demo simply replace main.cpp with main2.cpp). This demo requires the glew library only to compile.
+->	addons_examples_mingw_direct3d9.cbp: 	A CodeBlocks project file that can be used to compile the first demo for Windows (to compile the second demo simply replace main.cpp with main2.cpp). This demo requires the direct3d9 libraries to compile.
+->  addons_example_monodevelop.cproj:		A Monodevelop C++ project file that contains both main*.cpp files: however only one has its "Build Action" set to "compile" (this makes it easier to switch between them). It requires the two C++ packages "gl" and "sdl2": their absolute paths are hardcoded for Ubuntu Linux 64bit, but they can be easily reconfigured by the user.
 Even if you use another IDE, in case of compilation problems, it can still be useful to open these files with a text editor and see their content.
 
 You can test the two examples (without compiling them) in your web browser by clicking on the two .html files inside the html subfolder (although not all the addons might be active in this build).
@@ -17,11 +18,9 @@ UPDATE: There's a third demo named main3.cpp, but it's currently used to develop
 
 
 ====================================
-WHAT IS IMGUI ADDONS ?
+WHAT IS "IMGUI ADDONS" ?
 ====================================
-It's a collection of "extra imgui widgets" together with an automatic way of "binding" ImGui to a specific openGL library (glfw, SDL2, glut and WinAPI), so that a single cpp "main" file can be used for all of them.
-
-It supports openGL only (==> DIRECTX IS NOT SUPPORTED <==).
+It's a collection of "extra imgui widgets" together with an automatic way of "binding" ImGui to a specific openGL library (glfw, SDL2, glut and WinAPI), or to the Direct3D9 library, so that a single cpp "main" file can be used for all of them.
 
 "ImGui Addons" does NOT modify the ImGui library itself in any way (i.e. imgui.cpp, imgui_draw.cpp and imgui_demo.cpp are untouched); it just adds:
 -> the "addons" subfolder.
@@ -44,7 +43,9 @@ Currently the extra imgui widgets that are available are:
 							-> PopupMenu (a single column menu with image entries).
 							-> ColorChooser and ColorCombo (based on the code from: https://github.com/benoitjacquier/imgui. Thank you benoitjacquier!).
 							-> InputTextMultilineWithHorizontalScrolling (Roflraging posted it to the ImGui Issue Section here: https://github.com/ocornut/imgui/issues/383. Thank you Roflraging!).
--> imguinodegrapheditor:	-> Based on the code posted by Omar, the creator of ImGui. It's still under developmement, but it should be already usable.
+							-> ImageButtonWithText and ImageWithZoomAndPan.
+							-> The ImageAnimation struct, that can be used to display animated images or animated buttons from frames in a texture or from a .gif image.
+-> imguinodegrapheditor:	-> Based on the code posted by Omar, the creator of ImGui.
 -> imguicodeeditor (WIP, UNUSABLE)	this is an attempt to develop a code editor using ImGui only (without direct STL support).
 					However, developing such a control is a huge challange, and I'm not sure when and if it will eventually be functional.
 					In any case, if you need this kind of control, I suggest you try a more reliable solution, such as the Scintilla Editor,
@@ -72,7 +73,7 @@ And (for expert programmers only) now there's a new kind of imgui addons, called
 That's why I've said "for expert programmers only" above.
 
 Currently "yes addons" are:
--> imguipdfviewer.h/cpp: depends on "LIBS+= -lpoppler-glib -lpoppler" "PKGCONFIG += glib-2.0 gdk-2.0 cairo". (and probably on STL as well).
+-> imguipdfviewer.h/cpp: depends on -lpoppler-glib (that depends on glib-2.0 and cairo, and probably on STL as well).
 
 
 
@@ -101,7 +102,7 @@ Optionally the main method allows the user to directly load ttf fonts (from file
 Another benefit of using a binding is that you can access some helper methods such as ImImpl_LoadTexture(...) and ImImpl_LoadTextureFromMemory(...);
 
 
-3 -> If you use a binding, OPTIONALLY some of these definitions might work at the project level (depending on the binding you choose):
+3 -> If you use an OpenGL binding, OPTIONALLY some of these definitions might work at the project level (depending on the binding you choose):
 IMIMPL_SHADER_NONE 				# no shaders at all, and no vertex buffer object as well (minimal implementation).
 IMIMPL_SHADER_GL3  				# shader uses openGL 3.3 (glsl #version 330)
 IMIMPL_SHADER_GLES 				# shader uses gles (and if IMIMPL_SHADER_GL3 is defined glsl #version 300 es)
@@ -115,7 +116,7 @@ IMGUIBINDINGS_RESTORE_GL_STATE			# restores the glViewport (and most of other GL
 IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON:		# when defined ImGui::GetIO()->Fonts->ClearInputData() and ImGui::GetIO()->Fonts->ClearTexData() are called as soon as possible saving some memory (and allowing you to append new fonts later (e.g. in InitGL())).
 						# it used to be the default, but future ImGui dynamic atlas support will require input data anyway.
 						# The input data is cleaned up before the delation of the font texture when IMGUI_BINDING_CLEAR_INPUT_DATA_SOON is not defined.
-
+						# This definition is available for the Direct3D binding as well.
 
 4 -> OPTIONALLY you can use other definitions at the project level:
 IMGUI_USE_ZLIB					# requires the library zlib. It currently enables loading ttf.gz fonts (from file or embedded in C++ code) through the ImImpl_Main(...) method (only if you use one of the "bindings" above), 
@@ -192,6 +193,11 @@ Some notes:
 	I'm pretty new to emscripten and I don't know if there's some easy workaround to persist file changes when you close the browser.
 	Note: Files passed with --preload-file are copied and grouped together in a blob with the .data extension next to the .html file.
 
+-> There is an imgui addon named imguiemscripten: it's in charge of adding "/persistent_folder" to the emscripten file system.
+   File saved in this folder should persist somewhere in your browser cache (in form of what is called an "IndexedDB", please search your browser's docs for further info).
+   Emscripten users can define NO_IMGUIEMSCRIPTEN to prevent the creation of the persistent folder (NO_IMGUIEMSCRIPTEN should be defined for you in non-emscripten builds).   
+   ATM I have some issue with the persistent folder (basically I don't seem to be able to load something back at init time).
+
 (*): To compile the first demo using the GLUT binding, please try:
 em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_GLUT_BINDING" -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
 	To compile it using GLFW3 try: 
@@ -205,6 +211,7 @@ em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp .
 
 In short I suggest you use the SDL2 binding when building with the emscripten compiler, because you can use native cursors (that are missing from GLFW < 3.1), and unicode support (that is missing from GLUT).
 GLFW can be a possible alternative only for version 3.1 or above.
+
 
 
 
