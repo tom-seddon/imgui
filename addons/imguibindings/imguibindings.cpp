@@ -934,7 +934,7 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
 
 #ifndef IMIMPL_SHADER_NONE
     // Setup render state: alpha-blending enabled, no face culling (or GL_FRONT face culling), no depth testing, scissor enabled
-    GLint last_texture=0;
+    //GLint last_texture=0;
 #   ifdef IMGUIBINDINGS_RESTORE_GL_STATE
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT /*| GL_DEPTH_BUFFER_BIT*/);

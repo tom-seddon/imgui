@@ -231,237 +231,240 @@ void DestroyGL()    // Mandatory
 }
 void DrawGL()	// Mandatory
 {
-        static ImVec4 clearColor(0.5f, 0.5f, 0.5f, 1.0f);
-        ImImpl_ClearColorBuffer(clearColor);    // Warning: it does not clear depth buffer
+    const ImVec4 defaultClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+    static ImVec4 clearColor = defaultClearColor;
+    ImImpl_ClearColorBuffer(clearColor);    // Warning: it does not clear depth buffer
 
-        // Pause/Resume ImGui and process input as usual
-        if (!ImGui::GetIO().WantCaptureKeyboard)    {
-            if (ImGui::IsKeyPressed('h',false)       // case sensitive
+    // Pause/Resume ImGui and process input as usual
+    if (!ImGui::GetIO().WantCaptureKeyboard)    {
+        if (ImGui::IsKeyPressed('h',false)       // case sensitive
                 || gImGuiFunctionKeyReleased[0])     // 0 = F1, 11 = F12
-                gImGuiPaused = !gImGuiPaused;       // TODO: fix minor visual bug (if possible) happening at the first "restoring ImGui" frame (comment out the line "if (gImGuiPaused) return;" to see it)
+            gImGuiPaused = !gImGuiPaused;       // TODO: fix minor visual bug (if possible) happening at the first "restoring ImGui" frame (comment out the line "if (gImGuiPaused) return;" to see it)
+    }
+
+    // More detailed example on how to overuse ImGui to process input. This works even when ImGui is paused:
+    if (gImGuiWereOutsideImGui) // true when "gImGuiPaused" or simply when we're outside ImGui Windows with both mouse and cursor.
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        static unsigned myStrangeCounter=0;
+
+        if (!io.WantCaptureKeyboard && !io.WantCaptureMouse && !io.WantTextInput )   // always "true" if we "leave" "if (gImGuiWereOutsideImGui)" AFAIR
+        {
+
+            // (Key and Mouse) Input events fall into two main categories:
+            // 1) "stateful" events (= pressed or released events) are easier to process. e.g.:
+
+            if (ImGui::IsKeyPressed('H',false))        // case sensitive
+            {printf("'H' key pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
+            // Tips for processing other "stateful" events (e.g. key/mouse pressed/released):
+            // a) for ImGui "known special chars", we can use something like:
+            //      if (ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Escape],false)  {...}
+            // b) for mouse Pressed/Released events:
+            //      if (io.KeysPressed[...]) {...}
+            // c) for F1-F12 Pressed/Released events use gImGuiFunctionKeyXXX[0-11]:
+            //      if (gImGuiFunctionKeyReleased[0]) {...}
+
+            // 2) "immediate" (or "continuous") events (= down events)
+            // When taking actions based on continuous events (e.g. "down events"), IMHO it's better to sync
+            // them to ensure the same behavior at differernt FPS.
+            // "inputProcessingInterval" should be a fixed amount >= our inverse frame rate.
+            // However, since we will later allow the user to modify the frame rate, we can't leave it constant here.
+            const float inputProcessingInterval = gImGuiInverseFPSClampOutsideImGui<=0 ? 0.03 : gImGuiInverseFPSClampOutsideImGui*2.f;  // Input processing frequency (better leave it constant)
+            static float timer = ImGui::GetTime();
+            float delta = ImGui::GetTime() - timer;
+            if (delta<inputProcessingInterval) {
+                if (delta<0) timer = ImGui::GetTime();  // protects from overflow ? (probably just an intention)
+            }
+            else {
+                timer+=delta;
+                //-------------------------------------------------------------------
+                if (io.KeysDown[io.KeyMap[ImGuiKey_RightArrow]]) {printf("Right arrow pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
+                //if (io.MouseDown[2]) {printf("Middle Mouse Button pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
+                //-------------------------------------------------------------------
+            }
         }
 
-        // More detailed example on how to overuse ImGui to process input. This works even when ImGui is paused:
-        if (gImGuiWereOutsideImGui) // true when "gImGuiPaused" or simply when we're outside ImGui Windows with both mouse and cursor.
-        {
-            ImGuiIO& io = ImGui::GetIO();
-            static unsigned myStrangeCounter=0;
+    }
 
-            if (!io.WantCaptureKeyboard && !io.WantCaptureMouse && !io.WantTextInput )   // always "true" if we "leave" "if (gImGuiWereOutsideImGui)" AFAIR
-            {
+    if (gImGuiPaused) return; // exit early (even if ocassional ImGui calls should be allowed, as "immediate mode GUI" is made to mix GUI calls with normal code)
 
-                // (Key and Mouse) Input events fall into two main categories:
-                // 1) "stateful" events (= pressed or released events) are easier to process. e.g.:
 
-                if (ImGui::IsKeyPressed('H',false))        // case sensitive
-                {printf("'H' key pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
-                // Tips for processing other "stateful" events (e.g. key/mouse pressed/released):
-                // a) for ImGui "known special chars", we can use something like:
-                //      if (ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Escape],false)  {...}
-                // b) for mouse Pressed/Released events:
-                //      if (io.KeysPressed[...]) {...}
-                // c) for F1-F12 Pressed/Released events use gImGuiFunctionKeyXXX[0-11]:
-                //      if (gImGuiFunctionKeyReleased[0]) {...}
+    ShowExampleAppMainMenuBar();    // This is plain ImGui
 
-                // 2) "immediate" (or "continuous") events (= down events)
-                // When taking actions based on continuous events (e.g. "down events"), IMHO it's better to sync
-                // them to ensure the same behavior at differernt FPS.
-                // "inputProcessingInterval" should be a fixed amount >= our inverse frame rate.
-                // However, since we will later allow the user to modify the frame rate, we can't leave it constant here.
-                const float inputProcessingInterval = gImGuiInverseFPSClampOutsideImGui<=0 ? 0.03 : gImGuiInverseFPSClampOutsideImGui*2.f;  // Input processing frequency (better leave it constant)
-                static float timer = ImGui::GetTime();
-                float delta = ImGui::GetTime() - timer;
-                if (delta<inputProcessingInterval) {
-                    if (delta<0) timer = ImGui::GetTime();  // protects from overflow ? (probably just an intention)
-                }
-                else {
-                    timer+=delta;
-                    //-------------------------------------------------------------------
-                    if (io.KeysDown[io.KeyMap[ImGuiKey_RightArrow]]) {printf("Right arrow pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
-                    //if (io.MouseDown[2]) {printf("Middle Mouse Button pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
-                    //-------------------------------------------------------------------
-                }
-            }
+    static bool show_test_window = true;
+    static bool show_another_window = false;
+    static bool show_node_graph_editor_window = false;
+    static bool show_splitter_test_window = false;
 
+    // 1. Show a simple window
+    {
+        // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
+        // Me: However I've discovered that when I clamp the FPS to a low value (e.g.10), I have to catch double clicks manually in my binding to make them work.
+        // They work, but for some strange reasons only with windows properly set up through ImGui::Begin(...) and ImGui::End(...) (and whose name is NOT 'Debug').
+        // [Please remember that double clicking the titlebar of a window minimizes it]
+        // No problem with full frame rates.
+        static bool open = true;static bool no_border = false;static float bg_alpha = -1.f;
+        ImGui::Begin("Debug ", &open, ImVec2(450,300),bg_alpha,no_border ? 0 : ImGuiWindowFlags_ShowBorders);  // Try using 10 FPS and replacing the title with "Debug"...
+
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("Pause/Resume ImGui and process input as usual");ImGui::Separator();
+        ImGui::Text("Press F1 (or lowercase 'h') to turn ImGui on and off.");
+        ImVec4 halfTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];halfTextColor.w*=0.5f;
+        ImGui::TextColored(halfTextColor,"(Please read the code for further tips about input processing).");
+
+
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("Test Windows");ImGui::Separator();
+#       if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_SAVE_STYLE))
+        show_test_window ^= ImGui::Button("Test Window");
+#       endif //NO_IMGUISTYLESERIALIZER
+#       ifndef NO_IMGUITOOLBAR
+        show_another_window ^= ImGui::Button("Another Window With Toolbar Test");
+#       endif //NO_IMGUITOOLBAR
+#       ifndef NO_IMGUINODEGRAPHEDITOR
+        show_node_graph_editor_window ^= ImGui::Button("Another Window With NodeGraphEditor");
+#       endif //NO_IMGUINODEGRAPHEDITOR
+        show_splitter_test_window ^= ImGui::Button("Show splitter test window");
+
+        // Calculate and show framerate
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("Frame rate options");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","It might be necessary to move the mouse \"outside\" and \"inside\" ImGui for these options to update properly.");
+        ImGui::Separator();
+        static float ms_per_frame[120] = { 0 };
+        static int ms_per_frame_idx = 0;
+        static float ms_per_frame_accum = 0.0f;
+        ms_per_frame_accum -= ms_per_frame[ms_per_frame_idx];
+        ms_per_frame[ms_per_frame_idx] = ImGui::GetIO().DeltaTime * 1000.0f;
+        ms_per_frame_accum += ms_per_frame[ms_per_frame_idx];
+        ms_per_frame_idx = (ms_per_frame_idx + 1) % 120;
+        const float ms_per_frame_avg = ms_per_frame_accum / 120;
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", ms_per_frame_avg, 1000.0f / ms_per_frame_avg);
+        bool clampFPSOutsideImGui = gImGuiInverseFPSClampOutsideImGui > 0;
+        ImGui::Checkbox("Clamp FPS when \"outside\" ImGui.",&clampFPSOutsideImGui);
+        if (clampFPSOutsideImGui)    {
+            if (gImGuiInverseFPSClampOutsideImGui<=0) gImGuiInverseFPSClampOutsideImGui = 1.f/60.f;
+            float FPS = 1.f/gImGuiInverseFPSClampOutsideImGui;
+            if (ImGui::SliderFloat("FPS when \"outside\" ImGui",&FPS,5.f,60.f,"%.2f")) gImGuiInverseFPSClampOutsideImGui = 1.f/FPS;
         }
+        else gImGuiInverseFPSClampOutsideImGui = -1.f;
+        bool clampFPSInsideImGui = gImGuiInverseFPSClampInsideImGui > 0;
+        ImGui::Checkbox("Clamp FPS when \"inside\" ImGui.",&clampFPSInsideImGui);
+        if (clampFPSInsideImGui)    {
+            if (gImGuiInverseFPSClampInsideImGui<=0) gImGuiInverseFPSClampInsideImGui = 1.f/60.f;
+            float FPS = 1.f/gImGuiInverseFPSClampInsideImGui;
+            if (ImGui::SliderFloat("FPS when \"inside\" ImGui",&FPS,5.f,60.f,"%.2f")) gImGuiInverseFPSClampInsideImGui = 1.f/FPS;
+        }
+        else gImGuiInverseFPSClampInsideImGui = -1.f;
+        ImGui::Checkbox("Use dynamic FPS when \"inside\" ImGui.",&gImGuiDynamicFPSInsideImGui);
 
-        if (gImGuiPaused) return; // exit early (even if ocassional ImGui calls should be allowed, as "immediate mode GUI" is made to mix GUI calls with normal code)
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("Font options");ImGui::Separator();
+        //ImGui::Checkbox("Font Allow User Scaling", &ImGui::GetIO().FontAllowUserScaling);
+        //if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","If true, CTRL + mouse wheel scales the window\n(or just its font size if child window).");
+        ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.2f"); // scale everything
 
-
-        ShowExampleAppMainMenuBar();    // This is plain ImGui
-
-        static bool show_test_window = true;
-        static bool show_another_window = false;
-        static bool show_node_graph_editor_window = false;
-        static bool show_splitter_test_window = false;
-
-        // 1. Show a simple window
-        {
-            // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
-            // Me: However I've discovered that when I clamp the FPS to a low value (e.g.10), I have to catch double clicks manually in my binding to make them work.
-            // They work, but for some strange reasons only with windows properly set up through ImGui::Begin(...) and ImGui::End(...) (and whose name is NOT 'Debug').
-            // [Please remember that double clicking the titlebar of a window minimizes it]
-            // No problem with full frame rates.
-            static bool open = true;static bool no_border = false;static float bg_alpha = -1.f;
-            ImGui::Begin("Debug ", &open, ImVec2(450,300),bg_alpha,no_border ? 0 : ImGuiWindowFlags_ShowBorders);  // Try using 10 FPS and replacing the title with "Debug"...
-
-            ImGui::Text("\n");ImGui::Separator();ImGui::Text("Pause/Resume ImGui and process input as usual");ImGui::Separator();
-            ImGui::Text("Press F1 (or lowercase 'h') to turn ImGui on and off.");
-            ImVec4 halfTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];halfTextColor.w*=0.5f;
-            ImGui::TextColored(halfTextColor,"(Please read the code for further tips about input processing).");
-
-
-            ImGui::Text("\n");ImGui::Separator();ImGui::Text("Test Windows");ImGui::Separator();
-#           if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_SAVE_STYLE))
-            show_test_window ^= ImGui::Button("Test Window");
-#           endif //NO_IMGUISTYLESERIALIZER
-#           ifndef NO_IMGUITOOLBAR
-            show_another_window ^= ImGui::Button("Another Window With Toolbar Test");
-#           endif //NO_IMGUITOOLBAR
-#           ifndef NO_IMGUINODEGRAPHEDITOR
-            show_node_graph_editor_window ^= ImGui::Button("Another Window With NodeGraphEditor");
-#           endif //NO_IMGUINODEGRAPHEDITOR
-            show_splitter_test_window ^= ImGui::Button("Show splitter test window");
-
-            // Calculate and show framerate
-            ImGui::Text("\n");ImGui::Separator();ImGui::Text("Frame rate options");
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","It might be necessary to move the mouse \"outside\" and \"inside\" ImGui for these options to update properly.");
-            ImGui::Separator();
-            static float ms_per_frame[120] = { 0 };
-            static int ms_per_frame_idx = 0;
-            static float ms_per_frame_accum = 0.0f;
-            ms_per_frame_accum -= ms_per_frame[ms_per_frame_idx];
-            ms_per_frame[ms_per_frame_idx] = ImGui::GetIO().DeltaTime * 1000.0f;
-            ms_per_frame_accum += ms_per_frame[ms_per_frame_idx];
-            ms_per_frame_idx = (ms_per_frame_idx + 1) % 120;
-            const float ms_per_frame_avg = ms_per_frame_accum / 120;
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", ms_per_frame_avg, 1000.0f / ms_per_frame_avg);
-            bool clampFPSOutsideImGui = gImGuiInverseFPSClampOutsideImGui > 0;
-            ImGui::Checkbox("Clamp FPS when \"outside\" ImGui.",&clampFPSOutsideImGui);
-            if (clampFPSOutsideImGui)    {
-                if (gImGuiInverseFPSClampOutsideImGui<=0) gImGuiInverseFPSClampOutsideImGui = 1.f/60.f;
-                float FPS = 1.f/gImGuiInverseFPSClampOutsideImGui;
-                if (ImGui::SliderFloat("FPS when \"outside\" ImGui",&FPS,5.f,60.f,"%.2f")) gImGuiInverseFPSClampOutsideImGui = 1.f/FPS;
-            }
-            else gImGuiInverseFPSClampOutsideImGui = -1.f;
-            bool clampFPSInsideImGui = gImGuiInverseFPSClampInsideImGui > 0;
-            ImGui::Checkbox("Clamp FPS when \"inside\" ImGui.",&clampFPSInsideImGui);
-            if (clampFPSInsideImGui)    {
-                if (gImGuiInverseFPSClampInsideImGui<=0) gImGuiInverseFPSClampInsideImGui = 1.f/60.f;
-                float FPS = 1.f/gImGuiInverseFPSClampInsideImGui;
-                if (ImGui::SliderFloat("FPS when \"inside\" ImGui",&FPS,5.f,60.f,"%.2f")) gImGuiInverseFPSClampInsideImGui = 1.f/FPS;
-            }
-            else gImGuiInverseFPSClampInsideImGui = -1.f;
-            ImGui::Checkbox("Use dynamic FPS when \"inside\" ImGui.",&gImGuiDynamicFPSInsideImGui);
-
-            ImGui::Text("\n");ImGui::Separator();ImGui::Text("Font options");ImGui::Separator();
-            //ImGui::Checkbox("Font Allow User Scaling", &ImGui::GetIO().FontAllowUserScaling);
-            //if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","If true, CTRL + mouse wheel scales the window\n(or just its font size if child window).");
-            ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.2f"); // scale everything
-
-            // Some options ported from imgui_demo.cpp
-            ImGui::Text("\n");ImGui::Separator();ImGui::Text("Window options");ImGui::Separator();
-            ImGui::Checkbox("No border", &no_border);
-            ImGui::SameLine(0,25);
-            ImGui::PushItemWidth(100);
-            ImGui::DragFloat("Window Fill Alpha", &bg_alpha, 0.005f, -0.01f, 1.0f, bg_alpha < 0.0f ? "(default)" : "%.3f"); // Not exposing zero here so user doesn't "close" the UI (zero alpha clips all widgets). But application code could have a toggle to switch between zero and non-zero.
-            ImGui::PopItemWidth();
-            ImGui::PushItemWidth(275);
-            ImGui::ColorEdit3("glClearColor",&clearColor.x);
-            ImGui::PopItemWidth();
+        // Some options ported from imgui_demo.cpp
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("Window options");ImGui::Separator();
+        ImGui::Checkbox("No border", &no_border);
+        ImGui::SameLine(0,25);
+        ImGui::PushItemWidth(100);
+        ImGui::DragFloat("Window Fill Alpha", &bg_alpha, 0.005f, -0.01f, 1.0f, bg_alpha < 0.0f ? "(default)" : "%.3f"); // Not exposing zero here so user doesn't "close" the UI (zero alpha clips all widgets). But application code could have a toggle to switch between zero and non-zero.
+        ImGui::PopItemWidth();
+        ImGui::PushItemWidth(275);
+        ImGui::ColorEdit3("glClearColor",&clearColor.x);
+        ImGui::PopItemWidth();
+        if (clearColor.x!=defaultClearColor.x || clearColor.y!=defaultClearColor.y || clearColor.z!=defaultClearColor.z)    {
             ImGui::SameLine(0,10);
-            if (ImGui::SmallButton("Reset##glClearColorReset")) clearColor.x=clearColor.y=clearColor.z=.5f;
+            if (ImGui::SmallButton("Reset##glClearColorReset")) clearColor = defaultClearColor;
+        }
 
-            // imguistyleserializer test
-            ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguistyleserializer");ImGui::Separator();
-#           if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_SAVE_STYLE))
-            ImGui::Text("Please modify the current style in:");
-            ImGui::Text("ImGui Demo->Window Options->Style Editor");
-            static bool loadCurrentStyle = false;
-            static bool saveCurrentStyle = false;
-            static bool resetCurrentStyle = false;
-            loadCurrentStyle = ImGui::Button("Load Saved Style");
-            saveCurrentStyle = ImGui::Button("Save Current Style");
-            resetCurrentStyle = ImGui::Button("Reset Current Style");
-            const char* pStyleFileName =  styleFileName;    // defined globally
-            if (loadCurrentStyle)   {
+        // imguistyleserializer test
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguistyleserializer");ImGui::Separator();
+#       if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_SAVE_STYLE))
+        ImGui::Text("Please modify the current style in:");
+        ImGui::Text("ImGui Demo->Window Options->Style Editor");
+        static bool loadCurrentStyle = false;
+        static bool saveCurrentStyle = false;
+        static bool resetCurrentStyle = false;
+        loadCurrentStyle = ImGui::Button("Load Saved Style");
+        saveCurrentStyle = ImGui::Button("Save Current Style");
+        resetCurrentStyle = ImGui::Button("Reset Current Style");
+        const char* pStyleFileName =  styleFileName;    // defined globally
+        if (loadCurrentStyle)   {
 #               if (!defined(NO_IMGUIEMSCRIPTEN) && !defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
-                if (ImGuiHelper::FileExists(styleFileNamePersistent)) pStyleFileName = styleFileNamePersistent;
+            if (ImGuiHelper::FileExists(styleFileNamePersistent)) pStyleFileName = styleFileNamePersistent;
 #               endif //NO_IMGUIEMSCRIPTEN & C
-                if (!ImGui::LoadStyle(pStyleFileName,ImGui::GetStyle()))   {
-                    fprintf(stderr,"Warning: \"%s\" not present.\n",pStyleFileName);
-                }
+            if (!ImGui::LoadStyle(pStyleFileName,ImGui::GetStyle()))   {
+                fprintf(stderr,"Warning: \"%s\" not present.\n",pStyleFileName);
             }
-            if (saveCurrentStyle)   {
+        }
+        if (saveCurrentStyle)   {
 #               ifndef NO_IMGUIEMSCRIPTEN
-                pStyleFileName = styleFileNamePersistent;
+            pStyleFileName = styleFileNamePersistent;
 #               endif //NO_IMGUIEMSCRIPTEN
-                if (!ImGui::SaveStyle(pStyleFileName,ImGui::GetStyle()))   {
-                    fprintf(stderr,"Warning: \"%s\" cannot be saved.\n",pStyleFileName);
-                }
-                else {
+            if (!ImGui::SaveStyle(pStyleFileName,ImGui::GetStyle()))   {
+                fprintf(stderr,"Warning: \"%s\" cannot be saved.\n",pStyleFileName);
+            }
+            else {
 #                   ifndef NO_IMGUIEMSCRIPTEN
-                    ImGui::EmscriptenFileSystemHelper::Sync();
+                ImGui::EmscriptenFileSystemHelper::Sync();
 #                   endif //NO_IMGUIEMSCRIPTEN
-                }
             }
-            if (resetCurrentStyle)  ImGui::GetStyle() = ImGuiStyle();
-#           else //NO_IMGUISTYLESERIALIZER
-            ImGui::Text("%s","Excluded from this build.\n");
-#           endif //NO_IMGUISTYLESERIALIZER
+        }
+        if (resetCurrentStyle)  ImGui::GetStyle() = ImGuiStyle();
+#       else //NO_IMGUISTYLESERIALIZER
+        ImGui::Text("%s","Excluded from this build.\n");
+#       endif //NO_IMGUISTYLESERIALIZER
 
 
-            // imguifilesystem tests:
-            ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguifilesystem");ImGui::Separator();
-#           ifndef NO_IMGUIFILESYSTEM
-            const char* startingFolder = "./";
-            const char* optionalFileExtensionFilterString = "";//".jpg;.jpeg;.png;.tiff;.bmp;.gif;.txt";
+        // imguifilesystem tests:
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguifilesystem");ImGui::Separator();
+#       ifndef NO_IMGUIFILESYSTEM
+        const char* startingFolder = "./";
+        const char* optionalFileExtensionFilterString = "";//".jpg;.jpeg;.png;.tiff;.bmp;.gif;.txt";
 
-            //------------------------------------------------------------------------------------------
-            // 1 - ChooseFileDialogButton setup:
-            //------------------------------------------------------------------------------------------
-            ImGui::Text("Please choose a file: ");ImGui::SameLine();
-            const bool browseButtonPressed = ImGui::Button("...");
-            static ImGuiFs::Dialog fsInstance;
-            const char* chosenPath = fsInstance.chooseFileDialog(browseButtonPressed,startingFolder,optionalFileExtensionFilterString);
-            if (strlen(chosenPath)>0) {
-                // A path (chosenPath) has been chosen right now. However we can retrieve it later using: fsInstance.getChosenPath()
-            }
-            if (strlen(fsInstance.getChosenPath())>0) ImGui::Text("Chosen path: \"%s\"",fsInstance.getChosenPath());
+        //------------------------------------------------------------------------------------------
+        // 1 - ChooseFileDialogButton setup:
+        //------------------------------------------------------------------------------------------
+        ImGui::Text("Please choose a file: ");ImGui::SameLine();
+        const bool browseButtonPressed = ImGui::Button("...");
+        static ImGuiFs::Dialog fsInstance;
+        const char* chosenPath = fsInstance.chooseFileDialog(browseButtonPressed,startingFolder,optionalFileExtensionFilterString);
+        if (strlen(chosenPath)>0) {
+            // A path (chosenPath) has been chosen right now. However we can retrieve it later using: fsInstance.getChosenPath()
+        }
+        if (strlen(fsInstance.getChosenPath())>0) ImGui::Text("Chosen path: \"%s\"",fsInstance.getChosenPath());
 
-            //------------------------------------------------------------------------------------------
-            // 2 - ChooseFolderDialogButton setup:
-            //------------------------------------------------------------------------------------------
-            ImGui::Text("Please choose a folder: ");ImGui::SameLine();
-            const bool browseButtonPressed2 = ImGui::Button("...##2");
-            static ImGuiFs::Dialog fsInstance2;
-            const char* chosenFolder = fsInstance2.chooseFolderDialog(browseButtonPressed2,fsInstance2.getLastDirectory());
-            if (strlen(chosenFolder)>0) {
-                // A path (chosenFolder) has been chosen right now. However we can retrieve it later using: fsInstance2.getChosenPath()
-            }
-            if (strlen(fsInstance2.getChosenPath())>0) ImGui::Text("Chosen folder: \"%s\"",fsInstance2.getChosenPath());
+        //------------------------------------------------------------------------------------------
+        // 2 - ChooseFolderDialogButton setup:
+        //------------------------------------------------------------------------------------------
+        ImGui::Text("Please choose a folder: ");ImGui::SameLine();
+        const bool browseButtonPressed2 = ImGui::Button("...##2");
+        static ImGuiFs::Dialog fsInstance2;
+        const char* chosenFolder = fsInstance2.chooseFolderDialog(browseButtonPressed2,fsInstance2.getLastDirectory());
+        if (strlen(chosenFolder)>0) {
+            // A path (chosenFolder) has been chosen right now. However we can retrieve it later using: fsInstance2.getChosenPath()
+        }
+        if (strlen(fsInstance2.getChosenPath())>0) ImGui::Text("Chosen folder: \"%s\"",fsInstance2.getChosenPath());
 
-            //------------------------------------------------------------------------------------------
-            // 3 - SaveFileDialogButton setup:
-            //------------------------------------------------------------------------------------------
-            ImGui::Text("Please pretend to save the dummy file 'myFilename.png' to: ");ImGui::SameLine();
-            const bool browseButtonPressed3 = ImGui::Button("...##3");
-            static ImGuiFs::Dialog fsInstance3;
-            const char* savePath = fsInstance3.saveFileDialog(browseButtonPressed3,"/usr/include","myFilename.png",".jpg;.jpeg;.png;.tiff;.bmp;.gif;.txt;.zip");//optionalFileExtensionFilterString);
-            if (strlen(savePath)>0) {
-                // A path (savePath) has been chosen right now. However we can retrieve it later using: fsInstance3.getChosenPath()
-            }
-            if (strlen(fsInstance3.getChosenPath())>0) ImGui::Text("Chosen save path: \"%s\"",fsInstance3.getChosenPath());
+        //------------------------------------------------------------------------------------------
+        // 3 - SaveFileDialogButton setup:
+        //------------------------------------------------------------------------------------------
+        ImGui::Text("Please pretend to save the dummy file 'myFilename.png' to: ");ImGui::SameLine();
+        const bool browseButtonPressed3 = ImGui::Button("...##3");
+        static ImGuiFs::Dialog fsInstance3;
+        const char* savePath = fsInstance3.saveFileDialog(browseButtonPressed3,"/usr/include","myFilename.png",".jpg;.jpeg;.png;.tiff;.bmp;.gif;.txt;.zip");//optionalFileExtensionFilterString);
+        if (strlen(savePath)>0) {
+            // A path (savePath) has been chosen right now. However we can retrieve it later using: fsInstance3.getChosenPath()
+        }
+        if (strlen(fsInstance3.getChosenPath())>0) ImGui::Text("Chosen save path: \"%s\"",fsInstance3.getChosenPath());
 
 
-#           else //NO_IMGUIFILESYSTEM
-            ImGui::Text("%s","Excluded from this build.\n");
-#           endif //NO_IMGUIFILESYSTEM
+#       else //NO_IMGUIFILESYSTEM
+        ImGui::Text("%s","Excluded from this build.\n");
+#       endif //NO_IMGUIFILESYSTEM
 
-            // DateChooser Test:
-            ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguidatechooser");ImGui::Separator();
- #          ifndef NO_IMGUIDATECHOOSER
-            /*struct tm {
+        // DateChooser Test:
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguidatechooser");ImGui::Separator();
+#       ifndef NO_IMGUIDATECHOOSER
+        /*struct tm {
   int tm_sec;			 Seconds.	[0-60] (1 leap second)
   int tm_min;			 Minutes.	[0-59]
   int tm_hour;			 Hours.	[0-23]
@@ -471,288 +474,180 @@ void DrawGL()	// Mandatory
   int tm_wday;			 Day of week.	[0-6]
   int tm_yday;			 Days in year.[0-365]
   };*/
-            ImGui::AlignFirstTextHeightToWidgets();
-            ImGui::Text("Choose a date:");
-            ImGui::SameLine();
-            static tm myDate={0};       // IMPORTANT: must be static! (plenty of compiler warnings here...)
-            if (ImGui::DateChooser("Date Chooser##MyDateChooser",myDate,"%d/%m/%Y",true)) {
-                // A new date has been chosen
-                //fprintf(stderr,"A new date has been chosen exacty now: \"%.2d-%.2d-%.4d\"\n",myDate.tm_mday,myDate.tm_mon+1,myDate.tm_year+1900);
-            }
-            ImGui::Text("Chosen date: \"%.2d-%.2d-%.4d\"",myDate.tm_mday,myDate.tm_mon+1,myDate.tm_year+1900);
-#           else       //NO_IMGUIDATECHOOSER
-            ImGui::Text("%s","Excluded from this build.\n");
-#           endif      //NO_IMGUIDATECHOOSER
-
-            // imguivariouscontrols
-            ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguivariouscontrols");ImGui::Separator();
-#           ifndef NO_IMGUIVARIOUSCONTROLS
-            // ProgressBar Test:
-            ImGui::TestProgressBar();
-            // ColorChooser Test:
-            static ImVec4 chosenColor(1,1,1,1);
-            static bool openColorChooser = false;
-            ImGui::AlignFirstTextHeightToWidgets();ImGui::Text("Please choose a color:");ImGui::SameLine();
-            openColorChooser|=ImGui::ColorButton(chosenColor);
-            //if (openColorChooser) chosenColor.z=0.f;
-            if (ImGui::ColorChooser(&openColorChooser,&chosenColor)) {
-                // choice OK here
-            }
-            // ColorComboTest:
-            static ImVec4 chosenColor2(1,1,1,1);
-            if (ImGui::ColorCombo("MyColorCombo",&chosenColor2))
-            {
-                // choice OK here
-            }
-            // PopupMenuSimple Test:
-            // Recent Files-like menu
-            static const char* recentFileList[] = {"filename01","filename02","filename03","filename04","filename05","filename06","filename07","filename08","filename09","filename10"};
-            static ImGui::PopupMenuSimpleParams pmsParams;
-            /*const bool popupMenuButtonClicked = */ImGui::Button("Right-click me##PopupMenuSimpleTest");
-            pmsParams.open|= ImGui::GetIO().MouseClicked[1] && ImGui::IsItemHovered(); // RIGHT CLICK on the last widget
-                             //popupMenuButtonClicked;    // Or we can just click the button
-            const int selectedEntry = ImGui::PopupMenuSimple(pmsParams,recentFileList,(int) sizeof(recentFileList)/sizeof(recentFileList[0]),5,true,"RECENT FILES");
-            static int lastSelectedEntry = -1;
-            if (selectedEntry>=0) {
-                // Do something: clicked recentFileList[selectedEntry].
-                // Good in most cases, but here we want to persist the last choice because this branch happens only one frame:
-                lastSelectedEntry = selectedEntry;
-            }
-            if (lastSelectedEntry>=0) {ImGui::SameLine();ImGui::Text("Last selected: %s\n",recentFileList[lastSelectedEntry]);}
-            // Fast copy/cut/paste menus
-            static char buf[512]="Some sample text";
-            ImGui::InputTextMultiline("Right click to have\na (non-functional)\ncopy/cut/paste menu\nin one line of code##TestCopyCutPaste",buf,512);
-            const int cutCopyOrPasteSelected = ImGui::PopupMenuSimpleCopyCutPasteOnLastItem();
-            if (cutCopyOrPasteSelected>=0)  {
-                // Here we have 0 = cut, 1 = copy, 2 = paste
-                // However ImGui::PopupMenuSimpleCopyCutPasteOnLastItem() can't perform these operations for you
-                // and it's not trivial at all... at least I've got no idea on how to do it!
-                // Moreover, the selected text seems to lose focus when the menu is selected...
-            }
-
-            // Single column popup menu with icon support. It disappears when the mouse goes away. Never tested.
-            // User is supposed to create a static instance of it, add entries once, and then call "render()".
-            static ImGui::PopupMenu pm;
-            if (pm.isEmpty())   {
-                pm.addEntryTitle("Single Menu With Images");
-                char tmp[1024];ImVec2 uv0(0,0),uv1(0,0);
-                for (int i=0;i<9;i++) {
-                    strcpy(tmp,"Image Menu Entry ");
-                    sprintf(&tmp[strlen(tmp)],"%d",i+1);
-                    uv0 = ImVec2((float)(i%3)/3.f,(float)(i/3)/3.f);
-                    uv1 = ImVec2(uv0.x+1.f/3.f,uv0.y+1.f/3.f);
-
-                    pm.addEntry(tmp,reinterpret_cast<void*>(myImageTextureId2),uv0,uv1);
-                }
-
-            }
-            static bool trigger = false;
-            trigger|=ImGui::Button("Press me for a menu with images##PopupMenuWithImagesTest");
-            /*const int selectedImageMenuEntry =*/ pm.render(trigger);   // -1 = none
-
-
-            // Based on the code from: https://github.com/Roflraging
-            ImGui::Spacing();
-            ImGui::Text("InputTextMultiline with horizontal scrolling:");
-            static char buffer[1024] = "Code posted by Roflraging to the ImGui Issue Section (https://github.com/ocornut/imgui/issues/383).";
-            const float height = 60;
-            ImGui::PushID(buffer);
-            ImGui::InputTextMultilineWithHorizontalScrolling("ITMWHS", buffer, 1024, height);   // Note that now the label is not displayed ATM
-            ImGui::PopID();
-
-            ImGui::Spacing();
-            ImGui::Text("Same as above with a context-menu that should work (more or less):");
-            static char buffer2[1024] = "Code posted by Roflraging to the ImGui Issue Section (https://github.com/ocornut/imgui/issues/383).";
-            ImGui::PushID(buffer2);
-            static bool popup_open = false;static int threeStaticInts[3]={0,0,0};
-            ImGui::InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu("ITMWHS2", buffer2, 1024, height,popup_open,threeStaticInts);
-            ImGui::PopID();
-
-            ImGui::Spacing();
-            ImGui::ImageButtonWithText(reinterpret_cast<ImTextureID>(myImageTextureId2),"MyImageButtonWithText",ImVec2(16,16),ImVec2(0,0),ImVec2(0.33334f,0.33334f));
-
-#           ifndef NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
-            // One instance per image, but it can feed multiple widgets
-            static ImGui::AnimatedImage gif(myImageTextureId2,64,64,9,3,3,30,true);
-            ImGui::SameLine();
-            gif.render();
-            ImGui::SameLine();
-            gif.renderAsButton("myButton123",ImVec2(-.5f,-.5f));    // Negative size multiplies the 'native' gif size
-#           endif //NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
-
-            ImGui::Spacing();
-            ImGui::Text("Image with zoom (CTRL+MW) and pan (RMB drag):");
-            ImGui::TextColored(halfTextColor,"(Problem: zooming interfencee with GetIO().FontAllowUserScaling).");
-            static float zoom = 1.f;static ImVec2 pan(.5f,.5f);
-            // This requires     ImGui::GetIO().FontAllowUserScaling = false;
-            ImGui::ImageZoomAndPan(reinterpret_cast<ImTextureID>(myImageTextureId2),ImVec2(0,150),1.f,zoom,pan);    // aspect ratio can be aero for stretch mode
-#           else //NO_IMGUIVARIOUSCONTROLS
-            ImGui::Text("%s","Excluded from this build.\n");
-#           endif //NO_IMGUIVARIOUSCONTROLS
-
-            // TabLabels Test:
-            ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguitabwindow");ImGui::Separator();
-#           ifndef NO_IMGUITABWINDOW
-            // Based on the code by krys-spectralpixel (https://github.com/krys-spectralpixel), posted here: https://github.com/ocornut/imgui/issues/261
-            ImGui::Spacing();
-            ImGui::Text("TabLabels (based on the code by krys-spectralpixel):");
-            static const char* tabNames[] = {"Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
-            static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
-            static const char* tabTooltips[numTabs] = {"Render Tab Tooltip","This tab cannot be closed","Scene Tab Tooltip","","Object Tab Tooltip","","","","","Tired to add tooltips...",""};
-            static int tabItemOrdering[numTabs] = {0,1,2,3,4,5,6,7,8,9,10,11};
-            static int selectedTab = 0;
-            static int optionalHoveredTab = 0;
-            static bool allowTabLabelDragAndDrop=true;static bool tabLabelWrapMode = true;static bool allowClosingTabsWithMMB = true;
-            int justClosedTabIndex=-1,justClosedTabIndexInsideTabItemOrdering = -1,oldSelectedTab = selectedTab;
-            /*const bool tabSelectedChanged =*/ ImGui::TabLabels(numTabs,tabNames,selectedTab,tabTooltips,tabLabelWrapMode,&optionalHoveredTab,&tabItemOrdering[0],allowTabLabelDragAndDrop,allowClosingTabsWithMMB,&justClosedTabIndex,&justClosedTabIndexInsideTabItemOrdering);
-            // Optional stuff
-            if (justClosedTabIndex==1) {
-                tabItemOrdering[justClosedTabIndexInsideTabItemOrdering] = justClosedTabIndex;   // Prevent the user from closing Tab "Layers"
-                selectedTab = oldSelectedTab;   // This is safer, in case we had closed the selected tab
-            }
-            // Draw tab page
-            ImGui::Spacing();ImGui::Text("Tab Page For Tab: \"%s\" here.",tabNames[selectedTab]);
-            ImGui::Checkbox("Wrap Mode##TabLabelWrapMode",&tabLabelWrapMode);
-            ImGui::SameLine();ImGui::Checkbox("Drag And Drop##TabLabelDragAndDrop",&allowTabLabelDragAndDrop);
-            ImGui::SameLine();ImGui::Checkbox("MMB closes tabs##TabLabelMMBClosing",&allowClosingTabsWithMMB);
-            ImGui::SameLine();if (ImGui::SmallButton("Reset Tabs")) {for (int i=0;i<numTabs;i++) tabItemOrdering[i] = i;}
-            //if (optionalHoveredTab>=0) ImGui::Text("Mouse is hovering Tab Label: \"%s\".\n\n",tabNames[optionalHoveredTab]);
-
-#           else //NO_IMGUITABWINDOW
-            ImGui::Text("%s","Excluded from this build.\n");
-#           endif //NO_IMGUITABWINDOW
-
-            // ListView Test:
-            ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguilistview");ImGui::Separator();
-#           ifndef NO_IMGUILISTVIEW
-            MyTestListView();
-#           else //NO_IMGUILISTVIEW
-            ImGui::Text("%s","Excluded from this build.\n");
-#           endif //NO_IMGUILISTVIEW
-
-            ImGui::Separator();
-
-            ImGui::End();
+        ImGui::AlignFirstTextHeightToWidgets();
+        ImGui::Text("Choose a date:");
+        ImGui::SameLine();
+        static tm myDate={0};       // IMPORTANT: must be static! (plenty of compiler warnings here...)
+        if (ImGui::DateChooser("Date Chooser##MyDateChooser",myDate,"%d/%m/%Y",true)) {
+            // A new date has been chosen
+            //fprintf(stderr,"A new date has been chosen exacty now: \"%.2d-%.2d-%.4d\"\n",myDate.tm_mday,myDate.tm_mon+1,myDate.tm_year+1900);
         }
+        ImGui::Text("Chosen date: \"%.2d-%.2d-%.4d\"",myDate.tm_mday,myDate.tm_mon+1,myDate.tm_year+1900);
+#       else       //NO_IMGUIDATECHOOSER
+        ImGui::Text("%s","Excluded from this build.\n");
+#       endif      //NO_IMGUIDATECHOOSER
 
-        // 2. Show another simple window, this time using an explicit Begin/End pair
-#       ifndef NO_IMGUITOOLBAR
-        if (show_another_window)
+        // imguivariouscontrols
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguivariouscontrols");ImGui::Separator();
+#       ifndef NO_IMGUIVARIOUSCONTROLS
+        // ProgressBar Test:
+        ImGui::TestProgressBar();
+        // ColorChooser Test:
+        static ImVec4 chosenColor(1,1,1,1);
+        static bool openColorChooser = false;
+        ImGui::AlignFirstTextHeightToWidgets();ImGui::Text("Please choose a color:");ImGui::SameLine();
+        openColorChooser|=ImGui::ColorButton(chosenColor);
+        //if (openColorChooser) chosenColor.z=0.f;
+        if (ImGui::ColorChooser(&openColorChooser,&chosenColor)) {
+            // choice OK here
+        }
+        // ColorComboTest:
+        static ImVec4 chosenColor2(1,1,1,1);
+        if (ImGui::ColorCombo("MyColorCombo",&chosenColor2))
         {
-            ImGui::Begin("Another Window", &show_another_window, ImVec2(500,100));
-            {
-                // imguitoolbar test (note that it can be used both inside and outside windows (see below)
-                ImGui::Separator();ImGui::Text("imguitoolbar");ImGui::Separator();
-                static ImGui::Toolbar toolbar;
-                void* myImageTextureIdVoitPtr = reinterpret_cast<void*>(myImageTextureId2);
-                if (toolbar.getNumButtons()==0)  {
-                    char tmp[1024];ImVec2 uv0(0,0),uv1(0,0);
-                    for (int i=0;i<9;i++) {
-                        strcpy(tmp,"toolbutton ");
-                        sprintf(&tmp[strlen(tmp)],"%d",i+1);
-                        uv0 = ImVec2((float)(i%3)/3.f,(float)(i/3)/3.f);
-                        uv1 = ImVec2(uv0.x+1.f/3.f,uv0.y+1.f/3.f);
-
-                        toolbar.addButton(ImGui::Toolbutton(tmp,myImageTextureIdVoitPtr,uv0,uv1,ImVec2(16,16)));
-                    }
-                    toolbar.addSeparator(16);
-                    toolbar.addButton(ImGui::Toolbutton("toolbutton 11",myImageTextureIdVoitPtr,uv0,uv1,ImVec2(16,16),true,true,ImVec4(0.8,0.8,1.0,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
-                    toolbar.addButton(ImGui::Toolbutton("toolbutton 12",myImageTextureIdVoitPtr,uv0,uv1,ImVec2(16,16),true,false,ImVec4(1.0,0.8,0.8,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
-
-                    toolbar.setProperties(true,false,false,ImVec2(0.0f,0.f),ImVec2(0.25,1));
-                }
-                const int pressed = toolbar.render();
-                if (pressed>=0) fprintf(stderr,"Toolbar1: pressed:%d\n",pressed);
-            }
-            // Here we can open a child window if we want to toolbar not to scroll
-            ImGui::Spacing();ImGui::Text("imguitoolbar can be used inside windows too.\nThe first series of buttons can be used as a tab control.\nPlease resize the window and see the dynamic layout.\n");
-            ImGui::End();
+            // choice OK here
         }
-#       endif //NO_IMGUITOOLBAR
+        // PopupMenuSimple Test:
+        // Recent Files-like menu
+        static const char* recentFileList[] = {"filename01","filename02","filename03","filename04","filename05","filename06","filename07","filename08","filename09","filename10"};
+        static ImGui::PopupMenuSimpleParams pmsParams;
+        /*const bool popupMenuButtonClicked = */ImGui::Button("Right-click me##PopupMenuSimpleTest");
+        pmsParams.open|= ImGui::GetIO().MouseClicked[1] && ImGui::IsItemHovered(); // RIGHT CLICK on the last widget
+        //popupMenuButtonClicked;    // Or we can just click the button
+        const int selectedEntry = ImGui::PopupMenuSimple(pmsParams,recentFileList,(int) sizeof(recentFileList)/sizeof(recentFileList[0]),5,true,"RECENT FILES");
+        static int lastSelectedEntry = -1;
+        if (selectedEntry>=0) {
+            // Do something: clicked recentFileList[selectedEntry].
+            // Good in most cases, but here we want to persist the last choice because this branch happens only one frame:
+            lastSelectedEntry = selectedEntry;
+        }
+        if (lastSelectedEntry>=0) {ImGui::SameLine();ImGui::Text("Last selected: %s\n",recentFileList[lastSelectedEntry]);}
+        // Fast copy/cut/paste menus
+        static char buf[512]="Some sample text";
+        ImGui::InputTextMultiline("Right click to have\na (non-functional)\ncopy/cut/paste menu\nin one line of code##TestCopyCutPaste",buf,512);
+        const int cutCopyOrPasteSelected = ImGui::PopupMenuSimpleCopyCutPasteOnLastItem();
+        if (cutCopyOrPasteSelected>=0)  {
+            // Here we have 0 = cut, 1 = copy, 2 = paste
+            // However ImGui::PopupMenuSimpleCopyCutPasteOnLastItem() can't perform these operations for you
+            // and it's not trivial at all... at least I've got no idea on how to do it!
+            // Moreover, the selected text seems to lose focus when the menu is selected...
+        }
 
-        // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
-#       if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_SAVE_STYLE))
-        if (show_test_window)
+        // Single column popup menu with icon support. It disappears when the mouse goes away. Never tested.
+        // User is supposed to create a static instance of it, add entries once, and then call "render()".
+        static ImGui::PopupMenu pm;
+        if (pm.isEmpty())   {
+            pm.addEntryTitle("Single Menu With Images");
+            char tmp[1024];ImVec2 uv0(0,0),uv1(0,0);
+            for (int i=0;i<9;i++) {
+                strcpy(tmp,"Image Menu Entry ");
+                sprintf(&tmp[strlen(tmp)],"%d",i+1);
+                uv0 = ImVec2((float)(i%3)/3.f,(float)(i/3)/3.f);
+                uv1 = ImVec2(uv0.x+1.f/3.f,uv0.y+1.f/3.f);
+
+                pm.addEntry(tmp,reinterpret_cast<void*>(myImageTextureId2),uv0,uv1);
+            }
+
+        }
+        static bool trigger = false;
+        trigger|=ImGui::Button("Press me for a menu with images##PopupMenuWithImagesTest");
+        /*const int selectedImageMenuEntry =*/ pm.render(trigger);   // -1 = none
+
+
+        // Based on the code from: https://github.com/Roflraging
+        ImGui::Spacing();
+        ImGui::Text("InputTextMultiline with horizontal scrolling:");
+        static char buffer[1024] = "Code posted by Roflraging to the ImGui Issue Section (https://github.com/ocornut/imgui/issues/383).";
+        const float height = 60;
+        ImGui::PushID(buffer);
+        ImGui::InputTextMultilineWithHorizontalScrolling("ITMWHS", buffer, 1024, height);   // Note that now the label is not displayed ATM
+        ImGui::PopID();
+
+        ImGui::Spacing();
+        ImGui::Text("Same as above with a context-menu that should work (more or less):");
+        static char buffer2[1024] = "Code posted by Roflraging to the ImGui Issue Section (https://github.com/ocornut/imgui/issues/383).";
+        ImGui::PushID(buffer2);
+        static bool popup_open = false;static int threeStaticInts[3]={0,0,0};
+        ImGui::InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu("ITMWHS2", buffer2, 1024, height,popup_open,threeStaticInts);
+        ImGui::PopID();
+
+        ImGui::Spacing();
+        ImGui::ImageButtonWithText(reinterpret_cast<ImTextureID>(myImageTextureId2),"MyImageButtonWithText",ImVec2(16,16),ImVec2(0,0),ImVec2(0.33334f,0.33334f));
+
+#       ifndef NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
+        // One instance per image, but it can feed multiple widgets
+        static ImGui::AnimatedImage gif(myImageTextureId2,64,64,9,3,3,30,true);
+        ImGui::SameLine();
+        gif.render();
+        ImGui::SameLine();
+        gif.renderAsButton("myButton123",ImVec2(-.5f,-.5f));    // Negative size multiplies the 'native' gif size
+#       endif //NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
+
+        ImGui::Spacing();
+        ImGui::Text("Image with zoom (CTRL+MW) and pan (RMB drag):");
+        //ImGui::TextColored(halfTextColor,"(Problem: zooming interfence with GetIO().FontAllowUserScaling).");
+        static float zoom = 1.f;static ImVec2 pan(.5f,.5f);
+        // This requires     ImGui::GetIO().FontAllowUserScaling = false;
+        ImGui::ImageZoomAndPan(reinterpret_cast<ImTextureID>(myImageTextureId2),ImVec2(0,150),1.f,zoom,pan);    // aspect ratio can be aero for stretch mode
+#       else //NO_IMGUIVARIOUSCONTROLS
+        ImGui::Text("%s","Excluded from this build.\n");
+#       endif //NO_IMGUIVARIOUSCONTROLS
+
+        // TabLabels Test:
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguitabwindow");ImGui::Separator();
+#       ifndef NO_IMGUITABWINDOW
+        // Based on the code by krys-spectralpixel (https://github.com/krys-spectralpixel), posted here: https://github.com/ocornut/imgui/issues/261
+        ImGui::Spacing();
+        ImGui::Text("TabLabels (based on the code by krys-spectralpixel):");
+        static const char* tabNames[] = {"Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
+        static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
+        static const char* tabTooltips[numTabs] = {"Render Tab Tooltip","This tab cannot be closed","Scene Tab Tooltip","","Object Tab Tooltip","","","","","Tired to add tooltips...",""};
+        static int tabItemOrdering[numTabs] = {0,1,2,3,4,5,6,7,8,9,10,11};
+        static int selectedTab = 0;
+        static int optionalHoveredTab = 0;
+        static bool allowTabLabelDragAndDrop=true;static bool tabLabelWrapMode = true;static bool allowClosingTabs = true;
+        int justClosedTabIndex=-1,justClosedTabIndexInsideTabItemOrdering = -1,oldSelectedTab = selectedTab;
+        /*const bool tabSelectedChanged =*/ ImGui::TabLabels(numTabs,tabNames,selectedTab,tabTooltips,tabLabelWrapMode,&optionalHoveredTab,&tabItemOrdering[0],allowTabLabelDragAndDrop,allowClosingTabs,&justClosedTabIndex,&justClosedTabIndexInsideTabItemOrdering);
+        // Optional stuff
+        if (justClosedTabIndex==1) {
+            tabItemOrdering[justClosedTabIndexInsideTabItemOrdering] = justClosedTabIndex;   // Prevent the user from closing Tab "Layers"
+            selectedTab = oldSelectedTab;   // This is safer, in case we had closed the selected tab
+        }
+        // Draw tab page
+        ImGui::Spacing();ImGui::Text("Tab Page For Tab: \"%s\" here.",tabNames[selectedTab]);
+        ImGui::Checkbox("Wrap Mode##TabLabelWrapMode",&tabLabelWrapMode);
+        ImGui::SameLine();ImGui::Checkbox("Drag And Drop##TabLabelDragAndDrop",&allowTabLabelDragAndDrop);
+        ImGui::SameLine();ImGui::Checkbox("Closable##TabLabelClosing",&allowClosingTabs);
+        ImGui::SameLine();if (ImGui::SmallButton("Reset Tabs")) {for (int i=0;i<numTabs;i++) tabItemOrdering[i] = i;}
+        //if (optionalHoveredTab>=0) ImGui::Text("Mouse is hovering Tab Label: \"%s\".\n\n",tabNames[optionalHoveredTab]);
+
+#       else //NO_IMGUITABWINDOW
+        ImGui::Text("%s","Excluded from this build.\n");
+#       endif //NO_IMGUITABWINDOW
+
+        // ListView Test:
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguilistview");ImGui::Separator();
+#       ifndef NO_IMGUILISTVIEW
+        MyTestListView();
+#       else //NO_IMGUILISTVIEW
+        ImGui::Text("%s","Excluded from this build.\n");
+#       endif //NO_IMGUILISTVIEW
+
+        ImGui::Separator();
+
+        ImGui::End();
+    }
+
+    // 2. Show another simple window, this time using an explicit Begin/End pair
+#   ifndef NO_IMGUITOOLBAR
+    if (show_another_window)
+    {
+        ImGui::Begin("Another Window", &show_another_window, ImVec2(500,100));
         {
-            //ImGui::SetNewWindowDefaultPos(ImVec2(650, 20));        // Normally user code doesn't need/want to call this, because positions are saved in .ini file. Here we just want to make the demo initial state a bit more friendly!
-            ImGui::ShowTestWindow(&show_test_window);
-        }
-#       endif // NO_IMGUISTYLESERIALIZER
-#       ifndef NO_IMGUINODEGRAPHEDITOR
-        if (show_node_graph_editor_window) {
-            ImGui::SetNextWindowSize(ImVec2(700,600), ImGuiSetCond_FirstUseEver);
-            if (ImGui::Begin("Example: Custom Node Graph", &show_node_graph_editor_window)){
-#               ifndef IMGUINODEGRAPHEDITOR_NOTESTDEMO
-                ImGui::TestNodeGraphEditor();   // see its code for further info
-#               endif //IMGUINODEGRAPHEDITOR_NOTESTDEMO
-                ImGui::End();
-            }
-        }
-#       endif //NO_IMGUINODEGRAPHEDITOR
-        if (show_splitter_test_window)  {
-            // based on a snippet by Omar
-            static ImVec2 lastWindowSize(500,500);      // initial window size
-            static const float splitterWidth = 6.f;
-            static float w = 200.0f;                    // initial size of the top/left window
-            static float h = 300.0f;
-
-            ImGui::Begin("Splitter test",&show_splitter_test_window,lastWindowSize);//,-1.f,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize);
-            const ImVec2 windowSize = ImGui::GetWindowSize();
-            const bool sizeChanged = lastWindowSize.x!=windowSize.x || lastWindowSize.y!=windowSize.y;
-            if (sizeChanged) lastWindowSize = windowSize;
-            bool splitterActive = false;
-            const ImVec2 os(ImGui::GetStyle().FramePadding.x + ImGui::GetStyle().WindowPadding.x,
-                            ImGui::GetStyle().FramePadding.y + ImGui::GetStyle().WindowPadding.y);
-
-            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
-
-            // window top left
-            ImGui::BeginChild("child1", ImVec2(w, h), true);
-            ImGui::EndChild();
-            // horizontal splitter
-            ImGui::SameLine();
-            ImGui::InvisibleButton("hsplitter", ImVec2(splitterWidth,h));
-            if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
-            splitterActive = ImGui::IsItemActive();
-            if (splitterActive)  w += ImGui::GetIO().MouseDelta.x;
-            if (splitterActive || sizeChanged)  {
-                const float minw = ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().FramePadding.x;
-                const float maxw = minw + windowSize.x - splitterWidth - ImGui::GetStyle().WindowMinSize.x;
-                if (w>maxw)         w = maxw;
-                else if (w<minw)    w = minw;
-            }
-            ImGui::SameLine();
-            // window top right
-            ImGui::BeginChild("child2", ImVec2(0, h), true);
-            ImGui::EndChild();
-            // vertical splitter
-            ImGui::InvisibleButton("vsplitter", ImVec2(-1,splitterWidth));
-            if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
-            splitterActive = ImGui::IsItemActive();
-            if (splitterActive)  h += ImGui::GetIO().MouseDelta.y;
-            if (splitterActive || sizeChanged)  {
-                const float minh = ImGui::GetStyle().WindowPadding.y + ImGui::GetStyle().FramePadding.y;
-                const float maxh = windowSize.y - splitterWidth - ImGui::GetStyle().WindowMinSize.y;
-                if (h>maxh)         h = maxh;
-                else if (h<minh)    h = minh;
-            }
-            // window bottom
-            ImGui::BeginChild("child3", ImVec2(0,0), true);
-            ImGui::EndChild();
-
-            ImGui::PopStyleVar();
-
-            ImGui::End();
-        }
-
-        // imguitoolbar test 2: two global toolbars one at the top and one at the left
-#       ifndef NO_IMGUITOOLBAR
-        // These two lines are only necessary to accomodate space for the global menu bar we're using:
-        const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
-        const ImVec4 displayPortion = ImVec4(0,gMainMenuBarSize.y,displaySize.x,displaySize.y-gMainMenuBarSize.y);
-
-        {
-            static ImGui::Toolbar toolbar("myFirstToolbar##foo");
+            // imguitoolbar test (note that it can be used both inside and outside windows (see below)
+            ImGui::Separator();ImGui::Text("imguitoolbar");ImGui::Separator();
+            static ImGui::Toolbar toolbar;
+            void* myImageTextureIdVoitPtr = reinterpret_cast<void*>(myImageTextureId2);
             if (toolbar.getNumButtons()==0)  {
                 char tmp[1024];ImVec2 uv0(0,0),uv1(0,0);
                 for (int i=0;i<9;i++) {
@@ -761,48 +656,156 @@ void DrawGL()	// Mandatory
                     uv0 = ImVec2((float)(i%3)/3.f,(float)(i/3)/3.f);
                     uv1 = ImVec2(uv0.x+1.f/3.f,uv0.y+1.f/3.f);
 
-                    toolbar.addButton(ImGui::Toolbutton(tmp,reinterpret_cast<void*>(myImageTextureId2),uv0,uv1));
+                    toolbar.addButton(ImGui::Toolbutton(tmp,myImageTextureIdVoitPtr,uv0,uv1,ImVec2(16,16)));
                 }
                 toolbar.addSeparator(16);
-                toolbar.addButton(ImGui::Toolbutton("toolbutton 11",reinterpret_cast<void*>(myImageTextureId2),uv0,uv1,ImVec2(32,32),true,false,ImVec4(0.8,0.8,1.0,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
-                toolbar.addButton(ImGui::Toolbutton("toolbutton 12",reinterpret_cast<void*>(myImageTextureId2),uv0,uv1,ImVec2(48,24),true,false,ImVec4(1.0,0.8,0.8,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
+                toolbar.addButton(ImGui::Toolbutton("toolbutton 11",myImageTextureIdVoitPtr,uv0,uv1,ImVec2(16,16),true,true,ImVec4(0.8,0.8,1.0,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
+                toolbar.addButton(ImGui::Toolbutton("toolbutton 12",myImageTextureIdVoitPtr,uv0,uv1,ImVec2(16,16),true,false,ImVec4(1.0,0.8,0.8,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
 
-                toolbar.setProperties(false,false,true,ImVec2(0.5f,0.f),ImVec2(-1,-1),ImVec4(1,1,1,1),displayPortion);
+                toolbar.setProperties(true,false,false,ImVec2(0.0f,0.f),ImVec2(0.25,1));
             }
             const int pressed = toolbar.render();
-            if (pressed>=0) {printf("Toolbar1: pressed:%d\n",pressed);fflush(stdout);}
+            if (pressed>=0) fprintf(stderr,"Toolbar1: pressed:%d\n",pressed);
         }
-        {
-            static ImGui::Toolbar toolbar("myFirstToolbar2##foo");
-            if (toolbar.getNumButtons()==0)  {
-                char tmp[1024];ImVec2 uv0(0,0),uv1(0,0);
-                for (int i=8;i>=0;i--) {
-                    strcpy(tmp,"toolbutton ");
-                    sprintf(&tmp[strlen(tmp)],"%d",8-i+1);
-                    uv0=ImVec2((float)(i%3)/3.f,(float)(i/3)/3.f);
-                    uv1=ImVec2(uv0.x+1.f/3.f,uv0.y+1.f/3.f);
+        // Here we can open a child window if we want to toolbar not to scroll
+        ImGui::Spacing();ImGui::Text("imguitoolbar can be used inside windows too.\nThe first series of buttons can be used as a tab control.\nPlease resize the window and see the dynamic layout.\n");
+        ImGui::End();
+    }
+#   endif //NO_IMGUITOOLBAR
 
-                    toolbar.addButton(ImGui::Toolbutton(tmp,reinterpret_cast<void*>(myImageTextureId2),uv0,uv1,ImVec2(24,48)));
-                }
-                toolbar.addSeparator(16);
-                toolbar.addButton(ImGui::Toolbutton("toolbutton 11",reinterpret_cast<void*>(myImageTextureId2),uv0,uv1,ImVec2(24,32),true,false,ImVec4(0.8,0.8,1.0,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
-                toolbar.addButton(ImGui::Toolbutton("toolbutton 12",reinterpret_cast<void*>(myImageTextureId2),uv0,uv1,ImVec2(24,32),true,false,ImVec4(1.0,0.8,0.8,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
+    // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
+#   if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_SAVE_STYLE))
+    if (show_test_window)
+    {
+        //ImGui::SetNewWindowDefaultPos(ImVec2(650, 20));        // Normally user code doesn't need/want to call this, because positions are saved in .ini file. Here we just want to make the demo initial state a bit more friendly!
+        ImGui::ShowTestWindow(&show_test_window);
+    }
+#   endif // NO_IMGUISTYLESERIALIZER
+#   ifndef NO_IMGUINODEGRAPHEDITOR
+    if (show_node_graph_editor_window) {
+        ImGui::SetNextWindowSize(ImVec2(700,600), ImGuiSetCond_FirstUseEver);
+        if (ImGui::Begin("Example: Custom Node Graph", &show_node_graph_editor_window)){
+#           ifndef IMGUINODEGRAPHEDITOR_NOTESTDEMO
+            ImGui::TestNodeGraphEditor();   // see its code for further info
+#           endif //IMGUINODEGRAPHEDITOR_NOTESTDEMO
+            ImGui::End();
+        }
+    }
+#   endif //NO_IMGUINODEGRAPHEDITOR
+    if (show_splitter_test_window)  {
+        // based on a snippet by Omar
+        static ImVec2 lastWindowSize(500,500);      // initial window size
+        static const float splitterWidth = 6.f;
+        static float w = 200.0f;                    // initial size of the top/left window
+        static float h = 300.0f;
 
-                toolbar.setProperties(true,true,false,ImVec2(0.0f,0.0f),ImVec2(0.25f,0.9f),ImVec4(0.85,0.85,1,1),displayPortion);
+        ImGui::Begin("Splitter test",&show_splitter_test_window,lastWindowSize);//,-1.f,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize);
+        const ImVec2 windowSize = ImGui::GetWindowSize();
+        const bool sizeChanged = lastWindowSize.x!=windowSize.x || lastWindowSize.y!=windowSize.y;
+        if (sizeChanged) lastWindowSize = windowSize;
+        bool splitterActive = false;
+        const ImVec2 os(ImGui::GetStyle().FramePadding.x + ImGui::GetStyle().WindowPadding.x,
+                        ImGui::GetStyle().FramePadding.y + ImGui::GetStyle().WindowPadding.y);
 
-                //toolbar.setScaling(2.0f,1.1f);
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
+
+        // window top left
+        ImGui::BeginChild("child1", ImVec2(w, h), true);
+        ImGui::EndChild();
+        // horizontal splitter
+        ImGui::SameLine();
+        ImGui::InvisibleButton("hsplitter", ImVec2(splitterWidth,h));
+        if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+        splitterActive = ImGui::IsItemActive();
+        if (splitterActive)  w += ImGui::GetIO().MouseDelta.x;
+        if (splitterActive || sizeChanged)  {
+            const float minw = ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().FramePadding.x;
+            const float maxw = minw + windowSize.x - splitterWidth - ImGui::GetStyle().WindowMinSize.x;
+            if (w>maxw)         w = maxw;
+            else if (w<minw)    w = minw;
+        }
+        ImGui::SameLine();
+        // window top right
+        ImGui::BeginChild("child2", ImVec2(0, h), true);
+        ImGui::EndChild();
+        // vertical splitter
+        ImGui::InvisibleButton("vsplitter", ImVec2(-1,splitterWidth));
+        if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+        splitterActive = ImGui::IsItemActive();
+        if (splitterActive)  h += ImGui::GetIO().MouseDelta.y;
+        if (splitterActive || sizeChanged)  {
+            const float minh = ImGui::GetStyle().WindowPadding.y + ImGui::GetStyle().FramePadding.y;
+            const float maxh = windowSize.y - splitterWidth - ImGui::GetStyle().WindowMinSize.y;
+            if (h>maxh)         h = maxh;
+            else if (h<minh)    h = minh;
+        }
+        // window bottom
+        ImGui::BeginChild("child3", ImVec2(0,0), true);
+        ImGui::EndChild();
+
+        ImGui::PopStyleVar();
+
+        ImGui::End();
+    }
+
+    // imguitoolbar test 2: two global toolbars one at the top and one at the left
+#   ifndef NO_IMGUITOOLBAR
+    // These two lines are only necessary to accomodate space for the global menu bar we're using:
+    const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+    const ImVec4 displayPortion = ImVec4(0,gMainMenuBarSize.y,displaySize.x,displaySize.y-gMainMenuBarSize.y);
+
+    {
+        static ImGui::Toolbar toolbar("myFirstToolbar##foo");
+        if (toolbar.getNumButtons()==0)  {
+            char tmp[1024];ImVec2 uv0(0,0),uv1(0,0);
+            for (int i=0;i<9;i++) {
+                strcpy(tmp,"toolbutton ");
+                sprintf(&tmp[strlen(tmp)],"%d",i+1);
+                uv0 = ImVec2((float)(i%3)/3.f,(float)(i/3)/3.f);
+                uv1 = ImVec2(uv0.x+1.f/3.f,uv0.y+1.f/3.f);
+
+                toolbar.addButton(ImGui::Toolbutton(tmp,reinterpret_cast<void*>(myImageTextureId2),uv0,uv1));
             }
-            const int pressed = toolbar.render();
-            if (pressed>=0) {printf("Toolbar2: pressed:%d\n",pressed);fflush(stdout);}
+            toolbar.addSeparator(16);
+            toolbar.addButton(ImGui::Toolbutton("toolbutton 11",reinterpret_cast<void*>(myImageTextureId2),uv0,uv1,ImVec2(32,32),true,false,ImVec4(0.8,0.8,1.0,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
+            toolbar.addButton(ImGui::Toolbutton("toolbutton 12",reinterpret_cast<void*>(myImageTextureId2),uv0,uv1,ImVec2(48,24),true,false,ImVec4(1.0,0.8,0.8,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
+
+            toolbar.setProperties(false,false,true,ImVec2(0.5f,0.f),ImVec2(-1,-1),ImVec4(1,1,1,1),displayPortion);
         }
+        const int pressed = toolbar.render();
+        if (pressed>=0) {printf("Toolbar1: pressed:%d\n",pressed);fflush(stdout);}
+    }
+    {
+        static ImGui::Toolbar toolbar("myFirstToolbar2##foo");
+        if (toolbar.getNumButtons()==0)  {
+            char tmp[1024];ImVec2 uv0(0,0),uv1(0,0);
+            for (int i=8;i>=0;i--) {
+                strcpy(tmp,"toolbutton ");
+                sprintf(&tmp[strlen(tmp)],"%d",8-i+1);
+                uv0=ImVec2((float)(i%3)/3.f,(float)(i/3)/3.f);
+                uv1=ImVec2(uv0.x+1.f/3.f,uv0.y+1.f/3.f);
 
-#       ifndef NO_IMGUIFILESYSTEM
-        // Really tiny visual optimization here:
-        ImGuiFs::Dialog::WindowLTRBOffsets.x = 24;   // save some pixels from left-right screen borders
-        ImGuiFs::Dialog::WindowLTRBOffsets.y = gMainMenuBarSize.y + 32; // save some pixels from top-bottom screen borders
-#       endif //NO_IMGUIFILESYSTEM
+                toolbar.addButton(ImGui::Toolbutton(tmp,reinterpret_cast<void*>(myImageTextureId2),uv0,uv1,ImVec2(24,48)));
+            }
+            toolbar.addSeparator(16);
+            toolbar.addButton(ImGui::Toolbutton("toolbutton 11",reinterpret_cast<void*>(myImageTextureId2),uv0,uv1,ImVec2(24,32),true,false,ImVec4(0.8,0.8,1.0,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
+            toolbar.addButton(ImGui::Toolbutton("toolbutton 12",reinterpret_cast<void*>(myImageTextureId2),uv0,uv1,ImVec2(24,32),true,false,ImVec4(1.0,0.8,0.8,1)));  // Note that separator "eats" one toolbutton index as if it was a real button
 
-#       endif //NO_IMGUITOOLBAR
+            toolbar.setProperties(true,true,false,ImVec2(0.0f,0.0f),ImVec2(0.25f,0.9f),ImVec4(0.85,0.85,1,1),displayPortion);
+
+            //toolbar.setScaling(2.0f,1.1f);
+        }
+        const int pressed = toolbar.render();
+        if (pressed>=0) {printf("Toolbar2: pressed:%d\n",pressed);fflush(stdout);}
+    }
+
+#   ifndef NO_IMGUIFILESYSTEM
+    // Really tiny visual optimization here:
+    ImGuiFs::Dialog::WindowLTRBOffsets.x = 24;   // save some pixels from left-right screen borders
+    ImGuiFs::Dialog::WindowLTRBOffsets.y = gMainMenuBarSize.y + 32; // save some pixels from top-bottom screen borders
+#   endif //NO_IMGUIFILESYSTEM
+
+#   endif //NO_IMGUITOOLBAR
 }
 
 
