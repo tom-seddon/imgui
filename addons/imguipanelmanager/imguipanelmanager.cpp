@@ -621,7 +621,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         if (!(flags & ImGuiWindowFlags_NoTitleBar))
         {
             if (p_opened != NULL)
-                CloseWindowButton(p_opened);
+                *p_opened = CloseWindowButton(p_opened);
             if (p_undocked != NULL)
                 DockWindowButton(p_undocked,p_opened);
 
@@ -923,7 +923,8 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
         else if (selected) {
             pane.bar.setSelectedButtonIndex(-1);
             persistHoverFocus = false;  // optional line (when commented out leaves a selected window in hover move: we must press the close button another time to hide it)
-            dirty = true;
+	    dirty = true;mgr.updateSizes();  // Needed to update the innerQuadSize
+	    dirty = true; // Needed so next time the hover window sizes are set
         }
     }
     if (!wd.isToggleWindow) {

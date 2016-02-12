@@ -636,7 +636,7 @@ void DrawGL()	// Mandatory
                             }
                         }
                     }
-                    tabWindow.render(); // Must be called inside "its" window (and sets isInited() to false)
+                    tabWindow.render(); // Must be called inside "its" window (and sets isInited() to false). [ ChildWindows can't be used here (but can be used inside Tab Pages). Basically all the "Central Window" must be given to 'tabWindow'. ]
 #                   else // NO_IMGUITABWINDOW
                     ImGui::Text("Example central window");
 #                   endif // NO_IMGUITABWINDOW
