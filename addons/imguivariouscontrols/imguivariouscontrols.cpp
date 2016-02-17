@@ -895,8 +895,7 @@ struct AnimatedImageInternal {
 
             while ((gr->data = stbi__gif_load_next(&s, &g, &c, 4)))
             {
-                STBI_FREE(gr->out);gr->out=NULL;
-                if (gr->data == (unsigned char*)&s)
+		if (gr->data == (unsigned char*)&s)
                 {
                     gr->data = 0;
                     break;
@@ -910,7 +909,7 @@ struct AnimatedImageInternal {
                 ++ag.frames;
             }
 
-            STBI_FREE(gr->out);gr->out=NULL;
+	    STBI_FREE(g.out);
             if (gr != &head)    {
                 STBI_FREE(gr);
             }
@@ -1402,6 +1401,8 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
 
     return rv;
 }
+
+
 
 
 

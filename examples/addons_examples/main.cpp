@@ -358,7 +358,13 @@ void DrawGL()	// Mandatory
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("Font options");ImGui::Separator();
         //ImGui::Checkbox("Font Allow User Scaling", &ImGui::GetIO().FontAllowUserScaling);
         //if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","If true, CTRL + mouse wheel scales the window\n(or just its font size if child window).");
+        ImGui::PushItemWidth(275);
         ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.2f"); // scale everything
+        ImGui::PopItemWidth();
+        if (ImGui::GetIO().FontGlobalScale!=1.f)    {
+            ImGui::SameLine(0,10);
+            if (ImGui::SmallButton("Reset##glFontGlobalScale")) ImGui::GetIO().FontGlobalScale = 1.f;
+        }
 
         // Some options ported from imgui_demo.cpp
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("Window options");ImGui::Separator();
@@ -385,7 +391,17 @@ void DrawGL()	// Mandatory
         static bool resetCurrentStyle = false;
         loadCurrentStyle = ImGui::Button("Load Saved Style");
         saveCurrentStyle = ImGui::Button("Save Current Style");
-        resetCurrentStyle = ImGui::Button("Reset Current Style");
+        resetCurrentStyle = ImGui::Button("Reset Current Style To: ");ImGui::SameLine();
+        static int styleEnumNum = 0;
+        ImGui::PushItemWidth(200);
+        ImGui::Combo("###StyleEnumCombo",&styleEnumNum,ImGui::GetDefaultStyleNames(),(int) ImGuiStyle_Count,(int) ImGuiStyle_Count);
+        ImGui::PopItemWidth();
+        if (ImGui::IsItemHovered()) {
+            if   (styleEnumNum==0)      ImGui::SetTooltip("%s","\"Default\"\nThis is the default\nImGui theme");
+            else if (styleEnumNum==1)   ImGui::SetTooltip("%s","\"Gray\"\nThis is the default\ntheme of this demo");
+            else if (styleEnumNum==2)   ImGui::SetTooltip("%s","\"OSX\"\nPosted by @itamago here:\nhttps://github.com/ocornut/imgui/pull/511\n(hope I can use it)");
+        }
+
         const char* pStyleFileName =  styleFileName;    // defined globally
         if (loadCurrentStyle)   {
 #               if (!defined(NO_IMGUIEMSCRIPTEN) && !defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
@@ -408,7 +424,7 @@ void DrawGL()	// Mandatory
 #                   endif //NO_IMGUIEMSCRIPTEN
             }
         }
-        if (resetCurrentStyle)  ImGui::GetStyle() = ImGuiStyle();
+        if (resetCurrentStyle)  ImGui::ResetStyle(styleEnumNum,ImGui::GetStyle());
 #       else //NO_IMGUISTYLESERIALIZER
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUISTYLESERIALIZER
