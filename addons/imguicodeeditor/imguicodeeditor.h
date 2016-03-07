@@ -28,6 +28,24 @@
 #error imguistring is required for imguicodeeditor to work
 #endif //NO_IMGUISTRING
 
+// ImGui::InputTextWithSyntaxHighlighting(..):
+/*
+  Since ImGuiCe::CodeEditor is far from being usable (read the comment block below),
+  I've added a simpler control by modifying ImGui::InputTextMultiline(...) a bit.
+  I had to drop most of the ImGuiCe::CodeEditor(...) features [ expecially line bookmark support and code-folding ;( ],
+  but I think that it can be usable for people that just needs to edit small snippets of code.
+
+  It still uses ImGuiCe::CodeEditor::GetStyle() and ImGuiCe::Language, so that
+  styles and languages can be added for both controls in one pass.
+
+  // TO FIX:
+  -> mouse text selection when horizontal scrolling is present
+  -> line number alignment
+  -> speed: add a global static id-map to hold some state info could speed up the ctrl considerably
+  //
+*/
+
+// ImGuiCe::CodeEditor
 // STATE: NOT USABLE
 // TODO/ROADMAP:
 /*
@@ -209,6 +227,7 @@ public:
     struct Style {
         ImVec4 color_background;
         ImVec4 color_text;
+        ImVec4 color_text_selected_background;
         int font_text;
         ImU32 color_line_numbers_background;
         ImVec4 color_line_numbers;
@@ -263,12 +282,13 @@ public:
 
     static Style style;
 
-    protected:
-    void ParseTextForFolding(bool forceAllSegmentsFoldedOrNot = false, bool foldingStateToForce = true);
-    Language lang;
     // We could have stored a pair of these in each "language struct", but this way we save memory and can make per-instance changes
     typedef ImHashMapCString MyKeywordMapType;      // Map from a string token (char*) to a SyntaxHighlightingType.         [chars are deep copied inside map]
     //typedef ImHashMapConstCString MyKeywordMapType; // Map from a string token (const char*) to a SyntaxHighlightingType.   [const chars are not copied inside map]
+
+    protected:
+    void ParseTextForFolding(bool forceAllSegmentsFoldedOrNot = false, bool foldingStateToForce = true);
+    Language lang;
     MyKeywordMapType shTypeKeywordMap;
     ImHashMapChar    shTypePunctuationMap;
 private:
@@ -277,10 +297,32 @@ private:
     void TextLineUnformattedWithSH(const char *text, const char *text_end);
     void TextLineWithSHV(const char *fmt, va_list args);
     void TextLineWithSH(const char *fmt...);
+
+    static void StaticInit();
+    friend bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang,const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data);
+
 };
 
 
-} // namespace ImGui
+} // namespace ImGuiCe
 
+
+namespace ImGuiCe {
+
+
+bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
+
+} // namespace ImGuiCe
+
+// Alias
+namespace ImGui {
+
+
+inline bool InputTextWithSyntaxHighlighting(const char* labelJustForID, char* buf, size_t buf_size,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL) {
+    return ImGuiCe::BadCodeEditor(labelJustForID,buf,buf_size,lang,size_arg,flags,callback,user_data);
+}
+
+
+}   // namespace ImGui
 
 #endif //IMGUICODEEDITOR_H_

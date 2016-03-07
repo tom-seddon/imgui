@@ -1264,7 +1264,6 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
             TabWindow::TabLabel& tab = *tabs[i];
             if (tab.closable) ++numClosableTabs;
 
-
             fontOverride = ((selectedTab == &tab) ? (tab.getModified() ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED_MODIFIED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED]]) :
                 (tab.getModified() ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_MODIFIED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_NORMAL]]));
             if (!fontOverride) {
@@ -1285,7 +1284,7 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
             // Draw the button
             mustCloseTab = false;
             ImGui::PushID(&tab);   // otherwise two tabs with the same name would clash.
-            if (ImGui::TabButton("",selectedTab == &tab,tab.closable ? &mustCloseTab : NULL,tab.getLabel(),NULL,&tabStyle,(ImFont*)fontOverride,NULL,NULL,canUseSizeOptimization))   {
+            if (tab.mustSelectNextFrame || ImGui::TabButton("",(selectedTab == &tab),tab.closable ? &mustCloseTab : NULL,tab.getLabel(),NULL,&tabStyle,(ImFont*)fontOverride,NULL,NULL,canUseSizeOptimization))   {
                 selection_changed = (selectedTab != &tab);
                 newSelectedTab = &tab;
                 tab.mustSelectNextFrame = false;
@@ -1402,7 +1401,12 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
         }
         else {
             if (selectedTab) selectedTab->render();
-            else {ImGui::Text("EMPTY TAB LABEL DOCKING SPACE. PLEASE DRAG AND DROP TAB LABELS HERE! And please use ImGui::TabWindow::SetWindowContentDrawerCallback(...) to set a callback to display this text. ");}
+            else {
+                ImGui::Text("EMPTY TAB LABEL DOCKING SPACE.");
+                ImGui::Text("PLEASE DRAG AND DROP TAB LABELS HERE!");
+                ImGui::Separator();
+                ImGui::Spacing();
+                ImGui::TextWrapped("And please use ImGui::TabWindow::SetWindowContentDrawerCallback(...) to set a callback to modify this text.");}
         }
         ImGui::EndChild();  // user
         mhs.storeStyleVars();
@@ -1495,9 +1499,12 @@ void TabWindow::render()
     TabWindowDragData& dd = gDragData;
 
     static int frameCnt = -1;
+    static bool lastFrameNoDragTabLabelHasBeenDrawn = true;
     ImGuiState& g = *GImGui;
     if (frameCnt!=g.FrameCount) {
         frameCnt=g.FrameCount;
+        const bool mustDrawDraggedTabLabel = (!g.HoveredWindow || lastFrameNoDragTabLabelHasBeenDrawn) && dd.draggingTabSrc;
+        lastFrameNoDragTabLabelHasBeenDrawn = true;
         //--------------------------------------------------------------
         // Some "static" actions here:
         //--------------------------------------------------------------
@@ -1560,7 +1567,7 @@ void TabWindow::render()
             TabLabelGroupPopupMenuDrawerCb(MyTabWindowHelperStruct::tabLabelGroupPopup,*MyTabWindowHelperStruct::tabLabelPopupTabWindow,MyTabWindowHelperStruct::tabLabelGroupPopupNode,TabLabelGroupPopupMenuDrawerUserPtr);
         }
         // 3) Display dragging button only if no hover window is present (otherwise we need to draw something under it before, see below)
-	if (!g.HoveredWindow && dd.draggingTabSrc)  {
+    if (mustDrawDraggedTabLabel)  {
 	    if (dd.draggingTabWindowSrc->isIsolated()) {
 		dd.resetDraggingSrc();
 		MyTabWindowHelperStruct::LockedDragging = true;	// consume one click before restrt dragging again
@@ -1744,6 +1751,7 @@ void TabWindow::render()
             else HoveredCorrectChildWindow = NULL;
             // Button -----------------
             dd.drawDragButton(drawList,wp,mp);
+            lastFrameNoDragTabLabelHasBeenDrawn = false;
             // -------------------------------------------------------------------
             ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
         }

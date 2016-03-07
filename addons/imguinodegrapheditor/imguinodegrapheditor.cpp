@@ -308,8 +308,9 @@ void NodeGraphEditor::render()
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
         ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0,0));
 
-        ImGui::Checkbox("Show connection names", &show_connection_names);
-	if (io.FontAllowUserScaling) {ImGui::SameLine(0,4);ImGui::Text("Use CTRL+MW to zoom.");}
+        ImGui::Checkbox("Show connection names.", &show_connection_names);
+    //if (io.FontAllowUserScaling)
+    {ImGui::SameLine(0,15);ImGui::Text("Use CTRL+MW to zoom.");}
         ImGui::SameLine(ImGui::GetWindowWidth()-120);
         ImGui::Checkbox("Show grid", &show_grid);
 	static const char* txts[2] = {"Hold MMB to scroll. Double-click LMB on slots to remove their links.",
@@ -341,12 +342,13 @@ void NodeGraphEditor::render()
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.color_background);
     ImGui::BeginChild("scrolling_region", ImVec2(0,0), true, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollWithMouse);
 
-    if (!io.FontAllowUserScaling && io.MouseWheel && ImGui::GetCurrentWindow()==GImGui->HoveredWindow)   {
+    if (!io.FontAllowUserScaling && io.KeyCtrl && ImGui::GetCurrentWindow()==GImGui->HoveredWindow && (io.MouseWheel || io.MouseClicked[2]))   {
 	// Zoom / Scale window
 	ImGuiState& g = *GImGui;
 	ImGuiWindow* window = ImGui::GetCurrentWindow();
 	float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
-	float scale = new_font_scale / window->FontWindowScale;
+    if (io.MouseClicked[2]) new_font_scale = 1.f;   // MMB = RESET ZOOM
+    float scale = new_font_scale / window->FontWindowScale;
 	if (scale!=1)	{
 	    scrolling=scrolling*scale;
 	    window->FontWindowScale = new_font_scale;

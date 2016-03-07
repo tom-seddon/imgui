@@ -38,6 +38,8 @@ IMGUI_BASE_PATH=../..
 
 #DEFINES+= IMGUI_WIP	    # to remove (dev only)
 #DEFINES+=IMGUIBINDINGS_RESTORE_GL_STATE
+
+#DEFINES+= YES_IMGUIDOCK	# Testing only! To remove
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 

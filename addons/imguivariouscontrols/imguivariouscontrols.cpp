@@ -1,5 +1,7 @@
 #include "imguivariouscontrols.h"
 
+#include <imgui_internal.h> // intellisense
+
 #ifndef NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
 #ifndef IMGUI_USE_AUTO_BINDING
 #ifndef STBI_INCLUDE_STB_IMAGE_H
@@ -1401,8 +1403,6 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
 
     return rv;
 }
-
-
 
 
 

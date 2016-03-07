@@ -88,6 +88,9 @@
 #ifdef YES_IMGUIPDFVIEWER
 #include "./imguiyesaddons/imguipdfviewer.cpp"
 #endif //YES_IMGUIPDFVIEWER
+#ifdef YES_IMGUIDOCK
+#include "./imguiyesaddons/imguidock.cpp"
+#endif //YES_IMGUIDOCK
 
 #endif //IMGUI_USER_ADDONS_INL_
 

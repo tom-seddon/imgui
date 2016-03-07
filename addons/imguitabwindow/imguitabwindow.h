@@ -308,7 +308,12 @@ public:
     // This method will be used ONLY if you don't set TabWindow::SetWindowContentDrawerCallback(...),
     // (and you prefer extending from this class)
     virtual void render() {
-        ImGui::TextWrapped("Here is the content of tab label: \"%s\". Please consider using ImGui::TabWindow::SetWindowContentDrawerCallback(...) to set a callback for it, or extending TabWindowLabel and implement its render() method. ",getLabel());
+        ImGui::Text("Here is the content of tab label: \"%s\".",getLabel());
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::Text("Please consider using:");
+        ImGui::Text("ImGui::TabWindow::SetWindowContentDrawerCallback(...)");
+        ImGui::TextWrapped("%s","to set a content for it, or extending TabWindowLabel and implement its render() method.");
     }
 
     virtual bool saveAs(const char* savePath=NULL) {

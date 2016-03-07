@@ -113,11 +113,18 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #		undef YES_IMGUIPDFVIEWER
 #		define YES_IMGUIPDFVIEWER
 #	endif //NO_IMGUIPDFVIEWER
+#	ifndef NO_IMGUIDOCK
+#		undef YES_IMGUIDOCK
+#		define YES_IMGUIDOCK
+#	endif //NO_IMGUIDOCK
 #endif //YES_IMGUIADDONS_ALL
 
 #ifdef YES_IMGUIPDFVIEWER
 #include "./imguiyesaddons/imguipdfviewer.h"
 #endif //YES_IMGUIPDFVIEWER
+#ifdef YES_IMGUIDOCK
+#include "./imguiyesaddons/imguidock.h"
+#endif //YES_IMGUIDOCK
 
 #endif //IMGUI_USER_ADDONS_H_
 

@@ -309,11 +309,32 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
 }
 #endif //NO_IMGUISTYLESERIALIZER_LOADSTYLE
 
+
+// @dougbinks (https://github.com/ocornut/imgui/issues/438)
+void ChangeStyleColors(ImGuiStyle& style,float satThresholdForInvertingLuminance,float shiftHue)  {
+    if (satThresholdForInvertingLuminance>=1.f && shiftHue==0.f) return;
+    for (int i = 0; i < ImGuiCol_COUNT; i++)	{
+	ImVec4& col = style.Colors[i];
+	float H, S, V;
+	ImGui::ColorConvertRGBtoHSV( col.x, col.y, col.z, H, S, V );
+	if( S < satThresholdForInvertingLuminance)  { V = 1.0 - V; }
+	if (shiftHue) {H+=shiftHue;if (H>1) H-=1.f;else if (H<0) H+=1.f;}
+	ImGui::ColorConvertHSVtoRGB( H, S, V, col.x, col.y, col.z );
+    }
+}
+static inline void InvertStyleColors(ImGuiStyle& style)  {ChangeStyleColors(style,.1f,0.f);}
+static inline void ChangeStyleColorsHue(ImGuiStyle& style,float shiftHue=0.f)  {ChangeStyleColors(style,0.f,shiftHue);}
+
+
 bool ResetStyle(int styleEnum,ImGuiStyle& style) {
     if (styleEnum<0 || styleEnum>=ImGuiStyle_Count) return false;
     style = ImGuiStyle();
     switch (styleEnum) {
-    case ImGuiStyle_Gray: {
+    case ImGuiStyle_DefaultInverse:
+	InvertStyleColors(style);
+    break;
+    case ImGuiStyle_Gray:
+    {
 	style.AntiAliasedLines = true;
 	style.AntiAliasedShapes = true;
 	style.CurveTessellationTol = 1.25f;
@@ -376,12 +397,11 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.00f, 0.00f, 0.66f, 0.34f);
 	style.Colors[ImGuiCol_TooltipBg]             = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
-	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
-
-
+	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);	
     }
     break;
-    case ImGuiStyle_OSX: {
+    case ImGuiStyle_OSX:
+    case ImGuiStyle_OSXInverse:    {
 	// Posted by @itamago here: https://github.com/ocornut/imgui/pull/511
 	style.Colors[ImGuiCol_Text]                  = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextDisabled]          = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
@@ -428,14 +448,17 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
 	style.Colors[ImGuiCol_TooltipBg]             = ImVec4(1.00f, 1.00f, 1.00f, 0.94f);
 	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+
+	if (styleEnum == ImGuiStyle_OSXInverse) InvertStyleColors(style);
     }
     break;
     default:
     break;
-    }
+    } 
+
     return true;
 }
-static const char* DefaultStyleNames[ImGuiStyle_Count]={"Default","Gray","OSX"};
+static const char* DefaultStyleNames[ImGuiStyle_Count]={"Default","Gray","OSX","DefaultInverse","OSXInverse"};
 const char** GetDefaultStyleNames() {return &DefaultStyleNames[0];}
 
 

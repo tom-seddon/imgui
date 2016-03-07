@@ -295,6 +295,9 @@ void DrawGL()	// Mandatory
     static bool show_another_window = false;
     static bool show_node_graph_editor_window = false;
     static bool show_splitter_test_window = false;
+    static bool show_dock_window = false;
+    static bool show_tab_windows = false;
+
 
     // 1. Show a simple window
     {
@@ -323,6 +326,14 @@ void DrawGL()	// Mandatory
         show_node_graph_editor_window ^= ImGui::Button("Another Window With NodeGraphEditor");
 #       endif //NO_IMGUINODEGRAPHEDITOR
         show_splitter_test_window ^= ImGui::Button("Show splitter test window");
+#       ifdef YES_IMGUIDOCK
+        show_dock_window ^= ImGui::Button("Another Window With ImGuiDock");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","LumixEngine Dock system test.\nHowever I guess it was intended to be used globally.\nSo the result looks ugly, the main menu hides the tabs\nand once started the only way to stop it is to click here again.\nI really suggest you test it globally in a brand new demo.");
+#       endif //YES_IMGUIDOCK
+#       ifndef NO_IMGUITABWINDOW
+        show_tab_windows ^= ImGui::Button("Show TabWindow Test");
+#       endif //NO_IMGUITABWINDOW
+
 
         // Calculate and show framerate
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("Frame rate options");
@@ -391,9 +402,10 @@ void DrawGL()	// Mandatory
         static bool resetCurrentStyle = false;
         loadCurrentStyle = ImGui::Button("Load Saved Style");
         saveCurrentStyle = ImGui::Button("Save Current Style");
-        resetCurrentStyle = ImGui::Button("Reset Current Style To: ");ImGui::SameLine();
-        static int styleEnumNum = 0;
-        ImGui::PushItemWidth(200);
+        resetCurrentStyle = ImGui::Button("Reset Current Style To: ");
+        ImGui::SameLine();
+        static int styleEnumNum = 1;
+        ImGui::PushItemWidth(135);
         ImGui::Combo("###StyleEnumCombo",&styleEnumNum,ImGui::GetDefaultStyleNames(),(int) ImGuiStyle_Count,(int) ImGuiStyle_Count);
         ImGui::PopItemWidth();
         if (ImGui::IsItemHovered()) {
@@ -401,6 +413,23 @@ void DrawGL()	// Mandatory
             else if (styleEnumNum==1)   ImGui::SetTooltip("%s","\"Gray\"\nThis is the default\ntheme of this demo");
             else if (styleEnumNum==2)   ImGui::SetTooltip("%s","\"OSX\"\nPosted by @itamago here:\nhttps://github.com/ocornut/imgui/pull/511\n(hope I can use it)");
         }
+
+        ImGui::SameLine();
+        static float hueShift = 0;
+        ImGui::PushItemWidth(50);
+        ImGui::DragFloat("HueShift##styleShiftHue",&hueShift,.005f,0,1,"%.2f");
+        ImGui::PopItemWidth();
+        if (hueShift!=0)   {
+            ImGui::SameLine();
+            if (ImGui::SmallButton("reset##styleReset")) {hueShift=0.f;}
+        }
+        const bool mustInvertColors = ImGui::Button("Invert Colors:##styleInvertColors");
+        ImGui::SameLine();
+        ImGui::PushItemWidth(50);
+        static float invertColorThreshold = .1f;
+        ImGui::DragFloat("Saturation Threshold##styleLumThres",&invertColorThreshold,.005f,0.f,0.5f,"%.2f");
+        ImGui::PopItemWidth();
+        if (mustInvertColors)  ImGui::ChangeStyleColors(ImGui::GetStyle(),invertColorThreshold);
 
         const char* pStyleFileName =  styleFileName;    // defined globally
         if (loadCurrentStyle)   {
@@ -424,7 +453,10 @@ void DrawGL()	// Mandatory
 #                   endif //NO_IMGUIEMSCRIPTEN
             }
         }
-        if (resetCurrentStyle)  ImGui::ResetStyle(styleEnumNum,ImGui::GetStyle());
+        if (resetCurrentStyle)  {
+            ImGui::ResetStyle(styleEnumNum,ImGui::GetStyle());
+            if (hueShift!=0) ImGui::ChangeStyleColors(ImGui::GetStyle(),0.f,hueShift);
+        }
 #       else //NO_IMGUISTYLESERIALIZER
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUISTYLESERIALIZER
@@ -636,10 +668,22 @@ void DrawGL()	// Mandatory
         ImGui::SameLine();ImGui::Checkbox("Closable##TabLabelClosing",&allowClosingTabs);
         ImGui::SameLine();if (ImGui::SmallButton("Reset Tabs")) {for (int i=0;i<numTabs;i++) tabItemOrdering[i] = i;}
         //if (optionalHoveredTab>=0) ImGui::Text("Mouse is hovering Tab Label: \"%s\".\n\n",tabNames[optionalHoveredTab]);
-
 #       else //NO_IMGUITABWINDOW
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUITABWINDOW
+
+        // BadCodeEditor Test:
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguicodeeditor");ImGui::Separator();
+#       ifndef NO_IMGUITABWINDOW
+        ImGui::Spacing();
+        ImGui::Text("ImGui::InputTextWithSyntaxHighlighting(...):");
+        static const char* myCode="# include <sadd.h>\n\nusing namespace std;\n\n//This is a comment\nclass MyClass\n{\npublic:\nMyClass() {}\nvoid Init(int num)\n{  // for loop\nfor (int t=0;t<20;t++)\n	{\n     mNum=t; /* setting var */\n     const float myFloat = 1.25f;\n      break;\n	}\n}\n\nprivate:\nint mNum;\n};\n\nstatic const char* SomeStrings[] = {\"One\"/*Comment One*//*Comment*/,\"Two /*Fake Comment*/\",\"Three\\\"Four\"};\n\nwhile (i<25 && i>=0)   {\n\ti--;\nbreak;} /*comment*/{/*This should not fold*/}/*comment2*/for (int i=0;i<20;i++)    {\n\t\t\tcontinue;//OK\n} // end second folding\n\nfor (int j=0;j<200;j++)  {\ncontinue;}\n\n//region Custom Region Here\n{\n//something inside here\n}\n//endregion\n\n/*\nMultiline\nComment\nHere\n*/\n\n/*\nSome Unicode Characters here:\n€€€€\n*/\n\n";
+        static char bceBuffer[1024]="";
+        if (bceBuffer[0]=='\0') strcpy(bceBuffer,myCode);   //Bad init (use initGL() to fill the buffer
+        ImGui::InputTextWithSyntaxHighlighting("ITWSH_JustForID",bceBuffer,sizeof(bceBuffer),ImGuiCe::LANG_CPP,ImVec2(0,300));
+#       else //NO_IMGUICODEEDITOR
+        ImGui::Text("%s","Excluded from this build.\n");
+#       endif //NO_IMGUICODEEDITOR
 
         // ListView Test:
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguilistview");ImGui::Separator();
@@ -763,6 +807,53 @@ void DrawGL()	// Mandatory
 
         ImGui::End();
     }
+#   ifdef YES_IMGUIDOCK
+    if (show_dock_window)   {
+        // I don't know how to use it, I'm a little dumb here... I probably have to create tabs somehow...
+        // or maybe it's supposed to be used on its own, without other ImGui "normal" windows...
+
+        ImGui::BeginDock("MyFirstDockedWindow",NULL,0);
+        ImGui::Text("LumixEngine Dock system test window 1.");
+        ImGui::EndDock();
+
+        ImGui::BeginDock("MySecondDockedWindow",NULL,0);
+        ImGui::Text("LumixEngine Dock system test window 2.");
+        ImGui::EndDock();
+
+    }
+#   endif //YES_IMGUIDOCK
+#   ifndef NO_IMGUITABWINDOW
+    if (show_tab_windows)   {
+        static ImGui::TabWindow tabWindows[2];  // Note: there's more than this: there are methods to save/load all TabWindows together, but we don't use them here. Also we don't use "custom callbacks", "TabLabel modified states" and TabLabel context-menus here to keep things simple.
+        static bool showTabWindow[2] = {true,true};
+
+        if (showTabWindow[0] && ImGui::Begin("TabWindow1", &showTabWindow[0], ImVec2(400,600),.85f,ImGuiWindowFlags_NoScrollbar))  {
+            ImGui::TabWindow&  tabWindow = tabWindows[0];
+            if (!tabWindow.isInited()) {
+                static const char* tabNames[] = {"Test","Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
+                static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
+                static const char* tabTooltips[numTabs] = {"Test Tab Tooltip","Render Tab Tooltip","Layers Tab Tooltip","Scene Tab Tooltip","This tab cannot be dragged around","Object Tab Tooltip","","","","This tab cannot be dragged around","Tired to add tooltips...",""};
+                for (int i=0;i<numTabs;i++) {
+                    tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
+                }
+            }
+            tabWindow.render(); // Must be inside a window
+            ImGui::End();
+        }
+
+        if (showTabWindow[1] && ImGui::Begin("TabWindow2", &showTabWindow[1], ImVec2(400,600),.85f,ImGuiWindowFlags_NoScrollbar))  {
+            ImGui::TabWindow&  tabWindow2 = tabWindows[1];
+            tabWindow2.render();
+            ImGui::End();
+        }
+
+        if (!showTabWindow[0] && !showTabWindow[1]) {
+            // reset flags
+            showTabWindow[0] = showTabWindow[1] = true;
+            show_tab_windows = false;
+        }
+    }
+#   endif //NO_IMGUITABWINDOW
 
     // imguitoolbar test 2: two global toolbars one at the top and one at the left
 #   ifndef NO_IMGUITOOLBAR
