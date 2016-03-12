@@ -3281,13 +3281,14 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
     ImGui::PushStyleColor(ImGuiCol_FrameBg,ceStyle.color_background);
     ImGui::BeginGroup();
-    if (!ImGui::BeginChildFrame(10, frame_bb.GetSize(),ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_ForceHorizontalScrollbar))
+    if (!ImGui::BeginChildFrame(id*2, frame_bb.GetSize(),ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_ForceHorizontalScrollbar))
     {
         ImGui::EndChildFrame();
         ImGui::EndGroup();
         ImGui::PopStyleColor();
         ImGui::SetCursorPos(startCursorPos);
         ImGui::PopID();
+        ImGui::SetCursorPos(ImVec2(startCursorPos.x+size.x,startCursorPos.y+size.y));   // Mandatory to consume space
         return false;
     }
 
@@ -3732,6 +3733,17 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                 edit_state.ScrollX = 0.0f;
             }
 
+            /*// Horizontal scroll
+            float scroll_x = draw_window->Scroll.x;
+            if (cursor_offset.x - textLineHeight < scroll_x)
+                scroll_x = ImMax(0.0f, cursor_offset.x - textLineHeight);
+            else if (cursor_offset.x - size.x >= scroll_x)
+                scroll_x = cursor_offset.x - size.x;
+            draw_window->DC.CursorPos.x += (draw_window->Scroll.x - scroll_x);   // To avoid a frame of lag
+            draw_window->Scroll.x = scroll_x;
+            render_pos.x = draw_window->DC.CursorPos.x;*/
+
+
             // Vertical scroll
             float scroll_y = draw_window->Scroll.y;
             if (cursor_offset.y - textLineHeight < scroll_y)
@@ -3872,28 +3884,29 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             g.OsImePosRequest = ImVec2(cursor_screen_pos.x - 1, cursor_screen_pos.y - textLineHeight);
     }
 
-    size.y += draw_window->ScrollbarSizes.y+style.WindowPadding.y;    // reset it
+    size.x += draw_window->ScrollbarSizes.x;                            // reset it
+    size.y += draw_window->ScrollbarSizes.y+style.WindowPadding.y;      // reset it
 
     ImGui::PopFont();
 
 
     ImGui::Dummy(ImVec2(/*size.x*/langData.textSizeX,textLineHeight)); // Always add room to Y-scroll an extra line (we also make it "langData.textSizeX" wide to fix horizontal scrollbar
     ImGui::EndChildFrame();
-    ImGui::EndGroup();
+    //ImGui::EndGroup();
     ImGui::PopStyleColor();
     const ImVec2 endCursorPos = ImGui::GetCursorPos();
 
 
     if (showLineNumbers) {
         ImGui::SetCursorPos(startCursorPos);
-        ImGui::BeginGroup();
+        //ImGui::BeginGroup();
 
         //CodeEditor::GetStyle().color_line_numbers_background = ImGui::ColorConvertFloat4ToU32(ImVec4(0.2,0,0,0.4));   // TO REMOVE!
         if (ceStyle.color_line_numbers_background>>24!=0)
         {
             // Here we manually blend bg colors, so that we can paint in one pass.
             // Otherwise we have to simply use here: ImGui::PushStyleColor(ImGuiCol_FrameBg,ceStyle.color_background)
-            // and activatee the code block below named "Draw background"
+            // and activate the code block below named "Draw background"
             const ImVec4& c = ceStyle.color_background;
             ImVec4 r = ImGui::ColorConvertU32ToFloat4(ceStyle.color_line_numbers_background);
             const float rac = 1.f - r.w;
@@ -3906,7 +3919,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         else ImGui::PushStyleColor(ImGuiCol_FrameBg,ceStyle.color_background);
         //ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(style.WindowPadding.x,0.f));
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(style.ItemSpacing.x,0));
-        if (!ImGui::BeginChildFrame(11, ImVec2(lineNumberSize,size.y),/*ImGuiWindowFlags_ForceHorizontalScrollbar|*/ImGuiWindowFlags_NoScrollbar))
+        if (!ImGui::BeginChildFrame(id*3, ImVec2(lineNumberSize,size.y),/*ImGuiWindowFlags_ForceHorizontalScrollbar|*/ImGuiWindowFlags_NoScrollbar))
         {
             ImGui::EndChildFrame();
             ImGui::PopStyleVar(1);
@@ -3940,9 +3953,10 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         ImGui::EndChildFrame();
         ImGui::PopStyleVar(1);
         ImGui::PopStyleColor();
-        ImGui::EndGroup();
         ImGui::SetCursorPos(endCursorPos);
     }
+    ImGui::EndGroup();
+
 
     // Log as text
     if (g.LogEnabled)

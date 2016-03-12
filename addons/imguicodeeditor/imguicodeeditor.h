@@ -312,6 +312,7 @@ namespace ImGuiCe {
 
 bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
 
+
 } // namespace ImGuiCe
 
 // Alias
