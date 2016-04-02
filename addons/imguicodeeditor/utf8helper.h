@@ -135,10 +135,11 @@ inline static int CountUTF8Chars(const char* text,const char* text_end=NULL,bool
     uint32_t codepoint;
     uint32_t state = 0;
     int count = 0;
-    const char* s = (const char*) text;
+    const unsigned char* s = (const unsigned char*) text;
     if (!text_end) text_end = text + strlen(text);
+    const unsigned char* text_end_uc = (const unsigned char*) text_end;
 
-    for (count = 0; s!=text_end; ++s)    {
+    for (count = 0; s!=text_end_uc; ++s)    {
         if (!decode(&state, &codepoint, *s)) ++count;
     }
 
