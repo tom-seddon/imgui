@@ -119,16 +119,18 @@ static inline float MyCalcTextWidthA(ImFont* font,float size, const char* text_b
     text_width = (font->FallbackXAdvance * scale) * numUTF8Chars;   // We use font->FallbackXAdvance for all (we could have used font->IndexXAdvance[0])
 #       else //IMGUICODEEDITOR_USE_UTF8HELPER_H
     if (!text_end) text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
-    const char* s = text_begin;int codepoint;int state = 0;const unsigned int tab = (unsigned int)'\t';
+    const unsigned char* s = (const unsigned char*) text_begin;
+    const unsigned char* text_endUC = (const unsigned char*) text_end;
+    uint32_t codepoint=0, state = 0;const uint32_t tab = (uint32_t)'\t';
     int numTabs = 0;
-    for (numUTF8Chars = 0; s!=text_end; ++s)    {
+    for (numUTF8Chars = 0; s!=text_endUC; ++s)    {
         if (UTF8Helper::decode(&state, &codepoint, *s)==UTF8Helper::UTF8_ACCEPT) {
             ++numUTF8Chars;
             if (codepoint == tab) ++numTabs;
         }
     }
     text_width = scale * (font->FallbackXAdvance * (numUTF8Chars-numTabs) + font->IndexXAdvance[tab] * numTabs);
-    if (remaining)  *remaining = s;
+    if (remaining)  *remaining = (const char*) s;
 #       endif //IMGUICODEEDITOR_USE_UTF8HELPER_H
 #   endif //NO_IMGUICODEEDITOR_USE_OPT_FOR_MONOSPACE_FONTS
     if (pNumUTF8CharsOut) *pNumUTF8CharsOut+=numUTF8Chars;
@@ -3279,8 +3281,11 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
     ImGuiWindow* draw_window = window;    
 
+    //static float codeEditorContentWidth = size.x;   // TODO: move to "state"
+
     ImGui::PushStyleColor(ImGuiCol_FrameBg,ceStyle.color_background);
     ImGui::BeginGroup();
+    //ImGui::SetNextWindowContentWidth(codeEditorContentWidth);
     if (!ImGui::BeginChildFrame(id*2, frame_bb.GetSize(),ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_ForceHorizontalScrollbar))
     {
         ImGui::EndChildFrame();
@@ -3869,7 +3874,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         }*/
         // --------------------------------------
 
-
+        //codeEditorContentWidth = langData.textSizeX;
     }
 
     if (canModifyText)   {

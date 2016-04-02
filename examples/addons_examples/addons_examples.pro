@@ -40,6 +40,7 @@ IMGUI_BASE_PATH=../..
 #DEFINES+=IMGUIBINDINGS_RESTORE_GL_STATE
 
 #DEFINES+= YES_IMGUIDOCK	# Testing only! To remove
+#DEFINES+= YES_IMGUISDF		# Testing only! To remove
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 
@@ -75,7 +76,9 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguicodeeditor/utf8helper.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguitabwindow/imguitabwindow.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiemscripten/imguiemscripten.h"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguipdfviewer.h"
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguipdfviewer.h"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguidock.h"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.h"
 
 
 SOURCES+=  $$IMGUI_BASE_PATH"/imgui.cpp" \
@@ -83,7 +86,8 @@ SOURCES+=  $$IMGUI_BASE_PATH"/imgui.cpp" \
 	   $$IMGUI_BASE_PATH"/imgui_demo.cpp" \ #\ # optional: for ImGui::ShowTestWindow()
 
 use_main4 {
-SOURCES+=main4.cpp main4_2.cpp
+#SOURCES+=main4.cpp main4_2.cpp
+SOURCES+=main4_3.cpp
 TARGET = imgui_addons_example4
 DEFINES+=NO_IMGUISTYLESERIALIZER NO_IMGUIDATECHOOSER NO_IMGUILISTVIEW NO_IMGUIGRAPHEDITOR NO_IMGUITOOLBAR NO_IMGUIPANELMANAGER NO_IMGUIFILESYSTEM NO_IMGUICODEEDITOR
 }  #use_main4
@@ -131,6 +135,8 @@ OTHER_FILES+= $$IMGUI_BASE_PATH"/addons/imgui_user.inl"				    \
 	   $$IMGUI_BASE_PATH"/addons/imguitabwindow/imguitabwindow.cpp"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiemscripten/imguiemscripten.cpp"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguipdfviewer.cpp"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguidock.cpp"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.cpp"		    \
 	   README_FIRST.txt
 
 

@@ -672,6 +672,7 @@ void DrawGL()	// Mandatory
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUITABWINDOW
 
+#       ifdef DOES_NOT_WORK
         // BadCodeEditor Test:
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguicodeeditor");ImGui::Separator();
 #       ifndef NO_IMGUITABWINDOW
@@ -685,6 +686,44 @@ void DrawGL()	// Mandatory
 #       else //NO_IMGUICODEEDITOR
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUICODEEDITOR
+#       endif //DOES_NOT_WORK
+
+#       ifdef YES_IMGUISDF
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguisdf");ImGui::Separator();
+        // Well, we should move the init stuff to InitGL(), clean up textures, etc. (all skipped to avoid multiple preprocessor branches around this file)
+        static ImTextureID sdfTexture = 0;
+        static ImGui::SdfTextChunk* sdfTextChunk = NULL;
+        static char sdfTextBuffer[8192]="\t";
+        if (!sdfTextChunk) {
+            static bool mustInit=true;
+            if (mustInit)   {
+                mustInit = false;
+                //---------------------
+                const char* sdfFontPath = "fonts/Sdf/DejaVuSerifCondensed-Bold.fnt";
+                const char* sdfImagePath = "fonts/Sdf/DejaVuSerifCondensed-Bold.png";
+                sdfTexture = ImImpl_LoadTexture(sdfImagePath,0,false,false,false);
+                ImGui::SdfCharset* charset = ImGui::SdfAddCharsetFromFile(sdfFontPath,sdfTexture,ImGui::SdfCharsetProperties());
+                IM_ASSERT(sdfTexture && charset);
+                sdfTextChunk = ImGui::SdfAddTextChunk(charset,ImGui::SDF_BT_OUTLINE,ImGui::SdfTextChunkProperties(20,ImGui::SDF_CENTER,ImGui::SDF_MIDDLE,ImVec2(.5f,.5f),ImVec2(.5f,.5f)));
+                IM_ASSERT(sdfTextChunk);
+
+                static const char* sdfSampleText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+                strcpy(sdfTextBuffer,sdfSampleText);
+                ImGui::SdfAddText(sdfTextChunk,sdfTextBuffer); // Actually we can append multiple of these calls together
+
+            }
+        }
+        if (sdfTextChunk)   {
+            static bool enableSdfTextChunk = false;
+            ImGui::Checkbox("Enable SDF Test",&enableSdfTextChunk);
+            if (enableSdfTextChunk) {
+                if (ImGui::CollapsingHeader("SDF On Screen Text")) ImGui::SdfTextChunkEdit(sdfTextChunk,sdfTextBuffer,sizeof(sdfTextBuffer)/sizeof(sdfTextBuffer[0]));
+
+                // To render all sdf text chunks:
+                ImGui::SdfRender(); // This should be moved at the top of DrawGL(), to work when ImGui is not active too. [or after ImGui::Render(), but that spot is not supported at the moment here...]
+            }
+         }
+#       endif //YES_IMGUISDF
 
         // ListView Test:
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguilistview");ImGui::Separator();
@@ -693,6 +732,7 @@ void DrawGL()	// Mandatory
 #       else //NO_IMGUILISTVIEW
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUILISTVIEW
+
 
         ImGui::Separator();
 

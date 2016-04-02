@@ -433,8 +433,17 @@ static GLuint ImImpl_CreateShader(GLenum type,const GLchar** shaderSource, ImImp
                 if (*p=='\n') ++numPrefixLines;
             }
         }
-        tmp = sourcePrefix;
-        tmp+= ImString(pSource);
+        // "#version" (and maybe "precision" or "#extension" ?) must be preserved at the top
+        const char* rv = NULL;
+        if (pSource && pSource[0]=='#' && pSource[1]=='v' && (rv = strchr(pSource,'\n'))) {
+            const size_t beg = (rv-pSource);
+            ImString tmp2 = ImString(pSource);
+            tmp = tmp2.substr(0,beg+1)+sourcePrefix+tmp2.substr(beg+1);
+        }
+        else {
+            tmp = sourcePrefix;
+            tmp+= ImString(pSource);
+        }
         pSource=tmp.c_str();
     }
 #   endif //NO_IMGUISTRING
@@ -485,6 +494,7 @@ static GLuint ImImpl_CreateShader(GLenum type,const GLchar** shaderSource, ImImp
 #           endif //NO_IMGUISTRING
         }
         fflush(stdout);
+        glDeleteShader(shader);shader=0;
     }
 
     return shader;
@@ -611,13 +621,20 @@ GLuint ImImpl_CompileShadersFromMemory(const GLchar** vertexShaderSource, const 
         printf("********ShaderLinkerLog:\n%s\n", &pszInfoLog[0]);
 #       endif //NO_IMGUISTRING
         fflush(stdout);
+        if (!pOptionalOptions || !pOptionalOptions->dontDeleteAttachedShaders) {
+            glDetachShader(program,vertexShader);glDeleteShader(vertexShader);vertexShader=0;
+            glDetachShader(program,fragmentShader);glDeleteShader(fragmentShader);fragmentShader=0;
+        }
+        glDeleteProgram(program);program=0;
     }
 
     //Delete shaders objects
     if (!pOptionalOptions || !pOptionalOptions->dontDeleteAttachedShaders)  {
-        GLuint attachedShaders[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};GLsizei attachedShaderCount = 0;
-        glGetAttachedShaders(program,sizeof(attachedShaders)/sizeof(attachedShaders[0]),&attachedShaderCount,attachedShaders);
-        for (GLsizei i=0;i<attachedShaderCount;i++) glDeleteShader( attachedShaders[i] );
+        if (program)    {
+            GLuint attachedShaders[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};GLsizei attachedShaderCount = 0;
+            glGetAttachedShaders(program,sizeof(attachedShaders)/sizeof(attachedShaders[0]),&attachedShaderCount,attachedShaders);
+            for (GLsizei i=0;i<attachedShaderCount;i++) glDeleteShader( attachedShaders[i] );
+        }
     }
 
     return program;

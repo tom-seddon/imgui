@@ -75,7 +75,7 @@ That's why I've said "for expert programmers only" above.
 Currently "yes addons" are:
 -> imguipdfviewer.h/cpp:	depends on -lpoppler-glib (that depends on glib-2.0 and cairo, and probably on STL as well).
 -> imguidock.h/cpp:			no dependencies. License: MIT. [from: https://github.com/nem0/LumixEngine/blob/master/src/editor/imgui/imgui_dock.h]
-
+-> imguisdf.h/cpp:		no dependencies, but needs OpenGL with Shaders.
 
 ===========================================
 HOW TO USE IMGUI ADDONS IN YOUR PROJECTS:

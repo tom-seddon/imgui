@@ -14,15 +14,16 @@
 #ifndef UTF8HELPER_H_
 #define UTF8HELPER_H_
 
+//#include <sys/types.h> //uint8_t,uint32_t
 
 class UTF8Helper {
 public:
-    typedef unsigned char uint8_t;
-    typedef int uint32_t;
+//    typedef unsigned char uint8_t;
+//    typedef unsigned int uint32_t;
 protected:
 UTF8Helper() {}
 
-#define USE_RICH_FELKER_OPTIMIZATION
+//#define USE_RICH_FELKER_OPTIMIZATION
 #ifndef USE_RICH_FELKER_OPTIMIZATION
 public:
 
@@ -32,7 +33,7 @@ UTF8_REJECT=1
 };
 
 protected:
-inline static uint8_t utf8d(uint32_t byte) const {
+inline static uint8_t utf8d(uint32_t byte) {
 static const uint8_t _utf8d[] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 00..1f
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 20..3f

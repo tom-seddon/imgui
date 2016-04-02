@@ -43,6 +43,11 @@
   -> line number alignment
   -> speed: add a global static id-map to hold some state info could speed up the ctrl considerably
   //
+  // UPDATE:
+  IT DOES NOT WORK! Cursor and selection is completely wrong!
+
+  I guess I'll quit developing this file. Too much time spent with very little result.
+  I'll probably drop it in the future...
 */
 
 // ImGuiCe::CodeEditor

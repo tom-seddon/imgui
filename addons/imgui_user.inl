@@ -91,6 +91,9 @@
 #ifdef YES_IMGUIDOCK
 #include "./imguiyesaddons/imguidock.cpp"
 #endif //YES_IMGUIDOCK
+#ifdef YES_IMGUISDF
+#include "./imguiyesaddons/imguisdf.cpp"
+#endif //YES_IMGUISDF
 
 #endif //IMGUI_USER_ADDONS_INL_
 
