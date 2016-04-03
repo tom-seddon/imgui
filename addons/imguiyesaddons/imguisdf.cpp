@@ -179,7 +179,7 @@ struct SdfShaderProgram {
     static const char** GetVertexShaderCodeForBothFonts() {
         static const char* gVertexShaderSource[] = {
 #           ifdef IMIMPL_SHADER_GL3
-#           ifdef IMIMPL_SHADER_GLES
+#           if (defined(IMIMPL_SHADER_GLES) || defined(__EMSCRIPTEN__))
             "#version 300 es\n"
 #           else  //IMIMPL_SHADER_GLES
             "#version 330\n"
@@ -193,7 +193,7 @@ struct SdfShaderProgram {
             "out vec2 Frag_UV;\n"
             "out vec4 Frag_Colour;\n"
 #           else //!IMIMPL_SHADER_GL3
-#           ifdef IMIMPL_SHADER_GLES
+#           if (defined(IMIMPL_SHADER_GLES) || defined(__EMSCRIPTEN__))
             "#version 100\n"
             "precision highp float;\n"
 #           endif //IMIMPL_SHADER_GLES
@@ -218,7 +218,7 @@ struct SdfShaderProgram {
     static const char** GetFragmentShaderCodeForRegularFont() {
         static const char* gFragmentShaderSource[] = {
 #       ifdef IMIMPL_SHADER_GL3
-#       ifdef IMIMPL_SHADER_GLES
+#       if (defined(IMIMPL_SHADER_GLES) || defined(__EMSCRIPTEN__))
             "#version 300 es\n"
 #       else //IMIMPL_SHADER_GLES
             "#version 330\n"
@@ -229,11 +229,11 @@ struct SdfShaderProgram {
             "in vec4 Frag_Colour;\n"
             "out vec4 FragColor;\n"
 #       else //!IMIMPL_SHADER_GL3
-//#       ifdef IMIMPL_SHADER_GLES
+#       if (defined(IMIMPL_SHADER_GLES) || defined(__EMSCRIPTEN__))
             "#version 100\n"
             "#extension GL_OES_standard_derivatives : enable\n" // fwidth
             "precision mediump float;\n"
-//#       endif //IMIMPL_SHADER_GLES
+#       endif //IMIMPL_SHADER_GLES
             "uniform sampler2D Texture;\n"
             "varying vec2 Frag_UV;\n"
             "varying vec4 Frag_Colour;\n"
@@ -260,7 +260,7 @@ struct SdfShaderProgram {
     static const char** GetFragmentShaderCodeForOutlineFont() {
         static const char* gFragmentShaderSource[] = {
 #       ifdef IMIMPL_SHADER_GL3
-#       ifdef IMIMPL_SHADER_GLES
+#       if (defined(IMIMPL_SHADER_GLES) || defined(__EMSCRIPTEN__))
             "#version 300 es\n"
 #       else //IMIMPL_SHADER_GLES
             "#version 330\n"
@@ -271,11 +271,11 @@ struct SdfShaderProgram {
             "in vec4 Frag_Colour;\n"
             "out vec4 FragColor;\n"
 #       else //!IMIMPL_SHADER_GL3
-//#       ifdef IMIMPL_SHADER_GLES
+#       if (defined(IMIMPL_SHADER_GLES) || defined(__EMSCRIPTEN__))
             "#version 100\n"
             "#extension GL_OES_standard_derivatives : enable\n" // fwidth
             "precision mediump float;\n"
-//#       endif //IMIMPL_SHADER_GLES
+#       endif //IMIMPL_SHADER_GLES
             "uniform sampler2D Texture;\n"
             "varying vec2 Frag_UV;\n"
             "varying vec4 Frag_Colour;\n"
