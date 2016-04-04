@@ -515,19 +515,21 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             window->ScrollbarSizes = ImVec2(window->ScrollbarY ? style.ScrollbarSize : 0.0f, window->ScrollbarX ? style.ScrollbarSize : 0.0f);
 
             // Window background
-            if (bg_alpha > 0.0f)
-            {
-                if ((flags & ImGuiWindowFlags_ComboBox) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_ComboBg, bg_alpha), window_rounding);
-                else if ((flags & ImGuiWindowFlags_Tooltip) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_PopupBg, bg_alpha), window_rounding);
-                else if ((flags & ImGuiWindowFlags_Popup) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_WindowBg, bg_alpha), window_rounding);
-                else if ((flags & ImGuiWindowFlags_ChildWindow) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size - window->ScrollbarSizes, GetColorU32(ImGuiCol_ChildWindowBg, bg_alpha), window_rounding, window->ScrollbarY ? (1|8) : (0xF));
-                else
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_WindowBg, bg_alpha), window_rounding);
-            }
+            // Default alpha
+            ImGuiCol bg_color_idx = ImGuiCol_WindowBg;
+            if ((flags & ImGuiWindowFlags_ComboBox) != 0)
+                bg_color_idx = ImGuiCol_ComboBg;
+            else if ((flags & ImGuiWindowFlags_Tooltip) != 0 || (flags & ImGuiWindowFlags_Popup) != 0)
+                bg_color_idx = ImGuiCol_PopupBg;
+            else if ((flags & ImGuiWindowFlags_ChildWindow) != 0)
+                bg_color_idx = ImGuiCol_ChildWindowBg;
+            ImVec4 bg_color = style.Colors[bg_color_idx];
+            if (bg_alpha >= 0.0f)
+                bg_color.w = bg_alpha;
+            bg_color.w *= style.Alpha;
+            if (bg_color.w > 0.0f)
+                window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, ColorConvertFloat4ToU32(bg_color), window_rounding);
+
 
             // Title bar
             if (!(flags & ImGuiWindowFlags_NoTitleBar)) {
@@ -794,8 +796,8 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
     //else if (hovered) ImGui::SetNextWindowFocus();  // is this line necessary ?
 
 
-    const float oldSize = sizeToUse;bool closed = false;bool undocked = hovered;
-    WindowData wd(windowName,curPos,curSize,togglable,pane.pos,sizeToUse,closed,persistHoverFocus,userData);
+    const float oldSize = sizeToUse;bool open = true;bool undocked = hovered;
+    WindowData wd(windowName,curPos,curSize,togglable,pane.pos,sizeToUse,open,persistHoverFocus,userData);
     //===============================================================================================
     if (wd.isToggleWindow) windowDrawer(wd);
     else if (wd.size.x>=ImGui::GetStyle().WindowMinSize.x){
@@ -806,7 +808,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
             ImGuiWindowFlags_NoMove |
             ImGuiWindowFlags_NoCollapse |
             ImGuiWindowFlags_NoSavedSettings;
-        if (ImGui::DockWindowBegin(wd.name, &wd.closed,&undocked, wd.size,mgr.dockedWindowsAlpha,wd.isToggleWindow ? ImGuiWindowFlags_NoSavedSettings : windowFlags,&draggingStarted,&wd))     {
+        if (ImGui::DockWindowBegin(wd.name, &wd.open,&undocked, wd.size,mgr.dockedWindowsAlpha,wd.isToggleWindow ? ImGuiWindowFlags_NoSavedSettings : (windowFlags|mgr.dockedWindowsExtraFlags|extraWindowFlags),&draggingStarted,&wd))     {
             ImGuiState& g = *GImGui;
             const ImGuiStyle& style = g.Style;
             ImGuiWindow* window = NULL;
@@ -915,11 +917,11 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
         ImGui::DockWindowEnd();
     }
     //================================================================================================
-    if (closed) {
+    if (open) {
         if (hovered) {
             persistHoverFocus = false;
         }
-        else if (togglableAndVisible) button->isDown = false;
+        //else if (togglableAndVisible) button->isDown = false;
         else if (selected) {
             pane.bar.setSelectedButtonIndex(-1);
             persistHoverFocus = false;  // optional line (when commented out leaves a selected window in hover move: we must press the close button another time to hide it)
@@ -927,6 +929,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
 	    dirty = true; // Needed so next time the hover window sizes are set
         }
     }
+    else if (togglableAndVisible) button->isDown = false;
     if (!wd.isToggleWindow) {
         if (!undocked && hovered)   {
             pane.bar.setSelectedButtonIndex(winAndBarIndex);

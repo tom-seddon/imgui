@@ -20,15 +20,15 @@ struct PanelManager {
         const Position dockPos;
 
         float& length;      // can be adjusted to resize the window (usable when isToggleWindow=false)
-        bool& closed;       // can be set to "true" to close the window
+        bool& open;         // can be set to "false" to close the window
         bool& persistFocus; // must be set to "true" when mouse is inside window (usable when isToggleWindow=false)
 
         void* userData;
         bool isResizing;
         WindowData(const char* _name,const ImVec2& _pos,const ImVec2& _size,const bool _isToggleWindow,const Position _dockPos,
-                   float& _length,bool& _closed,bool& _persistFocus,void* _userData)
+                   float& _length,bool& _open,bool& _persistFocus,void* _userData)
         : name(_name),pos(_pos),size(_size),isToggleWindow(_isToggleWindow),dockPos(_dockPos),
-          length(_length),closed(_closed),persistFocus(_persistFocus),userData(_userData),isResizing(false)
+          length(_length),open(_open),persistFocus(_persistFocus),userData(_userData),isResizing(false)
         {}
     };
     typedef void (*WindowDrawerDelegate)(WindowData& wd);
@@ -41,6 +41,7 @@ struct PanelManager {
             mutable float sizeHoverMode;
             WindowDrawerDelegate windowDrawer;
             void* userData;
+            mutable ImGuiWindowFlags extraWindowFlags;
 
             // protected:
             mutable bool dirty;
@@ -49,7 +50,7 @@ struct PanelManager {
             mutable bool persistHoverFocus;
             mutable bool draggingStarted;
 
-            AssociatedWindow(const char* _windowName=NULL,float _size=-1,WindowDrawerDelegate _windowDrawer=NULL,void* _userData=NULL) : windowName(_windowName),size(_size),sizeHoverMode(_size),windowDrawer(_windowDrawer),userData(_userData),
+            AssociatedWindow(const char* _windowName=NULL,float _size=-1,WindowDrawerDelegate _windowDrawer=NULL,void* _userData=NULL,ImGuiWindowFlags _extraWindowFlags=0) : windowName(_windowName),size(_size),sizeHoverMode(_size),windowDrawer(_windowDrawer),userData(_userData),extraWindowFlags(_extraWindowFlags),
             dirty(true),curPos(0,0),curSize(0,0),persistHoverFocus(false),draggingStarted(false)
              {}
             bool isValid() const {return windowDrawer!=NULL && windowName!=NULL;}
@@ -128,9 +129,10 @@ struct PanelManager {
     mutable ImVec2 innerQuadPos;mutable ImVec2 innerQuadSize;          // placement of the blank quad contained inside the toolbars AND the selected windows that are docked to them
     mutable float dockedWindowsAlpha;
     mutable float innerQuadChangedTimer;
+    mutable ImGuiWindowFlags dockedWindowsExtraFlags;
     public:
-    PanelManager(bool _visible=true,float _dockedWindowsAlpha=-1.f) : paneLeft(NULL),paneRight(NULL),paneTop(NULL),paneBottom(NULL),visible(_visible),
-    innerBarQuadPos(0,0),innerBarQuadSize(-1,-1),innerQuadPos(0,0),innerQuadSize(-1,-1),dockedWindowsAlpha(_dockedWindowsAlpha),innerQuadChangedTimer(-1.f) {}
+    PanelManager(bool _visible=true,float _dockedWindowsAlpha=0.8f,bool showDockedWindowBorders=true) : paneLeft(NULL),paneRight(NULL),paneTop(NULL),paneBottom(NULL),visible(_visible),
+    innerBarQuadPos(0,0),innerBarQuadSize(-1,-1),innerQuadPos(0,0),innerQuadSize(-1,-1),dockedWindowsAlpha(_dockedWindowsAlpha),innerQuadChangedTimer(-1.f),dockedWindowsExtraFlags(showDockedWindowBorders?ImGuiWindowFlags_ShowBorders:0) {}
     ~PanelManager() {clear();}
     void clear() {
         for (int i=0;i<panes.size();i++) panes[i].~Pane();
@@ -149,6 +151,11 @@ struct PanelManager {
 
     void setDockedWindowsAlpha(float alpha) {dockedWindowsAlpha=alpha;}
     float getDockedWindowsAlpha() const {return dockedWindowsAlpha;}
+    float& getDockedWindowsAlpha() {return dockedWindowsAlpha;}
+
+    void setDockedWindowsBorder(bool border) {if (border) dockedWindowsExtraFlags|=ImGuiWindowFlags_ShowBorders;else {dockedWindowsExtraFlags&=~ImGuiWindowFlags_ShowBorders;}}
+    bool getDockedWindowsBorder() const {return (dockedWindowsExtraFlags&ImGuiWindowFlags_ShowBorders);}
+
 
     size_t getNumPanes() const;
     bool isEmpty() const {return getNumPanes()==0;}

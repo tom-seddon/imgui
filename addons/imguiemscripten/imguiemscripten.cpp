@@ -18,7 +18,7 @@ void EmscriptenFileSystemHelper::Init()	 {
             // sync from persisted state into memory and then
             // run the 'test' function
             Module.syncdone = 0;
-            FS.syncfs(true, function (err) {
+            FS.syncfs(true, function (err) {                      
                       assert(!err);
                       Module.syncdone = 1;
                   });
@@ -39,7 +39,9 @@ void EmscriptenFileSystemHelper::Sync() {
 }
 // ccall('EmscriptemFileSystemHelperSuccess', 'v');
 
-bool EmscriptenFileSystemHelper::IsInSync() {return (emscripten_run_script_int("Module.syncdone") == 1);}
+bool EmscriptenFileSystemHelper::IsInSync() {
+    return (emscripten_run_script_int("Module.syncdone") == 1);
+}
 
 } // namespace ImGui
 

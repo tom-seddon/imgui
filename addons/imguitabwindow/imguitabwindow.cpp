@@ -1859,6 +1859,8 @@ TabWindow::TabWindow() {
     activeNode=mainNode;
     init=false;
     userPtr=NULL;
+    isolatedMode=false;
+
 }
 TabWindow::~TabWindow() {clearNodes();}
 
