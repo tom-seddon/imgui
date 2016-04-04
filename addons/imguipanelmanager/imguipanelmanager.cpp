@@ -192,7 +192,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
     // Default alpha
     if (bg_alpha < 0.0f)
-        bg_alpha = style.WindowFillAlphaDefault;
+        bg_alpha = 1.0f; //It was 0.7f (e.g. style.WindowFillAlphaDefault);
 
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     if (first_begin_of_the_frame)
@@ -520,7 +520,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 if ((flags & ImGuiWindowFlags_ComboBox) != 0)
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_ComboBg, bg_alpha), window_rounding);
                 else if ((flags & ImGuiWindowFlags_Tooltip) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_TooltipBg, bg_alpha), window_rounding);
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_PopupBg, bg_alpha), window_rounding);
                 else if ((flags & ImGuiWindowFlags_Popup) != 0)
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_WindowBg, bg_alpha), window_rounding);
                 else if ((flags & ImGuiWindowFlags_ChildWindow) != 0)

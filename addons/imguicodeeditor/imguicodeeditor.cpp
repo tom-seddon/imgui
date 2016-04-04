@@ -3286,7 +3286,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     ImGui::PushStyleColor(ImGuiCol_FrameBg,ceStyle.color_background);
     ImGui::BeginGroup();
     //ImGui::SetNextWindowContentWidth(codeEditorContentWidth);
-    if (!ImGui::BeginChildFrame(id*2, frame_bb.GetSize(),ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_ForceHorizontalScrollbar))
+    if (!ImGui::BeginChildFrame(id*2, frame_bb.GetSize(),ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar))
     {
         ImGui::EndChildFrame();
         ImGui::EndGroup();

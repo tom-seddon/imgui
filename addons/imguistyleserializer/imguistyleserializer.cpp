@@ -72,7 +72,7 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
     fprintf(f, "[ItemSpacing]\n%1.3f %1.3f\n", style.ItemSpacing.x,style.ItemSpacing.y);
     fprintf(f, "[ItemInnerSpacing]\n%1.3f %1.3f\n", style.ItemInnerSpacing.x,style.ItemInnerSpacing.y);
     fprintf(f, "[TouchExtraPadding]\n%1.3f %1.3f\n", style.TouchExtraPadding.x,style.TouchExtraPadding.y);
-    fprintf(f, "[WindowFillAlphaDefault]\n%1.3f\n", style.WindowFillAlphaDefault);
+    //fprintf(f, "[WindowFillAlphaDefault]\n%1.3f\n", style.WindowFillAlphaDefault);
     fprintf(f, "[WindowRounding]\n%1.3f\n", style.WindowRounding);
     fprintf(f, "[ScrollbarRounding]\n%1.3f\n", style.ScrollbarRounding);
     fprintf(f, "[WindowTitleAlign]\n%d\n", style.WindowTitleAlign);
@@ -133,6 +133,7 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
     }
     f_data[f_size] = 0;
 
+    float WindowFillAlphaDefault = -1.f;    // fallback for reloading an older file
     // Parse file in memory
     char name[128];name[0]='\0';
     const char* buf_end = f_data + f_size;
@@ -167,7 +168,7 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
                 else if (strcmp(name, "ItemSpacing")==0)               {npf=2;pf[0]=&style.ItemSpacing.x;pf[1]=&style.ItemSpacing.y;}
                 else if (strcmp(name, "ItemInnerSpacing")==0)          {npf=2;pf[0]=&style.ItemInnerSpacing.x;pf[1]=&style.ItemInnerSpacing.y;}
                 else if (strcmp(name, "TouchExtraPadding")==0)         {npf=2;pf[0]=&style.TouchExtraPadding.x;pf[1]=&style.TouchExtraPadding.y;}
-                else if (strcmp(name, "WindowFillAlphaDefault")==0)    {npf=1;pf[0]=&style.WindowFillAlphaDefault;}
+		else if (strcmp(name, "WindowFillAlphaDefault")==0)    {npf=1;pf[0]=&WindowFillAlphaDefault;}
                 else if (strcmp(name, "WindowRounding")==0)            {npf=1;pf[0]=&style.WindowRounding;}
                 else if (strcmp(name, "ScrollbarRounding")==0)         {npf=1;pf[0]=&style.ScrollbarRounding;}
                 else if (strcmp(name, "WindowTitleAlign")==0)          {npi=1;pi[0]=&style.WindowTitleAlign;}
@@ -192,6 +193,14 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
                             pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
                             break;
                         }
+			// Fallback for old files -----------------------------------
+			else if (strcmp(name,"TooltipBg")==0)	{
+			    npf = 4;
+			    ImVec4& color = style.Colors[ImGuiCol_PopupBg];
+			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
+			    break;
+			}
+			// -----------------------------------------------------------
                     }
                 }
             }
@@ -303,6 +312,8 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
         line_start = line_end+1;
     }
 
+    if (WindowFillAlphaDefault>=0.f) style.Colors[ImGuiCol_WindowBg].w*=WindowFillAlphaDefault;
+
     // Release memory
     ImGui::MemFree(f_data);
     return true;
@@ -339,7 +350,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.AntiAliasedShapes = true;
 	style.CurveTessellationTol = 1.25f;
 	style.Alpha = 1.f;
-	style.WindowFillAlphaDefault = .7f;
+	//style.WindowFillAlphaDefault = .7f;
 
 	style.WindowPadding = ImVec2(8,8);
 	style.WindowRounding = 8;
@@ -357,7 +368,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 
 	style.Colors[ImGuiCol_Text]                  = ImVec4(0.82f, 0.82f, 0.82f, 1.00f);
 	style.Colors[ImGuiCol_TextDisabled]          = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
-	style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.16f, 0.16f, 0.18f, 1.00f);
+	style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.16f, 0.16f, 0.18f, 0.70f);
 	style.Colors[ImGuiCol_ChildWindowBg]         = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
 	style.Colors[ImGuiCol_Border]                = ImVec4(0.00f, 0.00f, 0.00f, 0.60f);
 	style.Colors[ImGuiCol_BorderShadow]          = ImVec4(0.33f, 0.29f, 0.33f, 0.60f);
@@ -396,7 +407,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_PlotHistogram]         = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.00f, 0.00f, 0.66f, 0.34f);
-	style.Colors[ImGuiCol_TooltipBg]             = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
+	style.Colors[ImGuiCol_PopupBg]               = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
 	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);	
     }
     break;
@@ -407,7 +418,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_TextDisabled]          = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
 	//style.Colors[ImGuiCol_TextHovered]           = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 	//style.Colors[ImGuiCol_TextActive]            = ImVec4(1.00f, 1.00f, 0.00f, 1.00f);
-	style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.94f, 0.94f, 0.94f, 1.00f);
+	style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.94f, 0.94f, 0.94f, 0.7f);
 	style.Colors[ImGuiCol_ChildWindowBg]         = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
 	style.Colors[ImGuiCol_Border]                = ImVec4(0.00f, 0.00f, 0.00f, 0.39f);
 	style.Colors[ImGuiCol_BorderShadow]          = ImVec4(1.00f, 1.00f, 1.00f, 0.10f);
@@ -446,7 +457,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_PlotHistogram]         = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
-	style.Colors[ImGuiCol_TooltipBg]             = ImVec4(1.00f, 1.00f, 1.00f, 0.94f);
+	style.Colors[ImGuiCol_PopupBg]		     = ImVec4(1.00f, 1.00f, 1.00f, 0.94f);
 	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 
 	if (styleEnum == ImGuiStyle_OSXInverse) InvertStyleColors(style);

@@ -384,7 +384,7 @@ const TabLabelStyle& TabLabelStyle::GetMergedWithWindowAlpha()    {
     static int frameCnt=-1;    
     if (frameCnt!=ImGui::GetFrameCount())   {
         frameCnt=ImGui::GetFrameCount();
-	const float alpha = GImGui->Style.Alpha * GImGui->Style.WindowFillAlphaDefault;
+    const float alpha = GImGui->Style.Alpha;// * GImGui->Style.WindowFillAlphaDefault;
         S = TabLabelStyle::style;
 	for (int i=0;i<Col_TabLabel_Count;i++) S.colors[i] = ColorMergeWithAlpha(style.colors[i],alpha);
 	S.tabWindowLabelBackgroundColor.w*=alpha;
