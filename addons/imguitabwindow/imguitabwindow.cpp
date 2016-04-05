@@ -384,9 +384,9 @@ const TabLabelStyle& TabLabelStyle::GetMergedWithWindowAlpha()    {
     static int frameCnt=-1;    
     if (frameCnt!=ImGui::GetFrameCount())   {
         frameCnt=ImGui::GetFrameCount();
-    const float alpha = GImGui->Style.Alpha;// * GImGui->Style.WindowFillAlphaDefault;
+    const float alpha = GImGui->Style.Alpha * GImGui->Style.Colors[ImGuiCol_WindowBg].w;
         S = TabLabelStyle::style;
-	for (int i=0;i<Col_TabLabel_Count;i++) S.colors[i] = ColorMergeWithAlpha(style.colors[i],alpha);
+    for (int i=0;i<Col_TabLabel_Count;i++) S.colors[i] = ColorMergeWithAlpha(style.colors[i],alpha);
 	S.tabWindowLabelBackgroundColor.w*=alpha;
 	S.tabWindowSplitterColor.w*=alpha;
     }
@@ -1073,6 +1073,7 @@ struct MyTabWindowHelperStruct {
     ImVec4 splitterColorActive;
 
     float textHeightWithSpacing;
+    bool isWindowFocused;
 
     MyTabWindowHelperStruct(TabWindow* _tabWindow) {
         isMouseDragging = ImGui::IsMouseDragging(0,2.f);
@@ -1093,6 +1094,8 @@ struct MyTabWindowHelperStruct {
         storeStyleVars();
 
         textHeightWithSpacing = ImGui::GetTextLineHeightWithSpacing();
+
+        isWindowFocused = ImGui::IsWindowFocused();
     }
     ~MyTabWindowHelperStruct() {
 	restoreStyleVars();
@@ -1305,7 +1308,7 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
             mhs.MustOpenAskForClosingPopup = true;
 		}
             }
-            else if (ImGui::IsItemHoveredRect()) {
+            else if (mhs.isWindowFocused && ImGui::IsItemHoveredRect()) {
                 isAItemHovered = true;
                 //hoveredTab = &tab;
                 if (tab.tooltip && strlen(tab.tooltip)>0 && (&tab!=mhs.tabLabelPopup || GImGui->OpenedPopupStack.size()==0) )  ImGui::SetTooltip("%s",tab.tooltip);
@@ -2211,7 +2214,7 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
 
     ImVec2 startGroupCursorPos = ImGui::GetCursorPos();
     ImGui::BeginGroup();
-    ImVec2 tabButtonSz(0,0);bool mustCloseTab = false;bool canUseSizeOptimization = false;
+    ImVec2 tabButtonSz(0,0);bool mustCloseTab = false;bool canUseSizeOptimization = false;const bool isWindowFocused = ImGui::IsWindowFocused();
     bool selection_changed = false;bool noButtonDrawn = true;
     for (int j = 0,i; j < numTabs; j++)
     {
@@ -2248,7 +2251,7 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
 
         }
 
-        if (ImGui::IsItemHoveredRect() && !mustCloseTab) {
+        if (isWindowFocused && ImGui::IsItemHoveredRect() && !mustCloseTab) {
             if (pOptionalHoveredIndex) *pOptionalHoveredIndex = i;
             if (tabLabelTooltips && !isRMBclicked && tabLabelTooltips[i] && strlen(tabLabelTooltips[i])>0)  ImGui::SetTooltip("%s",tabLabelTooltips[i]);
 
@@ -2300,7 +2303,8 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
             const ImVec2& mp = ImGui::GetIO().MousePos;
             ImVec2 start(wp.x+mp.x-draggingTabOffset.x-draggingTabSize.x*0.5f,wp.y+mp.y-draggingTabOffset.y-draggingTabSize.y*0.5f);
             //const ImVec2 end(start.x+draggingTabSize.x,start.y+draggingTabSize.y);
-            ImDrawList* drawList = ImGui::GetWindowDrawList();
+            ImDrawList* drawList = //ImGui::GetWindowDrawList();
+                    &GImGui->OverlayDrawList;
             const TabLabelStyle& tabStyle = TabLabelStyleGetMergedWithAlphaForOverlayUsage();
             ImFont* fontOverride = (ImFont*) (draggingTabWasSelected ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_NORMAL]]);
             ImGui::TabButton(tabLabels[pOptionalItemOrdering[draggingTabIndex]],false,allowTabClosing ? &mustCloseTab : NULL,NULL,NULL,&tabStyle,fontOverride,&start,drawList);
