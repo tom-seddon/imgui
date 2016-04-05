@@ -8,17 +8,9 @@ static ImVec2 gMainMenuBarSize(0,0);
 static bool gShowMainMenuBar = true;
 
 
-//#define NO_IMGUITABWINDOW
-//#define NO_IMGUIHELPER_SERIALIZATION
-
+//#define NO_IMGUITABWINDOW   // Optional (but safer)
 
 #ifndef NO_IMGUITABWINDOW
-static const int numTabWindows = 2;
-static ImGui::TabWindow* ptabWindows=NULL;     // [Main problem with changing the number of tabWindows is that I'm not sure that you can save the layout for N tabWindows and load the same layout file for T tabWIndows (with N!=T) without possible problems/crashes].
-// Please note that for some odd reasons the following syntax:
-//static ImGui::TabWindow tabWindows[numTabWindows];
-// works on all cpp compilers >> EXCEPT EMSCRIPTEN <<. To write portable code I have to handle "ptabWindows" allocations/deallocations manually.... (It took me a whole afternoon to find this!)
-
 // Callbacks used by all ImGui::TabWindows
 void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent,void* userPtr) {
     // Users will use tab->userPtr here most of the time
@@ -152,12 +144,12 @@ void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,
         const char* saveNamePersistent = "/persistent_folder/myTabWindow.layout";
         const char* pSaveName = saveName;
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-        if (ImGui::MenuItem("Save Layout") && ptabWindows) {
+        if (ImGui::MenuItem("Save Layout")) {
 #           ifndef NO_IMGUIEMSCRIPTEN
             pSaveName = saveNamePersistent;
 #           endif //NO_IMGUIEMSCRIPTEN
-            //if (parent.save(pSaveName))   // This is OK for a single TabWindow
-            if (ImGui::TabWindow::Save(pSaveName,ptabWindows,numTabWindows))  // This is OK for a all TabWindows
+            if (parent.save(pSaveName))   // This is OK for a single TabWindow
+            //if (ImGui::TabWindow::Save(pSaveName,ptabWindows,numTabWindows))  // This is OK for a multiple TabWindows
             {
 #               ifndef NO_IMGUIEMSCRIPTEN
                 ImGui::EmscriptenFileSystemHelper::Sync();
@@ -166,12 +158,12 @@ void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,
         }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-        if (ImGui::MenuItem("Load Layout") && ptabWindows) {
+        if (ImGui::MenuItem("Load Layout")) {
 #           ifndef NO_IMGUIEMSCRIPTEN
             if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
 #           endif //NO_IMGUIEMSCRIPTEN
-            //parent.load(pSaveName);   // This is OK for a single TabWindow
-            ImGui::TabWindow::Load(pSaveName,ptabWindows,numTabWindows);  // This is OK for a all TabWindows
+            parent.load(pSaveName);   // This is OK for a single TabWindow
+            //ImGui::TabWindow::Load(pSaveName,ptabWindows,numTabWindows);  // This is OK for multiple TabWindows
         }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
@@ -182,24 +174,14 @@ void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,
 }
 
 // Helper methods (mainly to minimize the number of preprocessor calls later)
-static bool LoadAllTabWindows(bool fromDefaultStartLayout=true) {
-bool loadedFromFile = false;
-if (ptabWindows)    {
-#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
-#   ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-    static const char* saveName = "myTabWindow.layout";
-    const char* saveNamePersistent = "/persistent_folder/myTabWindow.layout";
-    const char* pSaveName = saveName;
-#   ifndef NO_IMGUIEMSCRIPTEN
-    if (!fromDefaultStartLayout && ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
-#   endif //NO_IMGUIEMSCRIPTEN
-
-    //loadedFromFile = tabWindow.load(pSaveName);   // This is good for a single TabWindow
-    loadedFromFile = ImGui::TabWindow::Load(pSaveName,ptabWindows,numTabWindows);  // This is OK for a all TabWindows
-#   endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
-#endif //NO_IMGUIHELPER
-}
-return loadedFromFile;
+static void ResetTabWindow(ImGui::TabWindow& tabWindow) {
+    tabWindow.clear();
+    static const char* tabNames[] = {"TabLabelStyle","Render","Layers","Capture","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
+    static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
+    static const char* tabTooltips[numTabs] = {"Edit the look of the tab labels","Render Tab Tooltip","Layers Tab Tooltip","Capture Tab Tooltip","non-draggable","Another Tab Tooltip","","","","non-draggable","Tired to add tooltips...",""};
+    for (int i=0;i<numTabs;i++) {
+        tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
+    }
 }
 #endif //NO_IMGUITABWINDOW
 
@@ -352,12 +334,7 @@ static void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
             ImGui::Text("Hello world from window \"%s\"",wd.name);
         }
         else if (strcmp(wd.name,DockedWindowNames[2])==0)    {
-            // Draw Property Window
-#           ifdef NO_IMGUITABWINDOW
             ImGui::Text("%s\n",wd.name);
-#           else //NO_IMGUITABWINDOW
-            if (ptabWindows) ptabWindows[1].render();
-#           endif //NO_IMGUITABWINDOW
         }
         else if (strcmp(wd.name,DockedWindowNames[3])==0) {
             // Draw Find Window
@@ -372,8 +349,8 @@ static void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
             bool border = mgr.getDockedWindowsBorder();
             if (ImGui::Checkbox("Window Border",&border)) mgr.setDockedWindowsBorder(border);          
 #           ifndef NO_IMGUITABWINDOW
-            ImGui::Spacing();
-            if (ImGui::Button("Reset All TabWindows")) LoadAllTabWindows();
+            //ImGui::Spacing();
+            //if (ImGui::Button("Reset Central Window Tabs")) ResetTabWindow(tabWindow);
 #           endif //NO_IMGUITABWINDOW
         }
         else /*if (strcmp(wd.name,DockedWindowNames[5])==0)*/    {
@@ -578,30 +555,29 @@ void DrawGL()	// Mandatory
                 ImGui::SetNextWindowSize(mgr.getCentralQuadSize());
                 if (ImGui::Begin("Central Window",NULL,ImVec2(0,0),mgr.getDockedWindowsAlpha(),ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove  | ImGuiWindowFlags_NoResize | (mgr.getDockedWindowsBorder() ? ImGuiWindowFlags_ShowBorders : 0)))    {
 #                   ifndef NO_IMGUITABWINDOW
-                    if (!ptabWindows) {
-                        ptabWindows = (ImGui::TabWindow*) ImGui::MemAlloc((size_t)numTabWindows*sizeof(ImGui::TabWindow));
-                        for (int i=0;i<numTabWindows;i++) {
-                            IMIMPL_PLACEMENT_NEW(&ptabWindows[i]) ImGui::TabWindow();
-                        }
-                    }
-
-                    ImGui::TabWindow& tabWindow = ptabWindows[0];
+                    static ImGui::TabWindow tabWindow;
                     if (!tabWindow.isInited()) {
                         ImGui::TabWindow::SetWindowContentDrawerCallback(&TabContentProvider,NULL); // Mandatory
                         ImGui::TabWindow::SetTabLabelPopupMenuDrawerCallback(&TabLabelPopupMenuProvider,NULL);  // Optional (if you need context-menu)
                         ImGui::TabWindow::SetTabLabelGroupPopupMenuDrawerCallback(&TabLabelGroupPopupMenuProvider,NULL);    // Optional (fired when RMB is clicked on an empty spot in the tab area)
 
-                        if (!LoadAllTabWindows())    {
-                            static const char* tabNames[] = {"TabLabelStyle","Render","Layers","Capture","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
-                            static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
-                            static const char* tabTooltips[numTabs] = {"Edit the look of the tab labels","Render Tab Tooltip","Layers Tab Tooltip","Capture Tab Tooltip","non-draggable","Another Tab Tooltip","","","","non-draggable","Tired to add tooltips...",""};
-                            for (int i=0;i<numTabs;i++) {
-                                tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
-                            }
-                        }
+                        bool loadedFromFile = false;
+#                       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#                       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+                        static const char* saveName = "myTabWindow.layout";
+                        const char* pSaveName = saveName;
+#                       ifndef NO_IMGUIEMSCRIPTEN
+                        const char* saveNamePersistent = "/persistent_folder/myTabWindow.layout";
+                        if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
+#                       endif //NO_IMGUIEMSCRIPTEN
+                        loadedFromFile = tabWindow.load(pSaveName);   // This is good for a single TabWindow
+                        //loadedFromFile = ImGui::TabWindow::Load(pSaveName,ptabWindows,numTabWindows);  // This is OK for a multiple TabWindows
+#                       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#                       endif //NO_IMGUIHELPER
+                        if (!loadedFromFile) ResetTabWindow(tabWindow);
                     }
-                    tabWindow.render(); // Must be called inside "its" window (and sets isInited() to false). [ ChildWindows can't be used here (but can be used inside Tab Pages). Basically all the "Central Window" must be given to 'tabWindow'. ]
-#                   else // NO_IMGUITABWINDOW
+                    tabWindow.render(); // Must be called inside "its" window (and sets isInited() to false). [ ChildWindows can't be used here (but can be used inside Tab Pages). Basically all the "Central Window" must be given to 'tabWindow'. ]                    
+#                    else // NO_IMGUITABWINDOW
                     ImGui::Text("Example central window");
 #                   endif // NO_IMGUITABWINDOW
                 }
@@ -652,15 +628,6 @@ void DestroyGL()    // Mandatory
 {
     if (myImageTextureId) {ImImpl_FreeTexture(myImageTextureId);}
     if (myImageTextureId2) {ImImpl_FreeTexture(myImageTextureId2);}
-
-#   ifndef NO_IMGUITABWINDOW
-    if (ptabWindows) {
-        for (int i=0;i<numTabWindows;i++) ptabWindows[i].~TabWindow();
-        ImGui::MemFree(ptabWindows);
-        ptabWindows = NULL;
-    }
-#   endif //NO_IMGUITABWINDOW
-
 }
 
 
