@@ -86,9 +86,10 @@ struct SdfTextChunk {
         ImVec2 scaling;
         SdfTextColor sdfTextColor;
         bool italic;
+        int hAlignment;
         TextBit() {}
     };
-    ImVectorEx<TextBit> textBits;
+    ImVector<TextBit> textBits;
     SdfTextChunk() {charset=NULL;buffer=NULL;numValidGlyphs=0;shadowOffsetInPixels.x=shadowOffsetInPixels.y=4.f;}
     SdfTextChunk(const SdfCharset* _charset,int bufferType,const SdfTextChunkProperties& properties=SdfTextChunkProperties(),bool preferStreamDrawBufferUsage=false) {
         buffer = (SdfVertexBuffer*) ImGui::MemAlloc(sizeof(SdfVertexBuffer));
@@ -108,16 +109,16 @@ struct SdfTextChunk {
             buffer=NULL;
         }
     }
-    inline void addText(const char* startText,bool _italic,const SdfTextColor* pSdfTextColor,const ImVec2* textScaling,const char* endText);
+    inline void addText(const char* startText,bool _italic,const SdfTextColor* pSdfTextColor,const ImVec2* textScaling,const char* endText,const SDFHAlignment *phalignOverride, bool fakeBold);
     inline void clearText() {
         if (buffer) buffer->clear();
         textBits.clear();
         dirty=false;
         numValidGlyphs=0;
     }
-    inline void assignText(const char* startText,bool _italic,const SdfTextColor* pSdfTextColor,const ImVec2* textScaling,const char* endText) {
+    inline void assignText(const char* startText,bool _italic,const SdfTextColor* pSdfTextColor,const ImVec2* textScaling,const char* endText,const SDFHAlignment *phalignOverride, bool fakeBold) {
         clearText();
-        addText(startText,_italic,pSdfTextColor,textScaling,endText);
+        addText(startText,_italic,pSdfTextColor,textScaling,endText,phalignOverride,fakeBold);
     }
 
     bool endText(ImVec2 screenSize=ImVec2(-1,-1));
@@ -603,7 +604,7 @@ struct SdfCharset {
 
 };
 
-void SdfTextChunk::addText(const char* startText,bool _italic,const SdfTextColor* pSdfTextColor,const ImVec2* textScaling,const char* endText) {
+void SdfTextChunk::addText(const char* startText, bool _italic, const SdfTextColor* pSdfTextColor, const ImVec2* textScaling, const char* endText,const SDFHAlignment *phalignOverride, bool fakeBold) {
     IM_ASSERT(startText);
     IM_ASSERT(charset);
 
@@ -611,9 +612,10 @@ void SdfTextChunk::addText(const char* startText,bool _italic,const SdfTextColor
     textBits.push_back(TextBit());
     TextBit& TB = textBits[textBitsSize];
 
-    TB.scaling = textScaling ? *textScaling : ImVec2(1,1);
+    TB.scaling = textScaling ? *textScaling : ImVec2(1,1);if (fakeBold) {TB.scaling.x*=1.2f;/*TB.scaling.y*=1.1f;*/}
     TB.italic = _italic;
-    TB.sdfTextColor = pSdfTextColor ? *pSdfTextColor : gSdfTextDefaultColor;
+    TB.sdfTextColor = pSdfTextColor ? *pSdfTextColor : gSdfTextDefaultColor;// change if fakeBold ?
+    TB.hAlignment = phalignOverride ? (int)(*phalignOverride) : -1;
 
     SdfCharDescriptor cd; int lastCdId=0;
     const bool useKernings = charset->KerningsCount>0;float kerning = 0;
@@ -692,8 +694,51 @@ bool SdfTextChunk::endText(ImVec2 screenSize) {
     } LineData;
 
     LineData lineData(BaseBase,LineHeightBase);
+    SDFHAlignment lastTBalignment = props.halign,halign = props.halign;bool mustStartNewAlignment = false;
     for (int i=0,isz=textBits.size();i<isz;i++) {
         const TextBit& TB = textBits[i];
+        halign =  (TB.hAlignment==-1) ? props.halign : (SDFHAlignment)TB.hAlignment;
+        mustStartNewAlignment = (lastTBalignment!=halign);
+        if (mustStartNewAlignment)  {
+            //------------------------------------------
+            if (totalSizeInPixels.x<lineData.sizeInPixels.x) totalSizeInPixels.x = lineData.sizeInPixels.x;
+            //totalSizeInPixels.y+= lineData.LineHeight;
+            // h alignment on lineData
+            // Horizontal alignment here---------------------------------
+            if (lineData.pVertStartLine && pVert) {
+                if (lastTBalignment==SDF_JUSTIFY)  {
+                    // horizontal alignment here---------------------------------
+                    if (lineData.numGlyphs>1 &&  (/*!lastCd || lastCd->Id!='\n' ||*/ lineData.sizeInPixels.x>0.65f*(cursorXlimits.y - cursorXlimits.x)))  {
+                        const float deltaX = (cursorXlimits.y - cursorXlimits.x - lineData.sizeInPixels.x)/(float)(lineData.numGlyphs-1);
+                        int cnt = 0;float addend = deltaX;
+                        for (SdfVertexBuffer::VertexDeclaration* vd = (lineData.pVertStartLine+6);vd!=pVert;++vd)   {
+                            vd->posAndUV.x+=addend;
+                            if (++cnt==6) {cnt=0;addend+=deltaX;}
+                        }
+                    }
+                }
+                else {
+                    float offsetX=0.f;
+                    if (lastTBalignment!=SDF_LEFT)      {
+                        offsetX = cursorXlimits.y - cursorXlimits.x - lineData.sizeInPixels.x;
+                        if (lastTBalignment==SDF_CENTER) offsetX*=0.5f;
+                    }
+                    if (offsetX!=0.f) {
+                        for (SdfVertexBuffer::VertexDeclaration* vd = lineData.pVertStartLine;vd!=pVert;++vd)   {
+                            vd->posAndUV.x+=offsetX;
+                        }
+                    }
+                }
+            }
+            //------------------------------------------------------------
+            //lineData = LineData(BaseBase,LineHeightBase);
+            lineData.pVertStartLine=lineData.pVertLastLineSplitter=NULL;
+            lineData.numGlyphs = 0;
+            lineData.sizeInPixels=ImVec2(0,0);
+            cursor.x = cursorXlimits.x;
+            //------------------------------------------------------------
+            lastTBalignment=halign;
+        }
         const ImVec2 localScale = TB.scaling * globalScale;
         if (shadowOffsetInPixels.x<localScale.x) shadowOffsetInPixels.x = localScale.x;
         if (shadowOffsetInPixels.y<localScale.y) shadowOffsetInPixels.y = localScale.y;
@@ -839,7 +884,7 @@ bool SdfTextChunk::endText(ImVec2 screenSize) {
                 totalSizeInPixels.y+= lineData.LineHeight;
                 // Horizontal alignment here---------------------------------
                 if (lineData.pVertStartLine && pLastVertOfLine) {
-                    if (props.halign==SDF_JUSTIFY)  {
+                    if (halign==SDF_JUSTIFY)  {
                         // horizontal alignment here---------------------------------
                         if (lineData.numGlyphs>1 && (cd.Id!='\n' || lineData.sizeInPixels.x>0.65f*(cursorXlimits.y - cursorXlimits.x)))  {
                             const float deltaX = (cursorXlimits.y - cursorXlimits.x - lineData.sizeInPixels.x)/(float)(lineData.numGlyphs-1);
@@ -852,9 +897,9 @@ bool SdfTextChunk::endText(ImVec2 screenSize) {
                     }
                     else {
                         float offsetX=0.f;
-                        if (props.halign!=SDF_LEFT)      {
+                        if (halign!=SDF_LEFT)      {
                             offsetX = cursorXlimits.y - cursorXlimits.x - lineData.sizeInPixels.x;
-                            if (props.halign==SDF_CENTER) offsetX*=0.5f;
+                            if (halign==SDF_CENTER) offsetX*=0.5f;
                         }
                         if (offsetX!=0.f) {
                             for (SdfVertexBuffer::VertexDeclaration* vd = lineData.pVertStartLine;vd!=pLastVertOfLine;++vd)   {
@@ -992,7 +1037,7 @@ bool SdfTextChunk::endText(ImVec2 screenSize) {
         // h alignment on lineData
         // Horizontal alignment here---------------------------------
         if (lineData.pVertStartLine && pVert) {
-            if (props.halign==SDF_JUSTIFY)  {
+            if (halign==SDF_JUSTIFY)  {
                 // horizontal alignment here---------------------------------
                 if (lineData.numGlyphs>1 &&  (/*!lastCd || lastCd->Id!='\n' ||*/ lineData.sizeInPixels.x>0.65f*(cursorXlimits.y - cursorXlimits.x)))  {
                     const float deltaX = (cursorXlimits.y - cursorXlimits.x - lineData.sizeInPixels.x)/(float)(lineData.numGlyphs-1);
@@ -1005,9 +1050,9 @@ bool SdfTextChunk::endText(ImVec2 screenSize) {
             }
             else {
                 float offsetX=0.f;
-                if (props.halign!=SDF_LEFT)      {
+                if (halign!=SDF_LEFT)      {
                     offsetX = cursorXlimits.y - cursorXlimits.x - lineData.sizeInPixels.x;
-                    if (props.halign==SDF_CENTER) offsetX*=0.5f;
+                    if (halign==SDF_CENTER) offsetX*=0.5f;
                 }
                 if (offsetX!=0.f) {
                     for (SdfVertexBuffer::VertexDeclaration* vd = lineData.pVertStartLine;vd!=pVert;++vd)   {
@@ -1139,9 +1184,143 @@ void SdfClearText(SdfTextChunk* chunk)    {
     IM_ASSERT(chunk);
     chunk->clearText();
 }
-void SdfAddText(SdfTextChunk* chunk,const char* startText,bool italic,const SdfTextColor* pSdfTextColor,const ImVec2* textScaling,const char* endText)    {
+void SdfAddText(SdfTextChunk* chunk, const char* startText, bool italic, const SdfTextColor* pSdfTextColor, const ImVec2* textScaling, const char* endText,const SDFHAlignment *phalignOverride, bool fakeBold)    {
     IM_ASSERT(chunk);
-    chunk->addText(startText,italic,pSdfTextColor,textScaling,endText);
+    chunk->addText(startText,italic,pSdfTextColor,textScaling,endText,phalignOverride,fakeBold);
+}
+
+
+void SdfAddTextWithTags(SdfTextChunk* chunk,const char* startText,const char* endText)  {
+    IM_ASSERT(chunk);
+    if (!startText || startText==endText || startText[0]=='\0') return;
+    typedef struct _SdfTagState {
+        bool bold;
+        bool italic;
+        ImVector<SdfTextColor> color;
+        ImVector<ImVec2> scaling;
+        ImVector<SDFHAlignment> hAlign;
+        _SdfTagState() : bold(false),italic(false) {}
+        void SdfAddText(SdfTextChunk* chunk,const unsigned char* startText,const unsigned char* endText) const {
+            chunk->addText((const char*)startText,
+                           italic,
+                           color.size()>0?&color[color.size()-1]:NULL,
+                           scaling.size()>0?&scaling[scaling.size()-1]:NULL,
+                           (const char*)endText,
+                           hAlign.size()>0?&hAlign[hAlign.size()-1]:NULL,
+                           bold
+                           );
+        }
+    } SdfTagState;
+    SdfTagState TS;
+
+    uint32_t state=UTF8Helper::UTF8_ACCEPT,codePoint=0,lastCodePoint=0,numGlyphs=0;
+    const uint32_t startTagCP = '<';    // Hp) startTagCP and endTagCP must be 1 bytes long (in UTF8)
+    const uint32_t endTagCP = '>';
+    const unsigned char* endTextUC = (const unsigned char*) (endText==NULL?(startText+strlen(startText)):endText);
+    const unsigned char* p = (const unsigned char*) startText;
+    const unsigned char* startTag=NULL;const unsigned char* endTag=NULL;const unsigned char* startSubchunk = p;
+    for(p = (const unsigned char*) startText; p!=endTextUC; ++p)
+    {
+        if (UTF8Helper::decode(&state, &codePoint, *p)!=UTF8Helper::UTF8_ACCEPT) continue;
+        ++numGlyphs;
+        if (lastCodePoint == codePoint) continue;
+        lastCodePoint = codePoint;
+        if (codePoint==startTagCP) startTag = p;
+        else if (startTag && codePoint==endTagCP) {
+            endTag = p+1;
+            bool tagValid = true;
+            const char* s = (const char*) (startTag+1);
+            const char* e = (const char*) (endTag-1);
+            bool negate = false;bool hasEquality = false;
+            if (*s=='/') {negate=true;++s;if (s>=e) tagValid=false;}
+            const char* equality = e;
+            if (tagValid && !negate) {
+                equality = strchr(s,'=');
+                if (!equality || equality>=e) {
+                    hasEquality = false;
+                    equality = e;
+                }
+                else hasEquality = true;
+            }
+            if (tagValid)   {
+                // Parse the two fields
+                static char field0[16];field0[0]='\0';
+                static char field1[16];field1[0]='\0';
+                int cnt=0;bool started = false;
+                for (const char* t=s;t!=equality && cnt<15;++t) {
+                    if (*t==' ' || *t=='\t') {
+                        if (!started) continue;
+                        else break;
+                    }
+                    field0[cnt++]=tolower(*t);   // <ctype.h> tolower()
+                    started = true;
+                }
+                field0[cnt]='\0';
+                if (hasEquality) {
+                    started = false;bool quoteStarted = false;
+                    cnt=0;for (const char* t=equality+1;t!=e && cnt<15;++t) {
+                        if (!quoteStarted && (*t==' ' || *t=='\t')) {
+                            if (!started) continue;
+                            else break;
+                        }
+                        if (*t=='\'' || *t=='"')    {
+                            if (!started) started = true;
+                            if (quoteStarted) break;
+                            quoteStarted = true;
+                            continue;
+                        }
+                        field1[cnt++]=tolower(*t);   // <ctype.h> tolower()
+                        started = true;
+                    }
+                    field1[cnt]='\0';
+                }
+                //fprintf(stderr,"Found tag: %.*s (%d): field0:%s field1:%s hasEquality:%s negate:%s [Text before:\"%.*s\"]\n",(int)(e-s),s,(int)(e-s),field0,field1,hasEquality?"true":"false",negate?"true":"false",(int)(startTag-startSubchunk),startSubchunk);
+
+                TS.SdfAddText(chunk,startSubchunk,startTag);
+                startSubchunk = endTag;
+
+                // Process Tag and push or pop TS:
+                bool error = false;
+                if (strcmp(field0,"b")==0)          TS.bold=!negate;
+                else if (strcmp(field0,"i")==0)     TS.italic=!negate;
+                else if (strncmp(field0,"hal",3)==0)    {
+                    if (negate) {if (TS.hAlign.size()>0) TS.hAlign.pop_back();}
+                    else if (hasEquality)   {
+                        SDFHAlignment hal=SDF_CENTER;
+                        if (strncmp(field1,"l",1)==0) hal = SDF_LEFT;
+                        else if (strncmp(field1,"c",1)==0) hal = SDF_CENTER;
+                        else if (strncmp(field1,"r",1)==0) hal = SDF_RIGHT;
+                        else if (strncmp(field1,"j",1)==0) hal = SDF_JUSTIFY;
+                        else error = true;
+                        if (!error) TS.hAlign.push_back(hal);
+                    }
+                    else error = true;
+                }
+                else if (strncmp(field0,"s",1)==0)  {
+                    ImVec2 scaling(1,1);
+                    if (negate)  {if (TS.scaling.size()>0) TS.scaling.pop_back();}
+                    else if (hasEquality && sscanf(field1, "%f", &scaling.x))  {
+                        scaling.y = scaling.x;
+                        TS.scaling.push_back(scaling);
+                    }
+                    else error = true;
+                }
+                 else if (strncmp(field0,"c",1)==0)  {
+                    ImU32 color;
+                    if (negate)  {if (TS.color.size()>0) TS.color.pop_back();}
+                    else if (hasEquality && sscanf(field1, "%x", &color))  {
+                        TS.color.push_back(SdfTextColor(ImGui::ColorConvertU32ToFloat4(color)));
+                    }
+                    else error = true;
+                }
+                //TODO: other tags here
+                //if (error) {printf("SdfMarkupError: Can't understand tag: \"%.*s\"\n",(int)(e-s),s);fflush(stdout);}
+            }
+            startTag=endTag=NULL;
+        }
+
+    }
+    if (startSubchunk && p) TS.SdfAddText(chunk,startSubchunk,p);
 }
 
 void SdfTextColor::SetDefault(const SdfTextColor& defaultColor,bool updateAllExistingTextChunks) {
@@ -1320,27 +1499,32 @@ void SdfRender(const ImVec4* pViewportOverride) {
 
 
 #ifndef NO_IMGUISDF_EDIT
-bool SdfTextChunkEdit(SdfTextChunk* sdfTextChunk,char* buffer,int bufferSize)   {
+bool SdfTextChunkEdit(SdfTextChunk* sdfTextChunk, char* buffer, int bufferSize)   {
     IM_ASSERT(sdfTextChunk && buffer && bufferSize>0);
     ImGui::PushID(sdfTextChunk);
     SdfTextChunkProperties& sdfLayoutProps = sdfTextChunk->props;
     unsigned int flags = (unsigned int) sdfTextChunk->buffer->type;
 
     bool changed = false,changed2=false;
+    static bool useMarkups = true;
+    changed2|=ImGui::Checkbox("Use markups",&useMarkups);
     changed|=ImGui::CheckboxFlags("Outline##SDF_outline_style",&flags,ImGui::SDF_BT_OUTLINE);ImGui::SameLine();
     changed|=ImGui::CheckboxFlags("Shadowed##SDF_shadowed_style",&flags,ImGui::SDF_BT_SHADOWED);
     if (changed) ImGui::SdfTextChunkSetStyle(sdfTextChunk,(int)flags);
 
-    changed=false;
-    ImGui::SameLine();
-    static bool italic = false;changed|=ImGui::Checkbox("Italic##SDF_italic",&italic);
-    ImGui::PushItemWidth(ImGui::GetWindowWidth()/3.f);
-    static ImVec4 color = sdfTextChunk->buffer->getColorOfVert(0) ? *sdfTextChunk->buffer->getColorOfVert(0) : SdfTextDefaultColor.colorTopLeft;changed|=ImGui::ColorEdit3("Color##SDF_color",&color.x);
+    changed=changed2;changed2=false;
+    if (!useMarkups) ImGui::SameLine();
+    static bool italic = false;if (!useMarkups) changed|=ImGui::Checkbox("Italic##SDF_italic",&italic);
+    static ImVec4 color = sdfTextChunk->buffer->getColorOfVert(0) ? *sdfTextChunk->buffer->getColorOfVert(0) : SdfTextDefaultColor.colorTopLeft;
+    if (!useMarkups) {
+        ImGui::PushItemWidth(ImGui::GetWindowWidth()/3.f);
+        changed|=ImGui::ColorEdit3("Color##SDF_color",&color.x);
+        ImGui::PopItemWidth();
+    }
+    //ImGui::PushItemWidth(ImGui::GetWindowWidth()/6.f);
     //static ImVec2 scaling(1.f,1.f);changed|=ImGui::DragFloat2("Scale##SDF_scale",&scaling.x,0.1f,0.25f,4.f);
-    ImGui::PopItemWidth();
-    ImGui::PushItemWidth(ImGui::GetWindowWidth()/6.f);
     //static float scaling(1.f);changed|=ImGui::DragFloat("Scale##SDF_scale",&scaling,0.1f,0.25f,4.f);
-    ImGui::PopItemWidth();
+    //ImGui::PopItemWidth();
 
     ImGui::PushItemWidth(ImGui::GetWindowWidth()/10.f);
     changed2|=ImGui::DragFloat("max num lines##SDF_maxnumlines",&sdfLayoutProps.maxNumTextLines,0.5f,1.0f,100.f);
@@ -1358,13 +1542,18 @@ bool SdfTextChunkEdit(SdfTextChunk* sdfTextChunk,char* buffer,int bufferSize)   
     ImGui::PopItemWidth();
 
     bool textChanged = false;
-    changed|=textChanged=ImGui::InputTextMultiline("SDF Text",buffer,bufferSize,ImVec2(0,0),ImGuiInputTextFlags_AllowTabInput);
+    ImGui::PushItemWidth(-1.f);
+    changed|=textChanged=ImGui::InputTextMultiline("##SDF Text",buffer,bufferSize,ImVec2(0,0),ImGuiInputTextFlags_AllowTabInput);
+    ImGui::PopItemWidth();
     if (changed || changed2) {
         if (changed2) ImGui::SdfTextChunkGetProperties(sdfTextChunk) = sdfLayoutProps;
         ImGui::SdfClearText(sdfTextChunk);
-        ImGui::SdfTextColor textColor(color);
-        //ImVec2 scaling2D(scaling,scaling);
-        ImGui::SdfAddText(sdfTextChunk,buffer,italic,&textColor,NULL/*&scaling2D*/); // Actually we can append multiple of these calls together
+        if (!useMarkups)    {
+            ImGui::SdfTextColor textColor(color);
+            //ImVec2 scaling2D(scaling,scaling);
+            ImGui::SdfAddText(sdfTextChunk,buffer,italic,&textColor,NULL/*&scaling2D*/); // Actually we can append multiple of these calls together
+        }
+        else ImGui::SdfAddTextWithTags(sdfTextChunk,buffer,NULL);
     }
 
     ImGui::PopID();

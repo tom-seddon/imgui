@@ -707,9 +707,10 @@ void DrawGL()	// Mandatory
                 sdfTextChunk = ImGui::SdfAddTextChunk(charset,ImGui::SDF_BT_OUTLINE,ImGui::SdfTextChunkProperties(20,ImGui::SDF_CENTER,ImGui::SDF_MIDDLE,ImVec2(.5f,.5f),ImVec2(.5f,.5f)));
                 IM_ASSERT(sdfTextChunk);
 
-                static const char* sdfSampleText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+                //static const char* sdfSampleText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+                static const char* sdfSampleText = "Lorem ipsum <COLOR=00FF00>dolor</COLOR> sit <I>amet</I>, consectetur <B>adipiscing</B> elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n<SCALE=2.0><HALIGN=LEFT>Left<HALIGN=CENTER>Center<HALIGN=RIGHT>Right</SCALE>";
                 strcpy(sdfTextBuffer,sdfSampleText);
-                ImGui::SdfAddText(sdfTextChunk,sdfTextBuffer); // Actually we can append multiple of these calls together
+                ImGui::SdfAddTextWithTags(sdfTextChunk,sdfTextBuffer); // Actually we can append multiple of these calls together
 
             }
         }

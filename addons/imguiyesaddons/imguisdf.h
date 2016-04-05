@@ -105,7 +105,8 @@ struct SdfTextColor {
     static void SetDefault(const SdfTextColor& defaultColor, bool updateAllExistingTextChunks=false);
 };
 static SdfTextColor SdfTextDefaultColor;
-void SdfAddText(struct SdfTextChunk* chunk,const char* startText,bool italic=false,const SdfTextColor* pSdfTextColor=NULL,const ImVec2* textScaling=NULL,const char* endText=NULL);
+void SdfAddText(struct SdfTextChunk* chunk,const char* startText,bool italic=false,const SdfTextColor* pSdfTextColor=NULL,const ImVec2* textScaling=NULL,const char* endText=NULL,const SDFHAlignment* phalignOverride=NULL,bool fakeBold=false);
+void SdfAddTextWithTags(struct SdfTextChunk* chunk,const char* startText,const char* endText=NULL);
 void SdfClearText(struct SdfTextChunk* chunk);
 //---------------------------------------------------------------------------------------------------
 
