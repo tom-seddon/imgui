@@ -1073,7 +1073,7 @@ struct MyTabWindowHelperStruct {
     ImVec4 splitterColorActive;
 
     float textHeightWithSpacing;
-    bool isWindowFocused;
+    bool isWindowHovered;
 
     MyTabWindowHelperStruct(TabWindow* _tabWindow) {
         isMouseDragging = ImGui::IsMouseDragging(0,2.f);
@@ -1095,7 +1095,7 @@ struct MyTabWindowHelperStruct {
 
         textHeightWithSpacing = ImGui::GetTextLineHeightWithSpacing();
 
-        isWindowFocused = ImGui::IsWindowFocused();
+        isWindowHovered = ImGui::IsRootWindowOrAnyChildFocused();
     }
     ~MyTabWindowHelperStruct() {
 	restoreStyleVars();
@@ -1308,7 +1308,7 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
             mhs.MustOpenAskForClosingPopup = true;
 		}
             }
-            else if (mhs.isWindowFocused && ImGui::IsItemHoveredRect()) {
+            else if (mhs.isWindowHovered && ImGui::IsItemHoveredRect()) {
                 isAItemHovered = true;
                 //hoveredTab = &tab;
                 if (tab.tooltip && strlen(tab.tooltip)>0 && (&tab!=mhs.tabLabelPopup || GImGui->OpenedPopupStack.size()==0) )  ImGui::SetTooltip("%s",tab.tooltip);
@@ -2214,7 +2214,8 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
 
     ImVec2 startGroupCursorPos = ImGui::GetCursorPos();
     ImGui::BeginGroup();
-    ImVec2 tabButtonSz(0,0);bool mustCloseTab = false;bool canUseSizeOptimization = false;const bool isWindowFocused = ImGui::IsWindowFocused();
+    ImVec2 tabButtonSz(0,0);bool mustCloseTab = false;bool canUseSizeOptimization = false;
+    const bool isWindowHovered = ImGui::IsWindowHovered();
     bool selection_changed = false;bool noButtonDrawn = true;
     for (int j = 0,i; j < numTabs; j++)
     {
@@ -2251,7 +2252,7 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
 
         }
 
-        if (isWindowFocused && ImGui::IsItemHoveredRect() && !mustCloseTab) {
+        if (isWindowHovered && ImGui::IsItemHoveredRect() && !mustCloseTab) {
             if (pOptionalHoveredIndex) *pOptionalHoveredIndex = i;
             if (tabLabelTooltips && !isRMBclicked && tabLabelTooltips[i] && strlen(tabLabelTooltips[i])>0)  ImGui::SetTooltip("%s",tabLabelTooltips[i]);
 

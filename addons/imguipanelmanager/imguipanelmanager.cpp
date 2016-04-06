@@ -3,7 +3,7 @@
 
 
 bool gImGuiDockpanelManagerExtendedStyle = true;
-float gImGuiDockPanelManagerActiveResizeSize = 4.f;
+float gImGuiDockPanelManagerActiveResizeSize = 6.f;
 bool gImGuiDockPanelManagerAddExtraTitleBarResizing = false;
 
 // Static Helper Methods:
