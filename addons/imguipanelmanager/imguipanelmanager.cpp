@@ -3,6 +3,8 @@
 
 
 bool gImGuiDockpanelManagerExtendedStyle = true;
+float gImGuiDockPanelManagerActiveResizeSize = 4.f;
+bool gImGuiDockPanelManagerAddExtraTitleBarResizing = false;
 
 // Static Helper Methods:
 namespace ImGui {
@@ -247,7 +249,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             const ImRect title_bar_without_buttons_rect(title_bar_rect.Min,title_bar_rect.Max-ImVec2(buttonsSize,0));
 
             // NEW PART: resize by dragging title bar (and mousewheel ?)
-            if (wd && pDraggingStarted && (*pDraggingStarted || (g.HoveredWindow == window && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max))))  {
+            if (wd && pDraggingStarted && (wd->dockPos==ImGui::PanelManager::BOTTOM || gImGuiDockPanelManagerAddExtraTitleBarResizing || gImGuiDockPanelManagerActiveResizeSize==0) && (*pDraggingStarted || (g.HoveredWindow == window && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max))))  {
                 const ImGuiID resize_id = window->GetID("#RESIZE");
                 bool hovered, held=false,wheel = false;//g.IO.MouseWheel!=0.f;
                 if (!wheel) ButtonBehavior(title_bar_without_buttons_rect, resize_id, &hovered, &held);//, true);
@@ -477,14 +479,14 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
             ImU32 resize_col = 0;
             const float resize_corner_size = ImMax(g.FontSize * 1.35f, window_rounding + 1.0f + g.FontSize * 0.2f);
-            if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && !(flags & ImGuiWindowFlags_NoResize))
+            /*if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && !(flags & ImGuiWindowFlags_NoResize))
             {
                 // Manual resize
                 const ImVec2 br = window->Rect().GetBR();
                 const ImRect resize_rect(br - ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f), br);
                 const ImGuiID resize_id = window->GetID("#RESIZE");
                 bool hovered, held;
-                ButtonBehavior(resize_rect, resize_id, &hovered, &held, /*true,*/ ImGuiButtonFlags_FlattenChilds);
+                ButtonBehavior(resize_rect, resize_id, &hovered, &held, ImGuiButtonFlags_FlattenChilds);
                 resize_col = GetColorU32(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
 
                 if (hovered || held)
@@ -507,6 +509,46 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
                 window->Size = window->SizeFull;
                 title_bar_rect = window->TitleBarRect();
+            }*/
+
+            // NEW PART: resize by dragging window border
+            if (gImGuiDockPanelManagerActiveResizeSize>0 && !(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0
+                && pDraggingStarted && wd && wd->dockPos != ImGui::PanelManager::BOTTOM
+            )
+            {
+                ImVec2 rectMin(0,0),rectMax(0,0);
+                if (wd->dockPos == ImGui::PanelManager::LEFT)   {
+                    rectMin = window->Rect().GetTR(); rectMin.x-=gImGuiDockPanelManagerActiveResizeSize;rectMin.y+=title_bar_rect.GetHeight();
+                    rectMax = window->Rect().GetBR();
+                }
+                else if (wd->dockPos == ImGui::PanelManager::RIGHT) {
+                    rectMin = window->Rect().GetTL();rectMin.y+=title_bar_rect.GetHeight();
+                    rectMax = window->Rect().GetBL();rectMax.x+=gImGuiDockPanelManagerActiveResizeSize;
+                }
+                else if (wd->dockPos == ImGui::PanelManager::TOP) {
+                    rectMin = window->Rect().GetBL();rectMin.y-=gImGuiDockPanelManagerActiveResizeSize;
+                    rectMax = window->Rect().GetBR();
+                }
+
+                const ImRect resize_rect(rectMin,rectMax);
+                if (*pDraggingStarted || (g.HoveredWindow == window && IsMouseHoveringRect(resize_rect.Min, resize_rect.Max)))    {
+                    const ImGuiID resize_id = window->GetID("#RESIZE");
+                    bool hovered, held=false,wheel = false;
+                    if (!wheel) ButtonBehavior(resize_rect, resize_id, &hovered, &held);
+                    if (hovered || held || wheel) {
+                        g.MouseCursor = wd->dockPos<PanelManager::TOP ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS;
+                        if (!wd->isToggleWindow) wd->isResizing = true;
+                    }
+                    *pDraggingStarted = held;
+                    if (held || wheel)   {
+                        ImVec2 newSize(0,0);
+                        ImVec2 amount = wheel ? ImVec2(g.IO.MouseWheel*20.f,g.IO.MouseWheel*20.f) : g.IO.MouseDelta;
+                        if (wd->dockPos==ImGui::PanelManager::LEFT || wd->dockPos==ImGui::PanelManager::TOP) newSize = ImMax(window->SizeFull + amount, style.WindowMinSize);
+                        else newSize = ImMax(window->SizeFull - amount, style.WindowMinSize);
+                        wd->length = wd->dockPos<ImGui::PanelManager::TOP ? newSize.x : newSize.y;
+                    }
+
+                }
             }
 
             // Scrollbars
@@ -826,7 +868,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
                 }
             }
 
-            const bool allowManualResizeGrip = false;//true;
+            const bool allowManualResizeGrip = false;//true;    // I DON'T THINK THIS WORKS ANYMORE (TODO: Remove it)
             if (allowManualResizeGrip)  {
                 ImRect resize_aabb(0,0,0,0);
                 const ImGuiID resize_id = window->GetID("#RESIZE");

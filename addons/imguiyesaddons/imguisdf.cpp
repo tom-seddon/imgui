@@ -678,6 +678,9 @@ bool SdfTextChunk::endText(ImVec2 screenSize) {
     ImVec2 totalSizeInPixels(0.f,0.f);
     bool mustEndOneLine = false;
 
+    ImVec2 localScaleXminmax(0.f,0.f),localScaleYminmax(0.f,0.f);
+
+
     const SdfCharDescriptor* lastCd = NULL;
     typedef struct _LineData{
         ImVec2 sizeInPixels;
@@ -740,8 +743,18 @@ bool SdfTextChunk::endText(ImVec2 screenSize) {
             lastTBalignment=halign;
         }
         const ImVec2 localScale = TB.scaling * globalScale;
-        if (shadowOffsetInPixels.x<localScale.x) shadowOffsetInPixels.x = localScale.x;
-        if (shadowOffsetInPixels.y<localScale.y) shadowOffsetInPixels.y = localScale.y;
+        if (i==0) {
+            localScaleXminmax.x=localScaleXminmax.y=localScale.x;
+            localScaleYminmax.x=localScaleYminmax.y=localScale.y;
+        }
+        else {
+            if      (localScaleXminmax.x>localScale.x) localScaleXminmax.x = localScale.x;
+            else if (localScaleXminmax.y<localScale.x) localScaleXminmax.y = localScale.x;
+            if      (localScaleYminmax.x>localScale.y) localScaleYminmax.x = localScale.y;
+            else if (localScaleYminmax.y<localScale.y) localScaleYminmax.y = localScale.y;
+        }
+        //if (shadowOffsetInPixels.x<localScale.x) shadowOffsetInPixels.x = localScale.x;
+        //if (shadowOffsetInPixels.y<localScale.y) shadowOffsetInPixels.y = localScale.y;
         if (lineData.lastTbScalingY!=TB.scaling.y)   {
             lineData.lastTbScalingY=TB.scaling.y;
             if (lineData.maxTbScalingY<TB.scaling.y)    {
@@ -1076,9 +1089,14 @@ bool SdfTextChunk::endText(ImVec2 screenSize) {
         }
     }
 
-    const float soc = 0.0575f;
+    /*const float soc = 0.0575f;
     shadowOffsetInPixels.x*=soc;
-    shadowOffsetInPixels.y*=soc;
+    shadowOffsetInPixels.y*=soc;*/
+
+    const float soc = 0.0625f;
+    shadowOffsetInPixels.x=soc*(0.75f*localScaleXminmax.x + 0.25f*localScaleXminmax.y);
+    shadowOffsetInPixels.y=soc*(0.75f*localScaleYminmax.x + 0.25f*localScaleYminmax.y);
+    fprintf(stderr,"localScaleXminmax:(%1.3f,%1.3f) localScaleYminmax:(%1.3f,%1.3f)\n",localScaleXminmax.x,localScaleXminmax.y,localScaleYminmax.x,localScaleYminmax.y);
 
     return true;
 
