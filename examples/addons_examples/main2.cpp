@@ -8,10 +8,12 @@ static ImVec2 gMainMenuBarSize(0,0);
 static bool gShowMainMenuBar = true;
 
 
-//#define NO_IMGUITABWINDOW   // Optional (but safer)
+//#define NO_IMGUITABWINDOW   // Optional (but safer and useful to learn ImGui::PanelManager only)
 
 #ifndef NO_IMGUITABWINDOW
-// Callbacks used by all ImGui::TabWindows
+ImGui::TabWindow tabWindows[5]; // 0 = center, 1 = left, 2 = right, 3 = top, 4 = bottom
+
+// Callbacks used by all ImGui::TabWindows and set in InitGL()
 void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent,void* userPtr) {
     // Users will use tab->userPtr here most of the time
     ImGui::Spacing();ImGui::Separator();
@@ -148,8 +150,8 @@ void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,
 #           ifndef NO_IMGUIEMSCRIPTEN
             pSaveName = saveNamePersistent;
 #           endif //NO_IMGUIEMSCRIPTEN
-            if (parent.save(pSaveName))   // This is OK for a single TabWindow
-            //if (ImGui::TabWindow::Save(pSaveName,ptabWindows,numTabWindows))  // This is OK for a multiple TabWindows
+            //if (parent.save(pSaveName))   // This is OK for a single TabWindow
+            if (ImGui::TabWindow::Save(pSaveName,&tabWindows[0],sizeof(tabWindows)/sizeof(tabWindows[0])))  // This is OK for a multiple TabWindows
             {
 #               ifndef NO_IMGUIEMSCRIPTEN
                 ImGui::EmscriptenFileSystemHelper::Sync();
@@ -162,8 +164,8 @@ void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,
 #           ifndef NO_IMGUIEMSCRIPTEN
             if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
 #           endif //NO_IMGUIEMSCRIPTEN
-            parent.load(pSaveName);   // This is OK for a single TabWindow
-            //ImGui::TabWindow::Load(pSaveName,ptabWindows,numTabWindows);  // This is OK for multiple TabWindows
+            //parent.load(pSaveName);   // This is OK for a single TabWindow
+            ImGui::TabWindow::Load(pSaveName,&tabWindows[0],sizeof(tabWindows)/sizeof(tabWindows[0]));  // This is OK for multiple TabWindows
         }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
@@ -173,18 +175,32 @@ void TabLabelGroupPopupMenuProvider(ImVector<ImGui::TabWindow::TabLabel*>& tabs,
     ImGui::PopStyleColor(2);
 }
 
-// Helper methods (mainly to minimize the number of preprocessor calls later)
-static void ResetTabWindow(ImGui::TabWindow& tabWindow) {
-    tabWindow.clear();
-    static const char* tabNames[] = {"TabLabelStyle","Render","Layers","Capture","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
-    static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
-    static const char* tabTooltips[numTabs] = {"Edit the look of the tab labels","Render Tab Tooltip","Layers Tab Tooltip","Capture Tab Tooltip","non-draggable","Another Tab Tooltip","","","","non-draggable","Tired to add tooltips...",""};
-    for (int i=0;i<numTabs;i++) {
-        tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
-    }
+// These callbacks are not ImGui::TabWindow callbacks, but ImGui::PanelManager callbacks, set in AddTabWindowIfSupported(...) right below
+static void DrawDockedTabWindows(ImGui::PanelManagerWindowData& wd)    {
+    // See more generic DrawDockedWindows(...) below...
+    ImGui::TabWindow& tabWindow = tabWindows[(wd.dockPos==ImGui::PanelManager::LEFT)?1:
+                                            (wd.dockPos==ImGui::PanelManager::RIGHT)?2:
+                                            (wd.dockPos==ImGui::PanelManager::TOP)?3
+                                            :4];
+    tabWindow.render();
 }
+
 #endif //NO_IMGUITABWINDOW
 
+void AddTabWindowIfSupported(ImGui::PanelManagerPane* pane) {
+#ifndef NO_IMGUITABWINDOW
+    const ImTextureID texId = ImGui::TabWindow::DockPanelIconTextureID;
+    IM_ASSERT(pane && texId);
+    ImVec2 buttonSize(32,32);
+    static const char* names[4] = {"TabWindow Left","TabWindow Right","TabWindow Top", "TabWindow Bottom"};
+    const int index = (pane->pos == ImGui::PanelManager::LEFT)?0:(pane->pos == ImGui::PanelManager::RIGHT)?1:(pane->pos == ImGui::PanelManager::TOP)?2:3;
+    if (index<2) buttonSize.x=24;
+    const int uvIndex = (index==0)?3:(index==2)?0:(index==3)?2:index;
+    ImVec2 uv0(0.75f,(float)uvIndex*0.25f),uv1(uv0.x+0.25f,uv0.y+0.25f);
+    pane->addButtonAndWindow(ImGui::Toolbutton(names[index],texId,uv0,uv1,buttonSize),              // the 1st arg of Toolbutton is only used as a text for the tooltip.
+                ImGui::PanelManagerPaneAssociatedWindow(names[index],-1,&DrawDockedTabWindows));    //  the 1st arg of PanelManagerPaneAssociatedWindow is the name of the window
+#endif //NO_IMGUITABWINDOW
+}
 
 void InitGL()	// Mandatory
 {
@@ -196,6 +212,13 @@ if (!ImGui::LoadStyle("./myimgui.style",ImGui::GetStyle()))   {
 
 if (!myImageTextureId) myImageTextureId = ImImpl_LoadTexture("./Tile8x8.png");
 if (!myImageTextureId2) myImageTextureId2 = ImImpl_LoadTexture("./myNumbersTexture.png");
+
+#ifndef NO_IMGUITABWINDOW
+    ImGui::TabWindow::SetWindowContentDrawerCallback(&TabContentProvider,NULL); // Mandatory
+    ImGui::TabWindow::SetTabLabelPopupMenuDrawerCallback(&TabLabelPopupMenuProvider,NULL);  // Optional (if you need context-menu)
+    ImGui::TabWindow::SetTabLabelGroupPopupMenuDrawerCallback(&TabLabelGroupPopupMenuProvider,NULL);    // Optional (fired when RMB is clicked on an empty spot in the tab area)
+#endif //NO_IMGUITABWINDOW
+
 }
 
 static void ShowExampleMenuFile()
@@ -408,6 +431,7 @@ void DrawGL()	// Mandatory
                         pane->addButtonAndWindow(ImGui::Toolbutton(DockedWindowNames[i],myImageTextureVoid,uv0,uv1,buttonSize),         // the 1st arg of Toolbutton is only used as a text for the tooltip.
                                                  ImGui::PanelManagerPaneAssociatedWindow(DockedWindowNames[i],-1,&DrawDockedWindows));  //  the 1st arg of PanelManagerPaneAssociatedWindow is the name of the window
                     }
+                    AddTabWindowIfSupported(pane);
                     pane->addSeparator(48); // Note that a separator "eats" one toolbutton index as if it was a real button
 
                     // Here we add two "automatic" toggle buttons (i.e. toolbuttons + associated windows): only the last args of Toolbutton change.
@@ -441,6 +465,7 @@ void DrawGL()	// Mandatory
                     if (mgr.getPaneLeft()) pane->addClonedPane(*mgr.getPaneLeft(),false,0,2); // note that only the "docked" part of buttons/windows are clonable ("manual" buttons are simply ignored): TO FIX: for now please avoid leaving -1 as the last argument, as this seems to mess up button indices: just explicitely copy NonTogglable-DockButtons yourself.
                     // To clone single buttons (and not the whole pane) please use: pane->addClonedButtonAndWindow(...);
                     // IMPORTANT: Toggle Toolbuttons (and associated windows) can't be cloned and are just skipped if present
+                    AddTabWindowIfSupported(pane);
 
                     // here we could add new docked windows as well in the usual way now... but we don't
                     pane->addSeparator(48);   // Note that a separator "eats" one toolbutton index as if it was a real button
@@ -472,6 +497,7 @@ void DrawGL()	// Mandatory
                         pane->addButtonAndWindow(ImGui::Toolbutton(DockedWindowNames[i],myImageTextureVoid,uv0,uv1,buttonSize),         // the 1st arg of Toolbutton is only used as a text for the tooltip.
                                                  ImGui::PanelManagerPaneAssociatedWindow(DockedWindowNames[i],-1,&DrawDockedWindows));  //  the 1st arg of PanelManagerPaneAssociatedWindow is the name of the window
                     }
+                    AddTabWindowIfSupported(pane);
                     pane->addSeparator(64); // Note that a separator "eats" one toolbutton index as if it was a real button
 
                     // Here we add two "automatic" toggle buttons (i.e. toolbuttons + associated windows): only the last args of Toolbutton change.
@@ -495,9 +521,9 @@ void DrawGL()	// Mandatory
             }
             // TOP PANE
             {
-                // Here we create a top pane by cloning the bottom one so that the same windows can be shown in two opposite sides.
-                const ImGui::PanelManager::Pane* bottomPane = mgr.getPane(ImGui::PanelManager::BOTTOM);
-                if (bottomPane) {
+                // Here we create a top pane.
+                //const ImGui::PanelManager::Pane* bottomPane = mgr.getPane(ImGui::PanelManager::BOTTOM);
+                //if (bottomPane) {
                     ImGui::PanelManager::Pane* pane = mgr.addPane(ImGui::PanelManager::TOP,"myFirstToolbarTop##foo");
                     if (pane)   {
                         // Here we add the "proper" docked buttons and windows:
@@ -508,6 +534,7 @@ void DrawGL()	// Mandatory
                             pane->addButtonAndWindow(ImGui::Toolbutton(DockedWindowNames[i],myImageTextureVoid,uv0,uv1,buttonSize),         // the 1st arg of Toolbutton is only used as a text for the tooltip.
                                                      ImGui::PanelManagerPaneAssociatedWindow(DockedWindowNames[i],-1,&DrawDockedWindows));  //  the 1st arg of PanelManagerPaneAssociatedWindow is the name of the window
                         }
+                        AddTabWindowIfSupported(pane);
                         pane->addSeparator(64); // Note that a separator "eats" one toolbutton index as if it was a real button
 
                         const ImVec2 extraButtonSize(32,32);
@@ -526,7 +553,7 @@ void DrawGL()	// Mandatory
                         pane->addButtonOnly(ImGui::Toolbutton("Show/Hide central window",myImageTextureVoid,uv0,uv1,toggleButtonSize,true,true));  // Here we add a manual toggle button that we'll process later
 
                     }
-                }
+                //}
             }
 
             // Optional line that affects the look of all the Toolbuttons in the Panes inserted so far:
@@ -555,12 +582,8 @@ void DrawGL()	// Mandatory
                 ImGui::SetNextWindowSize(mgr.getCentralQuadSize());
                 if (ImGui::Begin("Central Window",NULL,ImVec2(0,0),mgr.getDockedWindowsAlpha(),ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove  | ImGuiWindowFlags_NoResize | (mgr.getDockedWindowsBorder() ? ImGuiWindowFlags_ShowBorders : 0)))    {
 #                   ifndef NO_IMGUITABWINDOW
-                    static ImGui::TabWindow tabWindow;
+                    ImGui::TabWindow& tabWindow = tabWindows[0];
                     if (!tabWindow.isInited()) {
-                        ImGui::TabWindow::SetWindowContentDrawerCallback(&TabContentProvider,NULL); // Mandatory
-                        ImGui::TabWindow::SetTabLabelPopupMenuDrawerCallback(&TabLabelPopupMenuProvider,NULL);  // Optional (if you need context-menu)
-                        ImGui::TabWindow::SetTabLabelGroupPopupMenuDrawerCallback(&TabLabelGroupPopupMenuProvider,NULL);    // Optional (fired when RMB is clicked on an empty spot in the tab area)
-
                         bool loadedFromFile = false;
 #                       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #                       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
@@ -570,11 +593,19 @@ void DrawGL()	// Mandatory
                         const char* saveNamePersistent = "/persistent_folder/myTabWindow.layout";
                         if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
 #                       endif //NO_IMGUIEMSCRIPTEN
-                        loadedFromFile = tabWindow.load(pSaveName);   // This is good for a single TabWindow
-                        //loadedFromFile = ImGui::TabWindow::Load(pSaveName,ptabWindows,numTabWindows);  // This is OK for a multiple TabWindows
+                        //loadedFromFile = tabWindow.load(pSaveName);   // This is good for a single TabWindow
+                        loadedFromFile = ImGui::TabWindow::Load(pSaveName,&tabWindows[0],sizeof(tabWindows)/sizeof(tabWindows[0]));  // This is OK for a multiple TabWindows
 #                       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #                       endif //NO_IMGUIHELPER
-                        if (!loadedFromFile) ResetTabWindow(tabWindow);
+                        if (!loadedFromFile) {
+                            //tabWindow.clear();
+                            static const char* tabNames[] = {"TabLabelStyle","Render","Layers","Capture","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
+                            static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
+                            static const char* tabTooltips[numTabs] = {"Edit the look of the tab labels","Render Tab Tooltip","Layers Tab Tooltip","Capture Tab Tooltip","non-draggable","Another Tab Tooltip","","","","non-draggable","Tired to add tooltips...",""};
+                            for (int i=0;i<numTabs;i++) {
+                                tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
+                            }
+                        }
                     }
                     tabWindow.render(); // Must be called inside "its" window (and sets isInited() to false). [ ChildWindows can't be used here (but can be used inside Tab Pages). Basically all the "Central Window" must be given to 'tabWindow'. ]                    
 #                    else // NO_IMGUITABWINDOW

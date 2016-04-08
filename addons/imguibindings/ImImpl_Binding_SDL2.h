@@ -96,17 +96,20 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
 }
 
 static bool InitBinding(const ImImpl_InitParams* pOptionalInitParams=NULL,int argc=0, char** argv=NULL)	{
+/*  // From the web:
+SDL_INIT_EVERYTHING & ~(SDL_INIT_TIMER | SDL_INIT_HAPTIC) succeeds in Firefox. Timer doesn't work because it requires threads, and haptic support also isn't included. SDL_INIT_AUDIO requires Web Audio, and causes failure in IE. There is no flag for threads; they are simply initialized by default if they are enabled.
+In the SDL2 version of my DOSBox port, I simply don't use SDL_INIT_TIMER and call SDL_GetTicks() anyways. Yes, that is wrong according to SDL documentation, but it works. Availability of that function is probably important for games. For audio, I use SDL_InitSubSystem(SDL_INIT_AUDIO), and run in no audio mode if that fails.
+I think failing in SDL_Init() when a requested subsystem doesn't work properly is reasonable. When porting it's a lot easier to understand that failure than than failures later on when trying to use it.
+*/
+#ifndef IMIMPL_SDL2_INIT_FLAGS
 #   ifndef __EMSCRIPTEN__
-    if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
-#   else   // __EMSCRIPTEN__
-    /*  // From the web:
-    SDL_INIT_EVERYTHING & ~(SDL_INIT_TIMER | SDL_INIT_HAPTIC) succeeds in Firefox. Timer doesn't work because it requires threads, and haptic support also isn't included. SDL_INIT_AUDIO requires Web Audio, and causes failure in IE. There is no flag for threads; they are simply initialized by default if they are enabled.
-    In the SDL2 version of my DOSBox port, I simply don't use SDL_INIT_TIMER and call SDL_GetTicks() anyways. Yes, that is wrong according to SDL documentation, but it works. Availability of that function is probably important for games. For audio, I use SDL_InitSubSystem(SDL_INIT_AUDIO), and run in no audio mode if that fails.
-    I think failing in SDL_Init() when a requested subsystem doesn't work properly is reasonable. When porting it's a lot easier to understand that failure than than failures later on when trying to use it.
-    */
-    if (SDL_Init(SDL_INIT_VIDEO)<0)
-#   endif //__EMSCRIPTEN__
-    {
+#		define IMIMPL_SDL2_INIT_FLAGS (SDL_INIT_EVERYTHING)
+#	else //__EMSCRIPTEN__
+#		define IMIMPL_SDL2_INIT_FLAGS (SDL_INIT_VIDEO)
+#	endif //__EMSCRIPTEN__
+#endif //IMIMPL_SDL2_INIT_FLAGS
+
+    if (SDL_Init(IMIMPL_SDL2_INIT_FLAGS) < 0)	{
         fprintf(stderr, "Couldn't initialize SDL: %s\n", SDL_GetError());
         return false;
     }

@@ -204,18 +204,22 @@ public:
 #   ifndef _WIN32
         if (!path || strlen(path)==0) {
             realpath("./", rv);
+/*
 #           ifdef __EMSCRIPTEN__        // v.1.35.7 needs it because of a bug in realpath failing on all the folders
             if (!rv || strlen(rv)==0) strcpy(rv,"/");
-#           endif //__EMSCRIPTEN__
+#           endif //__EMSCRIPTEN__		// but v.1.36.1 fixed it
+*/
         }
         else {
             realpath(path, rv);
+/*
 #           ifdef __EMSCRIPTEN__        // v.1.35.7 needs it because of a bug in realpath failing on all the folders
             if (!rv || strlen(rv)==0) {
                 if (path[0]=='.') strcpy(rv,&path[1]);
                 else strcpy(rv,path);
             }
-#           endif //__EMSCRIPTEN__
+#           endif //__EMSCRIPTEN__		// but v.1.36.1 fixed it
+*/
         }
         //printf("GetAbsolutePath(\"%s\",\"%s\");\n",path,rv);fflush(stdout);
 #   else //_WIN32

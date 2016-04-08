@@ -202,6 +202,8 @@ Some notes:
    File saved in this folder should persist somewhere in your browser cache (in form of what is called an "IndexedDB", please search your browser's docs for further info).
    Emscripten users can define NO_IMGUIEMSCRIPTEN to prevent the creation of the persistent folder (NO_IMGUIEMSCRIPTEN should be defined for you in non-emscripten builds).   
    ATM I have some issue with the persistent folder (basically I don't seem to be able to load something back at init time).
+   UPDATE: I strongly suggest you enable NO_IMGUIEMSCRIPTEN for emscripten builds in case of problems if you experience errors that Firefox "Tools->Web Developer" tells you that are related to IFSDB (or something like that).
+   (Maybe in the future I'll turn this into a "yes_addon", so that it's disabled by default).
 
 (*): To compile the first demo using the GLUT binding, please try:
 em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_GLUT_BINDING" -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
