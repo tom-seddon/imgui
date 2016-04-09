@@ -1220,7 +1220,7 @@ bool ImGui::PanelManager::render(Pane** pPanePressedOut, int *pPaneToolbuttonPre
 
         const int oldHoverButtonIndex = bar.getHoverButtonIndex();
         const int oldSelectedButtonIndex = bar.getSelectedButtonIndex();
-        const int pressed = bar.render();
+        const int pressed = bar.render(true);   // "true" uses ImGui::IsItemHoveringRect()
         int selectedButtonIndex = bar.getSelectedButtonIndex();
         int& hoverButtonIndex = bar.hoverButtonIndex;
 

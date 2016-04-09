@@ -1259,9 +1259,10 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
         float windowWidth = 0.f,sumX=0.f;
         windowWidth = windowSize.x;//ImGui::GetWindowWidth();// - style.WindowPadding.x;// - (ImGui::GetScrollMaxY()>0 ? style.ScrollbarSize : 0.f);
         TabWindow::TabLabel* newSelectedTab = selectedTab;
-        numClosableTabs = 0;
+        numClosableTabs = 0;        
         ImVec2 tabButtonSz(0,0);bool mustCloseTab = false;bool canUseSizeOptimization = false;bool isAItemHovered = false;
-	bool selection_changed = false;
+        const bool isDraggingCorrectly = mhs.isMouseDragging && !mhs.LockedDragging && !mhs.isASplitterActive;
+        bool selection_changed = false;
         for (int i = 0; i < numTabs; i++)
         {
             TabWindow::TabLabel& tab = *tabs[i];
@@ -1308,30 +1309,32 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
             mhs.MustOpenAskForClosingPopup = true;
 		}
             }
-            else if (mhs.isWindowHovered && ImGui::IsItemHoveredRect()) {
+            else if (/*(mhs.isWindowHovered || isDraggingCorrectly || (!isDraggingCorrectly && dd.draggingTabSrc)) &&*/ ImGui::IsItemHoveredRect()) {
                 isAItemHovered = true;
                 //hoveredTab = &tab;
                 if (tab.tooltip && strlen(tab.tooltip)>0 && (&tab!=mhs.tabLabelPopup || GImGui->OpenedPopupStack.size()==0) )  ImGui::SetTooltip("%s",tab.tooltip);
 
-                if (mhs.isMouseDragging && !mhs.LockedDragging && !mhs.isASplitterActive) {
+                if (isDraggingCorrectly) {
                     if (!dd.draggingTabSrc) {
-                        if (!tab.draggable) mhs.LockedDragging = true;
-                        else    {
-                            dd.draggingTabSrc = &tab;
-                            dd.draggingTabNodeSrc = this;
-                            dd.draggingTabImGuiWindowSrc = g.HoveredWindow;
-                            dd.draggingTabWindowSrc = mhs.tabWindow;
-                            dd.draggingTabSrcIsSelected = (selectedTab == &tab);
+                        if (mhs.isWindowHovered)    {
+                            if (!tab.draggable) mhs.LockedDragging = true;
+                            else    {
+                                dd.draggingTabSrc = &tab;
+                                dd.draggingTabNodeSrc = this;
+                                dd.draggingTabImGuiWindowSrc = g.HoveredWindow;
+                                dd.draggingTabWindowSrc = mhs.tabWindow;
+                                dd.draggingTabSrcIsSelected = (selectedTab == &tab);
 
-                            dd.draggingTabSrcSize = ImGui::GetItemRectSize();
-                            const ImVec2& mp = ImGui::GetIO().MousePos;
-                            const ImVec2 draggingTabCursorPos = ImGui::GetCursorPos();
-                            dd.draggingTabSrcOffset=ImVec2(
-                                        mp.x+dd.draggingTabSrcSize.x*0.5f-sumX+ImGui::GetScrollX(),
-                                        mp.y+dd.draggingTabSrcSize.y*0.5f-draggingTabCursorPos.y+ImGui::GetScrollY()
-                                        );
+                                dd.draggingTabSrcSize = ImGui::GetItemRectSize();
+                                const ImVec2& mp = ImGui::GetIO().MousePos;
+                                const ImVec2 draggingTabCursorPos = ImGui::GetCursorPos();
+                                dd.draggingTabSrcOffset=ImVec2(
+                                            mp.x+dd.draggingTabSrcSize.x*0.5f-sumX+ImGui::GetScrollX(),
+                                            mp.y+dd.draggingTabSrcSize.y*0.5f-draggingTabCursorPos.y+ImGui::GetScrollY()
+                                            );
 
-                            //fprintf(stderr,"Hovered Start Window:%s\n",g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
+                                //fprintf(stderr,"Hovered Start Window:%s\n",g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
+                            }
                         }
                     }
                     else if (dd.draggingTabSrc && (!tab.draggable || !mhs.allowExchangeTabLabels)) {
@@ -1353,7 +1356,7 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
                     dd.draggingTabWindowDst = mhs.tabWindow;
                 }
 
-                if (mhs.isRMBclicked) {
+                if (mhs.isRMBclicked && mhs.isWindowHovered) {
                     // select it
                     selection_changed = (selectedTab != &tab);
                     newSelectedTab = &tab;

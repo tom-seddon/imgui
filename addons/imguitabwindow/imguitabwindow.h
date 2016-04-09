@@ -135,14 +135,6 @@ static void TabWindow::SetTabLabelSaveCallback(TabLabelFileCallback _tabLabelSav
 // KNOWN BUGS:
 /*
 -> If you scale the tab labels (e.g. with CTRL+mouse wheel), the dragged tab is not scaled. (I'm not sure this will be ever fixed).
--> Integration with ImGui::PanelManager [see main2.cpp]:
-   -> In order to prevent dragging tab labels of a window that is BELOW a "hovering window" some changes have been made,
-      but those changes now prevent swapping tab labels between different windows (i.e. dragging a tab label from one window
-      onto the tab label of another window).
-      Basically I allowed "dragging" only when ImGui::IsRootWindowOrAnyChildFocused() to prevent dragging from hidden windows.
-      If there a better way to just detect windows that are hidden by others, or by the focused one ?
-   -> It would be nice to allow dragging a tab label onto the ImGui::Toolbar::Button of a docked-closed TabWindow, but I guess
-      this will be impossible since ImGui::Toolbar and ImGui::PanelManager don't even know what a ImGui::TabWindow is...
 */
 
 
