@@ -299,7 +299,38 @@ void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, cons
     ImU32 fillColorTop,fillColorBottom;GetVerticalGradientTopAndBottomColors(fillColor,fillColorGradientDeltaIn0_05,fillColorTop,fillColorBottom);
     ImDrawListAddRectWithVerticalGradient(dl,a,b,fillColorTop,fillColorBottom,strokeColor,rounding,rounding_corners,strokeThickness,antiAliased);
 }
+
 #endif //NO_IMGUIHELPER_DRAW_METHODS
+
+// These two methods are inspired by imguidock.cpp
+void PutInBackground(const char* optionalRootWindowName)  {
+    ImGuiWindow* w = optionalRootWindowName ? FindWindowByName(optionalRootWindowName) : GetCurrentWindow();
+    if (!w) return;
+    ImGuiState& g = *GImGui;
+    if (g.Windows[0] == w) return;
+    const int isz = g.Windows.Size;
+    for (int i = 0; i < isz; i++)  {
+        if (g.Windows[i] == w)  {
+            for (int j = i; j > 0; --j) g.Windows[j] = g.Windows[j-1];  // shifts [0,j-1] to [1,j]
+            g.Windows[0] = w;
+            break;
+        }
+    }
+}
+void PutInForeground(const char* optionalRootWindowName)  {
+    ImGuiWindow* w = optionalRootWindowName ? FindWindowByName(optionalRootWindowName) : GetCurrentWindow();
+    if (!w) return;
+    ImGuiState& g = *GImGui;
+    const int iszMinusOne = g.Windows.Size - 1;
+    if (iszMinusOne<0 || g.Windows[iszMinusOne] == w) return;
+    for (int i = iszMinusOne; i >= 0; --i)  {
+        if (g.Windows[i] == w)  {
+            for (int j = i; j < iszMinusOne; j++) g.Windows[j] = g.Windows[j+1];  // shifts [i+1,iszMinusOne] to [i,iszMinusOne-1]
+            g.Windows[iszMinusOne] = w;
+            break;
+        }
+    }
+}
 
 } // namespace Imgui
 

@@ -1309,10 +1309,10 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
             mhs.MustOpenAskForClosingPopup = true;
 		}
             }
-            else if (/*(mhs.isWindowHovered || isDraggingCorrectly || (!isDraggingCorrectly && dd.draggingTabSrc)) &&*/ ImGui::IsItemHoveredRect()) {
+	    else if (ImGui::IsItemHoveredRect()) {
                 isAItemHovered = true;
                 //hoveredTab = &tab;
-                if (tab.tooltip && strlen(tab.tooltip)>0 && (&tab!=mhs.tabLabelPopup || GImGui->OpenedPopupStack.size()==0) )  ImGui::SetTooltip("%s",tab.tooltip);
+                if (tab.tooltip && mhs.isWindowHovered && strlen(tab.tooltip)>0 && (&tab!=mhs.tabLabelPopup || GImGui->OpenedPopupStack.size()==0) )  ImGui::SetTooltip("%s",tab.tooltip);
 
                 if (isDraggingCorrectly) {
                     if (!dd.draggingTabSrc) {
@@ -1349,11 +1349,17 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
                         dd.drawProhibitionSign(drawList,wp,itemPos,dd.draggingTabSrcSize.y*1.2f);
                     }
                 }
-                else if (dd.draggingTabSrc && dd.draggingTabSrc!=&tab){
-                    dd.draggingTabDst = &tab;
-                    dd.draggingTabNodeDst = this;
-                    dd.draggingTabImGuiWindowDst = g.HoveredWindow;
-                    dd.draggingTabWindowDst = mhs.tabWindow;
+                else if (dd.draggingTabSrc && dd.draggingTabSrc!=&tab && g.HoveredRootWindow && g.CurrentWindow) {
+                    // This code should execute only on a drop AFAIK
+                    const int len1 = strlen(g.HoveredRootWindow->Name);
+                    const int len2 = strlen(g.CurrentWindow->Name);
+                    if (strncmp(g.HoveredRootWindow->Name,g.CurrentWindow->Name,len1)==0 && (len1<=len2 || g.CurrentWindow->Name[len1]=='.'))    {
+                        //fprintf(stderr,"g.HoveredRootWindow=%s g.CurrentWindow=%s\n",g.HoveredRootWindow?g.HoveredRootWindow->Name:"NULL",g.CurrentWindow?g.CurrentWindow->Name:"NULL");
+                        dd.draggingTabDst = &tab;
+                        dd.draggingTabNodeDst = this;
+                        dd.draggingTabImGuiWindowDst = g.HoveredWindow;
+                        dd.draggingTabWindowDst = mhs.tabWindow;
+                    }
                 }
 
                 if (mhs.isRMBclicked && mhs.isWindowHovered) {
@@ -1666,11 +1672,11 @@ void TabWindow::render()
                     ImU32 quadCol = ImColor(1.f,1.f,1.f,defaultQuadAlpha);
                     ImU32 quadColHovered = ImColor(0.5f,0.5f,1.f,1.f);
                     const float minDim = ws.x < ws.y ? ws.x : ws.y;
-                    const float MIN_SIZE = 75.f;
-                    const float centralQuadDim =(minDim*0.25f)>=MIN_SIZE?(minDim*0.25f):
-                                                                         (minDim<MIN_SIZE)?minDim:
-                                                                                           (minDim*0.5f)>=MIN_SIZE?(minDim*0.5f):
-                                                                                                                   MIN_SIZE;
+                    const float MIN_SIZE = 87.5f;
+                    const float MAX_SIZE = 200.5f;
+                    float centralQuadDim = minDim*0.45f;
+                    if	    (MIN_SIZE>0 && centralQuadDim<MIN_SIZE) centralQuadDim = MIN_SIZE;
+                    else if (MAX_SIZE>0 && centralQuadDim>MAX_SIZE) centralQuadDim = MAX_SIZE;
                     ImVec2 uv0,uv1;bool hovers;
 
                     if (dd.draggingTabWindowSrc->canExchangeTabLabelsWith(this))	{

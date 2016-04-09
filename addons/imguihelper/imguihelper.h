@@ -39,6 +39,14 @@ void ImDrawListAddCircle(ImDrawList* dl,const ImVec2& centre, float radius,const
 void ImDrawListAddCircleWithVerticalGradient(ImDrawList* dl,const ImVec2& centre, float radius,const ImU32& fillColorTop,const ImU32& fillColorBottom,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
 #endif //NO_IMGUIHELPER_DRAW_METHODS
 
+// These two methods are inspired by imguidock.cpp
+// if optionalRootWindowName==NULL, they refer to the current window
+// P.S. This methods are never used anywhere, and it's not clear to me when
+// PutInForeground() is better then ImGui::SetWindowFocus()
+void PutInBackground(const char* optionalRootWindowName=NULL);
+void PutInForeground(const char* optionalRootWindowName=NULL);
+
+
 #   ifdef IMGUI_USE_ZLIB	// requires linking to library -lZlib
 // Two methods that fill rv and return true on success
 #       ifndef NO_IMGUIHELPER_SERIALIZATION

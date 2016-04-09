@@ -161,7 +161,7 @@ public:
         bgColor = _bg_col;
     }
 
-    int render(bool useExtendedHovering=false) const {
+    int render(bool allowdHoveringWhileMouseDragging=false) const {
         int pressedItem = -1;
         const int numberToolbuttons = (int)buttons.size();
         if (numberToolbuttons==0 || !visible) return pressedItem;
@@ -185,11 +185,12 @@ public:
         static const ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse|
                 ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings/*|ImGuiWindowFlags_Tooltip*/;
         const bool dontSkip = inWindowMode || ImGui::Begin(name,NULL,toolbarWindowSize,0,flags);
-        if (dontSkip){
+        if (dontSkip){                        
             ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0,0,0,0));      // Hack not needed in previous ImGui versions: the bg color of the image button should be defined inside ImGui::ImageButton(...). (see below)
             bool noItemHovered = true;float nextSpacingAmount = 0;float currentWidth=Style.WindowPadding.x;const float windowWidth = ImGui::GetWindowWidth();
             float bg_col_opacity = 1.f;ImVec4 bg_col = bgColor;if (bg_col.w>=0) bg_col_opacity = bg_col.w;
             ImVec4 tint_col(1,1,1,1);ImVec2 tbsz(0,0);        
+            const bool isMouseDragging = allowdHoveringWhileMouseDragging ? ImGui::IsMouseDragging(0) : false;
             for (int i=0;i<numberToolbuttons;i++)  {
                 const Button& tb = buttons[i];
                 tbsz.x=tb.size.x*scaling.x;tbsz.y=tb.size.y*scaling.y;
@@ -240,7 +241,7 @@ public:
                 }
                 ImGui::PopID();
                 if (inWindowMode) currentWidth+=tbsz.x;
-                const bool isItemHovered = useExtendedHovering ? ImGui::IsItemHoveredRect() : ImGui::IsItemHovered();
+                const bool isItemHovered = isMouseDragging ? ImGui::IsItemHoveredRect() : ImGui::IsItemHovered();
                 if (isItemHovered)
                 {
                     if (!tooltipsDisabled && strlen(tb.tooltip)>0)   {
@@ -258,7 +259,7 @@ public:
             if (noItemHovered) hoverButtonIndex = -1;
             ImGui::PopStyleColor();                             // Hack not needed in previous ImGui versions (see above)
         }
-        if (!inWindowMode) ImGui::End();
+        if (!inWindowMode) ImGui::End();                
         // restore old sizes
         Style.ItemSpacing = oldItemSpacing;     // Hack to fix vertical layout
         if (!inWindowMode) Style.WindowPadding = oldWindowPadding;
