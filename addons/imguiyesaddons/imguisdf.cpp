@@ -742,7 +742,8 @@ bool SdfTextChunk::endText(ImVec2 screenSize) {
             //------------------------------------------------------------
             lastTBalignment=halign;
         }
-        const ImVec2 localScale = TB.scaling * globalScale;
+        const ImVec2 localScale = TB.scaling * globalScale //;
+                * ImVec2(TB.italic ? 0.925f : 1.f,1.f);  // This line makes italic a bit slimmer than normal text
         if (i==0) {
             localScaleXminmax.x=localScaleXminmax.y=localScale.x;
             localScaleYminmax.x=localScaleYminmax.y=localScale.y;
