@@ -230,7 +230,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         // Collapse window by double-clicking on title bar
         // At this point we don't have a clipping rectangle setup yet, so we can use the title bar area for hit detection and drawing
-        //if (!(flags & ImGuiWindowFlags_NoTitleBar) && !(flags & ImGuiWindowFlags_NoCollapse))
+        if (!(flags & ImGuiWindowFlags_NoTitleBar))// && !(flags & ImGuiWindowFlags_NoCollapse))
         {
             ImRect title_bar_rect = window->TitleBarRect();
             /*
@@ -513,7 +513,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
             // NEW PART: resize by dragging window border
             if (gImGuiDockPanelManagerActiveResizeSize>0 && !(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0
-                && pDraggingStarted && wd && wd->dockPos != ImGui::PanelManager::BOTTOM
+                && pDraggingStarted && wd && (wd->dockPos != ImGui::PanelManager::BOTTOM || (flags & ImGuiWindowFlags_NoTitleBar))
             )
             {
                 ImVec2 rectMin(0,0),rectMax(0,0);
@@ -528,6 +528,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 else if (wd->dockPos == ImGui::PanelManager::TOP) {
                     rectMin = window->Rect().GetBL();rectMin.y-=gImGuiDockPanelManagerActiveResizeSize;
                     rectMax = window->Rect().GetBR();
+                }
+                else if (wd->dockPos == ImGui::PanelManager::BOTTOM) {
+                    rectMin = window->Rect().GetTL();
+                    rectMax = window->Rect().GetTR();rectMax.y+=gImGuiDockPanelManagerActiveResizeSize;
                 }
 
                 const ImRect resize_rect(rectMin,rectMax);
@@ -850,7 +854,9 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
             ImGuiWindowFlags_NoMove |
             ImGuiWindowFlags_NoCollapse |
             ImGuiWindowFlags_NoSavedSettings;
-        if (ImGui::DockWindowBegin(wd.name, &wd.open,&undocked, wd.size,mgr.dockedWindowsAlpha,wd.isToggleWindow ? ImGuiWindowFlags_NoSavedSettings : (windowFlags|mgr.dockedWindowsExtraFlags|extraWindowFlags),&draggingStarted,&wd))     {
+            const ImGuiWindowFlags windowFlagsTotal = wd.isToggleWindow ? ImGuiWindowFlags_NoSavedSettings : (windowFlags|mgr.dockedWindowsExtraFlags|extraWindowFlags);
+            if ((windowFlagsTotal & ImGuiWindowFlags_NoTitleBar)) open=!open;   // Terrible hack to make it work (but I remind that "open" was previously called "closed": so that had a sense!)
+        if (ImGui::DockWindowBegin(wd.name, &wd.open,&undocked, wd.size,mgr.dockedWindowsAlpha,windowFlagsTotal,&draggingStarted,&wd))     {
             ImGuiState& g = *GImGui;
             const ImGuiStyle& style = g.Style;
             ImGuiWindow* window = NULL;

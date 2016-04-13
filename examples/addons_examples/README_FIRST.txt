@@ -204,6 +204,7 @@ Some notes:
    ATM I have some issue with the persistent folder (basically I don't seem to be able to load something back at init time).
    UPDATE: I strongly suggest you enable NO_IMGUIEMSCRIPTEN for emscripten builds in case of problems if you experience errors that Firefox "Tools->Web Developer" tells you that are related to IFSDB (or something like that).
    (Maybe in the future I'll turn this into a "yes_addon", so that it's disabled by default).
+   UPDATE 2: Please ALWAYS define NO_IMGUIEMSCRIPTEN in emscripten builds: programs always crash without it...
 
 (*): To compile the first demo using the GLUT binding, please try:
 em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_GLUT_BINDING" -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL

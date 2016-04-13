@@ -155,6 +155,8 @@ struct PanelManager {
 
     void setDockedWindowsBorder(bool border) {if (border) dockedWindowsExtraFlags|=ImGuiWindowFlags_ShowBorders;else {dockedWindowsExtraFlags&=~ImGuiWindowFlags_ShowBorders;}}
     bool getDockedWindowsBorder() const {return (dockedWindowsExtraFlags&ImGuiWindowFlags_ShowBorders);}
+    void setDockedWindowsNoTitleBar(bool flag) {if (flag) dockedWindowsExtraFlags|=ImGuiWindowFlags_NoTitleBar;else {dockedWindowsExtraFlags&=~ImGuiWindowFlags_NoTitleBar;}}
+    bool getDockedWindowsNoTitleBar() const {return (dockedWindowsExtraFlags&ImGuiWindowFlags_NoTitleBar);}
 
 
     size_t getNumPanes() const;

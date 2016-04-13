@@ -39,6 +39,8 @@ public:
     inline int getType() const {return type;}
     inline void setType(int _type) {type=_type;}
     inline const ImVec4* getColorOfVert(int num) const {return verts.size()>num*6 ? &verts[num*6].color : NULL;}
+    inline int size() const {return verts.size();}
+    inline int numChars() const {return verts.size()/6;}
 protected:
     SdfVertexBuffer(int _type=SDF_BT_OUTLINE,bool _preferStreamDrawBufferUsage=false) : type(_type),preferStreamDrawBufferUsage(_preferStreamDrawBufferUsage) {maxVertsSize=0;vbo=0;}
     struct VertexDeclaration {
@@ -72,6 +74,46 @@ struct SdfCharDescriptor
     { }
 };
 
+struct SdfAnimation {
+    //public:
+    SdfAnimation() {totalTime=0.f;}
+    SdfAnimation(const SdfAnimation& o) {*this=o;totalTime=0.f;}
+    SdfAnimation(const ImVector<SdfAnimationKeyFrame>& _keyFrames) {cloneKeyFramesFrom(_keyFrames);totalTime=0.f;}
+    ~SdfAnimation() {}
+    const SdfAnimation& operator=(const SdfAnimation& o)    {
+        cloneKeyFramesFrom(o.keyFrames);
+        return *this;
+    }
+    //protected:
+    ImVector<SdfAnimationKeyFrame> keyFrames;
+    float totalTime;
+    inline void cloneKeyFramesFrom(const ImVector<SdfAnimationKeyFrame>& _keyFrames) {
+        // deep clone keyframes
+        const int nkf = _keyFrames.size();
+        keyFrames.clear();keyFrames.reserve(nkf);
+        for (int i=0;i<nkf;i++) keyFrames[i] = _keyFrames[i];
+    }
+    inline float addKeyFrame(const SdfAnimationKeyFrame& kf) {
+        keyFrames.push_back(kf);
+        totalTime+=kf.timeInSeconds;
+        return totalTime;
+    }
+    inline bool removeKeyFrameAt(int i) {
+        if (i<0 || i>=keyFrames.size()) return false;
+        for (int j=i,jsz=keyFrames.size()-1;j<jsz;j++) keyFrames[j] = keyFrames[j+1];
+        keyFrames.pop_back();
+        update();
+        return true;
+    }
+    inline void clear() {keyFrames.clear();totalTime=0.f;}
+    inline void update() {
+        totalTime = 0.f;
+        for (int i=0,isz=keyFrames.size();i<isz;i++)    {
+            totalTime+=keyFrames[i].timeInSeconds;
+        }
+    }
+};
+
 struct SdfTextChunk {
     SdfTextChunkProperties props;
     const SdfCharset* charset;
@@ -79,18 +121,23 @@ struct SdfTextChunk {
     int numValidGlyphs;
     mutable bool dirty;
     ImVec2 shadowOffsetInPixels;
+    bool mute;
+
+    SDFAnimationMode animationMode;
+    SdfAnimation* manualAnimationRef;
+    float animationStartTime;
+    SdfAnimationParams animationParams;
 
     struct TextBit {
-        ImVector<SdfCharDescriptor> charDescriptors;
-        ImVector<float> kernings;
+	ImVectorEx<SdfCharDescriptor> charDescriptors;
+	ImVectorEx<float> kernings;
         ImVec2 scaling;
         SdfTextColor sdfTextColor;
         bool italic;
-        int hAlignment;
-        TextBit() {}
+	int hAlignment;
     };
-    ImVector<TextBit> textBits;
-    SdfTextChunk() {charset=NULL;buffer=NULL;numValidGlyphs=0;shadowOffsetInPixels.x=shadowOffsetInPixels.y=4.f;}
+    ImVectorEx<TextBit> textBits;
+    SdfTextChunk() {charset=NULL;buffer=NULL;numValidGlyphs=0;shadowOffsetInPixels.x=shadowOffsetInPixels.y=4.f;mute = false;animationMode=SDF_AM_NONE;manualAnimationRef=NULL;animationStartTime=-1.f;tmpVisible = true;tmpLocalTime=0.f;}
     SdfTextChunk(const SdfCharset* _charset,int bufferType,const SdfTextChunkProperties& properties=SdfTextChunkProperties(),bool preferStreamDrawBufferUsage=false) {
         buffer = (SdfVertexBuffer*) ImGui::MemAlloc(sizeof(SdfVertexBuffer));
         IM_PLACEMENT_NEW (buffer) SdfVertexBuffer(bufferType,preferStreamDrawBufferUsage);
@@ -101,18 +148,119 @@ struct SdfTextChunk {
         dirty = true;
         numValidGlyphs=0;
         shadowOffsetInPixels.x=shadowOffsetInPixels.y=4.f;
+        mute = false;
+        animationMode=SDF_AM_NONE;manualAnimationRef=NULL;animationStartTime=-1.f;
+        tmpVisible = true;tmpLocalTime=0.f;
     }
     ~SdfTextChunk() {
         if (buffer) {
             buffer->~SdfVertexBuffer();
             ImGui::MemFree(buffer);
-            buffer=NULL;
+	    buffer=NULL;
+	}
+    }
+    inline void setMute(bool flag) {
+        if (mute!=flag) {
+            animationStartTime = -1.f;
+            mute = flag;
         }
     }
+
+    // These tmp variables are valid per frame and set by next methods:
+    mutable bool tmpVisible;
+    mutable float tmpLocalTime;
+    mutable SdfAnimationKeyFrame tmpKeyFrame;
+
+    inline static float Lerp(float t,float v0,float v1) {return v0+t*(v1-v0);}
+    inline static int LerpInt(float t,int v0,int v1) {return v0+(int)((t*(float)(v1-v0))+0.5f);}
+    inline static void Lerp(float t,SdfAnimationKeyFrame& kfOut,const SdfAnimationKeyFrame& kf0,const SdfAnimationKeyFrame& kf1,int numGlyphs)    {
+        kfOut.alpha     = (kf0.alpha==kf1.alpha)		? kf0.alpha	: Lerp(t,kf0.alpha,kf1.alpha);
+        kfOut.offset.x	= (kf0.offset.x==kf1.offset.x)	? kf0.offset.x	: Lerp(t,kf0.offset.x,kf1.offset.x);
+        kfOut.offset.y	= (kf0.offset.y==kf1.offset.y)	? kf0.offset.y	: Lerp(t,kf0.offset.y,kf1.offset.y);
+        kfOut.scale.x	= (kf0.scale.x==kf1.scale.x)	? kf0.scale.x	: Lerp(t,kf0.scale.x,kf1.scale.x);
+        kfOut.scale.y	= (kf0.scale.y==kf1.scale.y)	? kf0.scale.y	: Lerp(t,kf0.scale.y,kf1.scale.y);
+	kfOut.startChar = (kf0.startChar==kf1.startChar)    ? kf0.startChar : LerpInt(t,kf0.startChar,kf1.startChar);
+	kfOut.endChar	= (kf0.endChar==kf1.endChar)	? kf0.endChar	: LerpInt(t,(kf0.endChar<0)?numGlyphs:kf0.endChar,(kf1.endChar<0)?numGlyphs:kf1.endChar);
+    }
+
+    inline bool checkVisibleAndEvalutateAnimationIfNecessary(float time) {
+        if (mute || (animationMode==SDF_AM_MANUAL && (!manualAnimationRef || manualAnimationRef->keyFrames.size()==0 || manualAnimationRef->totalTime==0.f))) return (tmpVisible=false);
+        if (animationStartTime < 0) animationStartTime = time;
+        tmpLocalTime=(time-animationStartTime)*animationParams.speed-animationParams.timeOffset;
+        if (tmpLocalTime<0) return (tmpVisible=false);
+        if (animationMode==SDF_AM_MANUAL && tmpLocalTime>manualAnimationRef->totalTime)   {
+            if (!animationParams.looping) {setMute(true);animationStartTime=-1.f;animationMode=SDF_AM_NONE;return (tmpVisible=false);}
+            else if (manualAnimationRef->totalTime>0.f) {
+                while (tmpLocalTime>manualAnimationRef->totalTime) {tmpLocalTime-=manualAnimationRef->totalTime;animationStartTime+=manualAnimationRef->totalTime;}
+                //fprintf(stderr,"time: %1.4f/%1.4f (%d frames)\n",tmpLocalTime,manualAnimationRef->totalTime,manualAnimationRef->keyFrames.size());
+                }
+        }
+        // evalutate animation here:
+        tmpKeyFrame = SdfAnimationKeyFrame();
+        switch (animationMode)  {
+        case SDF_AM_FADE_IN:  {if (tmpLocalTime<1.f)  tmpKeyFrame.alpha = tmpLocalTime;else  {setMute(false);animationStartTime=-1.f;animationMode=SDF_AM_NONE;}}
+            break;
+        case SDF_AM_FADE_OUT:  {if (tmpLocalTime<1.f)  tmpKeyFrame.alpha = 1.f-tmpLocalTime;else {setMute(true);animationStartTime=-1.f;animationMode=SDF_AM_NONE;}}
+            break;
+        case SDF_AM_TOGGLE:   {float tmp = (float) ((((int)(tmpLocalTime*100.f))%101)-50)*0.02f;tmpKeyFrame.alpha = tmp*tmp;}
+            break;
+        case SDF_AM_TYPING:   {
+            static const float timePerChar = 0.15f;
+            const int numChars = buffer->numChars();
+            const float timeForAllChars = timePerChar * numChars;
+            if (timeForAllChars>0)  {
+                if (tmpLocalTime<=timeForAllChars)	{
+                    tmpKeyFrame.endChar = (int)(((tmpLocalTime/timeForAllChars)*(float)(numChars))+0.5f);
+                }
+                else {setMute(false);animationStartTime=-1.f;animationMode=SDF_AM_NONE;}
+            }
+            else {setMute(false);animationStartTime=-1.f;animationMode=SDF_AM_NONE;}
+        }
+            break;
+        case SDF_AM_MANUAL: {
+            const SdfAnimation& an = *manualAnimationRef;
+            const int nkf = an.keyFrames.size();
+            static SdfAnimationKeyFrame ZeroKF(0.f,0.f);
+            float sumTime = 0;int i=0;const SdfAnimationKeyFrame* kf = NULL;
+            for (i=0;i<nkf;i++) {
+                kf = &an.keyFrames[i];
+                if (kf->timeInSeconds==0.f) continue;
+                if (tmpLocalTime <= sumTime + kf->timeInSeconds) break;
+                sumTime+=kf->timeInSeconds;
+            }
+	    //if (!kf) kf = (nkf>0 && animationParams.looping) ? &an.keyFrames[nkf-1] : &ZeroKF;
+	    //fprintf(stderr,"FRAME: %d\n",i);
+	    IM_ASSERT(kf && kf->timeInSeconds);
+	    const SdfAnimationKeyFrame* kf_prev = (i>=1 ? &an.keyFrames[i-1] : (nkf>0 && animationParams.looping) ? &an.keyFrames[nkf-1] : &ZeroKF);
+            const float deltaTime = (tmpLocalTime-sumTime)/kf->timeInSeconds;   // in [0,1]
+            IM_ASSERT(deltaTime>=0.f && deltaTime<=1.f);
+            Lerp(deltaTime,tmpKeyFrame,*kf_prev,*kf,buffer->numChars());
+        }
+            break;
+        default:
+            break;
+        }
+
+    const bool applyAnimationParams = true; // optional
+    if (applyAnimationParams)   {
+        // Here we apply animationParams to the calculated fields
+        tmpKeyFrame.alpha*=animationParams.alpha;
+        tmpKeyFrame.offset.x+=animationParams.offset.x;
+        tmpKeyFrame.offset.y+=animationParams.offset.y;
+        tmpKeyFrame.scale.x*=animationParams.scale.x;
+        tmpKeyFrame.scale.y*=animationParams.scale.y;
+    }
+
+    return (tmpVisible=(tmpLocalTime>=0));
+    }
+
+    inline bool setupUniformValuesAndDrawArrays(struct SdfShaderProgram* SP, bool shadowPass, const ImVec2 &screenSize);
+
+
     inline void addText(const char* startText,bool _italic,const SdfTextColor* pSdfTextColor,const ImVec2* textScaling,const char* endText,const SDFHAlignment *phalignOverride, bool fakeBold);
     inline void clearText() {
         if (buffer) buffer->clear();
-        textBits.clear();
+	textBits.clear();
         dirty=false;
         numValidGlyphs=0;
     }
@@ -699,7 +847,7 @@ bool SdfTextChunk::endText(ImVec2 screenSize) {
     LineData lineData(BaseBase,LineHeightBase);
     SDFHAlignment lastTBalignment = props.halign,halign = props.halign;bool mustStartNewAlignment = false;
     for (int i=0,isz=textBits.size();i<isz;i++) {
-        const TextBit& TB = textBits[i];
+	const TextBit& TB = textBits[i];
         halign =  (TB.hAlignment==-1) ? props.halign : (SDFHAlignment)TB.hAlignment;
         mustStartNewAlignment = (lastTBalignment!=halign);
         if (mustStartNewAlignment)  {
@@ -1097,31 +1245,52 @@ bool SdfTextChunk::endText(ImVec2 screenSize) {
     const float soc = 0.0625f;
     shadowOffsetInPixels.x=soc*(0.75f*localScaleXminmax.x + 0.25f*localScaleXminmax.y);
     shadowOffsetInPixels.y=soc*(0.75f*localScaleYminmax.x + 0.25f*localScaleYminmax.y);
-    fprintf(stderr,"localScaleXminmax:(%1.3f,%1.3f) localScaleYminmax:(%1.3f,%1.3f)\n",localScaleXminmax.x,localScaleXminmax.y,localScaleYminmax.x,localScaleYminmax.y);
+    //fprintf(stderr,"localScaleXminmax:(%1.3f,%1.3f) localScaleYminmax:(%1.3f,%1.3f)\n",localScaleXminmax.x,localScaleXminmax.y,localScaleYminmax.x,localScaleYminmax.y);
 
     return true;
 
     //buffer->updateBoundVbo();
 }
 
+
+
 struct SdfStaticStructs {
     ImVector<SdfTextChunk*> gSdfTextChunks;
     ImVectorEx<SdfCharset*> gSdfCharsets;
+    ImVectorEx<SdfAnimation*> gSdfAnimations;
 
     SdfStaticStructs() {}
     ~SdfStaticStructs() {
+        DestroyAllAnimations();
         DestroyAllTextChunks();
         DestroyAllCharsets();
     }
-
+    void DestroyAllAnimations();
     void DestroyAllTextChunks();
     void DestroyAllCharsets();
 };
 static SdfStaticStructs gSdfInit;
+void SdfStaticStructs::DestroyAllAnimations()  {
+    for (int i=0,isz=gSdfInit.gSdfAnimations.size();i<isz;i++) {
+        gSdfInit.gSdfAnimations[i]->~SdfAnimation();
+        ImGui::MemFree(gSdfInit.gSdfAnimations[i]);
+        gSdfInit.gSdfAnimations[i] = NULL;
+    }
+    gSdfInit.gSdfAnimations.clear();
+
+    for (int i=0,isz=gSdfInit.gSdfTextChunks.size();i<isz;i++)  {
+        SdfTextChunk* chunk = gSdfInit.gSdfTextChunks[i];
+        if (chunk->manualAnimationRef)  {
+            if (chunk->animationMode==SDF_AM_MANUAL) {chunk->mute=true;chunk->animationStartTime=-1.f;}
+            chunk->manualAnimationRef=NULL;
+        }
+    }
+}
 void SdfStaticStructs::DestroyAllTextChunks()  {
     for (int i=0,isz=gSdfInit.gSdfTextChunks.size();i<isz;i++) {
         gSdfInit.gSdfTextChunks[i]->~SdfTextChunk();
         ImGui::MemFree(gSdfInit.gSdfTextChunks[i]);
+        gSdfInit.gSdfTextChunks[i] = NULL;
     }
     gSdfInit.gSdfTextChunks.clear();
 }
@@ -1129,10 +1298,10 @@ void SdfStaticStructs::DestroyAllCharsets()  {
     for (int i=0,isz=gSdfInit.gSdfCharsets.size();i<isz;i++) {
         gSdfInit.gSdfCharsets[i]->~SdfCharset();
         ImGui::MemFree(gSdfInit.gSdfCharsets[i]);
+        gSdfInit.gSdfCharsets[i] = NULL;
     }
     gSdfInit.gSdfCharsets.clear();
 }
-
 
 
 
@@ -1175,7 +1344,13 @@ void SdfTextChunkSetStyle(SdfTextChunk* textChunk,int sdfTextBufferType) {
 int SdfTextChunkGetStyle(const SdfTextChunk* textChunk) {
     return textChunk->buffer->getType();
 }
-
+void SdfTextChunkSetMute(SdfTextChunk* textChunk,bool flag) {
+    textChunk->setMute(flag);
+}
+bool SdfTextChunkGetMute(const SdfTextChunk* textChunk)  {
+    IM_ASSERT(textChunk);
+    return textChunk->mute;
+}
 void SdfRemoveTextChunk(SdfTextChunk* chunk)    {
     for (int i=0,isz=gSdfInit.gSdfTextChunks.size();i<isz;i++)  {
         if (chunk == gSdfInit.gSdfTextChunks[i])    {
@@ -1352,6 +1527,107 @@ void SdfTextColor::SetDefault(const SdfTextColor& defaultColor,bool updateAllExi
 }
 
 
+SdfAnimation* SdfAddAnimation() {
+    SdfAnimation* p = (SdfAnimation*) ImGui::MemAlloc(sizeof(SdfAnimation));
+    IM_PLACEMENT_NEW (p) SdfAnimation();
+    gSdfInit.gSdfAnimations.push_back(p);
+    return p;
+}
+float SdfAnimationAddKeyFrame(SdfAnimation* animation,const SdfAnimationKeyFrame& keyFrame) {
+    IM_ASSERT(animation);
+    return animation->addKeyFrame(keyFrame);
+}
+void SdfAnimationClear(SdfAnimation* animation) {
+    IM_ASSERT(animation);
+    animation->clear();
+}
+void SdfRemoveAnimation(SdfAnimation* animation)    {
+    IM_ASSERT(animation);
+    const bool checkItsNotSetToAnyChunk = true;
+    if (checkItsNotSetToAnyChunk)   {
+        for (int i=0,isz=gSdfInit.gSdfTextChunks.size();i<isz;i++)  {
+            SdfTextChunk* chunk = gSdfInit.gSdfTextChunks[i];
+            if (chunk->manualAnimationRef==animation)  {
+                if (chunk->animationMode==SDF_AM_MANUAL) {chunk->mute=true;chunk->animationStartTime=-1.f;}
+                chunk->manualAnimationRef=NULL;
+            }
+        }
+    }
+
+    for (int i=0,isz=gSdfInit.gSdfAnimations.size();i<isz;i++)  {
+        SdfAnimation* anim = gSdfInit.gSdfAnimations[i];
+        if (anim == animation)  {
+            // destroy animation
+            animation->~SdfAnimation();
+            ImGui::MemFree(animation);
+            // Swap with last element and pop_back
+            gSdfInit.gSdfAnimations[i] = gSdfInit.gSdfAnimations[isz-1];
+            gSdfInit.gSdfAnimations[isz-1] = NULL;
+            gSdfInit.gSdfAnimations.pop_back();
+            break;
+        }
+    }
+}
+void SdfRemoveAllAnimations() {
+    gSdfInit.DestroyAllAnimations();
+}
+void SdfTextChunkSetManualAnimation(struct SdfTextChunk* chunk,struct SdfAnimation* animation)  {
+    IM_ASSERT(chunk && animation);
+    if (chunk->manualAnimationRef != animation) {
+        chunk->manualAnimationRef = animation;
+        chunk->animationStartTime = -1.f;
+    }
+}
+void SdfTextChunkSetAnimationParams(struct SdfTextChunk* chunk,const SdfAnimationParams& params)   {
+    IM_ASSERT(chunk);
+    chunk->animationParams = params;
+    chunk->animationStartTime = -1.f;
+}
+void SdfTextChunkSetAnimationMode(struct SdfTextChunk* chunk,SDFAnimationMode mode) {
+    IM_ASSERT(chunk);
+    if (chunk->animationMode!=mode) {
+        chunk->animationMode=mode;
+        chunk->animationStartTime = -1.f;
+    }
+}
+SDFAnimationMode SdfTextChunkGetAnimationMode(struct SdfTextChunk* chunk) {
+    IM_ASSERT(chunk);
+    return chunk->animationMode;
+}
+
+const SdfAnimation* SdfTextChunkGetManualAnimation(const SdfTextChunk* chunk)	{
+    IM_ASSERT(chunk);
+    return chunk->manualAnimationRef;
+}
+SdfAnimation* SdfTextChunkGetManualAnimation(SdfTextChunk* chunk)   {
+    IM_ASSERT(chunk);
+    return chunk->manualAnimationRef;
+}
+const SdfAnimationParams& SdfTextChunkGetAnimationParams(const SdfTextChunk* chunk) {
+    IM_ASSERT(chunk);
+    return chunk->animationParams;
+}
+SdfAnimationParams& SdfTextChunkGetAnimationParams(SdfTextChunk* chunk)	{
+    IM_ASSERT(chunk);
+    return chunk->animationParams;
+}
+
+
+
+bool SdfTextChunk::setupUniformValuesAndDrawArrays(SdfShaderProgram* SP,bool shadowPass,const ImVec2& screenSize)	{
+    if (tmpKeyFrame.alpha==0.f) return false;
+    if (shadowPass)	{
+        SP->setUniformOffsetAndScale(ImVec2((tmpKeyFrame.offset.x*screenSize.x)+shadowOffsetInPixels.x,(tmpKeyFrame.offset.y*screenSize.y)+shadowOffsetInPixels.y),tmpKeyFrame.scale);
+        SP->setUniformAlphaAndShadow(tmpKeyFrame.alpha*0.5f,0.2f);
+    }
+    else {
+        SP->setUniformOffsetAndScale(tmpKeyFrame.offset*screenSize,tmpKeyFrame.scale);
+        SP->setUniformAlphaAndShadow(tmpKeyFrame.alpha,1.f);
+    }
+    glDrawArrays(GL_TRIANGLES, tmpKeyFrame.startChar*6, tmpKeyFrame.endChar<0 ? buffer->verts.size() : tmpKeyFrame.endChar*6);
+    return true;
+}
+
 void SdfRender(const ImVec4* pViewportOverride) {
     ImGuiIO& io = ImGui::GetIO();
     static ImVec2 displaySizeLast = io.DisplaySize;
@@ -1365,10 +1641,10 @@ void SdfRender(const ImVec4* pViewportOverride) {
         }
     }
 
-    bool hasRegularFonts=false,hasOutlineFonts=false;
+    bool hasRegularFonts=false,hasOutlineFonts=false;float globalTime = ImGui::GetTime();
     for (int i=0,isz=gSdfInit.gSdfTextChunks.size();i<isz;i++) {
-        const SdfTextChunk* c = gSdfInit.gSdfTextChunks[i];
-        if (c->textBits.size()==0) continue;
+        SdfTextChunk* c = gSdfInit.gSdfTextChunks[i];
+        if (c->textBits.size()==0 || !c->checkVisibleAndEvalutateAnimationIfNecessary(globalTime)) continue;
         hasRegularFonts|=(c->buffer->type==0 || (c->buffer->type&(SDF_BT_SHADOWED)));
         hasOutlineFonts|=(c->buffer->type&(SDF_BT_OUTLINE));
         if (hasRegularFonts && hasOutlineFonts) break;
@@ -1420,7 +1696,7 @@ void SdfRender(const ImVec4* pViewportOverride) {
         bool isShadow = false;
         for (int i=0,isz=gSdfInit.gSdfTextChunks.size();i<isz;i++) {
             SdfTextChunk* c = gSdfInit.gSdfTextChunks[i];
-            if (c->textBits.size()==0) continue;
+            if (c->textBits.size()==0 || !c->tmpVisible) continue;
             hasRegularFonts=(c->buffer->type!=SDF_BT_OUTLINE);
             if (!hasRegularFonts) continue;
             isShadow = (c->buffer->type&(SDF_BT_SHADOWED));
@@ -1437,32 +1713,13 @@ void SdfRender(const ImVec4* pViewportOverride) {
             glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(SdfVertexBuffer::VertexDeclaration),(const void*) (2*sizeof(GLfloat)));
             glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(SdfVertexBuffer::VertexDeclaration), (const void*)(0 + 4*sizeof(GLfloat)));
 
-
             if (c->endText(displaySize)) c->buffer->updateBoundVbo();
 
             glScissor(screenOffset.x+(c->props.boundsCenter.x-c->props.boundsHalfSize.x)*screenSize.x,screenOffset.y+(c->props.boundsCenter.y-c->props.boundsHalfSize.y)*screenSize.y,
             c->props.boundsHalfSize.x*screenSize.x*2.f,c->props.boundsHalfSize.y*screenSize.y*2.f);
 
-            //GLfloat sr[4];glGetFloatv(GL_SCISSOR_BOX,sr);
-            //fprintf(stderr,"(%1.0f,%1.0f,%1.0f,%1.0f)\n",sr[0],sr[1],sr[2],sr[3]);
-
-            // TODO: Fix this----------------------------------------------------------
-            if (isShadow) {
-                SP.setUniformOffsetAndScale(c->shadowOffsetInPixels,ImVec2(1,1));   // c->shadowOffsetInPixels should be mult per scale
-                SP.setUniformAlphaAndShadow(0.5f,0.2f);   // shadowAlpha should be multiplied by the font alpha
-
-                // Shadow Pass
-                glDrawArrays(GL_TRIANGLES, 0, c->buffer->verts.size());
-            }
-
-            if (!isShadow || (c->buffer->type==SDF_BT_SHADOWED)) {
-                SP.setUniformOffsetAndScale(ImVec2(0,0),ImVec2(1,1));
-                SP.setUniformAlphaAndShadow(1.f,1.f);
-
-                // Regular Pass
-                glDrawArrays(GL_TRIANGLES, 0, c->buffer->verts.size());
-            }
-            //-------------------------------------------------------------------------
+            if (isShadow) c->setupUniformValuesAndDrawArrays(&SP,true,screenSize);
+            if (!isShadow || (c->buffer->type==SDF_BT_SHADOWED)) c->setupUniformValuesAndDrawArrays(&SP,false,screenSize);
 
         }
     }
@@ -1472,7 +1729,7 @@ void SdfRender(const ImVec4* pViewportOverride) {
         if (screenSizeChanged) SP.resetUniformOrtho();
         for (int i=0,isz=gSdfInit.gSdfTextChunks.size();i<isz;i++) {
             SdfTextChunk* c = gSdfInit.gSdfTextChunks[i];
-            if (c->textBits.size()==0) continue;
+            if (c->textBits.size()==0 || !c->tmpVisible) continue;
             hasOutlineFonts=(c->buffer->type&(SDF_BT_OUTLINE));
             if (!hasOutlineFonts) continue;
 
@@ -1490,15 +1747,10 @@ void SdfRender(const ImVec4* pViewportOverride) {
 
             if (c->endText(displaySize)) c->buffer->updateBoundVbo();
 
-            // TODO: Fix this----------------------------------------------------------
-            SP.setUniformOffsetAndScale(ImVec2(0,0),ImVec2(1,1));
-            SP.setUniformAlphaAndShadow(1.f,1.f);
-            //-------------------------------------------------------------------------
-
             glScissor(screenOffset.x+(c->props.boundsCenter.x-c->props.boundsHalfSize.x)*screenSize.x,screenOffset.y+(c->props.boundsCenter.y-c->props.boundsHalfSize.y)*screenSize.y,
             c->props.boundsHalfSize.x*screenSize.x*2.f,c->props.boundsHalfSize.y*screenSize.y*2.f);
 
-            glDrawArrays(GL_TRIANGLES, 0, c->buffer->verts.size());
+            c->setupUniformValuesAndDrawArrays(&SP,false,screenSize);
         }
     }
 
@@ -1518,8 +1770,63 @@ void SdfRender(const ImVec4* pViewportOverride) {
 
 
 #ifndef NO_IMGUISDF_EDIT
+inline bool SdfAnimationKeyFrameEdit(SdfAnimationKeyFrame* kf)	{
+    IM_ASSERT(kf);
+    bool changed = false;
+    ImGui::PushID(kf);
+    ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.2f);
+
+    changed|=ImGui::DragFloat("Alpha##SdfAlpha",&kf->alpha,0.01f,0.0f,1.f);
+    ImGui::SameLine();
+    changed|=ImGui::DragFloat("FrameTimeInSeconds##SdfFrameTimeInSeconds",&kf->timeInSeconds,0.01f,0.0f,60.f);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","You can set it to zero\nfor the first frame.");
+    changed|=ImGui::DragFloat2("Offset##SdfKeyFrameOffset",&kf->offset.x,0.01f,-1.0f,1.0f);
+    //
+    //changed|=ImGui::DragFloat2("Scale##SdfKeyFrameScale",&kf->scale.x,0.01f,0.25f,2.5f);
+
+    changed|=ImGui::DragInt("StartChar##SdfStartChar",&kf->startChar,0.01f,0,2000);
+    ImGui::SameLine();
+    changed|=ImGui::DragInt("EndChar##SdfEndChar",&kf->endChar,0.01f,-1,2000);
+
+    ImGui::PopItemWidth();
+    ImGui::PopID();
+    return changed;
+}
+inline bool SdfAnimationEdit(SdfAnimation* an)	{
+    IM_ASSERT(an);
+    bool changed = false;
+    ImGui::PushID(an);
+    char name[65]="";
+    int kfri = -1;
+    for (int kfi=0,nkf=an->keyFrames.size();kfi<nkf;kfi++)    {
+        SdfAnimationKeyFrame& kf = an->keyFrames[kfi];
+        ImGui::PushID(kfi);
+        sprintf(&name[0],"KeyFrame %.3d", kfi);
+        if (ImGui::TreeNode(name)) {
+            changed|= SdfAnimationKeyFrameEdit(&kf);
+            if (ImGui::SmallButton("Remove##SdfRemoveKeyFrame")) {changed = true;kfri=kfi;}
+            ImGui::TreePop();
+        }
+        ImGui::PopID();
+    }
+    ImGui::PushItemWidth(ImGui::GetWindowWidth()/10.f);
+    ImGui::Separator();
+    if (ImGui::Button("Add KeyFrame##SdfAddKeyFrame")) {
+        SdfAnimationKeyFrame kf(1.f);
+        an->addKeyFrame(kf);
+        changed = true;
+    }
+    ImGui::PopItemWidth();
+    ImGui::PopID();
+
+    if (kfri>=0) an->removeKeyFrameAt(kfri);
+
+    return changed;
+}
+
 bool SdfTextChunkEdit(SdfTextChunk* sdfTextChunk, char* buffer, int bufferSize)   {
     IM_ASSERT(sdfTextChunk && buffer && bufferSize>0);
+
     ImGui::PushID(sdfTextChunk);
     SdfTextChunkProperties& sdfLayoutProps = sdfTextChunk->props;
     unsigned int flags = (unsigned int) sdfTextChunk->buffer->type;
@@ -1575,9 +1882,68 @@ bool SdfTextChunkEdit(SdfTextChunk* sdfTextChunk, char* buffer, int bufferSize) 
         else ImGui::SdfAddTextWithTags(sdfTextChunk,buffer,NULL);
     }
 
+    // Animations:
+    ImGui::PushItemWidth(ImGui::GetWindowWidth()/6.f);
+    static const char* AnimationModeNames[SDF_AM_TYPING+1] = {"NONE","MANUAL","FADE_IN","FADE_OUT","TOGGLE","TYPING"};
+    int animationMode = (int) ImGui::SdfTextChunkGetAnimationMode(sdfTextChunk);
+    if (ImGui::Combo("Animation Mode##SDFAnimationMode",&animationMode,&AnimationModeNames[0],sizeof(AnimationModeNames)/sizeof(AnimationModeNames[0])))    {
+        ImGui::SdfTextChunkSetAnimationMode(sdfTextChunk,(SDFAnimationMode)animationMode);
+        sdfTextChunk->setMute(false);
+        sdfTextChunk->animationStartTime = -1.f;
+    }
+    //ImGui::SameLine();
+    bool changed3 = false;
+    changed3|=ImGui::DragFloat("ASpeed##SdfAnimationSpeed",&sdfTextChunk->animationParams.speed,0.01f,0.2f,5.f);
+    ImGui::SameLine();
+    if (ImGui::Checkbox("ALoop##SdfAnimationLooping",&sdfTextChunk->animationParams.looping)) {changed3=true;sdfTextChunk->animationStartTime = -1.f;}
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Looping affects only\nmanual animations.");
+    ImGui::SameLine();
+    if (ImGui::Button("Reset##SdfAnimationParams")) {changed3=true;sdfTextChunk->animationParams = SdfAnimationParams();}
+    ImGui::DragFloat("GAlpha##SdfAlpha",&sdfTextChunk->animationParams.alpha,0.01f,0.0f,1.f);
+    ImGui::SameLine();
+    ImGui::DragFloat2("GOffset##SdfKeyFrameOffset",&sdfTextChunk->animationParams.offset.x,0.01f,-1.0f,1.0f);
+
+    if (changed3) {sdfTextChunk->setMute(false);sdfTextChunk->animationStartTime = -1.f;}
+    //ImGui::SameLine();
+    //ImGui::SameLine();ImGui::DragFloat2("Scale##SdfKeyFrameScale",&sdfTextChunk->animationParams.scale.x,0.01f,0.25f,2.5f);
+
+
+    ImGui::PopItemWidth();
+
+    //if (animationMode == SDF_AM_MANUAL)	{
+    SdfAnimation* optAnimation = sdfTextChunk->manualAnimationRef;
+    if (optAnimation) {
+        if (ImGui::CollapsingHeader("Manual Animation##SdfManualAnimation"))    {
+            if (SdfAnimationEdit(optAnimation)) {
+                optAnimation->update();
+                //sdfTextChunk->animationMode = SDF_AM_MANUAL;
+                sdfTextChunk->animationStartTime = -1.f;
+                sdfTextChunk->setMute(false);
+	    }
+	    ImGui::SameLine();
+	    if (ImGui::Button("Restart##SdfManualAnimationRestart")) {
+		sdfTextChunk->setMute(false);sdfTextChunk->animationStartTime = -1.f;
+		sdfTextChunk->animationMode = SDF_AM_MANUAL;
+	    }
+        }
+    }
+/*
+    else {
+        ImGui::Text("You need to add to the text chunk a new animation to edit it.");
+        ImGui::Text("Please see: SdfAddAnimation() and");
+        ImGui::Text("SdfTextChunkSetManualAnimation(...).");
+    }
+*/
+//    }
+
+
+
     ImGui::PopID();
     return textChanged;
 }
+
+
+
 #endif //NO_IMGUISDF_EDIT
 
 } // namespace

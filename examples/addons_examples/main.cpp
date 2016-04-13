@@ -694,6 +694,7 @@ void DrawGL()	// Mandatory
         static ImTextureID sdfTexture = 0;
         static ImGui::SdfTextChunk* sdfTextChunk = NULL;
         static char sdfTextBuffer[8192]="\t";
+        static ImGui::SdfAnimation* sdfManualAnimation = NULL;  // Entirely optional (might confuse users)
         if (!sdfTextChunk) {
             static bool mustInit=true;
             if (mustInit)   {
@@ -712,6 +713,11 @@ void DrawGL()	// Mandatory
                 strcpy(sdfTextBuffer,sdfSampleText);
                 ImGui::SdfAddTextWithTags(sdfTextChunk,sdfTextBuffer); // Actually we can append multiple of these calls together
 
+                const bool enableOptionalStuff = true; // TO FIX
+                if (enableOptionalStuff) {
+                    sdfManualAnimation = ImGui::SdfAddAnimation();
+                    ImGui::SdfTextChunkSetManualAnimation(sdfTextChunk,sdfManualAnimation); // This does not activate it by default
+                }
             }
         }
         if (sdfTextChunk)   {

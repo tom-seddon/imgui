@@ -5,7 +5,7 @@
 /*
 
 This file is intended to be used to load AngelFont text-based (= not binary or XML-based) Signed Distance Fonts (SDF) files
-and to display them onscreen, NOT INSIDE ANY ImGui windows, but as a screen overlay (= not on a 3D object)
+and to display them onscreen, NOT INSIDE ANY ImGui windows, but as a screen overlay (= not inside the 3D world)
 in normal openGL rendering.
 
 This is typically used for title/subtitle/credit screens and things like that...
@@ -32,6 +32,13 @@ with the following changes:
 5) The output .png size can be easily reduced by using 3rd party programs (e.g. pngnq -n 48 myImage.png).
 */
 
+// HOW TO USE IT:
+/* See main.cpp compiled with YES_IMGUISDF */
+
+// TODO:
+/*
+-> Add proper clipping (glScissorTest)
+*/
 
 #ifndef IMGUI_API
 #include <imgui.h>
@@ -88,6 +95,8 @@ SdfTextChunkProperties& SdfTextChunkGetProperties(struct SdfTextChunk* textChunk
 const SdfTextChunkProperties& SdfTextChunkGetProperties(const struct SdfTextChunk* textChunk);
 void SdfTextChunkSetStyle(struct SdfTextChunk* textChunk,int sdfTextBufferType=SDF_BT_OUTLINE);
 int SdfTextChunkGetStyle(const struct SdfTextChunk* textChunk);
+void SdfTextChunkSetMute(struct SdfTextChunk* textChunk,bool flag); // Mute makes it invisible
+bool SdfTextChunkGetMute(const struct SdfTextChunk* textChunk);
 void SdfRemoveTextChunk(struct SdfTextChunk* chunk);
 void SdfRemoveAllTextChunks();
 //--------------------------------------------------------------------------------------------------
@@ -112,6 +121,61 @@ void SdfClearText(struct SdfTextChunk* chunk);
 
 
 void SdfRender(const ImVec4 *pViewportOverride=NULL);   //pViewportOverride, if provided, is [x,y,width,height] in screen coordinates, not in framebuffer coords.
+
+
+// Optional/Extra methods:---------------------------------------------------------------
+enum SDFAnimationMode {
+    SDF_AM_NONE = 0,
+    SDF_AM_MANUAL,      // This mode uses a SdfAnimation (= a series of SdfAnimationKeyFrames)
+    SDF_AM_FADE_IN,
+    SDF_AM_FADE_OUT,
+    SDF_AM_TOGGLE,
+    SDF_AM_TYPING
+};
+struct SdfAnimationKeyFrame {
+    ImVec2 offset;
+    ImVec2 scale;   // better not use this, as it's not centered correctly (= it affects offset)
+    float alpha;
+    int startChar,endChar;
+    float timeInSeconds;    // of the transition between the previous one and this
+    SdfAnimationKeyFrame(float _timeInSeconds=0.f,float _alpha=1.f,int _startChar=0,int _endChar=-1,const ImVec2& _offset=ImVec2(0,0),const ImVec2& _scale=ImVec2(1,1)) :
+    offset(_offset),scale(_scale),alpha(_alpha),startChar(_startChar),endChar(_endChar),timeInSeconds(_timeInSeconds)
+    {}
+};
+struct SdfAnimation* SdfAddAnimation();
+float SdfAnimationAddKeyFrame(struct SdfAnimation* animation,const SdfAnimationKeyFrame& keyFrame); // returns the animation total length in seconds so far
+void SdfAnimationClear(struct SdfAnimation* animation);     // clears all SdfKeyFrames
+void SdfRemoveAnimation(struct SdfAnimation* animation);    // "animation" no more usable
+void SdfRemoveAllAnimations();
+
+struct SdfAnimationParams {
+    float speed,timeOffset;
+    ImVec2 offset,scale;
+    float alpha;
+    bool looping;
+    SdfAnimationParams()
+    {
+        speed = 1.f;timeOffset=0.f;
+        looping = false;
+        offset=ImVec2(0,0);
+        scale=ImVec2(1,1);
+        alpha=1.0f;
+    }
+};
+// Once an animation is active (from its mode), it plays if the text chunk is not mute.
+// When it ends the mode can be set to SDF_AM_NONE and the text chunk BAN be set to mute.
+// Only a manual animation can have a looping mode.
+void SdfTextChunkSetManualAnimation(struct SdfTextChunk* chunk,struct SdfAnimation* animation);
+const struct SdfAnimation* SdfTextChunkGetManualAnimation(const struct SdfTextChunk* chunk);
+struct SdfAnimation* SdfTextChunkGetManualAnimation(struct SdfTextChunk* chunk);
+void SdfTextChunkSetAnimationParams(struct SdfTextChunk* chunk,const SdfAnimationParams& params=SdfAnimationParams());
+const SdfAnimationParams& SdfTextChunkGetAnimationParams(const struct SdfTextChunk* chunk);
+SdfAnimationParams& SdfTextChunkGetAnimationParams(struct SdfTextChunk* chunk);
+void SdfTextChunkSetAnimationMode(struct SdfTextChunk* chunk,SDFAnimationMode mode=SDF_AM_NONE);
+SDFAnimationMode SdfTextChunkGetAnimationMode(const struct SdfTextChunk* chunk);
+//------------------------------------------------------------------------------------------
+
+
 
 #ifndef NO_IMGUISDF_EDIT
 bool SdfTextChunkEdit(SdfTextChunk* sdfTextChunk,char* buffer,int bufferSize);

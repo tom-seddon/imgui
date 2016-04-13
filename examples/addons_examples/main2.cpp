@@ -198,7 +198,7 @@ void AddTabWindowIfSupported(ImGui::PanelManagerPane* pane) {
     const int uvIndex = (index==0)?3:(index==2)?0:(index==3)?2:index;
     ImVec2 uv0(0.75f,(float)uvIndex*0.25f),uv1(uv0.x+0.25f,uv0.y+0.25f);
     pane->addButtonAndWindow(ImGui::Toolbutton(names[index],texId,uv0,uv1,buttonSize),              // the 1st arg of Toolbutton is only used as a text for the tooltip.
-                ImGui::PanelManagerPaneAssociatedWindow(names[index],-1,&DrawDockedTabWindows));    //  the 1st arg of PanelManagerPaneAssociatedWindow is the name of the window
+                ImGui::PanelManagerPaneAssociatedWindow(names[index],-1,&DrawDockedTabWindows,NULL,ImGuiWindowFlags_NoScrollbar));    //  the 1st arg of PanelManagerPaneAssociatedWindow is the name of the window
 #endif //NO_IMGUITABWINDOW
 }
 
@@ -370,7 +370,9 @@ static void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
         else if (strcmp(wd.name,"Preferences")==0)    {
             ImGui::DragFloat("Window Alpha",&mgr.getDockedWindowsAlpha(),0.01f,0.f,1.f);
             bool border = mgr.getDockedWindowsBorder();
-            if (ImGui::Checkbox("Window Border",&border)) mgr.setDockedWindowsBorder(border);          
+            if (ImGui::Checkbox("Window Border",&border)) mgr.setDockedWindowsBorder(border);
+            bool noTitleBar = mgr.getDockedWindowsNoTitleBar();
+            if (ImGui::Checkbox("Window TitleBar",&noTitleBar)) mgr.setDockedWindowsNoTitleBar(noTitleBar);
 #           ifndef NO_IMGUITABWINDOW
             //ImGui::Spacing();
             //if (ImGui::Button("Reset Central Window Tabs")) ResetTabWindow(tabWindow);
@@ -580,7 +582,7 @@ void DrawGL()	// Mandatory
             if (iqs.x>ImGui::GetStyle().WindowMinSize.x && iqs.y>ImGui::GetStyle().WindowMinSize.y) {
                 ImGui::SetNextWindowPos(mgr.getCentralQuadPosition());
                 ImGui::SetNextWindowSize(mgr.getCentralQuadSize());
-                if (ImGui::Begin("Central Window",NULL,ImVec2(0,0),mgr.getDockedWindowsAlpha(),ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove  | ImGuiWindowFlags_NoResize | (mgr.getDockedWindowsBorder() ? ImGuiWindowFlags_ShowBorders : 0)))    {
+                if (ImGui::Begin("Central Window",NULL,ImVec2(0,0),mgr.getDockedWindowsAlpha(),ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove  | ImGuiWindowFlags_NoResize | (mgr.getDockedWindowsBorder() ? ImGuiWindowFlags_ShowBorders : 0) | (mgr.getDockedWindowsNoTitleBar() ? ImGuiWindowFlags_NoTitleBar : 0)))    {
 #                   ifndef NO_IMGUITABWINDOW
                     ImGui::TabWindow& tabWindow = tabWindows[0];
                     if (!tabWindow.isInited()) {
