@@ -200,7 +200,7 @@ struct SdfTextChunk {
         switch (animationMode)  {
         case SDF_AM_FADE_IN:  {if (tmpLocalTime<1.f)  tmpKeyFrame.alpha = tmpLocalTime;else  {setMute(false);animationStartTime=-1.f;animationMode=SDF_AM_NONE;}}
             break;
-        case SDF_AM_FADE_OUT:  {if (tmpLocalTime<1.f)  tmpKeyFrame.alpha = 1.f-tmpLocalTime;else {setMute(true);animationStartTime=-1.f;animationMode=SDF_AM_NONE;}}
+        case SDF_AM_FADE_OUT:  {if (tmpLocalTime<1.f)  tmpKeyFrame.alpha = 1.f-tmpLocalTime;else {setMute(true);animationStartTime=-1.f;animationMode=SDF_AM_NONE;return (tmpVisible=false);}}
             break;
         case SDF_AM_TOGGLE:   {float tmp = (float) ((((int)(tmpLocalTime*100.f))%101)-50)*0.02f;tmpKeyFrame.alpha = tmp*tmp;}
             break;
@@ -1499,7 +1499,7 @@ void SdfAddTextWithTags(SdfTextChunk* chunk,const char* startText,const char* en
                     }
                     else error = true;
                 }
-                 else if (strncmp(field0,"c",1)==0)  {
+                else if (strncmp(field0,"c",1)==0)  {
                     ImU32 color;
                     if (negate)  {if (TS.color.size()>0) TS.color.pop_back();}
                     else if (hasEquality && sscanf(field1, "%x", &color))  {
@@ -1507,7 +1507,7 @@ void SdfAddTextWithTags(SdfTextChunk* chunk,const char* startText,const char* en
                     }
                     else error = true;
                 }
-                //TODO: other tags here
+                //TODO: other tags here (quad color, vAlign, etc.)
                 //if (error) {printf("SdfMarkupError: Can't understand tag: \"%.*s\"\n",(int)(e-s),s);fflush(stdout);}
             }
             startTag=endTag=NULL;
@@ -1770,16 +1770,18 @@ void SdfRender(const ImVec4* pViewportOverride) {
 
 
 #ifndef NO_IMGUISDF_EDIT
-inline bool SdfAnimationKeyFrameEdit(SdfAnimationKeyFrame* kf)	{
+inline bool SdfAnimationKeyFrameEdit(SdfAnimationKeyFrame* kf,bool isFirstFrame=false)	{
     IM_ASSERT(kf);
     bool changed = false;
     ImGui::PushID(kf);
     ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.2f);
 
     changed|=ImGui::DragFloat("Alpha##SdfAlpha",&kf->alpha,0.01f,0.0f,1.f);
-    ImGui::SameLine();
-    changed|=ImGui::DragFloat("FrameTimeInSeconds##SdfFrameTimeInSeconds",&kf->timeInSeconds,0.01f,0.0f,60.f);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","You can set it to zero\nfor the first frame.");
+    if (!(isFirstFrame && kf->timeInSeconds==0.f)) {
+        ImGui::SameLine();
+        changed|=ImGui::DragFloat("FrameTimeInSeconds##SdfFrameTimeInSeconds",&kf->timeInSeconds,0.01f,0.0f,60.f);
+        if (isFirstFrame && ImGui::IsItemHovered()) ImGui::SetTooltip("%s","You should set it to zero\nfor the first frame.");
+    }
     changed|=ImGui::DragFloat2("Offset##SdfKeyFrameOffset",&kf->offset.x,0.01f,-1.0f,1.0f);
     //
     //changed|=ImGui::DragFloat2("Scale##SdfKeyFrameScale",&kf->scale.x,0.01f,0.25f,2.5f);
@@ -1803,7 +1805,7 @@ inline bool SdfAnimationEdit(SdfAnimation* an)	{
         ImGui::PushID(kfi);
         sprintf(&name[0],"KeyFrame %.3d", kfi);
         if (ImGui::TreeNode(name)) {
-            changed|= SdfAnimationKeyFrameEdit(&kf);
+            changed|= SdfAnimationKeyFrameEdit(&kf,kfi==0);
             if (ImGui::SmallButton("Remove##SdfRemoveKeyFrame")) {changed = true;kfri=kfi;}
             ImGui::TreePop();
         }
@@ -1813,6 +1815,11 @@ inline bool SdfAnimationEdit(SdfAnimation* an)	{
     ImGui::Separator();
     if (ImGui::Button("Add KeyFrame##SdfAddKeyFrame")) {
         SdfAnimationKeyFrame kf(1.f);
+        if (an->keyFrames.size()==0) {kf.timeInSeconds=0.f;}
+        else {
+            kf = an->keyFrames[an->keyFrames.size()-1];
+            if (kf.timeInSeconds<=0.f) kf.timeInSeconds = 1.f;
+        }
         an->addKeyFrame(kf);
         changed = true;
     }
