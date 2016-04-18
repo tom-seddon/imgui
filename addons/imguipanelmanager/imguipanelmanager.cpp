@@ -251,7 +251,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             // NEW PART: resize by dragging title bar (and mousewheel ?)
             if (wd && pDraggingStarted && (wd->dockPos==ImGui::PanelManager::BOTTOM || gImGuiDockPanelManagerAddExtraTitleBarResizing || gImGuiDockPanelManagerActiveResizeSize==0) && (*pDraggingStarted || (g.HoveredWindow == window && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max))))  {
                 const ImGuiID resize_id = window->GetID("#RESIZE");
-                bool hovered, held=false,wheel = false;//g.IO.MouseWheel!=0.f;
+                bool hovered = false, held=false,wheel = false;//g.IO.MouseWheel!=0.f;
                 if (!wheel) ButtonBehavior(title_bar_without_buttons_rect, resize_id, &hovered, &held);//, true);
                 if (hovered || held || wheel) {
                     g.MouseCursor = wd->dockPos<PanelManager::TOP ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS;
@@ -537,7 +537,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 const ImRect resize_rect(rectMin,rectMax);
                 if (*pDraggingStarted || (g.HoveredWindow == window && IsMouseHoveringRect(resize_rect.Min, resize_rect.Max)))    {
                     const ImGuiID resize_id = window->GetID("#RESIZE");
-                    bool hovered, held=false,wheel = false;
+                    bool hovered = false, held=false,wheel = false;
                     if (!wheel) ButtonBehavior(resize_rect, resize_id, &hovered, &held);
                     if (hovered || held || wheel) {
                         g.MouseCursor = wd->dockPos<PanelManager::TOP ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS;

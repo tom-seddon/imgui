@@ -60,6 +60,27 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #include "./imguitabwindow/imguitabwindow.h"
 #endif //NO_IMGUITABWINDOW
 
+#ifdef YES_IMGUISOLOUD_ALL
+#   undef YES_IMGUISOLOUD
+#   define YES_IMGUISOLOUD
+#endif //YES_IMGUISOLOUD_ALL
+
+#if (defined(YES_IMGUISOLOUD) || defined(YES_IMGUIADDONS_ALL))
+// If no SoLoud backend is defined, define one. We must do it here to integrate with ImGui bindings better.
+// Available bindings beside SDL: WITH_PORTAUDIO  WITH_OPENAL WITH_XAUDIO2 WITH_WINMM WITH_WASAPIWITH_OSS WITH_ALSA (all untested)
+#   if (!defined(WITH_SDL) && !defined(WITH_SDL_STATIC) && !defined(WITH_SDL2) && !defined(WITH_SDL2_STATIC) && !defined(WITH_PORTAUDIO)  && !defined(WITH_OPENAL) && !defined(WITH_XAUDIO2) && !defined(WITH_WINMM)  && !defined(WITH_WASAPI) && !defined(WITH_OSS) && !defined(WITH_ALSA) && !defined(WITH_NULLDRIVER))
+#       ifdef IMGUI_USE_SDL2_BINDING
+#           define WITH_SDL2_STATIC         // So in our SDL2 binding we can force initialization of SDL_AUDIO
+#       else //IMGUI_USE_SDL2_BINDING
+#           if (defined(_WIN32) || defined(_WIN64))
+#               define WITH_WINMM
+#           else // (defined(_WIN32) || defined(_WIN64))
+#               define WITH_OPENAL          // Or maybe some other specific for Linux...
+#           endif // (defined(_WIN32) || defined(_WIN64))
+#       endif //IMGUI_USE_SDL2_BINDING
+#   endif // NO_SOLOUD_BINDING
+#endif //YES_IMGUISOLOUD
+
 #undef IMGUI_USE_AUTO_BINDING
 #undef IMGUI_USE_AUTO_BINDING_OPENGL
 #undef IMGUI_USE_AUTO_BINDING_DIRECT3D
@@ -123,6 +144,10 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #			define YES_IMGUISDF
 #		endif //NO_IMGUISDF
 #	endif //IMGUI_USE_AUTO_BINDING_OPENGL
+#	ifndef YES_IMGUISOLOUD
+#		undef YES_IMGUISOLOUD
+#		define YES_IMGUISOLOUD
+#	endif //YES_IMGUISOLOUD
 #endif //YES_IMGUIADDONS_ALL
 
 #ifdef YES_IMGUIPDFVIEWER
@@ -134,6 +159,9 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #ifdef YES_IMGUISDF
 #include "./imguiyesaddons/imguisdf.h"
 #endif //YES_IMGUISDF
+#ifdef YES_IMGUISOLOUD
+#include "./imguiyesaddons/imguisoloud.h" // Better leave it at the end
+#endif //YES_IMGUISOLOUD
 
 #endif //IMGUI_USER_ADDONS_H_
 

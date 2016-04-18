@@ -22,7 +22,20 @@ static SDL_Cursor* sdlCursors[ImGuiMouseCursor_Count_+1];
 // NB: ImGui already provide OS clipboard support for Windows so this isn't needed if you are using Windows only.
 static const char* ImImpl_GetClipboardTextFn()
 {
-    return SDL_GetClipboardText();
+    //return SDL_GetClipboardText();	// Wrong!!! Gets UTF-8 text from the clipboard, which must be freed with SDL_free(), otherwise leaks memory!
+    const char* text = SDL_GetClipboardText();
+    if (!text) return NULL;
+    const int len = strlen(text);
+    if (len==0) {SDL_free((void*)text);return "";}
+    static ImVector<char> clipboardBuffer;
+    // Optional branch to keep clipboardBuffer.capacity() low:
+    if (len<=clipboardBuffer.capacity() && clipboardBuffer.capacity()>512)  {
+        ImVector<char> emptyBuffer;clipboardBuffer.swap(emptyBuffer);
+    }
+    clipboardBuffer.resize(len+1);
+    strcpy(&clipboardBuffer[0],text);
+    SDL_free((void*)text);
+    return (const char*) &clipboardBuffer[0];
 }
 
 static void ImImpl_SetClipboardTextFn(const char* text)
@@ -105,7 +118,11 @@ I think failing in SDL_Init() when a requested subsystem doesn't work properly i
 #   ifndef __EMSCRIPTEN__
 #		define IMIMPL_SDL2_INIT_FLAGS (SDL_INIT_EVERYTHING)
 #	else //__EMSCRIPTEN__
-#		define IMIMPL_SDL2_INIT_FLAGS (SDL_INIT_VIDEO)
+#		if (defined(WITH_SDL) || defined(WITH_SDL_STATIC) || defined(WITH_SDL2) || defined(WITH_SDL2_STATIC)) // YES_IMGUISOLOUD
+#			define IMIMPL_SDL2_INIT_FLAGS (SDL_INIT_VIDEO|SDL_INIT_AUDIO)
+#		else // WITH_SDL2_STATIC // YES_IMGUISOLOUD
+#			define IMIMPL_SDL2_INIT_FLAGS (SDL_INIT_VIDEO)
+#		endif // WITH_SDL2_STATIC // YES_IMGUISOLOUD
 #	endif //__EMSCRIPTEN__
 #endif //IMIMPL_SDL2_INIT_FLAGS
 

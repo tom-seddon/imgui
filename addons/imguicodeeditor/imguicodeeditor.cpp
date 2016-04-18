@@ -3331,7 +3331,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     const bool is_shift_down = io.KeyShift;
     const bool is_alt_down = io.KeyAlt;
     const bool focus_requested = FocusableItemRegister(window, g.ActiveId == id, (flags & (ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_AllowTabInput)) == 0);    // Using completion callback disable keyboard tabbing
-    const bool focus_requested_by_code = focus_requested && (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent);
+    //const bool focus_requested_by_code = focus_requested && (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent);
     //const bool focus_requested_by_tab = focus_requested && !focus_requested_by_code;
 
     const bool hovered = IsHovered(frame_bb, id);

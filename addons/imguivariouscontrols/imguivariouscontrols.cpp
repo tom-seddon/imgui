@@ -714,7 +714,7 @@ bool InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu(const char *la
 
                 popup_open = false;
             }
-        }
+        }	 
     }
     else popup_open = false;
     //------------------------------------------------------------------

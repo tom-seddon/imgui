@@ -732,6 +732,82 @@ void DrawGL()	// Mandatory
          }
 #       endif //YES_IMGUISDF
 
+#       ifdef YES_IMGUISOLOUD
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguisoloud");ImGui::Separator();
+        // Well, we should move the init stuff to InitGL(), clean up textures, etc. (all skipped to avoid multiple preprocessor branches spread around this file)
+
+        // Code dirty-copied from the SoLoud Welcome example (I'm a newbie...)
+        static SoLoud::Soloud soloud; // Engine core
+
+        static bool enableSoLoud = false;
+        if (ImGui::Checkbox("Start SoLoud Test",&enableSoLoud))    {
+            if (enableSoLoud)   {
+                // Initialize SoLoud (automatic back-end selection)
+                // also, enable visualization for FFT calc
+                soloud.init();
+                soloud.setVisualizationEnable(1);
+
+                static SoLoud::WavStream ogg; // (SoLoud::Wav still works with ogg too)
+                ogg.load("tetsno.ogg");       // Load an ogg file in streaming mode (however if I set it to loop, then it plays multiple times at the same time if I click the check box twice...)
+                soloud.play(ogg);
+
+                static SoLoud::Wav wav;                 // One sample source
+                wav.load("AKWF_c604_0024.wav");       // Load a wave file
+                //wav.setLooping(1);                          // Tell SoLoud to loop the sound
+                /*int handle1 = */soloud.play(wav);             // Play it
+                //soloud.setVolume(handle1, 0.5f);            // Set volume; 1.0f is "normal"
+                //soloud.setPan(handle1, -0.2f);              // Set pan; -1 is left, 1 is right
+                //soloud.setRelativePlaySpeed(handle1, 0.9f); // Play a bit slower; 1.0f is normal
+
+                // extra sources need additional definitions (at the project level not here), unless you define YES_IMGUISOLOUD_ALL (a.t.p.l. not here).
+                // For example:
+#               ifdef YES_IMGUISOLOUD_SFXR
+                static SoLoud::Sfxr sfxr;
+                sfxr.loadPreset(SoLoud::Sfxr::COIN,0);
+                soloud.play(sfxr);
+#               endif //YES_IMGUISOLOUD_SFXR
+#               ifdef YES_IMGUISOLOUD_SPEECH
+                // Configure sound source
+                static SoLoud::Speech speech; // A sound source (speech, in this case)
+                speech.setText("Hello, world.");
+                speech.setVolume(7);
+                soloud.play(speech);    // Play the sound source (we could do this several times if we wanted)
+#               endif //YES_IMGUISOLOUD_SPEECH
+
+
+/*             // These should work too (AFAIK), but audio files are missing...
+#               ifdef YES_IMGUISOLOUD_MODPLUG
+                static SoLoud::Modplug mod;
+                mod.load("audio/BRUCE.S3M");
+                soloud.play(mod);
+#               endif //YES_IMGUISOLOUD_MODPLUG
+#               ifdef YES_IMGUISOLOUD_MONOTONE
+                static SoLoud::Monotone mon;
+                mon.load("audio/Jakim - Aboriginal Derivatives.mon");
+                soloud.play(mon);
+#               endif //YES_IMGUISOLOUD_MONOTONE
+#               ifdef YES_IMGUISOLOUD_TEDSID
+                static SoLoud::TedSid ted;
+                ted.load("audio/ted_storm.prg.dump");
+                soloud.play(ted);
+                static SoLoud::TedSid sid;
+                sid.load("audio/Modulation.sid.dump");
+                soloud.play(sid);
+#               endif //YES_IMGUISOLOUD_TEDSID
+*/
+
+            }
+            else {
+                soloud.stopAll();
+                soloud.deinit();     // Does this clean all the sources too ?
+            }
+        }
+        if (enableSoLoud && soloud.getVoiceCount()==0)  {
+            soloud.deinit();    // Does this clean all the sources too ?
+            enableSoLoud = false;
+        }
+#       endif //YES_IMGUISOLOUD
+
         // ListView Test:
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguilistview");ImGui::Separator();
 #       ifndef NO_IMGUILISTVIEW

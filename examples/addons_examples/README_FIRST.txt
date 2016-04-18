@@ -5,10 +5,10 @@ HOW TO COMPILE THE ADDON EXAMPLES:
 To compile these two examples (main.cpp and main2.cpp), no makefile is present.
 
 Instead four project files are provided:
-->	addons_examples.pro: 					A Qt Creator project file that can be used in Ubuntu only and must be edited to set the paths and to choose the example to compile (handy for Linux and Mac users). This file can be tweaked to use the libraries of your choice (see below).
-->	addons_examples_mingw.cbp: 				A CodeBlocks project file that can be used to compile the first demo for Windows (to compile the second demo simply replace main.cpp with main2.cpp). This demo requires the glew library only to compile.
+->	addons_examples.pro:			A Qt Creator project file that can be used in Ubuntu only and must be edited to set the paths and to choose the example to compile (handy for Linux and Mac users). This file can be tweaked to use the libraries of your choice (see below).
+->	addons_examples_mingw.cbp:		A CodeBlocks project file that can be used to compile the first demo for Windows (to compile the second demo simply replace main.cpp with main2.cpp). This demo requires the glew library only to compile.
 ->	addons_examples_mingw_direct3d9.cbp: 	A CodeBlocks project file that can be used to compile the first demo for Windows (to compile the second demo simply replace main.cpp with main2.cpp). This demo requires the direct3d9 libraries to compile.
-->  addons_example_monodevelop.cproj:		A Monodevelop C++ project file that contains both main*.cpp files: however only one has its "Build Action" set to "compile" (this makes it easier to switch between them). It requires the two C++ packages "gl" and "sdl2": their absolute paths are hardcoded for Ubuntu Linux 64bit, but they can be easily reconfigured by the user.
+->	addons_example_monodevelop.cproj:	A Monodevelop C++ project file that contains both main*.cpp files: however only one has its "Build Action" set to "compile" (this makes it easier to switch between them). It requires the two C++ packages "gl" and "sdl2": their absolute paths are hardcoded for Ubuntu Linux 64bit, but they can be easily reconfigured by the user.
 Even if you use another IDE, in case of compilation problems, it can still be useful to open these files with a text editor and see their content.
 
 You can test the two examples (without compiling them) in your web browser by clicking on the two .html files inside the html subfolder (although not all the addons might be active in this build).
@@ -74,8 +74,9 @@ That's why I've said "for expert programmers only" above.
 
 Currently "yes addons" are:
 -> imguipdfviewer.h/cpp:	depends on -lpoppler-glib (that depends on glib-2.0 and cairo, and probably on STL as well).
--> imguidock.h/cpp:			no dependencies. License: MIT. [from: https://github.com/nem0/LumixEngine/blob/master/src/editor/imgui/imgui_dock.h]
+-> imguidock.h/cpp:		no dependencies. License: MIT. [from: https://github.com/nem0/LumixEngine/blob/master/src/editor/imgui/imgui_dock.h]
 -> imguisdf.h/cpp:		no dependencies, but needs OpenGL with Shaders.
+-> imguisoloud.h/cpp:		depends on STL. License:  ZLib/LibPNG (and others more liberal) Link: [http://sol.gfxile.net/soloud/index.html]
 
 ===========================================
 HOW TO USE IMGUI ADDONS IN YOUR PROJECTS:
@@ -92,6 +93,7 @@ IMGUI_USE_GLUT_BINDING		# needs -lglut (or maybe -lGLUT)
 IMGUI_USE_SDL2_BINDING		# needs SDL2 libraries
 IMGUI_USE_GLFW_BINDING		# needs -lglfw (version3)
 IMGUI_USE_WINAPI_BINDING	# needs the windows API	- Warning: this option might require glew (IMGUI_USE_GLEW) to include the opengl headers correctly (please read below)
+IMGUI_USE_DIRECT3D9_BINDING	# needs the windows API	and Direct3D9
 When one of these is defined, then in your main.cpp file (or somewhere else) you MUST define these 4 methods globally:
 void InitGL() {}
 void ResizeGL(int w,int h) {}
@@ -120,10 +122,10 @@ IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON:		# when defined ImGui::GetIO()->Fonts->Clea
 
 4 -> OPTIONALLY you can use other definitions at the project level:
 IMGUI_USE_ZLIB					# requires the library zlib. It currently enables loading ttf.gz fonts (from file or embedded in C++ code) through the ImImpl_Main(...) method (only if you use one of the "bindings" above), 
-								# and two generic Gz decompression methods in imguihelper.
-DIRENT_USES_UTF8_CHARS			# affects imguifilesystem on Windows OS only. It should display UTF8 paths instead of Ascii paths. It's not defined by default because it lacks proper testing.
+						# and two generic Gz decompression methods in imguihelper.
+DIRENT_USES_UTF8_CHARS				# affects imguifilesystem on Windows OS only. It should display UTF8 paths instead of Ascii paths. It's not defined by default because it lacks proper testing.
 IMGUI_USE_MINIZIP				# EXPERIMENTAL. requires the library zlib. It currently affects imguifilesystem only and allows browsing inside zip files (not recursively).
-								# Currently when it's enabled it's not possible to disable this feature, but if this is required by some user, we can implement/fix it.
+						# Currently when it's enabled it's not possible to disable this feature, but if this is required by some user, we can implement/fix it.
 NO_ADDONNAMEHERE				# Addon exclusion definitions (e.g. NO_IMGUIFILESYSTEM). I've already addressed this topic above. They can be handy to speed up compilation and to resolve compilation problems.
 
 

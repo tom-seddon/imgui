@@ -94,6 +94,9 @@
 #ifdef YES_IMGUISDF
 #include "./imguiyesaddons/imguisdf.cpp"
 #endif //YES_IMGUISDF
+#ifdef YES_IMGUISOLOUD
+#include "./imguiyesaddons/imguisoloud.cpp" // This is huge. Better adding it as the last addon.
+#endif //YES_IMGUISOLOUD
 
 #endif //IMGUI_USER_ADDONS_INL_
 

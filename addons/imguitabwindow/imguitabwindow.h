@@ -232,7 +232,7 @@ static const ImFont* ImGuiFonts[FONT_STYLE_COUNT];
 class TabWindow {
 public:
 struct TabLabel {
-    friend class TabWindowNode;
+    friend struct TabWindowNode;
     friend class TabWindow;
     friend struct TabWindowDragData;
 private:
