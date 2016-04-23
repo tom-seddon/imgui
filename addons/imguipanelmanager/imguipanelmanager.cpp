@@ -668,8 +668,14 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         // Title bar
         if (!(flags & ImGuiWindowFlags_NoTitleBar))
         {
-            if (p_opened != NULL)
-                *p_opened = CloseWindowButton(p_opened);
+            if (p_opened != NULL)   {
+                //*p_opened = CloseWindowButton(p_opened);
+                const float pad = 2.0f;
+                const float rad = (window->TitleBarHeight() - pad*2.0f) * 0.5f;
+                const bool pressed = CloseButton(window->GetID("#CLOSE"), window->Rect().GetTR() + ImVec2(-pad - rad, pad + rad), rad);
+                if (p_opened != NULL && pressed) *p_opened = false;
+                *p_opened = pressed;    // Bad but safer
+            }
             if (p_undocked != NULL)
                 DockWindowButton(p_undocked,p_opened);
 
@@ -855,7 +861,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
             ImGuiWindowFlags_NoCollapse |
             ImGuiWindowFlags_NoSavedSettings;
             const ImGuiWindowFlags windowFlagsTotal = wd.isToggleWindow ? ImGuiWindowFlags_NoSavedSettings : (windowFlags|mgr.dockedWindowsExtraFlags|extraWindowFlags);
-            if ((windowFlagsTotal & ImGuiWindowFlags_NoTitleBar)) open=!open;   // Terrible hack to make it work (but I remind that "open" was previously called "closed": so that had a sense!)
+            if ((windowFlagsTotal & ImGuiWindowFlags_NoTitleBar)) open=!open;   // Terrible hack to make it work (but I remind that "open" was previously called "closed": so that had a sense!). See *p_opened = CloseWindowButton(p_opened); in BeginDockWindow.
         if (ImGui::DockWindowBegin(wd.name, &wd.open,&undocked, wd.size,mgr.dockedWindowsAlpha,windowFlagsTotal,&draggingStarted,&wd))     {
             ImGuiState& g = *GImGui;
             const ImGuiStyle& style = g.Style;
