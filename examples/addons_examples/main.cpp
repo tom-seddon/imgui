@@ -412,7 +412,8 @@ void DrawGL()	// Mandatory
             if   (styleEnumNum==0)      ImGui::SetTooltip("%s","\"Default\"\nThis is the default\nImGui theme");
             else if (styleEnumNum==1)   ImGui::SetTooltip("%s","\"Gray\"\nThis is the default\ntheme of this demo");
             else if (styleEnumNum==2)   ImGui::SetTooltip("%s","\"OSX\"\nPosted by @itamago here:\nhttps://github.com/ocornut/imgui/pull/511\n(hope I can use it)");
-        }
+	    else if (styleEnumNum==3)   ImGui::SetTooltip("%s","\"Dark\"\nA dark-grayscale style with\nno transparency (by default)");
+	}
 
         ImGui::SameLine();
         static float hueShift = 0;
@@ -709,7 +710,7 @@ void DrawGL()	// Mandatory
                 IM_ASSERT(sdfTextChunk);
 
                 //static const char* sdfSampleText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
-                static const char* sdfSampleText = "Lorem ipsum <COLOR=00FF00>dolor</COLOR> sit <I>amet</I>, consectetur <B>adipiscing</B> elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n<SCALE=2.0><HALIGN=LEFT>Left<HALIGN=CENTER>Center<HALIGN=RIGHT>Right</SCALE>";
+        static const char* sdfSampleText = "Lorem ipsum <COLOR=00FF00FF>dolor</COLOR> sit <I>amet</I>, consectetur <B>adipiscing</B> elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n<SCALE=2.0><HALIGN=LEFT>Left<HALIGN=CENTER>Center<HALIGN=RIGHT>Right</SCALE>";
                 strcpy(sdfTextBuffer,sdfSampleText);
                 ImGui::SdfAddTextWithTags(sdfTextChunk,sdfTextBuffer); // Actually we can append multiple of these calls together
 

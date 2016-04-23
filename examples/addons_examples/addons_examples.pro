@@ -79,7 +79,8 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguiemscripten/imguiemscripten.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguipdfviewer.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguidock.h"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.h"
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.h"			    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisoloud.h"
 
 
 SOURCES+=  $$IMGUI_BASE_PATH"/imgui.cpp" \
@@ -137,7 +138,8 @@ OTHER_FILES+= $$IMGUI_BASE_PATH"/addons/imgui_user.inl"				    \
 	   $$IMGUI_BASE_PATH"/addons/imguiemscripten/imguiemscripten.cpp"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguipdfviewer.cpp"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguidock.cpp"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.cpp"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.cpp"		    \				
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisoloud.cpp"		    \
 	   README_FIRST.txt
 
 

@@ -9794,6 +9794,97 @@ namespace SoLoud
 };
 #endif //YES_IMGUISOLOUD_VIC
 
+//----demos/piano/soloud_basicwave.cpp--------------------------------------------------------------------------------
+#ifndef NO_IMGUISOLOUD_BASICWAVE
+inline static float my_fabs(float x)    {return (x<0) ? (-x) : x;}
+
+namespace SoLoud
+{
+
+    BasicwaveInstance::BasicwaveInstance(Basicwave *aParent)
+    {
+        mParent = aParent;
+        mOffset = 0;
+    }
+
+    void BasicwaveInstance::getAudio(float *aBuffer, unsigned int aSamples)
+    {
+        unsigned int i;
+        switch (mParent->mWaveform)
+        {
+            case Basicwave::SINE:
+                for (i = 0; i < aSamples; i++)
+                {
+                    aBuffer[i] = (float)sin(mParent->mFreq * mOffset * M_PI * 2);
+                    mOffset++;
+                }
+                break;
+            case Basicwave::SAW:
+                for (i = 0; i < aSamples; i++)
+                {
+                    aBuffer[i] = (1 - (float)fmod(mParent->mFreq * mOffset, 1)) * 2 - 1;
+                    mOffset++;
+                }
+                break;
+            case Basicwave::INVERSESAW:
+                for (i = 0; i < aSamples; i++)
+                {
+                    aBuffer[i] = ((float)fmod(mParent->mFreq * mOffset, 1)) * 2 - 1;
+                    mOffset++;
+                }
+                break;
+            case Basicwave::SQUARE:
+                for (i = 0; i < aSamples; i++)
+                {
+                    aBuffer[i] = ((float)fmod(mParent->mFreq * mOffset, 1.0f) > 0.5f) ? -1.0f : 1.0f;
+                    mOffset++;
+                }
+                break;
+            case Basicwave::TRIANGLE:
+                for (i = 0; i < aSamples; i++)
+                {
+                    aBuffer[i] = my_fabs(0.5f - (float)fmod(mParent->mFreq * mOffset, 1)) * 4 - 1;
+                    mOffset++;
+                }
+                break;
+        }
+    }
+
+    bool BasicwaveInstance::hasEnded()
+    {
+        // This audio source never ends.
+        return 0;
+    }
+
+    Basicwave::Basicwave()
+    {
+        setSamplerate(44100);
+        mWaveform = SQUARE;
+    }
+
+    Basicwave::~Basicwave()
+    {
+        stop();
+    }
+
+    void Basicwave::setSamplerate(float aSamplerate)
+    {
+        mBaseSamplerate = aSamplerate;
+        mFreq = (float)(440 / mBaseSamplerate);
+    }
+
+    void Basicwave::setWaveform(int aWaveform)
+    {
+        mWaveform = aWaveform;
+    }
+
+    AudioSourceInstance * Basicwave::createInstance()
+    {
+        return new BasicwaveInstance(this);
+    }
+
+};
+#endif //NO_IMGUISOLOUD_BASICWAVE
 
 //----../src/audiosource/speech/soloud_speech.cpp-----------------------------------------------------------------------
 #ifdef YES_IMGUISOLOUD_SPEECH
@@ -16489,5 +16580,16 @@ namespace SoLoud
 #   pragma GCC diagnostic pop
 #endif //_MSC_VER
 //-----------------------------------------------------------------------------------
+
+#ifndef NO_IMGUISOLOUD_METHODS
+namespace ImGuiSoloud {
+
+#ifndef NO_IMGUISOLOUD_BASICWAVE
+// TODO: create a struct that bundles the Soloud::Piano example
+
+#endif //NO_IMGUISOLOUD_BASICWAVE
+
+} // namespace ImGuiSoloud
+#endif //NO_IMGUISOLOUD_METHODS
 
 

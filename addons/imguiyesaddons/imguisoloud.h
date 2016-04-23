@@ -94,10 +94,14 @@ The TED / SID support is based on tedplay (c) 2012 Attila Grosz, used under Unli
 
 // TIP: main.cpp has some code that uses imguisoloud, if you define YES_IMGUISOLOUD at the project level.
 
+/*
 // If no backend is defined, use WITH_SDL2_STATIC (however when used inside imguiaddons this is overridden. See addons/imgui_user.h).
 #if (!defined(WITH_SDL) && !defined(WITH_SDL_STATIC) && !defined(WITH_SDL2) && !defined(WITH_SDL2_STATIC) && !defined(WITH_PORTAUDIO)  && !defined(WITH_OPENAL) && !defined(WITH_XAUDIO2) && !defined(WITH_WINMM)  && !defined(WITH_WASAPI) && !defined(WITH_OSS) && !defined(WITH_ALSA) && !defined(WITH_NULLDRIVER))
 #	define WITH_SDL2_STATIC
 #endif //WITH_SDL2_STATIC
+// Removed: don't know what happens if nothing is defined. Anyway I already define stuff in addons/imgui_user.h, so it's not my interest to do it here...
+*/
+
 
 #ifdef YES_IMGUISOLOUD_ALL
 #   define YES_IMGUISOLOUD_SPEECH
@@ -1403,6 +1407,45 @@ namespace SoLoud
 	};
 };
 
+//----demos/piano/soloud_basicwave.h--------------------------------------------------------------------------------
+#ifndef NO_IMGUISOLOUD_BASICWAVE    // I would like to "embed" the whole piano demo someway too
+#define BASICWAVE_H
+namespace SoLoud
+{
+    class Basicwave;
+
+    class BasicwaveInstance : public AudioSourceInstance
+    {
+        Basicwave *mParent;
+        int mOffset;
+    public:
+        BasicwaveInstance(Basicwave *aParent);
+        virtual void getAudio(float *aBuffer, unsigned int aSamples);
+        virtual bool hasEnded();
+    };
+
+    class Basicwave : public AudioSource
+    {
+    public:
+        enum WAVEFORMS
+        {
+            SINE,
+            TRIANGLE,
+            SQUARE,
+            SAW,
+            INVERSESAW
+        };
+        float mFreq;
+        int mWaveform;
+        Basicwave();
+        virtual ~Basicwave();
+        void setSamplerate(float aSamplerate);
+        void setWaveform(int aWaveform);
+        virtual AudioSourceInstance *createInstance();
+    };
+};
+#endif //NO_IMGUISOLOUD_BASICWAVE
+
 //----soloud_speech.h-----------------------------------------------------------------------------------------------
 #ifdef YES_IMGUISOLOUD_SPEECH
 /*
@@ -2059,7 +2102,16 @@ namespace SoLoud
 };
 #endif //YES_IMGUISOLOUD_VIC
 
+#ifndef NO_IMGUISOLOUD_METHODS
+namespace ImGuiSoloud {
 
+#ifndef NO_IMGUISOLOUD_BASICWAVE
+// TODO: create a struct that bundles the Soloud::Piano example
+
+#endif //NO_IMGUISOLOUD_BASICWAVE
+
+} // namespace ImGuiSoloud
+#endif //NO_IMGUISOLOUD_METHODS
 
 
 //----end file-----------------------------------------------------------------------------------------

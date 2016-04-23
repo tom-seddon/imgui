@@ -143,23 +143,32 @@ struct SdfAnimationKeyFrame {
     {}
 };
 struct SdfAnimation* SdfAddAnimation();
+void SdfAnimationSetLoopingParams(struct SdfAnimation* animation,bool mustLoop,bool mustHideTextWhenFinishedIfNotLooping=true);
 float SdfAnimationAddKeyFrame(struct SdfAnimation* animation,const SdfAnimationKeyFrame& keyFrame); // returns the animation total length in seconds so far
 void SdfAnimationClear(struct SdfAnimation* animation);     // clears all SdfKeyFrames
 void SdfRemoveAnimation(struct SdfAnimation* animation);    // "animation" no more usable
 void SdfRemoveAllAnimations();
 
+
 struct SdfAnimationParams {
     float speed,timeOffset;
-    ImVec2 offset,scale;
-    float alpha;
-    bool looping;
+    int startChar,endChar;
     SdfAnimationParams()
     {
         speed = 1.f;timeOffset=0.f;
-        looping = false;
+        startChar=0;endChar=-1;
+    }
+};
+struct SdfGlobalParams {
+    ImVec2 offset,scale;
+    float alpha;
+    int startChar,endChar;
+    SdfGlobalParams()
+    {
         offset=ImVec2(0,0);
         scale=ImVec2(1,1);
         alpha=1.0f;
+        startChar=0;endChar=-1;
     }
 };
 // Once an animation is active (from its mode), it plays if the text chunk is not mute.
@@ -171,6 +180,9 @@ struct SdfAnimation* SdfTextChunkGetManualAnimation(struct SdfTextChunk* chunk);
 void SdfTextChunkSetAnimationParams(struct SdfTextChunk* chunk,const SdfAnimationParams& params=SdfAnimationParams());
 const SdfAnimationParams& SdfTextChunkGetAnimationParams(const struct SdfTextChunk* chunk);
 SdfAnimationParams& SdfTextChunkGetAnimationParams(struct SdfTextChunk* chunk);
+void SdfTextChunkSetGlobalParams(struct SdfTextChunk* chunk,const SdfGlobalParams& params=SdfGlobalParams());
+const SdfGlobalParams& SdfTextChunkGetGlobalParams(const struct SdfTextChunk* chunk);
+SdfGlobalParams& SdfTextChunkGetGlobalParams(struct SdfTextChunk* chunk);
 void SdfTextChunkSetAnimationMode(struct SdfTextChunk* chunk,SDFAnimationMode mode=SDF_AM_NONE);
 SDFAnimationMode SdfTextChunkGetAnimationMode(const struct SdfTextChunk* chunk);
 //------------------------------------------------------------------------------------------
