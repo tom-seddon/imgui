@@ -1656,14 +1656,20 @@ bool SdfTextChunk::setupUniformValuesAndDrawArrays(SdfShaderProgram* SP,bool sha
 
 	if (endCharSize<=startCharSize) return false;
 
-	if (shadowPass)	{
-            SP->setUniformOffsetAndScale(ImVec2((tmpKeyFrame.offset.x*screenSize.x)+shadowOffsetInPixels.x,(tmpKeyFrame.offset.y*screenSize.y)+shadowOffsetInPixels.y),tmpKeyFrame.scale);
-            SP->setUniformAlphaAndShadow(tmpKeyFrame.alpha*0.5f,0.2f);
-        }
-        else {
-            SP->setUniformOffsetAndScale(tmpKeyFrame.offset*screenSize,tmpKeyFrame.scale);
-            SP->setUniformAlphaAndShadow(tmpKeyFrame.alpha,1.f);
-        }
+    if (shadowPass)	{
+        SP->setUniformOffsetAndScale(ImVec2((tmpKeyFrame.offset.x*screenSize.x)+shadowOffsetInPixels.x*tmpKeyFrame.scale.x
+                                            +(screenSize.x*(0.5f-0.5f*tmpKeyFrame.scale.x))  // scaling (not sure this is correct) [can be removed]
+                                            ,(tmpKeyFrame.offset.y*screenSize.y)+shadowOffsetInPixels.y*tmpKeyFrame.scale.y
+                                            +(screenSize.y*(0.5f-0.5f*tmpKeyFrame.scale.y))  // scaling (not sure this is correct) [can be removed]
+                                            ),tmpKeyFrame.scale);
+        SP->setUniformAlphaAndShadow(tmpKeyFrame.alpha*0.5f,0.2f);
+    }
+    else {
+        SP->setUniformOffsetAndScale(tmpKeyFrame.offset*screenSize+
+                                     (screenSize-screenSize*tmpKeyFrame.scale)*0.5f  // scaling (not sure this is correct) [can be removed]
+                                     ,tmpKeyFrame.scale);
+        SP->setUniformAlphaAndShadow(tmpKeyFrame.alpha,1.f);
+    }
 
 	glDrawArrays(GL_TRIANGLES,startCharSize,endCharSize-startCharSize);
     }
@@ -1679,13 +1685,19 @@ bool SdfTextChunk::setupUniformValuesAndDrawArrays(SdfShaderProgram* SP,bool sha
 
         // 1) draw non-animated edges:
         {
-            if (shadowPass)	{
-                SP->setUniformOffsetAndScale(ImVec2(globalParams.offset.x*screenSize.x+shadowOffsetInPixels.x,globalParams.offset.y*screenSize.y+shadowOffsetInPixels.y),globalParams.scale);
-                SP->setUniformAlphaAndShadow(globalParams.alpha*0.5f,0.2f);
-            }
-            else {
-                SP->setUniformOffsetAndScale(globalParams.offset*screenSize,globalParams.scale);
-                SP->setUniformAlphaAndShadow(globalParams.alpha,1.f);
+        if (shadowPass)	{
+            SP->setUniformOffsetAndScale(ImVec2(globalParams.offset.x*screenSize.x+shadowOffsetInPixels.x*globalParams.scale.x
+                                                +(screenSize.x*(0.5f-0.5f*globalParams.scale.x))  // scaling (not sure this is correct) [can be removed]
+                                                ,globalParams.offset.y*screenSize.y+shadowOffsetInPixels.y*globalParams.scale.y
+                                                +(screenSize.y*(0.5f-0.5f*globalParams.scale.y))  // scaling (not sure this is correct) [can be removed]
+                                                ),globalParams.scale);
+            SP->setUniformAlphaAndShadow(globalParams.alpha*0.5f,0.2f);
+        }
+        else {
+            SP->setUniformOffsetAndScale(globalParams.offset*screenSize
+                                         +(screenSize-screenSize*globalParams.scale)*0.5f  // scaling (not sure this is correct) [can be removed]
+                                         ,globalParams.scale);
+            SP->setUniformAlphaAndShadow(globalParams.alpha,1.f);
             }
             // First edge:
 	    if (realAnimationParamsStartSize>minStartSize) glDrawArrays(GL_TRIANGLES, minStartSize, realAnimationParamsStartSize-minStartSize);
@@ -1696,14 +1708,20 @@ bool SdfTextChunk::setupUniformValuesAndDrawArrays(SdfShaderProgram* SP,bool sha
         // 2) draw animated portion:
 	if (realTmpFrameStartSize<=realAnimationParamsEndSize && realTmpFrameEndSize>=realAnimationParamsStartSize)
 	{
-            if (shadowPass)	{
-                SP->setUniformOffsetAndScale(ImVec2((tmpKeyFrame.offset.x*screenSize.x)+shadowOffsetInPixels.x,(tmpKeyFrame.offset.y*screenSize.y)+shadowOffsetInPixels.y),tmpKeyFrame.scale);
-                SP->setUniformAlphaAndShadow(tmpKeyFrame.alpha*0.5f,0.2f);
-            }
-            else {
-                SP->setUniformOffsetAndScale(tmpKeyFrame.offset*screenSize,tmpKeyFrame.scale);
-                SP->setUniformAlphaAndShadow(tmpKeyFrame.alpha,1.f);
-            }
+        if (shadowPass)	{
+            SP->setUniformOffsetAndScale(ImVec2((tmpKeyFrame.offset.x*screenSize.x)+shadowOffsetInPixels.x*tmpKeyFrame.scale.x
+                                                +(screenSize.x*(0.5f-0.5f*tmpKeyFrame.scale.x))  // scaling (not sure this is correct) [can be removed]
+                                                ,(tmpKeyFrame.offset.y*screenSize.y)+shadowOffsetInPixels.y*tmpKeyFrame.scale.y
+                                                +(screenSize.y*(0.5f-0.5f*tmpKeyFrame.scale.y))  // scaling (not sure this is correct) [can be removed]
+                                                ),tmpKeyFrame.scale);
+            SP->setUniformAlphaAndShadow(tmpKeyFrame.alpha*0.5f,0.2f);
+        }
+        else {
+            SP->setUniformOffsetAndScale(tmpKeyFrame.offset*screenSize
+                                         +(screenSize-screenSize*tmpKeyFrame.scale)*0.5f  // scaling (not sure this is correct) [can be removed]
+                                         ,tmpKeyFrame.scale);
+            SP->setUniformAlphaAndShadow(tmpKeyFrame.alpha,1.f);
+        }
 	    const GLint startAnimationCharIndex = realAnimationParamsStartSize>realTmpFrameStartSize?realAnimationParamsStartSize:realTmpFrameStartSize;
 	    const GLint endAnimationCharIndex   = realTmpFrameEndSize<realAnimationParamsEndSize?realTmpFrameEndSize:realAnimationParamsEndSize;
 
@@ -1869,7 +1887,7 @@ inline bool SdfAnimationKeyFrameEdit(SdfAnimationKeyFrame* kf,bool isFirstFrame=
     }
     changed|=ImGui::DragFloat2("Offset##SdfKeyFrameOffset",&kf->offset.x,0.01f,-1.0f,1.0f);
     //
-    //changed|=ImGui::DragFloat2("Scale##SdfKeyFrameScale",&kf->scale.x,0.01f,0.25f,2.5f);
+    changed|=ImGui::DragFloat2("Scale##SdfKeyFrameScale",&kf->scale.x,0.001f,0.1f,5.0f);
 
     changed|=ImGui::DragInt("StartChar##SdfStartChar",&kf->startChar,0.01f,0,2000);
     ImGui::SameLine();
@@ -2009,9 +2027,10 @@ bool SdfTextChunkEdit(SdfTextChunk* sdfTextChunk, char* buffer, int bufferSize) 
     }
 
     if (ImGui::TreeNode("Global Params"))	{
-	ImGui::DragFloat("GAlpha##SdfAlpha",&sdfTextChunk->globalParams.alpha,0.01f,0.0f,1.f);
+    ImGui::DragFloat("GAlpha##SdfGAlpha",&sdfTextChunk->globalParams.alpha,0.01f,0.0f,1.f);
 	ImGui::SameLine();
-	ImGui::DragFloat2("GOffset##SdfKeyFrameOffset",&sdfTextChunk->globalParams.offset.x,0.01f,-1.0f,1.0f);
+    ImGui::DragFloat2("GOffset##SdfGKeyFrameOffset",&sdfTextChunk->globalParams.offset.x,0.01f,-1.0f,1.0f);
+    ImGui::DragFloat2("GScale##SdfGKeyFrameScale",&sdfTextChunk->globalParams.scale.x,0.001f,0.1f,5.0f);
 	//ImGui::SameLine();
 
 	bool hov2 = false;
