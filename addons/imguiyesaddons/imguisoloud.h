@@ -94,6 +94,8 @@ The TED / SID support is based on tedplay (c) 2012 Attila Grosz, used under Unli
 
 // TIP: main.cpp has some code that uses imguisoloud, if you define YES_IMGUISOLOUD at the project level.
 
+// BUGS: there's a memory leak on Linux when using pthreads (so that WITH_SDL2 is good, but WITH_OPENAL leaks).
+
 /*
 // If no backend is defined, use WITH_SDL2_STATIC (however when used inside imguiaddons this is overridden. See addons/imgui_user.h).
 #if (!defined(WITH_SDL) && !defined(WITH_SDL_STATIC) && !defined(WITH_SDL2) && !defined(WITH_SDL2_STATIC) && !defined(WITH_PORTAUDIO)  && !defined(WITH_OPENAL) && !defined(WITH_XAUDIO2) && !defined(WITH_WINMM)  && !defined(WITH_WASAPI) && !defined(WITH_OSS) && !defined(WITH_ALSA) && !defined(WITH_NULLDRIVER))

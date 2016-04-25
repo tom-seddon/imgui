@@ -341,6 +341,7 @@ int _strnicmp(const char *str1,const char *str2, int n);
 typedef const BYTE * LPCBYTE;
 #endif
 
+
 #define MOD_AMIGAC2			0x1AB
 #define MAX_SAMPLE_LENGTH	16000000
 #define MAX_SAMPLE_RATE		192000
@@ -18044,6 +18045,7 @@ typedef struct _PATHANDLE
 	int samples;
 } PATHANDLE;
 
+
 #ifndef HAVE_SINF
 static inline float sinf(float x) {
 /* default to double version */
@@ -29108,4 +29110,5 @@ BOOL CSoundFile::ReadNote()
 	}
 	return TRUE;
 }
+
 

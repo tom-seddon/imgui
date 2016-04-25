@@ -412,8 +412,9 @@ void DrawGL()	// Mandatory
             if   (styleEnumNum==0)      ImGui::SetTooltip("%s","\"Default\"\nThis is the default\nImGui theme");
             else if (styleEnumNum==1)   ImGui::SetTooltip("%s","\"Gray\"\nThis is the default\ntheme of this demo");
             else if (styleEnumNum==2)   ImGui::SetTooltip("%s","\"OSX\"\nPosted by @itamago here:\nhttps://github.com/ocornut/imgui/pull/511\n(hope I can use it)");
-	    else if (styleEnumNum==3)   ImGui::SetTooltip("%s","\"Dark\"\nA dark-grayscale style with\nno transparency (by default)");
-	}
+            else if (styleEnumNum==3)   ImGui::SetTooltip("%s","\"Dark\"\nA dark-grayscale style with\nno transparency (by default)");
+            else if (styleEnumNum==4)   ImGui::SetTooltip("%s","\"Dougbinks\"\nPosted by @dougbinks here:\nhttps://gist.github.com/dougbinks/8089b4bbaccaaf6fa204236978d165a9\n(hope I can use it)");
+    }
 
         ImGui::SameLine();
         static float hueShift = 0;

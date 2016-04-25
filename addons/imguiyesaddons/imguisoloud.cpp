@@ -73,6 +73,7 @@ The TED / SID support is based on tedplay (c) 2012 Attila Grosz, used under Unli
 // suppress some warning-----------------------------------------------------------------------
 #ifdef _MSC_VER
 #   pragma warning(disable:4100)
+//#   pragma warning(disable: 4146) // unary minus operator applied to unsigned type, result still unsigned  // used by (-lsb) construct to turn 0 into 0 and 1 into 0xFFFF
 #else //_MSC_VER
 #   pragma GCC diagnostic push
 #   pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -4028,10 +4029,14 @@ namespace SoLoud
 		{
 			setVoiceVolume(ch, aVolume);
 		}
+        int i;
+        for (i = 0; i < MAX_CHANNELS; i++)
+        {
+            mVoice[ch]->mCurrentChannelVolume[i] = mVoice[ch]->mChannelVolume[i] * mVoice[ch]->mOverallVolume;
+        }
 		setVoiceRelativePlaySpeed(ch, 1);
 
-		int i;
-		for (i = 0; i < FILTERS_PER_STREAM; i++)
+        for (i = 0; i < FILTERS_PER_STREAM; i++)
 		{
 			if (aSound.mFilter[i])
 			{
@@ -4063,7 +4068,7 @@ namespace SoLoud
 			mLastClockedTime = aSoundTime;
 		unlockAudioMutex();
 		int samples = 0;
-		if (lasttime != 0)
+        if (aSoundTime > lasttime)  //if (lasttime != 0)
 		{
 			samples = (int)floor((aSoundTime - lasttime) * mSamplerate);
 		}
@@ -6429,7 +6434,19 @@ namespace SoLoud
 		{
 			return FILE_LOAD_FAILED;
 		}
-		if (aReader->read32() != MAKEDWORD('f','m','t',' '))
+        //if (aReader->read32() != MAKEDWORD('f','m','t',' '))
+        int chunk = aReader->read32();
+        if (chunk == MAKEDWORD('J','U','N','K'))
+        {
+            int size = aReader->read32();
+            if (size & 1)
+                size += 1;
+            int i;
+            for (i = 0; i < size; i++)
+                aReader->read8();
+            chunk = aReader->read32();
+        }
+        if (chunk != MAKEDWORD('f','m','t',' '))
 		{
 			return FILE_LOAD_FAILED;
 		}
@@ -6448,7 +6465,7 @@ namespace SoLoud
 			return FILE_LOAD_FAILED;
 		}
 		
-		int chunk = aReader->read32();
+        chunk = aReader->read32();
 		
 		if (chunk == MAKEDWORD('L','I','S','T'))
 		{
@@ -6918,7 +6935,20 @@ namespace SoLoud
 		{
 			return FILE_LOAD_FAILED;
 		}
-		if (fp->read32() != MAKEDWORD('f', 'm', 't', ' '))
+        int chunk = fp->read32();
+        if (chunk == MAKEDWORD('J', 'U', 'N', 'K'))
+        {
+            int size = fp->read32();
+            if (size & 1)
+            {
+                size += 1;
+            }
+            int i;
+            for (i = 0; i < size; i++)
+                fp->read8();
+            chunk = fp->read32();
+        }
+        if (chunk != MAKEDWORD('f', 'm', 't', ' '))
 		{
 			return FILE_LOAD_FAILED;
 		}
@@ -6937,7 +6967,7 @@ namespace SoLoud
 			return FILE_LOAD_FAILED;
 		}
 		
-		int chunk = fp->read32();
+        chunk = fp->read32();
 		
 		if (chunk == MAKEDWORD('L','I','S','T'))
 		{
@@ -7163,8 +7193,28 @@ namespace SoLoud
 #ifdef YES_IMGUISOLOUD_MODPLUG
 #ifdef WITH_MODPLUG
 //---------../ext/libmodplug/src/modplug.h-------------------------------------------
-//#include <modplug.h>				// Should we amalgamate this too ?
+//#include <modplug.h>                  // Should we amalgamate this too ?
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-compare"
+#endif
+#   ifdef MAX_CHANNELS
+#       define SOLOUD_MAX_CHANNELS MAX_CHANNELS
+#   undef MAX_CHANNELS
+#   endif //MAX_CHANNELS
+#define HAVE_SETENV
+#define HAVE_SINF
 #include "imguimodplug.cpp.inl"			// Sure! Should we scope it with a namespace ? Not now...
+#undef HAVE_SINF
+#undef HAVE_SETENV
+#   ifdef SOLOUD_MAX_CHANNELS
+#       undef MAX_CHANNELS
+#       define  MAX_CHANNELS SOLOUD_MAX_CHANNELS
+#       undef SOLOUD_MAX_CHANNELS
+#   endif //SOLOUD_MAX_CHANNELS
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 //---------end ./ext/libmodplug/...--------------------------------------------------
 #endif //WITH_MODPLUG
 //----../src/audiosource/modplug/soloud_modplug.cpp-----------------------------------------------------------------------------------------------
@@ -9749,7 +9799,8 @@ namespace SoLoud
 		{
 		    unsigned lsb = lfsr & 1;
 		    lfsr >>= 1;
-		    lfsr ^= (-lsb) & 0xB400u;
+            //lfsr ^= (-lsb) & 0xB400u;
+            lfsr ^= (unsigned)(-(signed)lsb) & 0xB400u;
 		    m_noise[i] = (lfsr & 0xff) ^ (lfsr >> 8);
 		}
 	}
@@ -10003,7 +10054,8 @@ char * darray::getDataInPos(int aPosition)
 			mAllocated = mUsed = 0;
 			return NULL;
 		}
-		else memset(newdata,0,newsize);	// new
+        else memset(newdata + mAllocated, 0, newsize - mAllocated); //
+        //memset(newdata,0,newsize);	// nope
 
 		mData = newdata;
 		mAllocated = newsize;			
@@ -10024,6 +10076,11 @@ void darray::put(int aData)
 	*s = aData;
 }
 //----../src/audiosource/speech/klatt.cpp--[&& Elements.def]-----------------------------------------------------------
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-braces" // warning : suggest braces aronud initialization of subobject
+#endif
+
 #ifndef PI
 #define PI 3.1415926535897932384626433832795f
 #endif
@@ -12485,9 +12542,9 @@ int klatt::phone_to_elm(char *aPhoneme, int aCount, darray *aElement)
 				if (!(p->mFeat & ELM_FEATURE_VWL))
 					stress = 0;
 
-				int stressdur = StressDur(p,stress);
+                int stressdur = StressDur(p,stress);
 
-				t += stressdur;
+                t += stressdur;
 
 				aElement->put(stressdur);
 				aElement->put(stress);
@@ -12783,6 +12840,9 @@ void klatt::init()
 	mNLast = 0;                       /* Previous output of random number generator  */
 	mGlotLast = 0;                    /* Previous value of glotout  */
 }
+#ifdef __clang__
+#   pragma clang diagnostic pop
+#endif
 //----../src/audiosource/speech/tts.cpp-----------------------------------------------------------------------
 #include <stdlib.h>
 #include <stdio.h>

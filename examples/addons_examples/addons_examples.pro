@@ -41,7 +41,7 @@ IMGUI_BASE_PATH=../..
 
 #DEFINES+= YES_IMGUIDOCK	# Testing only! To remove
 #DEFINES+= YES_IMGUISDF		# Testing only! To remove
-#DEFINES+= YES_IMGUISOLOUD #YES_IMGUISOLOUD_MODPLUG #YES_IMGUISOLOUD_SPEECH		# Testing only (with use_sdl2)! To remove
+#DEFINES+= YES_IMGUISOLOUD_ALL #YES_IMGUISOLOUD_MODPLUG #YES_IMGUISOLOUD_SPEECH		# Testing only (with use_sdl2)! To remove
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 
