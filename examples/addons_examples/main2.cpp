@@ -9,7 +9,7 @@ static bool gShowMainMenuBar = true;
 
 
 //#define NO_IMGUITABWINDOW         // Optional (but safer and useful to learn ImGui::PanelManager only)
-#define TEST_ICONS_INSIDE_TTF     // Optional to test FontAwesome (a ttf file containing icons)
+//#define TEST_ICONS_INSIDE_TTF     // Optional to test FontAwesome (a ttf file containing icons)
 
 #ifdef TEST_ICONS_INSIDE_TTF
 #include "fonts/Icons/FontAwesome/definitions.h"
