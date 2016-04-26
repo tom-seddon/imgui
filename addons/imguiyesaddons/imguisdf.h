@@ -129,7 +129,10 @@ enum SDFAnimationMode {
     SDF_AM_MANUAL,      // This mode uses a SdfAnimation (= a series of SdfAnimationKeyFrames)
     SDF_AM_FADE_IN,
     SDF_AM_FADE_OUT,
-    SDF_AM_TOGGLE,
+    SDF_AM_ZOOM_IN,
+    SDF_AM_ZOOM_OUT,
+    SDF_AM_BLINK,
+    SDF_AM_ZOOM_PULSE,
     SDF_AM_TYPING
 };
 struct SdfAnimationKeyFrame {

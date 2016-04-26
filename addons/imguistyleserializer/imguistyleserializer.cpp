@@ -465,8 +465,8 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	if (styleEnum == ImGuiStyle_OSXInverse) InvertStyleColors(style);
     }
     break;
-    case ImGuiStyle_Dark:
-    case ImGuiStyle_DarkInverse:	    {
+    case ImGuiStyle_DarkOpaque:
+    case ImGuiStyle_DarkOpaqueInverse:	    {
 	style.AntiAliasedLines = true;
 	style.AntiAliasedShapes = true;
 	style.CurveTessellationTol = 1.25f;
@@ -532,14 +532,14 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.26f, 0.26f, 0.63f, 1.00f);
 	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 
-	if (styleEnum == ImGuiStyle_DarkInverse) {
+	if (styleEnum == ImGuiStyle_DarkOpaqueInverse) {
 	    InvertStyleColors(style);
 	    style.Colors[ImGuiCol_PopupBg]	     = ImVec4(0.99f, 0.96f, 1.00f, 1.00f);
 	}
     }
     break;
-    case ImGuiStyle_Dougbinks:
-    case ImGuiStyle_DougbinksInverse:	    {
+    case ImGuiStyle_OSXOpaque:
+    case ImGuiStyle_OSXOpaqueInverse:	    {
 	//ImVec4 Full = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
 	style.FrameRounding = 3.0f;
 	style.Colors[ImGuiCol_Text]                  = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
@@ -586,7 +586,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_PopupBg]		     = ImVec4(1.00f, 1.00f, 1.00f, 0.94f);
 	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 
-	if (styleEnum == ImGuiStyle_DougbinksInverse) {
+	if (styleEnum == ImGuiStyle_OSXOpaqueInverse) {
 	    InvertStyleColors(style);
 	    //style.Colors[ImGuiCol_PopupBg]	     = ImVec4(0.3f, 0.3f, 0.4f, 1.00f);
 	}
@@ -599,7 +599,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 
     return true;
 }
-static const char* DefaultStyleNames[ImGuiStyle_Count]={"Default","Gray","OSX","Dark","Dougbinks","DefaultInverse","OSXInverse","DarkInverse","DougbinksInverse"};
+static const char* DefaultStyleNames[ImGuiStyle_Count]={"Default","Gray","OSX","OSXOpaque","DarkOpaque","DefaultInverse","OSXInverse","OSXOpaqueInverse","DarkOpaqueInverse"};
 const char** GetDefaultStyleNames() {return &DefaultStyleNames[0];}
 
 

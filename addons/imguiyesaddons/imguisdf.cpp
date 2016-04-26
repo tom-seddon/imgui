@@ -210,7 +210,29 @@ struct SdfTextChunk {
             break;
         case SDF_AM_FADE_OUT:  {if (tmpLocalTime<1.f)  tmpKeyFrame.alpha = 1.f-tmpLocalTime;else {setMute(true);animationStartTime=-1.f;animationMode=SDF_AM_NONE;return (tmpVisible=false);}}
             break;
-        case SDF_AM_TOGGLE:   {float tmp = (float) ((((int)(tmpLocalTime*100.f))%101)-50)*0.02f;tmpKeyFrame.alpha = tmp*tmp;}
+        case SDF_AM_ZOOM_IN:  {
+            if (tmpLocalTime<1.f)  {
+                tmpKeyFrame.alpha = tmpLocalTime;   // in [0,1]
+                tmpLocalTime = (2.0f-tmpLocalTime); // in [2,1]
+                tmpLocalTime = tmpLocalTime*tmpLocalTime*tmpLocalTime;  // in [8,1]
+                tmpKeyFrame.scale.x=tmpKeyFrame.scale.y = tmpLocalTime;
+            }
+            else  {setMute(false);animationStartTime=-1.f;animationMode=SDF_AM_NONE;}}
+            break;
+        case SDF_AM_ZOOM_OUT:  {
+            if (tmpLocalTime<1.f)  {
+                tmpKeyFrame.alpha = 1.f-tmpLocalTime;
+                tmpLocalTime = (1.0f+tmpLocalTime); // in [1,2]
+                tmpLocalTime = tmpLocalTime*tmpLocalTime*tmpLocalTime;  // in [1,8]
+                tmpKeyFrame.scale.x=tmpKeyFrame.scale.y = tmpLocalTime;
+            }
+            else {setMute(true);animationStartTime=-1.f;animationMode=SDF_AM_NONE;return (tmpVisible=false);}}
+            break;
+        case SDF_AM_BLINK:   {float tmp = (float) ((((int)(tmpLocalTime*100.f))%101)-50)*0.02f;tmpKeyFrame.alpha = tmp*tmp;}
+            break;
+        case SDF_AM_ZOOM_PULSE:   {
+            tmpKeyFrame.scale.x=tmpKeyFrame.scale.y = 1.0f+((0.005f*20.f)/(float)(this->props.maxNumTextLines))*sinf(tmpLocalTime*10.0f);
+            }
             break;
         case SDF_AM_TYPING:   {
             static const float timePerChar = 0.15f;
@@ -2001,7 +2023,7 @@ bool SdfTextChunkEdit(SdfTextChunk* sdfTextChunk, char* buffer, int bufferSize) 
 
     // Animations:
     ImGui::PushItemWidth(ImGui::GetWindowWidth()/6.f);
-    static const char* AnimationModeNames[SDF_AM_TYPING+1] = {"NONE","MANUAL","FADE_IN","FADE_OUT","TOGGLE","TYPING"};
+    static const char* AnimationModeNames[SDF_AM_TYPING+1] = {"NONE","MANUAL","FADE_IN","FADE_OUT","ZOOM_IN","ZOOM_OUT","BLINK","ZOOM_PULSE","TYPING"};
     int animationMode = (int) ImGui::SdfTextChunkGetAnimationMode(sdfTextChunk);
     if (ImGui::Combo("Animation Mode##SDFAnimationMode",&animationMode,&AnimationModeNames[0],sizeof(AnimationModeNames)/sizeof(AnimationModeNames[0])))    {
         ImGui::SdfTextChunkSetAnimationMode(sdfTextChunk,(SDFAnimationMode)animationMode);

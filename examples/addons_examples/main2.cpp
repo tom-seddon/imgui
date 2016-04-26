@@ -1042,6 +1042,18 @@ static void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
             static bool cb2=false;ImGui::CheckBoxTick("CheckBoxTick",&cb2);
             static bool cb3=false;ImGui::MenuItemCheckBox("MenuItemCheckBox",&cb3);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Probably this works only\ninside a Menu...");
+
+
+	    // We, we can use default fonts as well (std UTF8 chars):
+	    ImGui::Spacing();ImGui::Separator();
+	    ImGui::TextDisabled("Testing the same without any icon font");
+	    ImGui::Separator();ImGui::Spacing();
+
+	    static bool cb4=false;ImGui::CheckBoxFont("CheckBoxDefaultFonts",&cb4,"▣","□");
+	    static bool cb5=false;ImGui::CheckBoxFont("CheckBoxDefaultFonts2",&cb5,"■","□");
+	    static bool cb6=false;ImGui::CheckBoxFont("CheckBoxDefaultFonts3",&cb6,"▼","▶");
+	    static bool cb7=false;ImGui::CheckBoxFont("CheckBoxDefaultFonts4",&cb7,"▽","▷");
+
 #           endif //TEST_ICONS_INSIDE_TTF
         }
         else if (strcmp(wd.name,DockedWindowNames[3])==0) {
@@ -1379,6 +1391,11 @@ int main(int argc, char** argv)
             0x2921, 0x2922, // ⤡ ⤢
             0x263A, 0x263A, // ☺
             0x266A, 0x266A, // ♪
+            0x25B2, 0x25B5, // ▲ △ ▴ ▵
+            0x25BC, 0x25BF, // ▼ ▽ ▾ ▿
+            0x25B6, 0x25BB, //: ▶ ▷ ▸ ▹ ► ▻
+            0x25C0, 0x25C5, // ◀ ◁ ◂ ◃ ◄ ◅
+            0x25A0, 0x25A3, // ■ □ ▢ ▣
             0 // € ™ ↖ ⇖ ⬁ ⬉ ⤡ ⤢ ☺ ♪
         };
     const float fontSizeInPixels = 18.f;
