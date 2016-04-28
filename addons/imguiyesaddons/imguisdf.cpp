@@ -227,10 +227,95 @@ struct SdfTextChunk {
                 tmpKeyFrame.scale.x=tmpKeyFrame.scale.y = tmpLocalTime;
             }
             else {setMute(true);animationStartTime=-1.f;animationMode=SDF_AM_NONE;return (tmpVisible=false);}}
-            break;
+            break;    
+        case SDF_AM_APPEAR_IN:  {
+            if (tmpLocalTime<1.f)  {
+                tmpKeyFrame.alpha = tmpLocalTime;   // in [0,1]
+                tmpLocalTime *= tmpLocalTime;
+                tmpKeyFrame.scale.y = tmpLocalTime;
+            }
+            else  {setMute(false);animationStartTime=-1.f;animationMode=SDF_AM_NONE;}}
+        break;
+        case SDF_AM_APPEAR_OUT:  {
+            if (tmpLocalTime<1.f)  {
+                tmpKeyFrame.alpha = 1.f-tmpLocalTime;
+                tmpLocalTime = tmpKeyFrame.alpha;
+                tmpLocalTime *= tmpLocalTime;
+                tmpKeyFrame.scale.y = tmpLocalTime;
+            }
+            else {setMute(true);animationStartTime=-1.f;animationMode=SDF_AM_NONE;return (tmpVisible=false);}}
+        break;
+        case SDF_AM_LEFT_IN:  {
+            if (tmpLocalTime<1.f)  {
+                tmpKeyFrame.alpha = tmpLocalTime;   // in [0,1]
+                tmpLocalTime *= tmpLocalTime;
+                tmpKeyFrame.offset.x = -1.0f + tmpLocalTime;
+            }
+            else  {setMute(false);animationStartTime=-1.f;animationMode=SDF_AM_NONE;}}
+        break;
+        case SDF_AM_LEFT_OUT:  {
+            if (tmpLocalTime<1.f)  {
+                tmpKeyFrame.alpha = 1.f-tmpLocalTime;
+                tmpLocalTime = tmpKeyFrame.alpha;
+                tmpLocalTime *= tmpLocalTime;
+                tmpKeyFrame.offset.x = -1.0f + tmpLocalTime;
+            }
+            else {setMute(true);animationStartTime=-1.f;animationMode=SDF_AM_NONE;return (tmpVisible=false);}}
+        break;
+         case SDF_AM_RIGHT_IN:  {
+            if (tmpLocalTime<1.f)  {
+                tmpKeyFrame.alpha = tmpLocalTime;   // in [0,1]
+                tmpLocalTime *= tmpLocalTime;
+                tmpKeyFrame.offset.x = 1.0f - tmpLocalTime;
+            }
+            else  {setMute(false);animationStartTime=-1.f;animationMode=SDF_AM_NONE;}}
+        break;
+        case SDF_AM_RIGHT_OUT:  {
+            if (tmpLocalTime<1.f)  {
+                tmpKeyFrame.alpha = 1.f-tmpLocalTime;
+                tmpLocalTime = tmpKeyFrame.alpha;
+                tmpLocalTime *= tmpLocalTime;
+                tmpKeyFrame.offset.x = 1.0f - tmpLocalTime;
+            }
+            else {setMute(true);animationStartTime=-1.f;animationMode=SDF_AM_NONE;return (tmpVisible=false);}}
+        break;
+        case SDF_AM_TOP_IN:  {
+            if (tmpLocalTime<1.f)  {
+                tmpKeyFrame.alpha = tmpLocalTime;   // in [0,1]
+                tmpLocalTime *= tmpLocalTime;
+                tmpKeyFrame.offset.y = -1.0f + tmpLocalTime;
+            }
+            else  {setMute(false);animationStartTime=-1.f;animationMode=SDF_AM_NONE;}}
+        break;
+        case SDF_AM_TOP_OUT:  {
+            if (tmpLocalTime<1.f)  {
+                tmpKeyFrame.alpha = 1.f-tmpLocalTime;
+                tmpLocalTime = tmpKeyFrame.alpha;
+                tmpLocalTime *= tmpLocalTime;
+                tmpKeyFrame.offset.y = -1.0f + tmpLocalTime;
+            }
+            else {setMute(true);animationStartTime=-1.f;animationMode=SDF_AM_NONE;return (tmpVisible=false);}}
+        break;
+         case SDF_AM_BOTTOM_IN:  {
+            if (tmpLocalTime<1.f)  {
+                tmpKeyFrame.alpha = tmpLocalTime;   // in [0,1]
+                tmpLocalTime *= tmpLocalTime;
+                tmpKeyFrame.offset.y = 1.0f - tmpLocalTime;
+            }
+            else  {setMute(false);animationStartTime=-1.f;animationMode=SDF_AM_NONE;}}
+        break;
+        case SDF_AM_BOTTOM_OUT:  {
+            if (tmpLocalTime<1.f)  {
+                tmpKeyFrame.alpha = 1.f-tmpLocalTime;
+                tmpLocalTime = tmpKeyFrame.alpha;
+                tmpLocalTime *= tmpLocalTime;
+                tmpKeyFrame.offset.y = 1.0f - tmpLocalTime;
+            }
+            else {setMute(true);animationStartTime=-1.f;animationMode=SDF_AM_NONE;return (tmpVisible=false);}}
+        break;
         case SDF_AM_BLINK:   {float tmp = (float) ((((int)(tmpLocalTime*100.f))%101)-50)*0.02f;tmpKeyFrame.alpha = tmp*tmp;}
             break;
-        case SDF_AM_ZOOM_PULSE:   {
+        case SDF_AM_PULSE:   {
             tmpKeyFrame.scale.x=tmpKeyFrame.scale.y = 1.0f+((0.005f*20.f)/(float)(this->props.maxNumTextLines))*sinf(tmpLocalTime*10.0f);
             }
             break;
@@ -271,7 +356,7 @@ struct SdfTextChunk {
             break;
         }
 
-    const bool applyAnimationParams = true; // optional
+    const bool applyAnimationParams = true;
     if (applyAnimationParams)   {
         // Here we apply animationParams to the calculated fields
         tmpKeyFrame.alpha*=globalParams.alpha;
@@ -2023,7 +2108,10 @@ bool SdfTextChunkEdit(SdfTextChunk* sdfTextChunk, char* buffer, int bufferSize) 
 
     // Animations:
     ImGui::PushItemWidth(ImGui::GetWindowWidth()/6.f);
-    static const char* AnimationModeNames[SDF_AM_TYPING+1] = {"NONE","MANUAL","FADE_IN","FADE_OUT","ZOOM_IN","ZOOM_OUT","BLINK","ZOOM_PULSE","TYPING"};
+    static const char* AnimationModeNames[SDF_AM_TYPING+1] = {"NONE","MANUAL",
+                                                              "FADE_IN","ZOOM_IN","APPEAR_IN","LEFT_IN","RIGHT_IN","TOP_IN","BOTTOM_IN",
+                                                              "FADE_OUT","ZOOM_OUT","APPEAR_OUT","LEFT_OUT","RIGHT_OUT","TOP_OUT","BOTTOM_OUT",
+                                                              "BLINK","PULSE","TYPING"};
     int animationMode = (int) ImGui::SdfTextChunkGetAnimationMode(sdfTextChunk);
     if (ImGui::Combo("Animation Mode##SDFAnimationMode",&animationMode,&AnimationModeNames[0],sizeof(AnimationModeNames)/sizeof(AnimationModeNames[0])))    {
         ImGui::SdfTextChunkSetAnimationMode(sdfTextChunk,(SDFAnimationMode)animationMode);

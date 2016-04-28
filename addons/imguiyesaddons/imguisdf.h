@@ -127,12 +127,25 @@ void SdfRender(const ImVec4 *pViewportOverride=NULL);   //pViewportOverride, if 
 enum SDFAnimationMode {
     SDF_AM_NONE = 0,
     SDF_AM_MANUAL,      // This mode uses a SdfAnimation (= a series of SdfAnimationKeyFrames)
+
     SDF_AM_FADE_IN,
-    SDF_AM_FADE_OUT,
     SDF_AM_ZOOM_IN,
+    SDF_AM_APPEAR_IN,
+    SDF_AM_LEFT_IN,
+    SDF_AM_RIGHT_IN,
+    SDF_AM_TOP_IN,
+    SDF_AM_BOTTOM_IN,
+
+    SDF_AM_FADE_OUT,
     SDF_AM_ZOOM_OUT,
+    SDF_AM_APPEAR_OUT,
+    SDF_AM_LEFT_OUT,
+    SDF_AM_RIGHT_OUT,
+    SDF_AM_TOP_OUT,
+    SDF_AM_BOTTOM_OUT,
+
     SDF_AM_BLINK,
-    SDF_AM_ZOOM_PULSE,
+    SDF_AM_PULSE,
     SDF_AM_TYPING
 };
 struct SdfAnimationKeyFrame {
