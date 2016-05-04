@@ -293,6 +293,218 @@ struct AnimatedImage {
 bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspectRatio,float& zoom,ImVec2& zoomCenter,int panMouseButtonDrag=1,int resetZoomAndPanMouseButton=2,const ImVec2& zoomMaxAndZoomStep=ImVec2(16.f,1.025f));
 
 
+// Moves: window->DC.CursorPos.x+= the indent(s) of a TreeNode
+void TreeNodeIndent(int numIndents=1);
+
+// Preliminar generic tree view implementation
+class TreeViewNode {
+protected:
+    friend class TreeView;
+public:
+    enum State {
+        STATE_NONE = 0,
+        STATE_OPEN = 1,
+        STATE_SELECTED = 1<<2,
+        STATE_CHECKED = 1<<3,
+        STATE_DEFAULT = 1<<4,
+        STATE_DISABLED = 1<<5
+    };
+    mutable int state;
+
+    enum Mode {
+        MODE_NONE = 0,
+
+        MODE_ROOT = 1,
+        MODE_INTERMEDIATE = 2,
+        MODE_LEAF = 4,
+
+        MODE_ROOT_INTERMEDIATE = 3,
+        MODE_ROOT_LEAF = 5,
+        MODE_INTERMEDIATE_LEAF = 6,
+        MODE_ALL = 7,
+    };
+
+    struct Data {
+        // TODO: serialize "Data"
+        char* displayName;      // can't be NULL (it's set to "" when NULL)
+        char* tooltip;          // optional (can be NULL)
+        char* text;             // user stuff, optional (can be NULL)
+        int   id;               // user stuff
+        Data(const char* _displayedName=NULL,const char* _tooltip=NULL,const char* _text=NULL,const int _id=0) : displayName(NULL),tooltip(NULL),text(NULL),id(0) {
+            set(_displayedName,_tooltip,_text,_id);
+        }
+        Data(const Data& o) : displayName(NULL),tooltip(NULL),text(NULL),id(0) {*this=o;}
+        ~Data() {
+            if (displayName) {ImGui::MemFree(displayName);displayName=NULL;}
+            if (tooltip)     {ImGui::MemFree(tooltip);tooltip=NULL;}
+            if (text)        {ImGui::MemFree(text);text=NULL;}
+            id=0;
+        }
+        void set(const char* _displayName=NULL,const char* _tooltip=NULL,const char* _text=NULL,const int _id=0) {
+            const char e = '\0';
+
+            if (text) {ImGui::MemFree(text);text=NULL;}
+            if (_text)  {
+                const int sz = strlen(_text);
+                text = (char*) ImGui::MemAlloc(sz+1);strcpy(text,_text);
+            }
+
+            if (tooltip) {ImGui::MemFree(tooltip);tooltip=NULL;}
+            if (_tooltip)  {
+                const int sz = strlen(_tooltip);
+                tooltip = (char*) ImGui::MemAlloc(sz+1);strcpy(tooltip,_tooltip);
+            }
+
+            if (displayName) {ImGui::MemFree(displayName);displayName=NULL;}
+            if (!_displayName) _displayName=&e;
+            if (_displayName)   {
+                const int sz = strlen(_displayName);
+                displayName = (char*) ImGui::MemAlloc(sz+1);strcpy(displayName,_displayName);
+            }
+
+            id = _id;
+        }
+        const Data& operator=(const Data& o) {
+            set(o.displayName,o.tooltip,o.text,o.id);
+            return *this;
+        }
+    };
+protected:
+
+    static TreeViewNode* CreateNode(const Data& _data,TreeViewNode* _parentNode=NULL,int nodeIndex=-1,bool addEmptyChildNodeVector=false);
+
+    void render(void *ptr, int numIndents=1);
+
+public:
+
+    TreeViewNode* addChildNode(const Data& _data,int nodeIndex=-1,bool addEmptyChildNodeVector=false)    {
+        return CreateNode(_data,this,nodeIndex,addEmptyChildNodeVector);
+    }
+    static void DeleteNode(TreeViewNode* n);
+
+    class TreeView& getTreeView();
+    const class TreeView& getTreeView() const;
+    TreeViewNode* getParentNode();              // Use TreeView::getParentNode(TreeViewNode* n): it's faster.
+    const TreeViewNode* getParentNode() const;  // Use TreeView::getParentNode(TreeViewNode* n): it's faster.
+    int getNodeIndex() const;
+    inline bool isLeafNode() const {return childNodes==NULL;}       // Please note that non-leaf nodes can have childNodes->size()==0
+    inline bool isRootNode() const {return !parentNode || !parentNode->parentNode;}
+    inline int getNumChildNodes() const {return childNodes ? childNodes->size() : 0;}
+    inline TreeViewNode* getChildNode(int index=0) {return (childNodes && childNodes->size()>index) ? (*childNodes)[index] : NULL;}
+    inline const TreeViewNode* getChildNode(int index=0) const {return (childNodes && childNodes->size()>index) ? (*childNodes)[index] : NULL;}
+
+    inline void addState(int stateFlag) const {state|=stateFlag;}
+    inline void removeState(int stateFlag) const {state&=~stateFlag;}
+    inline void toggleState(int stateFlag) const {state^=stateFlag;}
+    inline bool isStatePresent(int stateFlag) const {return (state&stateFlag);}
+    inline bool isStateMissing(int stateFlag) const {return !(state&stateFlag);}
+
+    void addAllDescendantsState(int stateFlag) const;
+    void removeAllDescendantsState(int stateFlag) const;
+    bool isStatePresentInAllDescendants(int stateFlag) const;
+    bool isStateMissingInAllDescendants(int stateFlag) const;
+
+
+    // To remove
+/*
+    void dbgDisplay(const int indent = 0) const {
+        for (int i=0;i<indent;i++) printf(" ");
+        printf("%s (%s) (%d) [parent=%s]\n",data.displayName?data.displayName:"NULL",data.text?data.text:"NULL",data.id,parentNode?(parentNode->data.displayName):"NULL");
+        if (childNodes && childNodes->size()>0) {
+            for (int i=0;i<childNodes->size();i++) {
+                TreeViewNode* n = (*childNodes)[i];
+                if (n) {n->dbgDisplay(indent+3);}
+            }
+        }
+    }
+*/
+
+protected:
+
+    TreeViewNode(const TreeViewNode::Data& _data=TreeViewNode::Data(), TreeViewNode* _parentNode=NULL, int nodeIndex=-1, bool addEmptyChildNodeVector=false);
+    virtual ~TreeViewNode();
+
+    Data data;
+
+    TreeViewNode* parentNode;
+    ImVector<TreeViewNode*>* childNodes;
+
+    inline unsigned int getMode() const {
+        int m = MODE_NONE;if (childNodes==NULL) m|=MODE_LEAF;
+        if (!parentNode || !parentNode->parentNode) m|=MODE_ROOT;
+        if (m==MODE_NONE) m = MODE_INTERMEDIATE;return m;
+    }
+    inline static bool MatchMode(unsigned int m,unsigned int nodeM) {
+        // Hp) nodeM can't be MODE_NONE
+        return (m==MODE_ALL || (m!=MODE_NONE && (m&nodeM)));
+    }
+};
+class TreeView : protected TreeViewNode {
+protected:
+friend class TreeViewNode;
+public:
+
+    TreeView(Mode _selectionMode=MODE_ALL,bool _allowMultipleSelection=false,Mode _checkboxMode=MODE_NONE,bool _allowAutoCheckboxBehaviour=true);
+    virtual ~TreeView();
+    bool isInited() {return inited;}
+    void render();  // Main method (makes inited = true).
+
+    inline int getNumRootNodes() const {return childNodes->size();}
+    inline TreeViewNode* getRootNode(int index=0) {return ((childNodes->size()>index) ? (*childNodes)[index] : NULL);}
+    inline const TreeViewNode* getRootNode(int index=0) const {return ((childNodes->size()>index) ? (*childNodes)[index] : NULL);}
+
+    inline TreeViewNode* getParentNode(TreeViewNode* node) {IM_ASSERT(node);return (node->parentNode!=this) ? node->parentNode : NULL;}
+    inline const TreeViewNode* getParentNode(const TreeViewNode* node) const {IM_ASSERT(node);return (node->parentNode!=this) ? node->parentNode : NULL;}
+
+    inline TreeViewNode* addRootNode(const TreeViewNode::Data& _data,int nodeIndex=-1,bool addEmptyChildNodeVector=false)    {
+        return TreeViewNode::CreateNode(_data,this,nodeIndex,addEmptyChildNodeVector);
+    }
+    inline static void DeleteNode(TreeViewNode* n) {TreeViewNode::DeleteNode(n);}    
+
+    // These methods are related to the whole node hierarchy
+    void addAllDescendantsState(int stateFlag) const {TreeViewNode::addAllDescendantsState(stateFlag);}
+    void removeAllDescendantsState(int stateFlag) const {TreeViewNode::removeAllDescendantsState(stateFlag);}
+    bool isStatePresentInAllDescendants(int stateFlag) const {return TreeViewNode::isStatePresentInAllDescendants(stateFlag);}
+    bool isStateMissingInAllDescendants(int stateFlag) const {return TreeViewNode::isStateMissingInAllDescendants(stateFlag);}
+
+    // Callbacks:
+    typedef void (*TreeViewNodeCallback)(TreeViewNode* node,TreeView& parent,void* userPtr);
+    void setTreeViewNodePopupMenuDrawerCb(TreeViewNodeCallback cb,void* userPtr=NULL) {treeViewNodePopupMenuDrawerCb = cb;treeViewNodePopupMenuDrawerCbUserPtr = userPtr;}
+    inline static const char* GetTreeViewNodePopupMenuName() {return "TreeViewNodePopupMenu";}  // you can use this name inside the callback: e.g. ImGui::BeginPopup(ImGui::TreeView::GetTreeViewNodePopupMenuName());
+    // only states that are modified through mouse interaction are reported (and checks produced by the "allowAutoCheckboxBehaviour" are NOT reported)
+    typedef void (*TreeViewNodeStateChangedCallback)(TreeViewNode* node,TreeView& parent,State state,bool wasStateRemoved,void* userPtr);
+    void setTreeViewNodeStateChangedCb(TreeViewNodeStateChangedCallback cb,void* userPtr=NULL) {treeViewNodeStateChangedCb = cb;treeViewNodeStateChangedCbUserPtr = userPtr;}
+    // usable mainly on leaf nodes for opening files...
+    void setTreeViewNodeDoubleClickedCb(TreeViewNodeCallback cb,void* userPtr=NULL) {treeViewNodeDoubleClickedCb = cb;treeViewNodeDoubleClickedCbUserPtr = userPtr;}
+    // must return true if icon is hovered. If set, use ImGui::SameLine() before returning
+    typedef bool (*TreeViewNodeDrawIconCallback)(TreeViewNode* node,TreeView& parent,void* userPtr);
+    void setTreeViewNodeDrawIconCb(TreeViewNodeDrawIconCallback cb,void* userPtr=NULL) {treeViewNodeDrawIconCb = cb;treeViewNodeDrawIconCbUserPtr = userPtr;}
+
+
+    // we leave these public...
+    unsigned int selectionMode;     // it SHOULD be a TreeViewNode::Mode, but we use a uint to fit ImGui::ComboFlag(...) directly (to change)
+    bool allowMultipleSelection;
+
+    unsigned int checkboxMode;
+    bool allowAutoCheckboxBehaviour;
+
+protected:
+    TreeViewNodeCallback treeViewNodePopupMenuDrawerCb;
+    void* treeViewNodePopupMenuDrawerCbUserPtr;
+    TreeViewNodeStateChangedCallback treeViewNodeStateChangedCb;
+    void* treeViewNodeStateChangedCbUserPtr;
+    TreeViewNodeCallback treeViewNodeDoubleClickedCb;
+    void* treeViewNodeDoubleClickedCbUserPtr;
+    TreeViewNodeDrawIconCallback treeViewNodeDrawIconCb;
+    void* treeViewNodeDrawIconCbUserPtr;
+
+    bool inited;
+
+};
+typedef TreeViewNode::Data TreeViewNodeData;
+typedef TreeViewNode::State TreeViewNodeState;
+typedef TreeViewNode::Mode TreeViewNodeMode;
+
 
 
 } // namespace ImGui

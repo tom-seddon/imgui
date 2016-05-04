@@ -639,6 +639,50 @@ void DrawGL()	// Mandatory
         static float zoom = 1.f;static ImVec2 pan(.5f,.5f);
         // This requires     ImGui::GetIO().FontAllowUserScaling = false;
         ImGui::ImageZoomAndPan(reinterpret_cast<ImTextureID>(myImageTextureId2),ImVec2(0,150),1.f,zoom,pan);    // aspect ratio can be aero for stretch mode
+
+        ImGui::Spacing();
+        ImGui::Text("Generic TreeView Implementation (WIP):");
+        {
+        static ImGui::TreeView tv;
+        // Optional tuff to change some tv options on the fly -------------------------------------
+        {
+        bool changed = false;
+        ImGui::AlignFirstTextHeightToWidgets();ImGui::TextDisabled("Selection Mode:");ImGui::SameLine();
+        changed|=ImGui::CheckboxFlags("Root##TreeViewSelectRoot",&tv.selectionMode,ImGui::TreeViewNode::MODE_ROOT);ImGui::SameLine();
+        changed|=ImGui::CheckboxFlags("Intermediate##TreeViewSelectIntermediate",&tv.selectionMode,ImGui::TreeViewNode::MODE_INTERMEDIATE);ImGui::SameLine();
+        changed|=ImGui::CheckboxFlags("Leaf##TreeViewSelectLeaf",&tv.selectionMode,ImGui::TreeViewNode::MODE_LEAF);
+        if (tv.selectionMode!=ImGui::TreeViewNode::MODE_NONE) {
+            ImGui::SameLine();
+            changed|=ImGui::Checkbox("MultiSelect##TreeViewMultiSelect",&tv.allowMultipleSelection);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","using CTRL + LMB");
+        }
+        if (changed) tv.removeAllDescendantsState(ImGui::TreeViewNode::STATE_SELECTED);
+
+        changed = false;
+        ImGui::AlignFirstTextHeightToWidgets();ImGui::TextDisabled("Checkbox Mode:");ImGui::SameLine();
+        changed|=ImGui::CheckboxFlags("Root##TreeViewCheckboxRoot",&tv.checkboxMode,ImGui::TreeViewNode::MODE_ROOT);ImGui::SameLine();
+        changed|=ImGui::CheckboxFlags("Intermediate##TreeViewCheckboxIntermediate",&tv.checkboxMode,ImGui::TreeViewNode::MODE_INTERMEDIATE);ImGui::SameLine();
+        changed|=ImGui::CheckboxFlags("Leaf##TreeViewCheckboxLeaf",&tv.checkboxMode,ImGui::TreeViewNode::MODE_LEAF);
+        if (tv.checkboxMode!=ImGui::TreeViewNode::MODE_NONE) {
+            ImGui::SameLine();
+            changed|=ImGui::Checkbox("Automatic##TreeViewAutoCheckChildNodes",&tv.allowAutoCheckboxBehaviour);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","auto parent/child checks");
+        }
+        if (changed) tv.removeAllDescendantsState(ImGui::TreeViewNode::STATE_CHECKED);
+        }
+        // ----------------------------------------------------------------------------------------------
+        if (!tv.isInited()) {
+                ImGui::TreeViewNode* n = tv.addRootNode(ImGui::TreeViewNodeData("FirstRoot Node"));
+                n = tv.addRootNode(ImGui::TreeViewNodeData("SecondRoot Node"));
+                n->addChildNode(ImGui::TreeViewNodeData("SecondRoot-FirstChild Node"));
+                ImGui::TreeViewNode* n2 = n->addChildNode(ImGui::TreeViewNodeData("SecondRoot-SecondChild Node"));
+                n2->addChildNode(ImGui::TreeViewNodeData("SecondRoot-SecondChild-FirstChild Node"));
+                n = tv.addRootNode(ImGui::TreeViewNodeData("ThirdRoot Node"));
+
+                //for (int i=0;i<tv.numRootNodes();i++) tv.getRootNode(i)->dbgDisplay();
+            }
+            tv.render();
+        }
 #       else //NO_IMGUIVARIOUSCONTROLS
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUIVARIOUSCONTROLS
