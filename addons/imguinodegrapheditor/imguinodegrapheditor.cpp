@@ -500,7 +500,7 @@ void NodeGraphEditor::render()
 
         bool nodeInEditMode = false;
         ImGui::BeginGroup(); // Lock horizontal position
-        ImGui::SetNextTreeNodeOpened(node->isOpen,ImGuiSetCond_Always);
+        ImGui::SetNextTreeNodeOpen(node->isOpen,ImGuiSetCond_Always);
         if (ImGui::TreeNode(node,"%s","")) {ImGui::TreePop();node->isOpen = true;}
         else node->isOpen = false;
         ImGui::SameLine(0,0);
@@ -807,7 +807,7 @@ void NodeGraphEditor::render()
     if (open_context_menu || open_delete_only_context_menu)  {
         if (node_hovered_in_list) selectedNode = node_hovered_in_list;
         if (node_hovered_in_scene) selectedNode = node_hovered_in_scene;
-        ImGuiState& g = *GImGui; while (g.OpenedPopupStack.size() > 0) g.OpenedPopupStack.pop_back();   // Close all existing context-menus
+        ImGuiState& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
         ImGui::PushID(selectedNode);
         if (open_delete_only_context_menu) ImGui::OpenPopup("delete_only_context_menu");
         else if (open_context_menu) ImGui::OpenPopup("context_menu");

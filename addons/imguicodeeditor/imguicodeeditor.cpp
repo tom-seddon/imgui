@@ -2459,7 +2459,7 @@ void CodeEditor::render()   {
                 }
                 const bool wasFolded = foldableLine->isFolded();
                 ImGui::PushStyleColor(ImGuiCol_Text,ImColor(style.color_syntax_highlighting[sht]));
-                ImGui::SetNextTreeNodeOpened(!wasFolded,ImGuiSetCond_Always);
+                ImGui::SetNextTreeNodeOpen(!wasFolded,ImGuiSetCond_Always);
                 if (!ImGui::TreeNode(line,"%s",""))  {
                     if (!wasFolded)   {
                         // process next lines to make them visible someway

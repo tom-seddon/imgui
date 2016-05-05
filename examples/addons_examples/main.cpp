@@ -646,6 +646,7 @@ void DrawGL()	// Mandatory
         static ImGui::TreeView tv;
         // Optional tuff to change some tv options on the fly -------------------------------------
         {
+	ImGui::Separator();
         bool changed = false;
         ImGui::AlignFirstTextHeightToWidgets();ImGui::TextDisabled("Selection Mode:");ImGui::SameLine();
         changed|=ImGui::CheckboxFlags("Root##TreeViewSelectRoot",&tv.selectionMode,ImGui::TreeViewNode::MODE_ROOT);ImGui::SameLine();
@@ -656,7 +657,7 @@ void DrawGL()	// Mandatory
             changed|=ImGui::Checkbox("MultiSelect##TreeViewMultiSelect",&tv.allowMultipleSelection);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","using CTRL + LMB");
         }
-        if (changed) tv.removeAllDescendantsState(ImGui::TreeViewNode::STATE_SELECTED);
+	if (changed) tv.removeStateFromAllDescendants(ImGui::TreeViewNode::STATE_SELECTED);
 
         changed = false;
         ImGui::AlignFirstTextHeightToWidgets();ImGui::TextDisabled("Checkbox Mode:");ImGui::SameLine();
@@ -668,11 +669,18 @@ void DrawGL()	// Mandatory
             changed|=ImGui::Checkbox("Automatic##TreeViewAutoCheckChildNodes",&tv.allowAutoCheckboxBehaviour);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","auto parent/child checks");
         }
-        if (changed) tv.removeAllDescendantsState(ImGui::TreeViewNode::STATE_CHECKED);
+	if (changed) tv.removeStateFromAllDescendants(ImGui::TreeViewNode::STATE_CHECKED);
         }
-        // ----------------------------------------------------------------------------------------------
+	ImGui::Checkbox("Inherit Disabled Look##TreeViewInheritDisabledLook",&tv.inheritDisabledLook);
+	ImGui::Separator();
+	// ----------------------------------------------------------------------------------------------
         if (!tv.isInited()) {
-                ImGui::TreeViewNode* n = tv.addRootNode(ImGui::TreeViewNodeData("FirstRoot Node"));
+		ImGui::TreeViewNode* n = tv.addRootNode(ImGui::TreeViewNodeData("Some nations"));
+		n->addChildNode(ImGui::TreeViewNodeData("Ireland"));
+		n->addChildNode(ImGui::TreeViewNodeData("Sweden"));
+		n->addChildNode(ImGui::TreeViewNodeData("Germany"));
+		n->addChildNode(ImGui::TreeViewNodeData("Mexico"));
+		n->addChildNode(ImGui::TreeViewNodeData("China"));
                 n = tv.addRootNode(ImGui::TreeViewNodeData("SecondRoot Node"));
                 n->addChildNode(ImGui::TreeViewNodeData("SecondRoot-FirstChild Node"));
                 ImGui::TreeViewNode* n2 = n->addChildNode(ImGui::TreeViewNodeData("SecondRoot-SecondChild Node"));

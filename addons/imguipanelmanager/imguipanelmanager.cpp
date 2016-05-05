@@ -126,7 +126,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     bool window_was_visible = (window->LastFrameActive == current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
     if (flags & ImGuiWindowFlags_Popup)
     {
-        ImGuiPopupRef& popup_ref = g.OpenedPopupStack[g.CurrentPopupStack.Size];
+        ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.CurrentPopupStack.Size];
         window_was_visible &= (window->PopupID == popup_ref.PopupID);
         window_was_visible &= (window == popup_ref.Window);
         popup_ref.Window = window;

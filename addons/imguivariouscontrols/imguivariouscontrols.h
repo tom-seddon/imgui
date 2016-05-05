@@ -297,17 +297,23 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
 void TreeNodeIndent(int numIndents=1);
 
 // Preliminar generic tree view implementation
+// TODO:
+// 1) add serialization
 class TreeViewNode {
 protected:
     friend class TreeView;
+    friend struct MyTreeViewHelperStruct;
 public:
     enum State {
-        STATE_NONE = 0,
-        STATE_OPEN = 1,
-        STATE_SELECTED = 1<<2,
-        STATE_CHECKED = 1<<3,
-        STATE_DEFAULT = 1<<4,
-        STATE_DISABLED = 1<<5
+        STATE_NONE      = 0,
+        STATE_OPEN      = 1,
+        STATE_SELECTED  = 1<<2,
+        STATE_CHECKED   = 1<<3,
+        STATE_DEFAULT   = 1<<4,     // user state (but its look is hard-coded)
+        STATE_DISABLED  = 1<<5,     // user state (but its look is hard-coded)
+        STATE_USER1     = 1<<6,     // user state
+        STATE_USER2     = 1<<7,     // user state
+        STATE_USER3     = 1<<8      // user state
     };
     mutable int state;
 
@@ -325,50 +331,42 @@ public:
     };
 
     struct Data {
-        // TODO: serialize "Data"
         char* displayName;      // can't be NULL (it's set to "" when NULL)
         char* tooltip;          // optional (can be NULL)
-        char* text;             // user stuff, optional (can be NULL)
-        int   id;               // user stuff
-        Data(const char* _displayedName=NULL,const char* _tooltip=NULL,const char* _text=NULL,const int _id=0) : displayName(NULL),tooltip(NULL),text(NULL),id(0) {
-            set(_displayedName,_tooltip,_text,_id);
+        char* userText;         // user stuff, optional (can be NULL)
+        int   userId;           // user stuff
+        Data(const char* _displayedName=NULL,const char* _tooltip=NULL,const char* _userText=NULL,const int _id=0) : displayName(NULL),tooltip(NULL),userText(NULL),userId(0) {
+            set(_displayedName,_tooltip,_userText,_id);
         }
-        Data(const Data& o) : displayName(NULL),tooltip(NULL),text(NULL),id(0) {*this=o;}
+        Data(const Data& o) : displayName(NULL),tooltip(NULL),userText(NULL),userId(0) {*this=o;}
         ~Data() {
-            if (displayName) {ImGui::MemFree(displayName);displayName=NULL;}
-            if (tooltip)     {ImGui::MemFree(tooltip);tooltip=NULL;}
-            if (text)        {ImGui::MemFree(text);text=NULL;}
-            id=0;
+            if (displayName){ImGui::MemFree(displayName);displayName=NULL;}
+            if (tooltip)    {ImGui::MemFree(tooltip);tooltip=NULL;}
+            if (userText)   {ImGui::MemFree(userText);userText=NULL;}
+            userId=0;
         }
-        void set(const char* _displayName=NULL,const char* _tooltip=NULL,const char* _text=NULL,const int _id=0) {
+        void set(const char* _displayName=NULL,const char* _tooltip=NULL,const char* _userText=NULL,const int _id=0) {
+            SetString(displayName,_displayName,false);
+            SetString(tooltip,_tooltip,true);
+            SetString(userText,_userText,true);
+            userId = _id;
+        }
+        inline static void SetString(char*& outText,const char* text,bool allowNNull=true) {
+            if (outText) {ImGui::MemFree(outText);outText=NULL;}
             const char e = '\0';
-
-            if (text) {ImGui::MemFree(text);text=NULL;}
-            if (_text)  {
-                const int sz = strlen(_text);
-                text = (char*) ImGui::MemAlloc(sz+1);strcpy(text,_text);
+            if (!text && !allowNNull) text=&e;
+            if (text)  {
+                const int sz = strlen(text);
+                outText = (char*) ImGui::MemAlloc(sz+1);strcpy(outText,text);
             }
-
-            if (tooltip) {ImGui::MemFree(tooltip);tooltip=NULL;}
-            if (_tooltip)  {
-                const int sz = strlen(_tooltip);
-                tooltip = (char*) ImGui::MemAlloc(sz+1);strcpy(tooltip,_tooltip);
-            }
-
-            if (displayName) {ImGui::MemFree(displayName);displayName=NULL;}
-            if (!_displayName) _displayName=&e;
-            if (_displayName)   {
-                const int sz = strlen(_displayName);
-                displayName = (char*) ImGui::MemAlloc(sz+1);strcpy(displayName,_displayName);
-            }
-
-            id = _id;
         }
         const Data& operator=(const Data& o) {
-            set(o.displayName,o.tooltip,o.text,o.id);
+            set(o.displayName,o.tooltip,o.userText,o.userId);
             return *this;
         }
     };
+
+
 protected:
 
     static TreeViewNode* CreateNode(const Data& _data,TreeViewNode* _parentNode=NULL,int nodeIndex=-1,bool addEmptyChildNodeVector=false);
@@ -387,11 +385,18 @@ public:
     TreeViewNode* getParentNode();              // Use TreeView::getParentNode(TreeViewNode* n): it's faster.
     const TreeViewNode* getParentNode() const;  // Use TreeView::getParentNode(TreeViewNode* n): it's faster.
     int getNodeIndex() const;
+    void moveNodeTo(int nodeIndex);
     inline bool isLeafNode() const {return childNodes==NULL;}       // Please note that non-leaf nodes can have childNodes->size()==0
     inline bool isRootNode() const {return !parentNode || !parentNode->parentNode;}
     inline int getNumChildNodes() const {return childNodes ? childNodes->size() : 0;}
     inline TreeViewNode* getChildNode(int index=0) {return (childNodes && childNodes->size()>index) ? (*childNodes)[index] : NULL;}
     inline const TreeViewNode* getChildNode(int index=0) const {return (childNodes && childNodes->size()>index) ? (*childNodes)[index] : NULL;}
+
+    void sortChildNodes(bool recursive,int (*comp)(const void *, const void *));
+    void sortChildNodesByDisplayName(bool recursive=false);
+    void sortChildNodesByTooltip(bool recursive=false);
+    void sortChildNodesByUserText(bool recursive=false);
+    void sortChildNodesByUserId(bool recursive=false);
 
     inline void addState(int stateFlag) const {state|=stateFlag;}
     inline void removeState(int stateFlag) const {state&=~stateFlag;}
@@ -399,10 +404,18 @@ public:
     inline bool isStatePresent(int stateFlag) const {return (state&stateFlag);}
     inline bool isStateMissing(int stateFlag) const {return !(state&stateFlag);}
 
-    void addAllDescendantsState(int stateFlag) const;
-    void removeAllDescendantsState(int stateFlag) const;
+    void addStateToAllChildNodes(int stateFlag, bool recursive = false) const;
+    void removeStateFromAllChildNodes(int stateFlag, bool recursive = false) const;
+    bool isStatePresentInAllChildNodes(int stateFlag) const;
+    bool isStateMissingInAllChildNodes(int stateFlag) const;
+
+    void addStateToAllDescendants(int stateFlag) const {addStateToAllChildNodes(stateFlag,true);}
+    void removeStateFromAllDescendants(int stateFlag) const {removeStateFromAllChildNodes(stateFlag,true);}
     bool isStatePresentInAllDescendants(int stateFlag) const;
     bool isStateMissingInAllDescendants(int stateFlag) const;
+
+    void getAllChildNodesWithState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false,bool clearResultBeforeUsage=true) const;
+    void getAllChildNodesWithoutState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false,bool clearResultBeforeUsage=true) const;
 
 
     // To remove
@@ -439,15 +452,16 @@ protected:
         return (m==MODE_ALL || (m!=MODE_NONE && (m&nodeM)));
     }
 };
+
 class TreeView : protected TreeViewNode {
 protected:
 friend class TreeViewNode;
 public:
 
-    TreeView(Mode _selectionMode=MODE_ALL,bool _allowMultipleSelection=false,Mode _checkboxMode=MODE_NONE,bool _allowAutoCheckboxBehaviour=true);
+    TreeView(Mode _selectionMode=MODE_ALL,bool _allowMultipleSelection=false,Mode _checkboxMode=MODE_NONE,bool _allowAutoCheckboxBehaviour=true,bool _inheritDisabledLook=true);
     virtual ~TreeView();
     bool isInited() {return inited;}
-    void render();  // Main method (makes inited = true).
+    TreeViewNode* render();  // Main method (makes inited = true). Returns NULL, or the node that's just been double-clicked (so you can save setting up an event for it...)
 
     inline int getNumRootNodes() const {return childNodes->size();}
     inline TreeViewNode* getRootNode(int index=0) {return ((childNodes->size()>index) ? (*childNodes)[index] : NULL);}
@@ -461,11 +475,28 @@ public:
     }
     inline static void DeleteNode(TreeViewNode* n) {TreeViewNode::DeleteNode(n);}    
 
+    // sorting
+    void sortRootNodes(bool recursive,int (*comp)(const void *, const void *))  {TreeViewNode::sortChildNodes(recursive,comp);}
+    void sortRootNodesByDisplayName(bool recursive=false) {TreeViewNode::sortChildNodesByDisplayName(recursive);}
+    void sortRootNodesByTooltip(bool recursive=false) {TreeViewNode::sortChildNodesByTooltip(recursive);}
+    void sortRootNodesByUserText(bool recursive=false) {TreeViewNode::sortChildNodesByUserText(recursive);}
+    void sortRootNodesByUserId(bool recursive=false) {TreeViewNode::sortChildNodesByUserId(recursive);}
+
+    // state
+    void addStateToAllRootNodes(int stateFlag, bool recursive = false) const {TreeViewNode::addStateToAllChildNodes(stateFlag,recursive);}
+    void removeStateFromAllRootNodes(int stateFlag, bool recursive = false) const {TreeViewNode::removeStateFromAllChildNodes(stateFlag,recursive);}
+    bool isStatePresentInAllRootNodes(int stateFlag) const {return TreeView::isStatePresentInAllChildNodes(stateFlag);}
+    bool isStateMissingInAllRootNodes(int stateFlag) const {return TreeView::isStateMissingInAllChildNodes(stateFlag);}
+
     // These methods are related to the whole node hierarchy
-    void addAllDescendantsState(int stateFlag) const {TreeViewNode::addAllDescendantsState(stateFlag);}
-    void removeAllDescendantsState(int stateFlag) const {TreeViewNode::removeAllDescendantsState(stateFlag);}
+    void addStateToAllDescendants(int stateFlag) const {TreeViewNode::addStateToAllDescendants(stateFlag);}
+    void removeStateFromAllDescendants(int stateFlag) const {TreeViewNode::removeStateFromAllDescendants(stateFlag);}
     bool isStatePresentInAllDescendants(int stateFlag) const {return TreeViewNode::isStatePresentInAllDescendants(stateFlag);}
     bool isStateMissingInAllDescendants(int stateFlag) const {return TreeViewNode::isStateMissingInAllDescendants(stateFlag);}
+
+    void getAllRootNodesWithState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false,bool clearResultBeforeUsage=true) const {TreeViewNode::getAllChildNodesWithState(result,stateFlag,recursive,clearResultBeforeUsage);}
+    void getAllRootNodesWithoutState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false,bool clearResultBeforeUsage=true) const {TreeViewNode::getAllChildNodesWithoutState(result,stateFlag,recursive,clearResultBeforeUsage);}
+
 
     // Callbacks:
     typedef void (*TreeViewNodeCallback)(TreeViewNode* node,TreeView& parent,void* userPtr);
@@ -487,6 +518,8 @@ public:
 
     unsigned int checkboxMode;
     bool allowAutoCheckboxBehaviour;
+
+    bool inheritDisabledLook;   // Not the STATE_DISABLED flag! Just the look.
 
 protected:
     TreeViewNodeCallback treeViewNodePopupMenuDrawerCb;

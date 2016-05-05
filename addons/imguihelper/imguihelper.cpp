@@ -53,7 +53,7 @@ bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS)	{
 
 void CloseAllPopupMenus()   {
     ImGuiState& g = *GImGui;
-    while (g.OpenedPopupStack.size() > 0) g.OpenedPopupStack.pop_back();
+    while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();
 }
 
 #ifndef NO_IMGUIHELPER_FONT_METHODS

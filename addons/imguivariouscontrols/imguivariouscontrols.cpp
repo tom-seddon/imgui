@@ -1457,12 +1457,15 @@ void TreeNodeIndent(int numIndents) {
 }
 
 // Tree view stuff starts here ==============================================================
+#include <stdlib.h> // qsort (Maybe we could add a define to exclude sorting...)
+
 struct MyTreeViewHelperStruct {
     TreeView& parentTreeView;
     TreeViewNode* eventNode;
     TreeViewNode::State eventFlag;
     bool eventFlagRemoved;
     bool mustFireDoubleClickEvent;
+    bool mustDrawAllNodesAsDisabled;
     struct ContextMenuDataStruct {
         TreeViewNode* activeNode;
         TreeView* parentTreeView;
@@ -1476,6 +1479,28 @@ struct MyTreeViewHelperStruct {
         eventNode = _eventNode;
         eventFlag = _eventFlag;
         eventFlagRemoved = _eventFlagRemoved;
+        mustDrawAllNodesAsDisabled = false;
+    }
+    // Sorters
+    inline static int SorterByDisplayName(const void *pn1, const void *pn2)  {
+        const TreeViewNode* n1 = *((const TreeViewNode**)pn1);
+        const TreeViewNode* n2 = *((const TreeViewNode**)pn2);
+        return strcmp(n1->data.displayName,n2->data.displayName);
+    }
+    inline static int SorterByTooltip(const void *pn1, const void *pn2)  {
+        const TreeViewNode* n1 = *((const TreeViewNode**)pn1);
+        const TreeViewNode* n2 = *((const TreeViewNode**)pn2);
+        return strcmp(n1->data.tooltip,n2->data.tooltip);
+    }
+    inline static int SorterByUserText(const void *pn1, const void *pn2)  {
+        const TreeViewNode* n1 = *((const TreeViewNode**)pn1);
+        const TreeViewNode* n2 = *((const TreeViewNode**)pn2);
+        return strcmp(n1->data.userText,n2->data.userText);
+    }
+    inline static int SorterByUserId(const void *pn1, const void *pn2)  {
+        const TreeViewNode* n1 = *((const TreeViewNode**)pn1);
+        const TreeViewNode* n2 = *((const TreeViewNode**)pn2);
+        return n1->data.userId-n2->data.userId;
     }
 
     // Default event callbacks
@@ -1483,12 +1508,13 @@ struct MyTreeViewHelperStruct {
 
         // Actually all the nodes can be set to default or be enabled/disabled, but it's just a test...
         const bool canBeSetToDefault = n->isRootNode() && n->isStateMissing(TreeViewNode::STATE_DEFAULT);
-        const bool canBeEnabledOrDisabled = n->isLeafNode();
+        const bool canBeEnabledOrDisabled = true;
+        const bool itsChildNodesAreSortable = n->childNodes && n->childNodes->size()>1;
 
-        if ((canBeSetToDefault || canBeEnabledOrDisabled) && ImGui::BeginPopup(TreeView::GetTreeViewNodePopupMenuName()))   {
+        if ((canBeSetToDefault || canBeEnabledOrDisabled || itsChildNodesAreSortable) && ImGui::BeginPopup(TreeView::GetTreeViewNodePopupMenuName()))   {
             ImGui::PushID(n);
             if (canBeSetToDefault && ImGui::MenuItem("Set as default root item"))  {
-                tv.removeAllDescendantsState(TreeViewNode::STATE_DEFAULT);  // allow (at most) one default node
+                tv.removeStateFromAllDescendants(TreeViewNode::STATE_DEFAULT);  // allow (at most) one default node
                 n->addState(TreeViewNode::STATE_DEFAULT);
             }
             if (canBeEnabledOrDisabled) {
@@ -1497,6 +1523,7 @@ struct MyTreeViewHelperStruct {
                 }
                 else if (ImGui::MenuItem("Disable item")) n->addState(TreeViewNode::STATE_DISABLED);
             }
+            if (itsChildNodesAreSortable && ImGui::MenuItem("Sort child nodes")) n->sortChildNodesByDisplayName();
             ImGui::PopID();
             ImGui::EndPopup();
         }
@@ -1521,7 +1548,7 @@ TreeViewNode::~TreeViewNode() {
             }
         }
         childNodes->clear();
-	childNodes->~ImVector<TreeViewNode*>();
+        childNodes->~ImVector<TreeViewNode*>();
         ImGui::MemFree(childNodes);
         childNodes=NULL;
     }
@@ -1612,24 +1639,77 @@ int TreeViewNode::getNodeIndex() const   {
     return 0;
 }
 
-void TreeViewNode::addAllDescendantsState(int stateFlag) const {
+void TreeViewNode::moveNodeTo(int nodeIndex)   {
+    if (!parentNode || !parentNode->childNodes) return;
+    const int isz = parentNode->childNodes->size();
+    if (isz<2) return;
+    if (nodeIndex<0 || nodeIndex>=isz) nodeIndex = isz-1;
+    const int curNodeIndex = getNodeIndex();
+    if (curNodeIndex==nodeIndex) return;
+    if (curNodeIndex<nodeIndex) {
+        for (int i=curNodeIndex;i<nodeIndex;i++)  (*parentNode->childNodes)[i] = (*parentNode->childNodes)[i+1];
+    }
+    else {
+        for (int i=curNodeIndex;i>nodeIndex;i--)  (*parentNode->childNodes)[i] = (*parentNode->childNodes)[i-1];
+    }
+    (*parentNode->childNodes)[nodeIndex] = this;
+}
+
+void TreeViewNode::sortChildNodes(bool recursive,int (*comp)(const void *, const void *)) {
+    if (childNodes && childNodes->size()>1)  {
+        if (recursive) {
+            for (int i=0,isz=childNodes->size();i<isz;i++) (*childNodes)[i]->sortChildNodes(recursive,comp);
+        }
+        qsort(&(*childNodes)[0],childNodes->size(),sizeof(TreeViewNode*),comp);
+    }
+}
+void TreeViewNode::sortChildNodesByDisplayName(bool recursive)    {
+    sortChildNodes(recursive,&MyTreeViewHelperStruct::SorterByDisplayName);
+}
+void TreeViewNode::sortChildNodesByTooltip(bool recursive)  {
+    sortChildNodes(recursive,MyTreeViewHelperStruct::SorterByTooltip);
+}
+void TreeViewNode::sortChildNodesByUserText(bool recursive) {
+    sortChildNodes(recursive,MyTreeViewHelperStruct::SorterByUserText);
+}
+void TreeViewNode::sortChildNodesByUserId(bool recursive)   {
+    sortChildNodes(recursive,MyTreeViewHelperStruct::SorterByUserId);
+}
+
+void TreeViewNode::addStateToAllChildNodes(int stateFlag,bool recursive) const {
     if (childNodes) {
         for (int i=0,isz=childNodes->size();i<isz;i++)  {
-            (*childNodes)[i]->addAllDescendantsState(stateFlag);
+            if (recursive) (*childNodes)[i]->addStateToAllChildNodes(stateFlag,recursive);
             (*childNodes)[i]->state|=stateFlag;
         }
     }
 }
-void TreeViewNode::removeAllDescendantsState(int stateFlag) const   {
+void TreeViewNode::removeStateFromAllChildNodes(int stateFlag,bool recursive) const   {
     if (childNodes) {
         for (int i=0,isz=childNodes->size();i<isz;i++)  {
-            (*childNodes)[i]->removeAllDescendantsState(stateFlag);
+            if (recursive) (*childNodes)[i]->removeStateFromAllChildNodes(stateFlag,recursive);
             (*childNodes)[i]->state&=(~stateFlag);
         }
     }
 }
 
-bool TreeViewNode::isStatePresentInAllDescendants(int stateFlag) const {
+bool TreeViewNode::isStatePresentInAllChildNodes(int stateFlag) const {
+    if (childNodes) {
+        for (int i=0,isz=childNodes->size();i<isz;i++)  {
+            if (!((*childNodes)[i]->state&stateFlag)) return false;
+        }
+    }
+    return true;
+}
+bool TreeViewNode::isStateMissingInAllChildNodes(int stateFlag) const {
+    if (childNodes) {
+        for (int i=0,isz=childNodes->size();i<isz;i++)  {
+            if (((*childNodes)[i]->state&stateFlag)) return false;
+        }
+    }
+    return true;
+}
+bool TreeViewNode::isStatePresentInAllDescendants(int stateFlag) const{
     if (childNodes) {
         for (int i=0,isz=childNodes->size();i<isz;i++)  {
             if (!((*childNodes)[i]->state&stateFlag) || !(*childNodes)[i]->isStatePresentInAllDescendants(stateFlag)) return false;
@@ -1637,7 +1717,7 @@ bool TreeViewNode::isStatePresentInAllDescendants(int stateFlag) const {
     }
     return true;
 }
-bool TreeViewNode::isStateMissingInAllDescendants(int stateFlag) const {
+bool TreeViewNode::isStateMissingInAllDescendants(int stateFlag) const{
     if (childNodes) {
         for (int i=0,isz=childNodes->size();i<isz;i++)  {
             if (((*childNodes)[i]->state&stateFlag) || !(*childNodes)[i]->isStateMissingInAllDescendants(stateFlag)) return false;
@@ -1647,7 +1727,29 @@ bool TreeViewNode::isStateMissingInAllDescendants(int stateFlag) const {
 }
 
 
-TreeView::TreeView(Mode _selectionMode,bool _allowMultipleSelection,Mode _checkboxMode,bool _allowAutoCheckboxBehaviour) : TreeViewNode(Data(),NULL,-1,true) {
+void TreeViewNode::getAllChildNodesWithState(ImVector<TreeViewNode *> &result, int stateFlag, bool recursive, bool clearResultBeforeUsage) const  {
+    if (clearResultBeforeUsage) result.clear();
+    if (childNodes) {
+        for (int i=0,isz=childNodes->size();i<isz;i++)   {
+            const TreeViewNode* n = (*childNodes)[i];
+            if (n->state&stateFlag) result.push_back(const_cast<TreeViewNode*>(n));
+            if (recursive) n->getAllChildNodesWithState(result,stateFlag,recursive,false);
+        }
+    }
+}
+void TreeViewNode::getAllChildNodesWithoutState(ImVector<TreeViewNode *> &result, int stateFlag, bool recursive, bool clearResultBeforeUsage) const   {
+    if (clearResultBeforeUsage) result.clear();
+    if (childNodes) {
+        for (int i=0,isz=childNodes->size();i<isz;i++)   {
+            const TreeViewNode* n = (*childNodes)[i];
+            if (!(n->state&stateFlag)) result.push_back(const_cast<TreeViewNode*>(n));
+            if (recursive) n->getAllChildNodesWithState(result,stateFlag,recursive,false);
+        }
+    }
+}
+
+
+TreeView::TreeView(Mode _selectionMode, bool _allowMultipleSelection, Mode _checkboxMode, bool _allowAutoCheckboxBehaviour, bool _inheritDisabledLook) : TreeViewNode(Data(),NULL,-1,true) {
     treeViewNodePopupMenuDrawerCb = &MyTreeViewHelperStruct::TreeViewNodePopupMenuProvider;
     treeViewNodePopupMenuDrawerCbUserPtr = NULL;
     treeViewNodeStateChangedCb = NULL;
@@ -1663,6 +1765,8 @@ TreeView::TreeView(Mode _selectionMode,bool _allowMultipleSelection,Mode _checkb
 
     checkboxMode = _checkboxMode;
     allowAutoCheckboxBehaviour = _allowAutoCheckboxBehaviour;
+
+    inheritDisabledLook = _inheritDisabledLook;
 }
 
 TreeView::~TreeView() {
@@ -1687,12 +1791,13 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
 
     bool stateopen = (state&STATE_OPEN);
     bool stateselected = (state&STATE_SELECTED);
+    bool mustdrawdisabled = (state&STATE_DISABLED) || tvhs.mustDrawAllNodesAsDisabled;
 
     ImGui::PushID(this);
     if (allowCheckBox) ImGui::AlignFirstTextHeightToWidgets();
 
     if (!isLeafNode) {
-        ImGui::SetNextTreeNodeOpened(stateopen,ImGuiSetCond_Always);
+        ImGui::SetNextTreeNodeOpen(stateopen,ImGuiSetCond_Always);
         ImGui::TreeNodeIndent(numIndents-1);
         mustTreePop = ImGui::TreeNode("","%s","");
         arrowHovered=ImGui::IsItemHovered();itemHovered|=arrowHovered;
@@ -1710,8 +1815,8 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
             tvhs.fillEvent(this,STATE_CHECKED,!(state&STATE_CHECKED));
             if (tv.allowAutoCheckboxBehaviour)  {
                 if (childNodes && childNodes->size()>0)    {
-                    if (statechecked) addAllDescendantsState(STATE_CHECKED);
-                    else if (isStatePresentInAllDescendants(STATE_CHECKED)) removeAllDescendantsState(STATE_CHECKED);
+                    if (statechecked) addStateToAllDescendants(STATE_CHECKED);
+                    else if (isStatePresentInAllDescendants(STATE_CHECKED)) removeStateFromAllDescendants(STATE_CHECKED);
                 }
                 TreeViewNode* p = parentNode;
                 while (p && p->parentNode!=NULL) {
@@ -1729,7 +1834,7 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
 
     if (tv.treeViewNodeDrawIconCb) itemHovered|=tv.treeViewNodeDrawIconCb(this,tv,tv.treeViewNodeDrawIconCbUserPtr);
 
-    if (state&STATE_DISABLED) ImGui::PushStyleColor(ImGuiCol_Text, GImGui->Style.Colors[ImGuiCol_TextDisabled]);
+    if (mustdrawdisabled) ImGui::PushStyleColor(ImGuiCol_Text, GImGui->Style.Colors[ImGuiCol_TextDisabled]);
     if ((state&STATE_DEFAULT) || (allowSelection && stateselected)) {
 	const ImVec4 textColor = GImGui->Style.Colors[ImGuiCol_Text];
 	ImVec2 shadowOffset(0,allowCheckBox ? (GImGui->Style.FramePadding.y*2) : 0);
@@ -1751,7 +1856,7 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
 	}
     }
     ImGui::Text("%s",data.displayName);
-    if (state&STATE_DISABLED) ImGui::PopStyleColor();
+    if (mustdrawdisabled) ImGui::PopStyleColor();
     if (ImGui::IsItemHovered()) {
         itemHovered=true;
         if (data.tooltip && strlen(data.tooltip)>0) ImGui::SetTooltip("%s",data.tooltip);
@@ -1786,7 +1891,7 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
     }
 
     if (mustTriggerSelection) {
-        if (!(ImGui::GetIO().KeyCtrl && tv.allowMultipleSelection)) tv.removeAllDescendantsState(STATE_SELECTED);
+        if (!(ImGui::GetIO().KeyCtrl && tv.allowMultipleSelection)) tv.removeStateFromAllDescendants(STATE_SELECTED);
         toggleState(STATE_SELECTED);
         tvhs.fillEvent(this,STATE_SELECTED,!(state&STATE_SELECTED));
     }
@@ -1794,8 +1899,13 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
     if (isStatePresent(STATE_OPEN))  {
         //---------------------------------------------------
         for (int i=0,isz=childNodes->size();i<isz;i++)   {
-            TreeViewNode* n = (*childNodes)[i];
-            if (n) n->render(&tvhs,numIndents+1);
+            TreeViewNode* n = (*childNodes)[i];                        
+            if (n) {
+                const bool oldMustDrawAllNodesAsDisabled = tvhs.mustDrawAllNodesAsDisabled;
+                if (tv.inheritDisabledLook && (state&STATE_DISABLED)) tvhs.mustDrawAllNodesAsDisabled = true;
+                n->render(&tvhs,numIndents+1);
+                tvhs.mustDrawAllNodesAsDisabled = oldMustDrawAllNodesAsDisabled;
+            }
         }
         //---------------------------------------------------
     }
@@ -1812,9 +1922,9 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
 }
 
 
-void TreeView::render() {
+TreeViewNode *TreeView::render() {
     inited = true;
-    if (!childNodes || childNodes->size()==0) return;
+    if (!childNodes || childNodes->size()==0) return NULL;
 
     static int frameCnt = -1;
     ImGuiState& g = *GImGui;
@@ -1825,7 +1935,7 @@ void TreeView::render() {
         if (cmd.activeNode && cmd.parentTreeView && cmd.parentTreeView->treeViewNodePopupMenuDrawerCb) {
             if (cmd.activeNodeChanged) {
                 cmd.activeNodeChanged = false;
-                ImGuiState& g = *GImGui; while (g.OpenedPopupStack.size() > 0) g.OpenedPopupStack.pop_back();   // Close all existing context-menus
+                ImGuiState& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
                 ImGui::OpenPopup(TreeView::GetTreeViewNodePopupMenuName());
             }
             cmd.parentTreeView->treeViewNodePopupMenuDrawerCb(cmd.activeNode,*cmd.parentTreeView,cmd.parentTreeView->treeViewNodePopupMenuDrawerCbUserPtr);
@@ -1839,16 +1949,21 @@ void TreeView::render() {
     ImGui::PushID(this);
     for (int i=0,isz=childNodes->size();i<isz;i++)   {
         TreeViewNode* n = (*childNodes)[i];
+        tvhs.mustDrawAllNodesAsDisabled = false;
         if (n) n->render(&tvhs);
     }
     ImGui::PopID();
     ImGui::EndGroup();
 
     // TODO: Move as much as event handling stuff from TreeViewNode::render() here
-
+    TreeViewNode* rv = NULL;
     // Fire events
     if (treeViewNodeStateChangedCb && tvhs.eventNode) treeViewNodeStateChangedCb(tvhs.eventNode,*this,tvhs.eventFlag,tvhs.eventFlagRemoved,treeViewNodeStateChangedCbUserPtr);
-    if (treeViewNodeDoubleClickedCb && tvhs.eventNode && tvhs.mustFireDoubleClickEvent) treeViewNodeDoubleClickedCb(tvhs.eventNode,*this,treeViewNodeDoubleClickedCbUserPtr);
+    if (tvhs.eventNode && tvhs.mustFireDoubleClickEvent) {
+        if (treeViewNodeDoubleClickedCb) treeViewNodeDoubleClickedCb(tvhs.eventNode,*this,treeViewNodeDoubleClickedCbUserPtr);
+        rv = tvhs.eventNode;
+    }
+    return rv;
 }
 // Tree view stuff ends here ==============================================================
 
