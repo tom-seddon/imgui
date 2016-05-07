@@ -299,6 +299,8 @@ void TreeNodeIndent(int numIndents=1);
 // Preliminar generic tree view implementation
 // TODO:
 // 1) add serialization
+// 2) See if we can switch context-menu with a single-shot RMB click (when a menu is still open)
+// 3) See if we can change TreeView::inheritDisabledLook with a unsigned int sate mask that can be used to inherit other looks
 class TreeViewNode {
 protected:
     friend class TreeView;
@@ -311,9 +313,18 @@ public:
         STATE_CHECKED   = 1<<3,
         STATE_DEFAULT   = 1<<4,     // user state (but its look is hard-coded)
         STATE_DISABLED  = 1<<5,     // user state (but its look is hard-coded)
-        STATE_USER1     = 1<<6,     // user state
-        STATE_USER2     = 1<<7,     // user state
-        STATE_USER3     = 1<<8      // user state
+
+        // Leaving space for other hard coded states
+
+        // user states (but its look can be set in TreeView::getTextColorForStateColor(...))
+        STATE_COLOR1    = 1<<9,
+        STATE_COLOR2    = 1<<10,    // STATE_COLOR1 wins on it (but only as far as the look is concerned)
+        STATE_COLOR3    = 1<<11,    // STATE_COLOR1 and STATE_COLOR2 win on it (but only as far as the look is concerned)
+
+        // user states (without any specific look)
+        STATE_USER1     = 1<<12,
+        STATE_USER2     = 1<<13,
+        STATE_USER3     = 1<<14
     };
     mutable int state;
 
@@ -382,8 +393,8 @@ public:
 
     class TreeView& getTreeView();
     const class TreeView& getTreeView() const;
-    TreeViewNode* getParentNode();              // Use TreeView::getParentNode(TreeViewNode* n): it's faster.
-    const TreeViewNode* getParentNode() const;  // Use TreeView::getParentNode(TreeViewNode* n): it's faster.
+    TreeViewNode* getParentNode();              // Using TreeView::getParentNode(TreeViewNode* n) is slightly faster.
+    const TreeViewNode* getParentNode() const;  // Using TreeView::getParentNode(TreeViewNode* n) is slightly faster.
     int getNodeIndex() const;
     void moveNodeTo(int nodeIndex);
     inline bool isLeafNode() const {return childNodes==NULL;}       // Please note that non-leaf nodes can have childNodes->size()==0
@@ -393,10 +404,10 @@ public:
     inline const TreeViewNode* getChildNode(int index=0) const {return (childNodes && childNodes->size()>index) ? (*childNodes)[index] : NULL;}
 
     void sortChildNodes(bool recursive,int (*comp)(const void *, const void *));
-    void sortChildNodesByDisplayName(bool recursive=false);
-    void sortChildNodesByTooltip(bool recursive=false);
-    void sortChildNodesByUserText(bool recursive=false);
-    void sortChildNodesByUserId(bool recursive=false);
+    void sortChildNodesByDisplayName(bool recursive=false,bool reverseOrder=false);
+    void sortChildNodesByTooltip(bool recursive=false,bool reverseOrder=false);
+    void sortChildNodesByUserText(bool recursive=false,bool reverseOrder=false);
+    void sortChildNodesByUserId(bool recursive=false,bool reverseOrder=false);
 
     inline void addState(int stateFlag) const {state|=stateFlag;}
     inline void removeState(int stateFlag) const {state&=~stateFlag;}
@@ -414,9 +425,15 @@ public:
     bool isStatePresentInAllDescendants(int stateFlag) const;
     bool isStateMissingInAllDescendants(int stateFlag) const;
 
+    // These return the first matching parentNode (if "recursive==false" they return node->parentNode or NULL).
+    TreeViewNode* getFirstParentNodeWithState(int stateFlag,bool recursive=true);
+    const TreeViewNode* getFirstParentNodeWithState(int stateFlag,bool recursive=true) const;
+    TreeViewNode* getFirstParentNodeWithoutState(int stateFlag,bool recursive=true);
+    const TreeViewNode* getFirstParentNodeWithoutState(int stateFlag,bool recursive=true) const;
+
+    // if "recursive==true" deleting the "result nodes" in order shouldn't work, but probably it works in the reverse order (TO TEST)
     void getAllChildNodesWithState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false,bool clearResultBeforeUsage=true) const;
     void getAllChildNodesWithoutState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false,bool clearResultBeforeUsage=true) const;
-
 
     // To remove
 /*
@@ -451,6 +468,10 @@ protected:
         // Hp) nodeM can't be MODE_NONE
         return (m==MODE_ALL || (m!=MODE_NONE && (m&nodeM)));
     }
+
+protected:
+    TreeViewNode(const TreeViewNode&) {}
+    void operator=(const TreeViewNode&) {}
 };
 
 class TreeView : protected TreeViewNode {
@@ -477,10 +498,10 @@ public:
 
     // sorting
     void sortRootNodes(bool recursive,int (*comp)(const void *, const void *))  {TreeViewNode::sortChildNodes(recursive,comp);}
-    void sortRootNodesByDisplayName(bool recursive=false) {TreeViewNode::sortChildNodesByDisplayName(recursive);}
-    void sortRootNodesByTooltip(bool recursive=false) {TreeViewNode::sortChildNodesByTooltip(recursive);}
-    void sortRootNodesByUserText(bool recursive=false) {TreeViewNode::sortChildNodesByUserText(recursive);}
-    void sortRootNodesByUserId(bool recursive=false) {TreeViewNode::sortChildNodesByUserId(recursive);}
+    void sortRootNodesByDisplayName(bool recursive=false,bool reverseOrder=false) {TreeViewNode::sortChildNodesByDisplayName(recursive,reverseOrder);}
+    void sortRootNodesByTooltip(bool recursive=false,bool reverseOrder=false) {TreeViewNode::sortChildNodesByTooltip(recursive,reverseOrder);}
+    void sortRootNodesByUserText(bool recursive=false,bool reverseOrder=false) {TreeViewNode::sortChildNodesByUserText(recursive,reverseOrder);}
+    void sortRootNodesByUserId(bool recursive=false,bool reverseOrder=false) {TreeViewNode::sortChildNodesByUserId(recursive,reverseOrder);}
 
     // state
     void addStateToAllRootNodes(int stateFlag, bool recursive = false) const {TreeViewNode::addStateToAllChildNodes(stateFlag,recursive);}
@@ -494,6 +515,7 @@ public:
     bool isStatePresentInAllDescendants(int stateFlag) const {return TreeViewNode::isStatePresentInAllDescendants(stateFlag);}
     bool isStateMissingInAllDescendants(int stateFlag) const {return TreeViewNode::isStateMissingInAllDescendants(stateFlag);}
 
+    // if "recursive==true" deleting the "result nodes" in order shouldn't work, but probably it works in the reverse order (TO TEST)
     void getAllRootNodesWithState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false,bool clearResultBeforeUsage=true) const {TreeViewNode::getAllChildNodesWithState(result,stateFlag,recursive,clearResultBeforeUsage);}
     void getAllRootNodesWithoutState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false,bool clearResultBeforeUsage=true) const {TreeViewNode::getAllChildNodesWithoutState(result,stateFlag,recursive,clearResultBeforeUsage);}
 
@@ -505,21 +527,30 @@ public:
     // only states that are modified through mouse interaction are reported (and checks produced by the "allowAutoCheckboxBehaviour" are NOT reported)
     typedef void (*TreeViewNodeStateChangedCallback)(TreeViewNode* node,TreeView& parent,State state,bool wasStateRemoved,void* userPtr);
     void setTreeViewNodeStateChangedCb(TreeViewNodeStateChangedCallback cb,void* userPtr=NULL) {treeViewNodeStateChangedCb = cb;treeViewNodeStateChangedCbUserPtr = userPtr;}
-    // usable mainly on leaf nodes for opening files...
+    // usable mainly on leaf nodes for opening files... [however the double-clicked node is already returned by render()...]
     void setTreeViewNodeDoubleClickedCb(TreeViewNodeCallback cb,void* userPtr=NULL) {treeViewNodeDoubleClickedCb = cb;treeViewNodeDoubleClickedCbUserPtr = userPtr;}
     // must return true if icon is hovered. If set, use ImGui::SameLine() before returning
     typedef bool (*TreeViewNodeDrawIconCallback)(TreeViewNode* node,TreeView& parent,void* userPtr);
     void setTreeViewNodeDrawIconCb(TreeViewNodeDrawIconCallback cb,void* userPtr=NULL) {treeViewNodeDrawIconCb = cb;treeViewNodeDrawIconCbUserPtr = userPtr;}
+    // just called after all rendering in this node (can be used to append stuff at the right of the line)
+    typedef void (*TreeViewNodeAfterDrawCallback)(TreeViewNode* node,TreeView& parent,float windowWidth,void* userPtr);
+    void setTreeViewNodeAfterDrawCb(TreeViewNodeAfterDrawCallback cb,void* userPtr=NULL) {treeViewNodeAfterDrawCb = cb;treeViewNodeAfterDrawCbUserPtr = userPtr;}
 
+    void *userPtr;                  // user stuff, not mine
 
-    // we leave these public...
+    ImVec4* getTextColorForStateColor(int aStateColorFlag) const;
+    ImVec4* getTextDisabledColorForStateColor(int aStateColorFlag) const;
+
+    // TODO: Fix stuff in this area ------------------------------------------------
+    // we leave these public...     // to make protected
     unsigned int selectionMode;     // it SHOULD be a TreeViewNode::Mode, but we use a uint to fit ImGui::ComboFlag(...) directly (to change)
     bool allowMultipleSelection;
 
     unsigned int checkboxMode;
     bool allowAutoCheckboxBehaviour;
 
-    bool inheritDisabledLook;   // Not the STATE_DISABLED flag! Just the look.
+    bool inheritDisabledLook;   // Not the STATE_DISABLED flag! Just the look. (Can we replace it with a unsigned int for generic state look-inheritance?)
+    //------------------------------------------------------------------------------
 
 protected:
     TreeViewNodeCallback treeViewNodePopupMenuDrawerCb;
@@ -530,8 +561,17 @@ protected:
     void* treeViewNodeDoubleClickedCbUserPtr;
     TreeViewNodeDrawIconCallback treeViewNodeDrawIconCb;
     void* treeViewNodeDrawIconCbUserPtr;
+    TreeViewNodeAfterDrawCallback treeViewNodeAfterDrawCb;
+    void* treeViewNodeAfterDrawCbUserPtr;
 
     bool inited;
+    mutable ImVec4 stateColors[6];  // 3 pairs of textColor-textDisabledColor
+
+protected:
+    TreeView(const TreeView&) {}
+    void operator=(const TreeView&) {}
+    TreeView(const TreeViewNode&) {}
+    void operator=(const TreeViewNode&) {}
 
 };
 typedef TreeViewNode::Data TreeViewNodeData;

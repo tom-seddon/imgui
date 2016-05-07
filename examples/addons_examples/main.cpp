@@ -644,6 +644,7 @@ void DrawGL()	// Mandatory
         ImGui::Text("Generic TreeView Implementation (WIP):");
         {
         static ImGui::TreeView tv;
+
         // Optional tuff to change some tv options on the fly -------------------------------------
         {
 	ImGui::Separator();
@@ -674,21 +675,23 @@ void DrawGL()	// Mandatory
 	ImGui::Checkbox("Inherit Disabled Look##TreeViewInheritDisabledLook",&tv.inheritDisabledLook);
 	ImGui::Separator();
 	// ----------------------------------------------------------------------------------------------
-        if (!tv.isInited()) {
-		ImGui::TreeViewNode* n = tv.addRootNode(ImGui::TreeViewNodeData("Some nations"));
-		n->addChildNode(ImGui::TreeViewNodeData("Ireland"));
-		n->addChildNode(ImGui::TreeViewNodeData("Sweden"));
-		n->addChildNode(ImGui::TreeViewNodeData("Germany"));
-		n->addChildNode(ImGui::TreeViewNodeData("Mexico"));
-		n->addChildNode(ImGui::TreeViewNodeData("China"));
-                n = tv.addRootNode(ImGui::TreeViewNodeData("SecondRoot Node"));
-                n->addChildNode(ImGui::TreeViewNodeData("SecondRoot-FirstChild Node"));
-                ImGui::TreeViewNode* n2 = n->addChildNode(ImGui::TreeViewNodeData("SecondRoot-SecondChild Node"));
-                n2->addChildNode(ImGui::TreeViewNodeData("SecondRoot-SecondChild-FirstChild Node"));
-                n = tv.addRootNode(ImGui::TreeViewNodeData("ThirdRoot Node"));
+    if (!tv.isInited()) {
+        ImGui::TreeViewNode* n = tv.addRootNode(ImGui::TreeViewNodeData("Some nations","Some nations here"));
+        //n->addState(ImGui::TreeViewNode::STATE_COLOR1);    // configurable color set
+        n->addChildNode(ImGui::TreeViewNodeData("Ireland"));
+        n->addChildNode(ImGui::TreeViewNodeData("Sweden"));
+        n->addChildNode(ImGui::TreeViewNodeData("Germany"));
+        n->addChildNode(ImGui::TreeViewNodeData("Mexico"));
+        n->addChildNode(ImGui::TreeViewNodeData("China"));
+        n = tv.addRootNode(ImGui::TreeViewNodeData("SecondRoot Node"));
+        n->addChildNode(ImGui::TreeViewNodeData("SecondRoot-FirstChild Node"));
+        ImGui::TreeViewNode* n2 = n->addChildNode(ImGui::TreeViewNodeData("SecondRoot-SecondChild Node","Node with a configurable text color"));
+        n2->addState(ImGui::TreeViewNode::STATE_COLOR2);    // configurable color set
+        n2->addChildNode(ImGui::TreeViewNodeData("SecondRoot-SecondChild-FirstChild Node"));
+        n = tv.addRootNode(ImGui::TreeViewNodeData("ThirdRoot Node"));
 
-                //for (int i=0;i<tv.numRootNodes();i++) tv.getRootNode(i)->dbgDisplay();
-            }
+        //for (int i=0;i<tv.numRootNodes();i++) tv.getRootNode(i)->dbgDisplay();
+    }
             tv.render();
         }
 #       else //NO_IMGUIVARIOUSCONTROLS
