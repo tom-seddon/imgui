@@ -698,8 +698,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         }
 
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
-        window->ClippedWindowRect = window->Rect();
-        window->ClippedWindowRect.Clip(window->ClipRect);
+        window->WindowRectClipped = window->Rect();
+        window->WindowRectClipped.Clip(window->ClipRect);
 
         // Pressing CTRL+C while holding on a window copy its content to the clipboard
         // This works but 1. doesn't handle multiple Begin/End pairs, 2. recursing into another Begin/End pair - so we need to work that out and add better logging scope.
