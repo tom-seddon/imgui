@@ -144,6 +144,25 @@ inline void MyTestListView() {
 
 }
 #endif //NO_IMGUILISTVIEW
+#ifndef NO_IMGUIVARIOUSCONTROLS
+// Completely optional Callbacks for ImGui::TreeView
+bool MyTreeViewNodeDrawIconCallback(ImGui::TreeViewNode* n, ImGui::TreeView& /*tv*/, void* /*userPtr*/)    {
+    // We use the node "userId" (an int) to store our icon index
+    int i = n->getUserId();
+    if (i>0 && i<10)   {
+        --i;   // in [0,8]
+        const ImVec2 uv0((float)(i%3)/3.f,(float)(i/3)/3.f);
+        const ImVec2 uv1(uv0.x+1.f/3.f,uv0.y+1.f/3.f);
+        ImVec2 size;size.x=size.y=ImGui::GetTextLineHeight();
+        ImGui::Image(myImageTextureId2,size,uv0,uv1);   // However when checkboxes are present this stays on the top (and no idea on how to fix it...)
+        const bool hovered = ImGui::IsItemHovered();
+        ImGui::SameLine();  // Mandatory
+        return hovered;
+    }
+    return false;
+    // Of course it's possible (and faster) to add icons from a ttf file...
+}
+#endif //NO_IMGUIVARIOUSCONTROLS
 
 // These are only needed if you need to modify them at runtime (almost never).
 // Otherwise you can set them directly in "main" (see at the botton of this file).
@@ -672,27 +691,43 @@ void DrawGL()	// Mandatory
         }
 	if (changed) tv.removeStateFromAllDescendants(ImGui::TreeViewNode::STATE_CHECKED);
         }
-	ImGui::Checkbox("Inherit Disabled Look##TreeViewInheritDisabledLook",&tv.inheritDisabledLook);
-	ImGui::Separator();
+    bool hasDrawIconCb = tv.getTreeViewNodeDrawIconCb();
+    if (ImGui::Checkbox("Show icons",&hasDrawIconCb)) {
+        tv.setTreeViewNodeDrawIconCb(hasDrawIconCb ? &MyTreeViewNodeDrawIconCallback : NULL);
+    }
+    ImGui::SameLine();
+    ImGui::Checkbox("Inherit Disabled Look##TreeViewInheritDisabledLook",&tv.inheritDisabledLook);
+    ImGui::Separator();
 	// ----------------------------------------------------------------------------------------------
     if (!tv.isInited()) {
+        // Here we add some optional callbacks (can be commented out):
+        if (myImageTextureId2) tv.setTreeViewNodeDrawIconCb(&MyTreeViewNodeDrawIconCallback);
+        // there are other callbacks we can set...
+
+        // Here we add some nodes for testing:
         ImGui::TreeViewNode* n = tv.addRootNode(ImGui::TreeViewNodeData("Some nations","Some nations here"));
         //n->addState(ImGui::TreeViewNode::STATE_COLOR1);    // configurable color set
+        n->setUserId(1);    // (optional) used in the icon callback
         n->addChildNode(ImGui::TreeViewNodeData("Ireland"));
         n->addChildNode(ImGui::TreeViewNodeData("Sweden"));
         n->addChildNode(ImGui::TreeViewNodeData("Germany"));
         n->addChildNode(ImGui::TreeViewNodeData("Mexico"));
         n->addChildNode(ImGui::TreeViewNodeData("China"));
         n = tv.addRootNode(ImGui::TreeViewNodeData("SecondRoot Node"));
+        n->setUserId(2);    // (optional) used in the icon callback
         n->addChildNode(ImGui::TreeViewNodeData("SecondRoot-FirstChild Node"));
         ImGui::TreeViewNode* n2 = n->addChildNode(ImGui::TreeViewNodeData("SecondRoot-SecondChild Node","Node with a configurable text color"));
         n2->addState(ImGui::TreeViewNode::STATE_COLOR2);    // configurable color set
+        n2->setUserId(8);    // (optional) used in the icon callback
         n2->addChildNode(ImGui::TreeViewNodeData("SecondRoot-SecondChild-FirstChild Node"));
-        n = tv.addRootNode(ImGui::TreeViewNodeData("ThirdRoot Node"));
+        // Test: Now we add the last two root nodes in reverse order:
+        n = tv.addRootNode(ImGui::TreeViewNodeData("FourthRoot Node","This is NOT a leaf node\nbut has no child nodes.\n(Good for folder browsers\nif we monitor STATE_OPEN changes)."),-1,true); // Note the last arg: this node can be opened even if has no child nodes (you can add a callback for state changes).
+        n->setUserId(3);    // (optional) used in the icon callback
+        n = tv.addRootNode(ImGui::TreeViewNodeData("ThirdRoot Node","This is both a root and a leaf node."),2); // put this node at place 2 (0 based).
+        n->setUserId(4);    // (optional) used in the icon callback
 
-        //for (int i=0;i<tv.numRootNodes();i++) tv.getRootNode(i)->dbgDisplay();
     }
-            tv.render();
+            tv.render();    // Mandatory (and returns the node that's been double clicked)
         }
 #       else //NO_IMGUIVARIOUSCONTROLS
         ImGui::Text("%s","Excluded from this build.\n");

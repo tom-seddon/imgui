@@ -72,7 +72,7 @@ void SetDateToday(tm* date)    {
 
 
 bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool closeWhenMouseLeavesIt,bool* pSetStartDateToDateOutThisFrame,const char* leftArrow,const char* rightArrow,const char* upArrowString,const char* downArrowString)    {
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
     if (window->SkipItems)

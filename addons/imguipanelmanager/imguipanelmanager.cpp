@@ -91,7 +91,7 @@ static bool DockWindowButton(bool* p_undocked,bool *p_open=NULL)
 }
 static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, const ImVec2& size, float bg_alpha, ImGuiWindowFlags flags,bool* pDraggingStarted=NULL,ImGui::PanelManager::WindowData* wd=NULL)
 {
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     IM_ASSERT(name != NULL);                        // Window name required
     IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
@@ -753,7 +753,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 }
 static void DockWindowEnd()
 {
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
     ImGui::Columns(1, "#CloseColumns");
@@ -863,7 +863,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
             const ImGuiWindowFlags windowFlagsTotal = wd.isToggleWindow ? ImGuiWindowFlags_NoSavedSettings : (windowFlags|mgr.dockedWindowsExtraFlags|extraWindowFlags);
             if ((windowFlagsTotal & ImGuiWindowFlags_NoTitleBar)) open=!open;   // Terrible hack to make it work (but I remind that "open" was previously called "closed": so that had a sense!). See *p_opened = CloseWindowButton(p_opened); in BeginDockWindow.
         if (ImGui::DockWindowBegin(wd.name, &wd.open,&undocked, wd.size,mgr.dockedWindowsAlpha,windowFlagsTotal,&draggingStarted,&wd))     {
-            ImGuiState& g = *GImGui;
+            ImGuiContext& g = *GImGui;
             const ImGuiStyle& style = g.Style;
             ImGuiWindow* window = NULL;
             //wd.persistFocus = ImGui::IsMouseHoveringWindow();

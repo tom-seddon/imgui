@@ -52,7 +52,7 @@ bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS)	{
 }
 
 void CloseAllPopupMenus()   {
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();
 }
 
@@ -86,7 +86,7 @@ void TextColored(int fntIndex, const ImVec4 &col, const char *fmt,...)  {
 void TextV(int fntIndex, const char *fmt, va_list args) {
     if (ImGui::GetCurrentWindow()->SkipItems) return;
 
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     const char* text_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
     ImGui::PushFont(fntIndex);
     TextUnformatted(g.TempBuffer, text_end);
@@ -306,7 +306,7 @@ void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, cons
 void PutInBackground(const char* optionalRootWindowName)  {
     ImGuiWindow* w = optionalRootWindowName ? FindWindowByName(optionalRootWindowName) : GetCurrentWindow();
     if (!w) return;
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     if (g.Windows[0] == w) return;
     const int isz = g.Windows.Size;
     for (int i = 0; i < isz; i++)  {
@@ -320,7 +320,7 @@ void PutInBackground(const char* optionalRootWindowName)  {
 void PutInForeground(const char* optionalRootWindowName)  {
     ImGuiWindow* w = optionalRootWindowName ? FindWindowByName(optionalRootWindowName) : GetCurrentWindow();
     if (!w) return;
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     const int iszMinusOne = g.Windows.Size - 1;
     if (iszMinusOne<0 || g.Windows[iszMinusOne] == w) return;
     for (int i = iszMinusOne; i >= 0; --i)  {

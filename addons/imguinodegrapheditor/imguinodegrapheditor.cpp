@@ -344,7 +344,7 @@ void NodeGraphEditor::render()
 
     if (!io.FontAllowUserScaling && io.KeyCtrl && ImGui::GetCurrentWindow()==GImGui->HoveredWindow && (io.MouseWheel || io.MouseClicked[2]))   {
 	// Zoom / Scale window
-	ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
 	ImGuiWindow* window = ImGui::GetCurrentWindow();
 	float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
     if (io.MouseClicked[2]) new_font_scale = 1.f;   // MMB = RESET ZOOM
@@ -807,7 +807,7 @@ void NodeGraphEditor::render()
     if (open_context_menu || open_delete_only_context_menu)  {
         if (node_hovered_in_list) selectedNode = node_hovered_in_list;
         if (node_hovered_in_scene) selectedNode = node_hovered_in_scene;
-        ImGuiState& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
+        ImGuiContext& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
         ImGui::PushID(selectedNode);
         if (open_delete_only_context_menu) ImGui::OpenPopup("delete_only_context_menu");
         else if (open_context_menu) ImGui::OpenPopup("context_menu");

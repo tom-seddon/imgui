@@ -420,7 +420,7 @@ static bool TabButton(const char *label, bool selected, bool *pCloseButtonPresse
     ImGuiWindow* window = GetCurrentWindow();
     if (window && window->SkipItems && !isFakeControl)  return false;
 
-    //ImGuiState& g = *GImGui;
+    //ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = ImGui::GetStyle();
     const TabLabelStyle& tabStyle = pOptionalStyleToUseIn ? *pOptionalStyleToUseIn : TabLabelStyle::Get();
     const ImGuiID id = isFakeControl ? 0 : window->GetID(label);
@@ -1100,7 +1100,7 @@ struct MyTabWindowHelperStruct {
     ~MyTabWindowHelperStruct() {
 	restoreStyleVars();
     /*if (mustOpenAskForClosingPopup) {
-        ImGuiState& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
+        ImGuiContext& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
 	    ImGui::OpenPopup(ImGui::TabWindow::GetTabLabelAskForDeletionModalWindowName());
     }*/
     }
@@ -1246,7 +1246,7 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
             window->DrawList->AddRectFilled(window->Pos, window->Pos+ImVec2(windowSize.x,allTabsSize.y), GetColorU32(tabStyle.tabWindowLabelBackgroundColor), 0);
         }
         style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
-        ImGuiState& g = *GImGui;
+        ImGuiContext& g = *GImGui;
         TabWindowDragData& dd = gDragData;
         const ImFont* fontOverride = NULL;
 
@@ -1491,7 +1491,7 @@ const char* dialogTitleLine1,const char* dialogTitleLine2) {
         mustCloseDialog = true;
     }
     ImGui::EndPopup();
-    if (mustCloseDialog) {ImGuiState& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();}   // Close all existing context-menus
+    if (mustCloseDialog) {ImGuiContext& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();}   // Close all existing context-menus
     //if (cancel) mustCloseDialog = false;
     }
     if (pMustCloseDialogOut) *pMustCloseDialogOut = mustCloseDialog;
@@ -1512,7 +1512,7 @@ void TabWindow::render()
 
     static int frameCnt = -1;
     static bool lastFrameNoDragTabLabelHasBeenDrawn = true;
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     if (frameCnt!=g.FrameCount) {
         frameCnt=g.FrameCount;
         const bool mustDrawDraggedTabLabel = (!g.HoveredWindow || lastFrameNoDragTabLabelHasBeenDrawn) && dd.draggingTabSrc;
@@ -1550,7 +1550,7 @@ void TabWindow::render()
     if (MyTabWindowHelperStruct::TabsToAskForClosing.size()>0)   {
         //fprintf(stderr,"Ok: %d\n",MyTabWindowHelperStruct::TabsToAskForClosing.size());
         if (MyTabWindowHelperStruct::MustOpenAskForClosingPopup)    {
-            ImGuiState& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
+            ImGuiContext& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
             ImGui::OpenPopup(TabWindow::GetTabLabelAskForDeletionModalWindowName());
             MyTabWindowHelperStruct::MustOpenAskForClosingPopup = false;
         }
@@ -1565,7 +1565,7 @@ void TabWindow::render()
         if (TabLabelPopupMenuDrawerCb && MyTabWindowHelperStruct::tabLabelPopup) {
             if (MyTabWindowHelperStruct::tabLabelPopupChanged) {
                 MyTabWindowHelperStruct::tabLabelPopupChanged = false;
-                ImGuiState& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
+                ImGuiContext& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
                 ImGui::OpenPopup(TabWindow::GetTabLabelPopupMenuName());
             }
             TabLabelPopupMenuDrawerCb(MyTabWindowHelperStruct::tabLabelPopup,*MyTabWindowHelperStruct::tabLabelPopupTabWindow,TabLabelPopupMenuDrawerUserPtr);
@@ -1573,7 +1573,7 @@ void TabWindow::render()
         if (TabLabelGroupPopupMenuDrawerCb && MyTabWindowHelperStruct::tabLabelGroupPopup.size()>0)    {
             if (MyTabWindowHelperStruct::tabLabelGroupPopupChanged) {
                 MyTabWindowHelperStruct::tabLabelGroupPopupChanged = false;
-                ImGuiState& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
+                ImGuiContext& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
                 ImGui::OpenPopup(TabWindow::GetTabLabelGroupPopupMenuName());
             }
             TabLabelGroupPopupMenuDrawerCb(MyTabWindowHelperStruct::tabLabelGroupPopup,*MyTabWindowHelperStruct::tabLabelPopupTabWindow,MyTabWindowHelperStruct::tabLabelGroupPopupNode,TabLabelGroupPopupMenuDrawerUserPtr);

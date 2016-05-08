@@ -33,7 +33,7 @@ struct gif_result : stbi__gif {
 
 namespace ImGui {
 static float GetWindowFontScale() {
-    //ImGuiState& g = *GImGui;
+    //ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     return window->FontWindowScale;
 }
@@ -239,7 +239,7 @@ inline static bool ColorChooserInternal(ImVec4 *pColorOut,bool supportsAlpha,boo
     ImVec4 color = pColorOut ? *pColorOut : ImVec4(0,0,0,1);
     if (!supportsAlpha) color.w=1.f;
 
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     const float smallWidth = windowWidth/9.f;
 
     static const ImU32 black = ColorConvertFloat4ToU32(ImVec4(0,0,0,1));
@@ -460,7 +460,7 @@ bool ColorCombo(const char* label,ImVec4 *pColorOut,bool supportsAlpha,float wid
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     if (window->SkipItems) return false;
 
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
 
@@ -735,7 +735,7 @@ bool ImageButtonWithText(ImTextureID texId,const char* label,const ImVec2& image
         size*=window->FontWindowScale*ImGui::GetIO().FontGlobalScale;
     }
 
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
 
     const ImGuiID id = window->GetID(label);
@@ -1098,7 +1098,7 @@ struct AnimatedImageInternal {
         else if (size.y<0) size.y=-size.y*h;
         size*=window->FontWindowScale*ImGui::GetIO().FontGlobalScale;
 
-        ImGuiState& g = *GImGui;
+        ImGuiContext& g = *GImGui;
         const ImGuiStyle& style = g.Style;
 
         // Default to using texture ID as ID. User can still push string/integer prefixes.
@@ -1303,7 +1303,7 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
                 /*if (io.FontAllowUserScaling) {
                     // invert effect:
                     // Zoom / Scale window
-                    ImGuiState& g = *GImGui;
+                    ImGuiContext& g = *GImGui;
                     ImGuiWindow* window = g.HoveredWindow;
                     float new_font_scale = ImClamp(window->FontWindowScale - g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
                     float scale = new_font_scale / window->FontWindowScale;
@@ -1451,7 +1451,7 @@ void TreeNodeIndent(int numIndents) {
     if (numIndents<=0) return;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems) return;
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     window->DC.CursorPos.x+= (g.FontSize+style.FramePadding.x*2)*numIndents;
 }
@@ -1466,6 +1466,7 @@ struct MyTreeViewHelperStruct {
     bool eventFlagRemoved;
     bool mustFireDoubleClickEvent;
     bool mustDrawAllNodesAsDisabled;
+    ImGuiWindow* window;
     float windowWidth;
     struct ContextMenuDataStruct {
         TreeViewNode* activeNode;
@@ -1476,6 +1477,7 @@ struct MyTreeViewHelperStruct {
     };
     static ContextMenuDataStruct ContextMenuData;
     MyTreeViewHelperStruct(TreeView& parent) : parentTreeView(parent),eventNode(NULL),eventFlag(TreeViewNode::STATE_NONE),eventFlagRemoved(false),mustFireDoubleClickEvent(false) {
+        window = ImGui::GetCurrentWindow();
         windowWidth = ImGui::GetWindowWidth();
     }
     void fillEvent(TreeViewNode* _eventNode=NULL,TreeViewNode::State _eventFlag=TreeViewNode::STATE_NONE,bool _eventFlagRemoved=false) {
@@ -1598,27 +1600,27 @@ TreeViewNode::TreeViewNode(const Data& _data, TreeViewNode *_parentNode, int nod
     state = 0;
     parentNode = _parentNode;
     if (parentNode) {
-	//We must add this node to parentNode->childNodes
-	if (!parentNode->childNodes)    {
-	    parentNode->childNodes = (ImVector<TreeViewNode*>*) ImGui::MemAlloc(sizeof(ImVector<TreeViewNode*>));
-	    IM_PLACEMENT_NEW(parentNode->childNodes) ImVector<TreeViewNode*>();
-	    parentNode->childNodes->push_back(this);
-	}
-	else if (nodeIndex<0 || nodeIndex>=parentNode->childNodes->size()) {
+        //We must add this node to parentNode->childNodes
+        if (!parentNode->childNodes)    {
+            parentNode->childNodes = (ImVector<TreeViewNode*>*) ImGui::MemAlloc(sizeof(ImVector<TreeViewNode*>));
+            IM_PLACEMENT_NEW(parentNode->childNodes) ImVector<TreeViewNode*>();
+            parentNode->childNodes->push_back(this);
+        }
+        else if (nodeIndex<0 || nodeIndex>=parentNode->childNodes->size()) {
             // append at the end
-	    parentNode->childNodes->push_back(this);
+            parentNode->childNodes->push_back(this);
         }
         else {
             // insert "this" at "nodeIndex"
-	    const int isz = parentNode->childNodes->size();
-	    parentNode->childNodes->resize(parentNode->childNodes->size()+1);
-	    for (int j=isz;j>nodeIndex;j++) (*(parentNode->childNodes))[j] = (*(parentNode->childNodes))[j-1];
-	    (*(parentNode->childNodes))[nodeIndex] = this;
+            const int isz = parentNode->childNodes->size();
+            parentNode->childNodes->resize(parentNode->childNodes->size()+1);
+            for (int j=isz;j>nodeIndex;j--) (*(parentNode->childNodes))[j] = (*(parentNode->childNodes))[j-1];
+            (*(parentNode->childNodes))[nodeIndex] = this;
         }
     }
     if (addEmptyChildNodeVector) {
-	childNodes = (ImVector<TreeViewNode*>*) ImGui::MemAlloc(sizeof(ImVector<TreeViewNode*>));
-	IM_PLACEMENT_NEW(childNodes) ImVector<TreeViewNode*>();
+        childNodes = (ImVector<TreeViewNode*>*) ImGui::MemAlloc(sizeof(ImVector<TreeViewNode*>));
+        IM_PLACEMENT_NEW(childNodes) ImVector<TreeViewNode*>();
     }
 }
 
@@ -1900,9 +1902,9 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
         if (allowSelection && stateselected)	{
             const ImVec2 textSize = ImGui::CalcTextSize(data.displayName);textSizeY=textSize.y;
             const ImU32 fillColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.1f));
-            GetCurrentWindow()->DrawList->AddRectFilled(GetCurrentWindow()->DC.CursorPos+shadowOffset,GetCurrentWindow()->DC.CursorPos+textSize,fillColor);
+            tvhs.window->DrawList->AddRectFilled(tvhs.window->DC.CursorPos+shadowOffset,tvhs.window->DC.CursorPos+textSize,fillColor);
             const ImU32 borderColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.15f));
-            GetCurrentWindow()->DrawList->AddRect(GetCurrentWindow()->DC.CursorPos+shadowOffset,GetCurrentWindow()->DC.CursorPos+textSize,borderColor,0.0f,0x0F,textSize.y*0.1f);
+            tvhs.window->DrawList->AddRect(tvhs.window->DC.CursorPos+shadowOffset,tvhs.window->DC.CursorPos+textSize,borderColor,0.0f,0x0F,textSize.y*0.1f);
         }
         if (state&STATE_DEFAULT)    {
             shadowOffset.y*=0.5f;
@@ -1910,7 +1912,7 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
             if (shadowOffset.x<1) shadowOffset.x=1.f;
             shadowOffset.y+=shadowOffset.x;
             const ImU32 shadowColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.6f));
-            GetCurrentWindow()->DrawList->AddText(GetCurrentWindow()->DC.CursorPos+shadowOffset,shadowColor,data.displayName);
+            tvhs.window->DrawList->AddText(tvhs.window->DC.CursorPos+shadowOffset,shadowColor,data.displayName);
         }
     }
 
@@ -1990,7 +1992,7 @@ TreeViewNode *TreeView::render() {
     if (!childNodes || childNodes->size()==0) return NULL;
 
     static int frameCnt = -1;
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     if (frameCnt!=g.FrameCount) {
         frameCnt=g.FrameCount;
         MyTreeViewHelperStruct::ContextMenuDataStruct& cmd = MyTreeViewHelperStruct::ContextMenuData;
@@ -1998,7 +2000,7 @@ TreeViewNode *TreeView::render() {
         if (cmd.activeNode && cmd.parentTreeView && cmd.parentTreeView->treeViewNodePopupMenuDrawerCb) {
             if (cmd.activeNodeChanged) {
                 cmd.activeNodeChanged = false;
-                ImGuiState& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
+                ImGuiContext& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
                 ImGui::OpenPopup(TreeView::GetTreeViewNodePopupMenuName());
             }
             cmd.parentTreeView->treeViewNodePopupMenuDrawerCb(cmd.activeNode,*cmd.parentTreeView,cmd.parentTreeView->treeViewNodePopupMenuDrawerCbUserPtr);

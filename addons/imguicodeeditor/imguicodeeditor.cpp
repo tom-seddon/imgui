@@ -588,11 +588,11 @@ void CodeEditor::TextLineWithSHV(const char* fmt, va_list args) {
 
 //#define TEST_HERE
 #ifndef TEST_HERE
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     const char* text_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
     TextLineUnformattedWithSH(g.TempBuffer, text_end);
 #else //TEST_HERE
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     const char* text_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
     // Bg Color-------------------
     ImU32 bg_col = ImColor(255,255,255,50);
@@ -2085,7 +2085,7 @@ void CodeEditor::render()   {
 
     if (!io.FontAllowUserScaling && io.MouseWheel && ImGui::GetCurrentWindow()==GImGui->HoveredWindow)   {
         // Zoom / Scale window
-        ImGuiState& g = *GImGui;
+        ImGuiContext& g = *GImGui;
         ImGuiWindow* window = ImGui::GetCurrentWindow();//g.HoveredWindow;
         float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
         float scale = new_font_scale / window->FontWindowScale;
@@ -2602,7 +2602,7 @@ template <int NUM_TOKENS> inline static const char* FindNextToken(const char* te
 }
 void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, const char* text_end, bool skipLineCommentAndStringProcessing)
 {
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     ImGuiWindow* window = ImGui::GetCurrentWindow();
 
     int text_len = (int)(text_end - text);
@@ -2911,7 +2911,7 @@ static BadCodeEditorData BadCodeEditorLanguageData[ImGuiCe::LANG_COUNT];
 
 static void MyRenderTextLineWrappedWithSH(const BadCodeEditorData& ceData,ImVec2& pos, const char* text, const char* text_end, bool skipLineCommentAndStringProcessing=false)
 {
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     ImGuiWindow* window = ImGui::GetCurrentWindow();
 
     ImFont** ImFonts = const_cast<ImFont**>(ImGuiCe::CodeEditor::ImFonts);
@@ -3205,7 +3205,7 @@ static void MyTextLineUnformattedWithSH(const BadCodeEditorData& ceData,const ch
 static void MyTextLineWithSHV(const BadCodeEditorData& ceData,const char* fmt, va_list args) {
     if (ImGui::GetCurrentWindow()->SkipItems)  return;
 
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     const char* text_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
     MyTextLineUnformattedWithSH(ceData,g.TempBuffer, text_end);
 }
@@ -3233,7 +3233,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     if (!langData.inited) langData.init(lang);
     langData.resetStateVariables();
 
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     const ImGuiIO& io = g.IO;
     const ImGuiStyle& style = g.Style;
     const ImGuiCe::CodeEditor::Style& ceStyle = ImGuiCe::CodeEditor::style;
@@ -3300,7 +3300,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     // Zooming CTRL + MW
     if (!io.FontAllowUserScaling && io.KeyCtrl && ImGui::GetCurrentWindow()==GImGui->HoveredWindow && (io.MouseWheel || io.MouseClicked[2]))   {
         // Zoom / Scale window
-        ImGuiState& g = *GImGui;
+        ImGuiContext& g = *GImGui;
         ImGuiWindow* window = ImGui::GetCurrentWindow();//g.HoveredWindow;
         float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.75f, 2.0f);
         if (io.MouseClicked[2]) new_font_scale = 1.f;   // MMB = RESET ZOOM

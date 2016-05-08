@@ -361,7 +361,7 @@ public:
             SetString(tooltip,_tooltip,true);
             SetString(userText,_userText,true);
             userId = _id;
-        }
+        }        
         inline static void SetString(char*& outText,const char* text,bool allowNNull=true) {
             if (outText) {ImGui::MemFree(outText);outText=NULL;}
             const char e = '\0';
@@ -449,6 +449,18 @@ public:
     }
 */
 
+    // "data" accessors
+    inline const char* getDisplayName() const {return data.displayName;}
+    inline void setDisplayName(const char* _displayName) {Data::SetString(data.displayName,_displayName,false);}
+    inline const char* getTooltip() const {return data.tooltip;}
+    inline void setTooltip(const char* _tooltip) {Data::SetString(data.tooltip,_tooltip,true);}
+    inline const char* getUserText() const {return data.userText;}
+    inline void setUserText(const char* _userText) {Data::SetString(data.userText,_userText,true);}
+    inline int& getUserId() {return data.userId;}
+    inline const int& getUserId() const {return data.userId;}
+    inline void setUserId(int uid) {data.userId=uid;}
+
+
 protected:
 
     TreeViewNode(const TreeViewNode::Data& _data=TreeViewNode::Data(), TreeViewNode* _parentNode=NULL, int nodeIndex=-1, bool addEmptyChildNodeVector=false);
@@ -523,18 +535,23 @@ public:
     // Callbacks:
     typedef void (*TreeViewNodeCallback)(TreeViewNode* node,TreeView& parent,void* userPtr);
     void setTreeViewNodePopupMenuDrawerCb(TreeViewNodeCallback cb,void* userPtr=NULL) {treeViewNodePopupMenuDrawerCb = cb;treeViewNodePopupMenuDrawerCbUserPtr = userPtr;}
+    inline TreeViewNodeCallback getTreeViewNodePopupMenuDrawerCb() const {return treeViewNodePopupMenuDrawerCb;}
     inline static const char* GetTreeViewNodePopupMenuName() {return "TreeViewNodePopupMenu";}  // you can use this name inside the callback: e.g. ImGui::BeginPopup(ImGui::TreeView::GetTreeViewNodePopupMenuName());
     // only states that are modified through mouse interaction are reported (and checks produced by the "allowAutoCheckboxBehaviour" are NOT reported)
     typedef void (*TreeViewNodeStateChangedCallback)(TreeViewNode* node,TreeView& parent,State state,bool wasStateRemoved,void* userPtr);
     void setTreeViewNodeStateChangedCb(TreeViewNodeStateChangedCallback cb,void* userPtr=NULL) {treeViewNodeStateChangedCb = cb;treeViewNodeStateChangedCbUserPtr = userPtr;}
+    inline TreeViewNodeStateChangedCallback getTreeViewNodeStateChangedCb() const {return treeViewNodeStateChangedCb;}
     // usable mainly on leaf nodes for opening files... [however the double-clicked node is already returned by render()...]
     void setTreeViewNodeDoubleClickedCb(TreeViewNodeCallback cb,void* userPtr=NULL) {treeViewNodeDoubleClickedCb = cb;treeViewNodeDoubleClickedCbUserPtr = userPtr;}
+    inline TreeViewNodeCallback getTreeViewNodeDoubleClickedCb() const {return treeViewNodeDoubleClickedCb;}
     // must return true if icon is hovered. If set, use ImGui::SameLine() before returning
     typedef bool (*TreeViewNodeDrawIconCallback)(TreeViewNode* node,TreeView& parent,void* userPtr);
     void setTreeViewNodeDrawIconCb(TreeViewNodeDrawIconCallback cb,void* userPtr=NULL) {treeViewNodeDrawIconCb = cb;treeViewNodeDrawIconCbUserPtr = userPtr;}
+    inline TreeViewNodeDrawIconCallback getTreeViewNodeDrawIconCb() const {return treeViewNodeDrawIconCb;}
     // just called after all rendering in this node (can be used to append stuff at the right of the line)
     typedef void (*TreeViewNodeAfterDrawCallback)(TreeViewNode* node,TreeView& parent,float windowWidth,void* userPtr);
     void setTreeViewNodeAfterDrawCb(TreeViewNodeAfterDrawCallback cb,void* userPtr=NULL) {treeViewNodeAfterDrawCb = cb;treeViewNodeAfterDrawCbUserPtr = userPtr;}
+    inline TreeViewNodeAfterDrawCallback getTreeViewNodeAfterDrawCb() const {return treeViewNodeAfterDrawCb;}
 
     void *userPtr;                  // user stuff, not mine
 

@@ -1277,7 +1277,7 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
 #endif// IMGUI_USE_DIRECT3D9_BINDING
 
 void ImImpl_NewFramePaused()    {
-    ImGuiState& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     g.Time += g.IO.DeltaTime;
 
     // Update inputs state
