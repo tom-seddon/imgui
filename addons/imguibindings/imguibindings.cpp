@@ -150,6 +150,7 @@ void ImImpl_ClearColorBuffer(const ImVec4& bgColor)  {
 #endif //defined(IMGUI_USE_DIRECT3D9_BINDING)
 
 void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
+    if (pOptionalInitParams && pOptionalInitParams->skipBuildingFonts) return;
     ImGuiIO& io = ImGui::GetIO();
     DestroyImGuiFontTexture();	// reentrant
 

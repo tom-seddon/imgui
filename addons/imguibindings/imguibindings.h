@@ -167,6 +167,7 @@ struct ImImpl_InitParams	{
     bool gFpsDynamicInsideImGui;    // false
     ImVector<FontData> fonts;
     bool forceAddDefaultFontAsFirstFont;
+    bool skipBuildingFonts;
     ImImpl_InitParams(
             int windowWidth=1270,
             int windowHeight=720,
@@ -177,12 +178,14 @@ struct ImImpl_InitParams	{
             const float OptionalTTFFontSizeInPixels=15.0f,
             const ImWchar* OptionalTTFGlyphRanges=NULL,
             ImFontConfig* pFontConfig=NULL,
-            bool _forceAddDefaultFontAsFirstFont = false
+            bool _forceAddDefaultFontAsFirstFont = false,
+            bool _skipBuildingFonts = false
     ) :
     gFpsClampInsideImGui(-1.0f),
     gFpsClampOutsideImGui(-1.0f),
     gFpsDynamicInsideImGui(false),
-    forceAddDefaultFontAsFirstFont(_forceAddDefaultFontAsFirstFont)
+    forceAddDefaultFontAsFirstFont(_forceAddDefaultFontAsFirstFont),
+    skipBuildingFonts(_skipBuildingFonts)
 	{
         gWindowSize.x = windowWidth<=0?1270:windowWidth;gWindowSize.y = windowHeight<=0?720:windowHeight;
 
@@ -213,7 +216,8 @@ struct ImImpl_InitParams	{
     gFpsClampOutsideImGui(-1.0f),
     gFpsDynamicInsideImGui(false),
     //fonts(_fonts),    // Hehe: this crashes the program on exit (I guess ImVector can't handle operator= correctly)
-    forceAddDefaultFontAsFirstFont(_forceAddDefaultFontAsFirstFont)
+    forceAddDefaultFontAsFirstFont(_forceAddDefaultFontAsFirstFont),
+    skipBuildingFonts(false)
     {
         gWindowSize.x = windowWidth<=0?1270:windowWidth;gWindowSize.y = windowHeight<=0?720:windowHeight;
         fonts.reserve(_fonts.size());for (int i=0,isz=_fonts.size();i<isz;i++) fonts.push_back(_fonts[i]);  // Manual workaround that works

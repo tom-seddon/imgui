@@ -460,6 +460,8 @@ public:
     inline const int& getUserId() const {return data.userId;}
     inline void setUserId(int uid) {data.userId=uid;}
 
+    void startRenamingMode();
+    bool isInRenamingMode() const;
 
 protected:
 
@@ -589,6 +591,8 @@ protected:
     void operator=(const TreeView&) {}
     TreeView(const TreeViewNode&) {}
     void operator=(const TreeViewNode&) {}
+
+
 
 };
 typedef TreeViewNode::Data TreeViewNodeData;

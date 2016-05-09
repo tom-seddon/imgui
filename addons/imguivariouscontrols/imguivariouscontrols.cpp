@@ -1456,8 +1456,12 @@ void TreeNodeIndent(int numIndents) {
     window->DC.CursorPos.x+= (g.FontSize+style.FramePadding.x*2)*numIndents;
 }
 
+}   // ImGui namespace
+
+
 // Tree view stuff starts here ==============================================================
 #include <stdlib.h> // qsort (Maybe we could add a define to exclude sorting...)
+namespace ImGui {
 
 struct MyTreeViewHelperStruct {
     TreeView& parentTreeView;
@@ -1476,6 +1480,25 @@ struct MyTreeViewHelperStruct {
         void reset() {*this = ContextMenuDataStruct();}
     };
     static ContextMenuDataStruct ContextMenuData;
+    struct NameEditingStruct {
+        TreeViewNode* editingNode;
+        char textInput[256];
+        bool mustFocusInputText;
+        NameEditingStruct(TreeViewNode* n=NULL,const char* startingText=NULL) : editingNode(n) {
+            textInput[0]='\0';
+            if (startingText) {
+                const int len = strlen(startingText);
+                if (len<255) strcpy(&textInput[0],startingText);
+                else {
+                    strncpy(&textInput[0],startingText,255);
+                    textInput[255]='\0';
+                }
+            }
+            mustFocusInputText = (editingNode!=NULL);
+        }
+        void reset() {*this = NameEditingStruct();}
+    };
+    static NameEditingStruct NameEditing;
     MyTreeViewHelperStruct(TreeView& parent) : parentTreeView(parent),eventNode(NULL),eventFlag(TreeViewNode::STATE_NONE),eventFlagRemoved(false),mustFireDoubleClickEvent(false) {
         window = ImGui::GetCurrentWindow();
         windowWidth = ImGui::GetWindowWidth();
@@ -1535,8 +1558,9 @@ struct MyTreeViewHelperStruct {
         const bool canBeSetToDefault = n->isRootNode() && n->isStateMissing(TreeViewNode::STATE_DEFAULT);
         const bool canBeEnabledOrDisabled = true;
         const bool itsChildNodesAreSortable = n->childNodes && n->childNodes->size()>1;
+        const bool canBeRenamed = !n->isInRenamingMode();
 
-        if ((canBeSetToDefault || canBeEnabledOrDisabled || itsChildNodesAreSortable) && ImGui::BeginPopup(TreeView::GetTreeViewNodePopupMenuName()))   {
+        if ((canBeSetToDefault || canBeEnabledOrDisabled || itsChildNodesAreSortable || canBeRenamed) && ImGui::BeginPopup(TreeView::GetTreeViewNodePopupMenuName()))   {
             ImGui::PushID(n);
             if (canBeSetToDefault && ImGui::MenuItem("Set as default root item"))  {
                 tv.removeStateFromAllDescendants(TreeViewNode::STATE_DEFAULT);  // allow (at most) one default node
@@ -1552,6 +1576,7 @@ struct MyTreeViewHelperStruct {
             if (ImGui::MenuItem("Sort child nodes in acending order")) n->sortChildNodesByDisplayName(false,false);
             if (ImGui::MenuItem("Sort child nodes in descending order")) n->sortChildNodesByDisplayName(false,true);
         }
+            if (canBeRenamed && ImGui::MenuItem("Rename")) {n->startRenamingMode();}
             ImGui::PopID();
             ImGui::EndPopup();
         }
@@ -1559,10 +1584,11 @@ struct MyTreeViewHelperStruct {
     }
 };
 MyTreeViewHelperStruct::ContextMenuDataStruct MyTreeViewHelperStruct::ContextMenuData;
-
+MyTreeViewHelperStruct::NameEditingStruct MyTreeViewHelperStruct::NameEditing;
 
 TreeViewNode::~TreeViewNode() {
     if (this == MyTreeViewHelperStruct::ContextMenuData.activeNode) MyTreeViewHelperStruct::ContextMenuData.reset();
+    if (this == MyTreeViewHelperStruct::NameEditing.editingNode) MyTreeViewHelperStruct::NameEditing.reset();
     //dbgDisplay();
     if (childNodes) {
         // delete child nodes
@@ -1791,6 +1817,13 @@ void TreeViewNode::getAllChildNodesWithoutState(ImVector<TreeViewNode *> &result
     }
 }
 
+void TreeViewNode::startRenamingMode()  {
+    MyTreeViewHelperStruct::NameEditing = MyTreeViewHelperStruct::NameEditingStruct(this,this->getDisplayName());
+}
+bool TreeViewNode::isInRenamingMode() const {
+    return (this==MyTreeViewHelperStruct::NameEditing.editingNode);
+}
+
 
 TreeView::TreeView(Mode _selectionMode, bool _allowMultipleSelection, Mode _checkboxMode, bool _allowAutoCheckboxBehaviour, bool _inheritDisabledLook) : TreeViewNode(Data(),NULL,-1,true) {
     treeViewNodePopupMenuDrawerCb = &MyTreeViewHelperStruct::TreeViewNodePopupMenuProvider;
@@ -1891,40 +1924,54 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
 
     if (tv.treeViewNodeDrawIconCb) itemHovered|=tv.treeViewNodeDrawIconCb(this,tv,tv.treeViewNodeDrawIconCbUserPtr);
 
-    if (mustdrawdisabled) {
-        if (!customColorState) ImGui::PushStyleColor(ImGuiCol_Text, GImGui->Style.Colors[ImGuiCol_TextDisabled]);
-        else ImGui::PushStyleColor(ImGuiCol_Text, tv.stateColors[(customColorState-1)*2+1]);
-    }
-    if ((state&STATE_DEFAULT) || (allowSelection && stateselected)) {
-        const ImVec4 textColor = (!customColorState || mustdrawdisabled) ? GImGui->Style.Colors[ImGuiCol_Text] : tv.stateColors[(customColorState-1)*2];
-        ImVec2 shadowOffset(0,allowCheckBox ? (GImGui->Style.FramePadding.y*2) : 0);
-        float textSizeY = 0.f;
-        if (allowSelection && stateselected)	{
-            const ImVec2 textSize = ImGui::CalcTextSize(data.displayName);textSizeY=textSize.y;
-            const ImU32 fillColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.1f));
-            tvhs.window->DrawList->AddRectFilled(tvhs.window->DC.CursorPos+shadowOffset,tvhs.window->DC.CursorPos+textSize,fillColor);
-            const ImU32 borderColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.15f));
-            tvhs.window->DrawList->AddRect(tvhs.window->DC.CursorPos+shadowOffset,tvhs.window->DC.CursorPos+textSize,borderColor,0.0f,0x0F,textSize.y*0.1f);
+    if (this!=MyTreeViewHelperStruct::NameEditing.editingNode)  {
+        if (mustdrawdisabled) {
+            if (!customColorState) ImGui::PushStyleColor(ImGuiCol_Text, GImGui->Style.Colors[ImGuiCol_TextDisabled]);
+            else ImGui::PushStyleColor(ImGuiCol_Text, tv.stateColors[(customColorState-1)*2+1]);
         }
-        if (state&STATE_DEFAULT)    {
-            shadowOffset.y*=0.5f;
-            shadowOffset.x = (textSizeY!=0.f ? textSizeY : ImGui::GetTextLineHeight())*0.05f;
-            if (shadowOffset.x<1) shadowOffset.x=1.f;
-            shadowOffset.y+=shadowOffset.x;
-            const ImU32 shadowColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.6f));
-            tvhs.window->DrawList->AddText(tvhs.window->DC.CursorPos+shadowOffset,shadowColor,data.displayName);
+        if ((state&STATE_DEFAULT) || (allowSelection && stateselected)) {
+            const ImVec4 textColor = (!customColorState || mustdrawdisabled) ? GImGui->Style.Colors[ImGuiCol_Text] : tv.stateColors[(customColorState-1)*2];
+            ImVec2 shadowOffset(0,allowCheckBox ? (GImGui->Style.FramePadding.y*2) : 0);
+            float textSizeY = 0.f;
+            if (allowSelection && stateselected)	{
+                const ImVec2 textSize = ImGui::CalcTextSize(data.displayName);textSizeY=textSize.y;
+                const ImU32 fillColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.1f));
+                tvhs.window->DrawList->AddRectFilled(tvhs.window->DC.CursorPos+shadowOffset,tvhs.window->DC.CursorPos+textSize,fillColor);
+                const ImU32 borderColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.15f));
+                tvhs.window->DrawList->AddRect(tvhs.window->DC.CursorPos+shadowOffset,tvhs.window->DC.CursorPos+textSize,borderColor,0.0f,0x0F,textSize.y*0.1f);
+            }
+            if (state&STATE_DEFAULT)    {
+                shadowOffset.y*=0.5f;
+                shadowOffset.x = (textSizeY!=0.f ? textSizeY : ImGui::GetTextLineHeight())*0.05f;
+                if (shadowOffset.x<1) shadowOffset.x=1.f;
+                shadowOffset.y+=shadowOffset.x;
+                const ImU32 shadowColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.6f));
+                tvhs.window->DrawList->AddText(tvhs.window->DC.CursorPos+shadowOffset,shadowColor,data.displayName);
+            }
+        }
+
+        if (!customColorState || mustdrawdisabled) ImGui::Text("%s",data.displayName);
+        else ImGui::TextColored(tv.stateColors[(customColorState-1)*2],"%s",data.displayName);
+
+        if (mustdrawdisabled) ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered()) {
+            itemHovered=true;
+            if (data.tooltip && strlen(data.tooltip)>0) ImGui::SetTooltip("%s",data.tooltip);
         }
     }
-
-    if (!customColorState || mustdrawdisabled) ImGui::Text("%s",data.displayName);
-    else ImGui::TextColored(tv.stateColors[(customColorState-1)*2],"%s",data.displayName);
-
-    if (mustdrawdisabled) ImGui::PopStyleColor();
-    if (ImGui::IsItemHovered()) {
-        itemHovered=true;
-        if (data.tooltip && strlen(data.tooltip)>0) ImGui::SetTooltip("%s",data.tooltip);
+    else {
+        char* ti = &MyTreeViewHelperStruct::NameEditing.textInput[0];
+        bool& mustFocus = MyTreeViewHelperStruct::NameEditing.mustFocusInputText;
+        if (mustFocus) {ImGui::SetKeyboardFocusHere();}
+        if (ImGui::InputText("###EditingName",ti,255,ImGuiInputTextFlags_EnterReturnsTrue)) {
+            if (strlen(ti)>0) setDisplayName(ti);
+            MyTreeViewHelperStruct::NameEditing.reset();
+        }
+        else {
+            if (!mustFocus && !ImGui::IsItemActive()) MyTreeViewHelperStruct::NameEditing.reset();
+            mustFocus = false;
+        }
     }
-
     if (tv.treeViewNodeAfterDrawCb) tv.treeViewNodeAfterDrawCb(this,tv,tvhs.windowWidth,tv.treeViewNodeAfterDrawCbUserPtr);
 
     if (mustTreePop) ImGui::TreePop();
