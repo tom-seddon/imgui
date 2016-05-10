@@ -296,11 +296,8 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
 // Moves: window->DC.CursorPos.x+= the indent(s) of a TreeNode
 void TreeNodeIndent(int numIndents=1);
 
-// Preliminar generic tree view implementation
-// TODO:
-// 1) add serialization
-// 2) See if we can switch context-menu with a single-shot RMB click (when a menu is still open)
-// 3) See if we can change TreeView::inheritDisabledLook with a unsigned int sate mask that can be used to inherit other looks
+// Basic tree view implementation
+// TODO: See if we can switch context-menu with a single-shot RMB click (when a menu is still open)
 class TreeViewNode {
 protected:
     friend class TreeView;
@@ -339,6 +336,21 @@ public:
         MODE_ROOT_LEAF = 5,
         MODE_INTERMEDIATE_LEAF = 6,
         MODE_ALL = 7,
+    };
+
+    enum EventType {
+        EVENT_NONE = 0,
+        EVENT_STATE_CHANGED,
+        EVENT_DOUBLE_CLICKED,
+        EVENT_RENAMED
+    };
+    struct Event {
+        TreeViewNode* node;
+        EventType type;
+        State state;bool wasStateRemoved;
+        Event() {set();}
+        inline void reset() {set();}
+        inline void set(TreeViewNode* _node=NULL,EventType _type=EVENT_NONE,State _state=STATE_NONE,bool _wasStateRemoved=false)    {node=_node;type=_type;state=_state;wasStateRemoved=_wasStateRemoved;}
     };
 
     struct Data {
@@ -391,10 +403,10 @@ public:
     }
     static void DeleteNode(TreeViewNode* n);
 
-    class TreeView& getTreeView();
-    const class TreeView& getTreeView() const;
-    TreeViewNode* getParentNode();              // Using TreeView::getParentNode(TreeViewNode* n) is slightly faster.
-    const TreeViewNode* getParentNode() const;  // Using TreeView::getParentNode(TreeViewNode* n) is slightly faster.
+    class TreeView& getTreeView();              // slightly slow
+    const class TreeView& getTreeView() const;  // slightly slow
+    TreeViewNode* getParentNode();
+    const TreeViewNode* getParentNode() const;
     int getNodeIndex() const;
     void moveNodeTo(int nodeIndex);
     inline bool isLeafNode() const {return childNodes==NULL;}       // Please note that non-leaf nodes can have childNodes->size()==0
@@ -402,6 +414,10 @@ public:
     inline int getNumChildNodes() const {return childNodes ? childNodes->size() : 0;}
     inline TreeViewNode* getChildNode(int index=0) {return (childNodes && childNodes->size()>index) ? (*childNodes)[index] : NULL;}
     inline const TreeViewNode* getChildNode(int index=0) const {return (childNodes && childNodes->size()>index) ? (*childNodes)[index] : NULL;}
+    void deleteAllChildNodes(bool leaveEmptyChildNodeVector=false);
+    void addEmptyChildNodeVector();         // Only works if "childNodes==NULL" (and allocates it)
+    void removeEmptyChildNodeVector();      // Only works if (childNodes->size()==0" (and deallocates it)
+    int getNumSiblings(bool includeMe=false) const;
 
     void sortChildNodes(bool recursive,int (*comp)(const void *, const void *));
     void sortChildNodesByDisplayName(bool recursive=false,bool reverseOrder=false);
@@ -412,8 +428,8 @@ public:
     inline void addState(int stateFlag) const {state|=stateFlag;}
     inline void removeState(int stateFlag) const {state&=~stateFlag;}
     inline void toggleState(int stateFlag) const {state^=stateFlag;}
-    inline bool isStatePresent(int stateFlag) const {return (state&stateFlag);}
-    inline bool isStateMissing(int stateFlag) const {return !(state&stateFlag);}
+    inline bool isStatePresent(int stateFlag) const {return ((state&stateFlag)==stateFlag);}
+    inline bool isStateMissing(int stateFlag) const {return ((state&stateFlag)!=stateFlag);}
 
     void addStateToAllChildNodes(int stateFlag, bool recursive = false) const;
     void removeStateFromAllChildNodes(int stateFlag, bool recursive = false) const;
@@ -463,6 +479,7 @@ public:
     void startRenamingMode();
     bool isInRenamingMode() const;
 
+
 protected:
 
     TreeViewNode(const TreeViewNode::Data& _data=TreeViewNode::Data(), TreeViewNode* _parentNode=NULL, int nodeIndex=-1, bool addEmptyChildNodeVector=false);
@@ -491,24 +508,25 @@ protected:
 class TreeView : protected TreeViewNode {
 protected:
 friend class TreeViewNode;
+friend struct MyTreeViewHelperStruct;
 public:
 
     TreeView(Mode _selectionMode=MODE_ALL,bool _allowMultipleSelection=false,Mode _checkboxMode=MODE_NONE,bool _allowAutoCheckboxBehaviour=true,bool _inheritDisabledLook=true);
     virtual ~TreeView();
     bool isInited() {return inited;}
-    TreeViewNode* render();  // Main method (makes inited = true). Returns NULL, or the node that's just been double-clicked (so you can save setting up an event for it...)
+    bool render();  // Main method (makes inited = true). Returns "lastEvent", containing the node that's changed in some way (e.g. double-clicked, end-edited or basic state changed)
+    inline Event& getLastEvent() const {return lastEvent;}
 
     inline int getNumRootNodes() const {return childNodes->size();}
     inline TreeViewNode* getRootNode(int index=0) {return ((childNodes->size()>index) ? (*childNodes)[index] : NULL);}
     inline const TreeViewNode* getRootNode(int index=0) const {return ((childNodes->size()>index) ? (*childNodes)[index] : NULL);}
 
-    inline TreeViewNode* getParentNode(TreeViewNode* node) {IM_ASSERT(node);return (node->parentNode!=this) ? node->parentNode : NULL;}
-    inline const TreeViewNode* getParentNode(const TreeViewNode* node) const {IM_ASSERT(node);return (node->parentNode!=this) ? node->parentNode : NULL;}
-
     inline TreeViewNode* addRootNode(const TreeViewNode::Data& _data,int nodeIndex=-1,bool addEmptyChildNodeVector=false)    {
         return TreeViewNode::CreateNode(_data,this,nodeIndex,addEmptyChildNodeVector);
     }
     inline static void DeleteNode(TreeViewNode* n) {TreeViewNode::DeleteNode(n);}    
+
+    void clear();
 
     // sorting
     void sortRootNodes(bool recursive,int (*comp)(const void *, const void *))  {TreeViewNode::sortChildNodes(recursive,comp);}
@@ -539,13 +557,6 @@ public:
     void setTreeViewNodePopupMenuDrawerCb(TreeViewNodeCallback cb,void* userPtr=NULL) {treeViewNodePopupMenuDrawerCb = cb;treeViewNodePopupMenuDrawerCbUserPtr = userPtr;}
     inline TreeViewNodeCallback getTreeViewNodePopupMenuDrawerCb() const {return treeViewNodePopupMenuDrawerCb;}
     inline static const char* GetTreeViewNodePopupMenuName() {return "TreeViewNodePopupMenu";}  // you can use this name inside the callback: e.g. ImGui::BeginPopup(ImGui::TreeView::GetTreeViewNodePopupMenuName());
-    // only states that are modified through mouse interaction are reported (and checks produced by the "allowAutoCheckboxBehaviour" are NOT reported)
-    typedef void (*TreeViewNodeStateChangedCallback)(TreeViewNode* node,TreeView& parent,State state,bool wasStateRemoved,void* userPtr);
-    void setTreeViewNodeStateChangedCb(TreeViewNodeStateChangedCallback cb,void* userPtr=NULL) {treeViewNodeStateChangedCb = cb;treeViewNodeStateChangedCbUserPtr = userPtr;}
-    inline TreeViewNodeStateChangedCallback getTreeViewNodeStateChangedCb() const {return treeViewNodeStateChangedCb;}
-    // usable mainly on leaf nodes for opening files... [however the double-clicked node is already returned by render()...]
-    void setTreeViewNodeDoubleClickedCb(TreeViewNodeCallback cb,void* userPtr=NULL) {treeViewNodeDoubleClickedCb = cb;treeViewNodeDoubleClickedCbUserPtr = userPtr;}
-    inline TreeViewNodeCallback getTreeViewNodeDoubleClickedCb() const {return treeViewNodeDoubleClickedCb;}
     // must return true if icon is hovered. If set, use ImGui::SameLine() before returning
     typedef bool (*TreeViewNodeDrawIconCallback)(TreeViewNode* node,TreeView& parent,void* userPtr);
     void setTreeViewNodeDrawIconCb(TreeViewNodeDrawIconCallback cb,void* userPtr=NULL) {treeViewNodeDrawIconCb = cb;treeViewNodeDrawIconCbUserPtr = userPtr;}
@@ -559,6 +570,28 @@ public:
 
     ImVec4* getTextColorForStateColor(int aStateColorFlag) const;
     ImVec4* getTextDisabledColorForStateColor(int aStateColorFlag) const;
+
+    void setTextColorForStateColor(int aStateColorFlag,const ImVec4& textColor,float disabledTextColorAlphaFactor=0.5f) const;
+
+//-------------------------------------------------------------------------------
+#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+protected:
+        bool save(ImGuiHelper::Serializer& s);
+public:
+        bool save(const char* filename);
+        static bool Save(const char* filename, TreeView **pTreeViews, int numTreeviews);
+#       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+protected:
+        bool load(ImGuiHelper::Deserializer& d,const char*& amount);
+public:
+        bool load(const char* filename);
+        static bool Load(const char* filename,TreeView** pTreeViews,int numTreeviews);
+#       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#       endif //NO_IMGUIHELPER_SERIALIZATION
+//--------------------------------------------------------------------------------
+
 
     // TODO: Fix stuff in this area ------------------------------------------------
     // we leave these public...     // to make protected
@@ -574,10 +607,6 @@ public:
 protected:
     TreeViewNodeCallback treeViewNodePopupMenuDrawerCb;
     void* treeViewNodePopupMenuDrawerCbUserPtr;
-    TreeViewNodeStateChangedCallback treeViewNodeStateChangedCb;
-    void* treeViewNodeStateChangedCbUserPtr;
-    TreeViewNodeCallback treeViewNodeDoubleClickedCb;
-    void* treeViewNodeDoubleClickedCbUserPtr;
     TreeViewNodeDrawIconCallback treeViewNodeDrawIconCb;
     void* treeViewNodeDrawIconCbUserPtr;
     TreeViewNodeAfterDrawCallback treeViewNodeAfterDrawCb;
@@ -585,6 +614,8 @@ protected:
 
     bool inited;
     mutable ImVec4 stateColors[6];  // 3 pairs of textColor-textDisabledColor
+
+    mutable Event lastEvent;
 
 protected:
     TreeView(const TreeView&) {}
@@ -598,6 +629,7 @@ protected:
 typedef TreeViewNode::Data TreeViewNodeData;
 typedef TreeViewNode::State TreeViewNodeState;
 typedef TreeViewNode::Mode TreeViewNodeMode;
+typedef TreeViewNode::Event TreeViewEvent;
 
 
 

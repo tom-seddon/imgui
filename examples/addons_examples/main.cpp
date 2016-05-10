@@ -146,7 +146,7 @@ inline void MyTestListView() {
 #endif //NO_IMGUILISTVIEW
 #ifndef NO_IMGUIVARIOUSCONTROLS
 // Completely optional Callbacks for ImGui::TreeView
-bool MyTreeViewNodeDrawIconCallback(ImGui::TreeViewNode* n, ImGui::TreeView& /*tv*/, void* /*userPtr*/)    {
+static bool MyTreeViewNodeDrawIconCallback(ImGui::TreeViewNode* n, ImGui::TreeView& /*tv*/, void* /*userPtr*/)    {
     // We use the node "userId" (an int) to store our icon index
     int i = n->getUserId();
     if (i>0 && i<10)   {
@@ -660,74 +660,129 @@ void DrawGL()	// Mandatory
         ImGui::ImageZoomAndPan(reinterpret_cast<ImTextureID>(myImageTextureId2),ImVec2(0,150),1.f,zoom,pan);    // aspect ratio can be aero for stretch mode
 
         ImGui::Spacing();
-        ImGui::Text("Generic TreeView Implementation (WIP):");
+        ImGui::Text("Generic TreeView Implementation:");
         {
-        static ImGui::TreeView tv;
+            // Actually we can use less than 5 lines of code to setup and run a very basic TreeView...
+            // [the single line: static ImGui::TreeView tv;tv.render(); works, but it's without any item...]
+            // but we need to perform some tests here...
 
-        // Optional tuff to change some tv options on the fly -------------------------------------
-        {
-	ImGui::Separator();
-        bool changed = false;
-        ImGui::AlignFirstTextHeightToWidgets();ImGui::TextDisabled("Selection Mode:");ImGui::SameLine();
-        changed|=ImGui::CheckboxFlags("Root##TreeViewSelectRoot",&tv.selectionMode,ImGui::TreeViewNode::MODE_ROOT);ImGui::SameLine();
-        changed|=ImGui::CheckboxFlags("Intermediate##TreeViewSelectIntermediate",&tv.selectionMode,ImGui::TreeViewNode::MODE_INTERMEDIATE);ImGui::SameLine();
-        changed|=ImGui::CheckboxFlags("Leaf##TreeViewSelectLeaf",&tv.selectionMode,ImGui::TreeViewNode::MODE_LEAF);
-        if (tv.selectionMode!=ImGui::TreeViewNode::MODE_NONE) {
+            static ImGui::TreeView tv;
+            static bool resetTv = false;    // triggered by an ImGui::Button below...
+            if (!tv.isInited() || resetTv) {                
+                if (resetTv)    {
+                    resetTv = false;
+                    tv.clear();
+                    tv.selectionMode=ImGui::TreeViewNode::MODE_ALL;
+                    tv.allowMultipleSelection=false;
+                    tv.checkboxMode=ImGui::TreeViewNode::MODE_NONE;
+                    tv.allowAutoCheckboxBehaviour=true;
+                    tv.inheritDisabledLook=true;
+                }
+
+                // Here we add some optional callbacks (can be commented out):
+                if (!tv.isInited() && myImageTextureId2) tv.setTreeViewNodeDrawIconCb(&MyTreeViewNodeDrawIconCallback);
+                // there are other callbacks we can set... expecially the popup menu that defaults to the "testing" one...
+
+                // Here we add some nodes for testing:
+                ImGui::TreeViewNode* n = tv.addRootNode(ImGui::TreeViewNodeData("Some nations","Some nations here"));
+                //n->addState(ImGui::TreeViewNode::STATE_COLOR1);    // configurable color set
+                n->setUserId(1);    // (optional) used in the icon callback
+                n->addChildNode(ImGui::TreeViewNodeData("Ireland"));
+                n->addChildNode(ImGui::TreeViewNodeData("Sweden"));
+                n->addChildNode(ImGui::TreeViewNodeData("Germany"));
+                n->addChildNode(ImGui::TreeViewNodeData("Mexico"));
+                n->addChildNode(ImGui::TreeViewNodeData("China"));
+                n = tv.addRootNode(ImGui::TreeViewNodeData("SecondRoot Node"));
+                n->setUserId(2);    // (optional) used in the icon callback
+                n->addChildNode(ImGui::TreeViewNodeData("SecondRoot-FirstChild Node"));
+                ImGui::TreeViewNode* n2 = n->addChildNode(ImGui::TreeViewNodeData("SecondRoot-SecondChild Node","Node with a configurable text color"));
+                n2->addState(ImGui::TreeViewNode::STATE_COLOR2);    // configurable color set
+                n2->setUserId(8);    // (optional) used in the icon callback
+                n2->addChildNode(ImGui::TreeViewNodeData("SecondRoot-SecondChild-FirstChild Node"));
+                // Test: Now we add the last two root nodes in reverse order:
+                n = tv.addRootNode(ImGui::TreeViewNodeData("FourthRoot Node","This is NOT a leaf node\nbut has no child nodes.\n(Good for folder browsers\nif we monitor STATE_OPEN changes)."),-1,true); // Note the last arg: this node can be opened even if has no child nodes (you can add a callback for state changes).
+                n->setUserId(3);    // (optional) used in the icon callback
+                n = tv.addRootNode(ImGui::TreeViewNodeData("ThirdRoot Node","This is both a root and a leaf node."),2); // put this node at place 2 (0 based).
+                n->setUserId(4);    // (optional) used in the icon callback
+            }
+
+            // Optional tuff to change some tv options on the fly -------------------------------------
+            {
+                ImGui::Separator();
+                bool changed = false;
+                ImGui::AlignFirstTextHeightToWidgets();ImGui::TextDisabled("Selection Mode:");ImGui::SameLine();
+                changed|=ImGui::CheckboxFlags("Root##TreeViewSelectRoot",&tv.selectionMode,ImGui::TreeViewNode::MODE_ROOT);ImGui::SameLine();
+                changed|=ImGui::CheckboxFlags("Intermediate##TreeViewSelectIntermediate",&tv.selectionMode,ImGui::TreeViewNode::MODE_INTERMEDIATE);ImGui::SameLine();
+                changed|=ImGui::CheckboxFlags("Leaf##TreeViewSelectLeaf",&tv.selectionMode,ImGui::TreeViewNode::MODE_LEAF);
+                if (tv.selectionMode!=ImGui::TreeViewNode::MODE_NONE) {
+                    ImGui::SameLine();
+                    changed|=ImGui::Checkbox("MultiSelect##TreeViewMultiSelect",&tv.allowMultipleSelection);
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","using CTRL + LMB");
+                }
+                if (changed) tv.removeStateFromAllDescendants(ImGui::TreeViewNode::STATE_SELECTED);
+
+                changed = false;
+                ImGui::AlignFirstTextHeightToWidgets();ImGui::TextDisabled("Checkbox Mode:");ImGui::SameLine();
+                changed|=ImGui::CheckboxFlags("Root##TreeViewCheckboxRoot",&tv.checkboxMode,ImGui::TreeViewNode::MODE_ROOT);ImGui::SameLine();
+                changed|=ImGui::CheckboxFlags("Intermediate##TreeViewCheckboxIntermediate",&tv.checkboxMode,ImGui::TreeViewNode::MODE_INTERMEDIATE);ImGui::SameLine();
+                changed|=ImGui::CheckboxFlags("Leaf##TreeViewCheckboxLeaf",&tv.checkboxMode,ImGui::TreeViewNode::MODE_LEAF);
+                if (tv.checkboxMode!=ImGui::TreeViewNode::MODE_NONE) {
+                    ImGui::SameLine();
+                    changed|=ImGui::Checkbox("Automatic##TreeViewAutoCheckChildNodes",&tv.allowAutoCheckboxBehaviour);
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","auto parent/child checks");
+                }
+                if (changed) tv.removeStateFromAllDescendants(ImGui::TreeViewNode::STATE_CHECKED);
+            }
+            bool hasDrawIconCb = tv.getTreeViewNodeDrawIconCb();
+            if (ImGui::Checkbox("Show icons",&hasDrawIconCb)) {
+                tv.setTreeViewNodeDrawIconCb(hasDrawIconCb ? &MyTreeViewNodeDrawIconCallback : NULL);
+            }
             ImGui::SameLine();
-            changed|=ImGui::Checkbox("MultiSelect##TreeViewMultiSelect",&tv.allowMultipleSelection);
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","using CTRL + LMB");
-        }
-	if (changed) tv.removeStateFromAllDescendants(ImGui::TreeViewNode::STATE_SELECTED);
-
-        changed = false;
-        ImGui::AlignFirstTextHeightToWidgets();ImGui::TextDisabled("Checkbox Mode:");ImGui::SameLine();
-        changed|=ImGui::CheckboxFlags("Root##TreeViewCheckboxRoot",&tv.checkboxMode,ImGui::TreeViewNode::MODE_ROOT);ImGui::SameLine();
-        changed|=ImGui::CheckboxFlags("Intermediate##TreeViewCheckboxIntermediate",&tv.checkboxMode,ImGui::TreeViewNode::MODE_INTERMEDIATE);ImGui::SameLine();
-        changed|=ImGui::CheckboxFlags("Leaf##TreeViewCheckboxLeaf",&tv.checkboxMode,ImGui::TreeViewNode::MODE_LEAF);
-        if (tv.checkboxMode!=ImGui::TreeViewNode::MODE_NONE) {
+            ImGui::Checkbox("Inherit Disabled Look##TreeViewInheritDisabledLook",&tv.inheritDisabledLook);
+#           if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+            ImGui::Separator();
+            static const char* saveName = "myTreeView.layout";
+            const char* saveNamePersistent = "/persistent_folder/myTreeView.layout";
+            const char* pSaveName = saveName;
+#           ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+            if (ImGui::Button("Save")) {
+#               ifndef NO_IMGUIEMSCRIPTEN
+                pSaveName = saveNamePersistent;
+#               endif //NO_IMGUIEMSCRIPTEN
+                if (tv.save(pSaveName))   {
+#                   ifndef NO_IMGUIEMSCRIPTEN
+                    ImGui::EmscriptenFileSystemHelper::Sync();
+#                   endif //NO_IMGUIEMSCRIPTEN
+                }
+            }
             ImGui::SameLine();
-            changed|=ImGui::Checkbox("Automatic##TreeViewAutoCheckChildNodes",&tv.allowAutoCheckboxBehaviour);
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","auto parent/child checks");
-        }
-	if (changed) tv.removeStateFromAllDescendants(ImGui::TreeViewNode::STATE_CHECKED);
-        }
-    bool hasDrawIconCb = tv.getTreeViewNodeDrawIconCb();
-    if (ImGui::Checkbox("Show icons",&hasDrawIconCb)) {
-        tv.setTreeViewNodeDrawIconCb(hasDrawIconCb ? &MyTreeViewNodeDrawIconCallback : NULL);
-    }
-    ImGui::SameLine();
-    ImGui::Checkbox("Inherit Disabled Look##TreeViewInheritDisabledLook",&tv.inheritDisabledLook);
-    ImGui::Separator();
-	// ----------------------------------------------------------------------------------------------
-    if (!tv.isInited()) {
-        // Here we add some optional callbacks (can be commented out):
-        if (myImageTextureId2) tv.setTreeViewNodeDrawIconCb(&MyTreeViewNodeDrawIconCallback);
-        // there are other callbacks we can set...
+#           endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#           ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+            if (ImGui::Button("Load")) {
+#               ifndef NO_IMGUIEMSCRIPTEN
+                if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
+#               endif //NO_IMGUIEMSCRIPTEN
+                tv.load(pSaveName);
+            }
+            ImGui::SameLine();
+#           endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#           endif //NO_IMGUIHELPER_SERIALIZATION
+            resetTv = ImGui::Button("Reset");
+            ImGui::Separator();
+            // ----------------------------------------------------------------------------------------------
 
-        // Here we add some nodes for testing:
-        ImGui::TreeViewNode* n = tv.addRootNode(ImGui::TreeViewNodeData("Some nations","Some nations here"));
-        //n->addState(ImGui::TreeViewNode::STATE_COLOR1);    // configurable color set
-        n->setUserId(1);    // (optional) used in the icon callback
-        n->addChildNode(ImGui::TreeViewNodeData("Ireland"));
-        n->addChildNode(ImGui::TreeViewNodeData("Sweden"));
-        n->addChildNode(ImGui::TreeViewNodeData("Germany"));
-        n->addChildNode(ImGui::TreeViewNodeData("Mexico"));
-        n->addChildNode(ImGui::TreeViewNodeData("China"));
-        n = tv.addRootNode(ImGui::TreeViewNodeData("SecondRoot Node"));
-        n->setUserId(2);    // (optional) used in the icon callback
-        n->addChildNode(ImGui::TreeViewNodeData("SecondRoot-FirstChild Node"));
-        ImGui::TreeViewNode* n2 = n->addChildNode(ImGui::TreeViewNodeData("SecondRoot-SecondChild Node","Node with a configurable text color"));
-        n2->addState(ImGui::TreeViewNode::STATE_COLOR2);    // configurable color set
-        n2->setUserId(8);    // (optional) used in the icon callback
-        n2->addChildNode(ImGui::TreeViewNodeData("SecondRoot-SecondChild-FirstChild Node"));
-        // Test: Now we add the last two root nodes in reverse order:
-        n = tv.addRootNode(ImGui::TreeViewNodeData("FourthRoot Node","This is NOT a leaf node\nbut has no child nodes.\n(Good for folder browsers\nif we monitor STATE_OPEN changes)."),-1,true); // Note the last arg: this node can be opened even if has no child nodes (you can add a callback for state changes).
-        n->setUserId(3);    // (optional) used in the icon callback
-        n = tv.addRootNode(ImGui::TreeViewNodeData("ThirdRoot Node","This is both a root and a leaf node."),2); // put this node at place 2 (0 based).
-        n->setUserId(4);    // (optional) used in the icon callback
+            if (tv.render())    // Mandatory call. Makes tv.isInit() return true. Returns true when a node event has occurred.
+            {
+                //ImGui::TreeViewEvent& event = tv.getLastEvent();
+                // event.node       // the ImGui::TreeViewNode* that's changed somehow (can be any node in the hierarchy)
+                // event.type =     // ImGui::TreeView::EVENT_STATE_DOUBLE_CLICKED     // node has been double clicked
+                // ImGui::TreeView::EVENT_END_EDITING              // successfully renamed
+                // ImGui::TreeView::EVENT_STATE_CHANGED            // the node state has changed and the other fields are valid
+                // event.state      // the ImGui::TreeView::STATE_ that's changed (only STATE_OPENED,STATE_SELECTED and STATE_CHECKED are monitored and the latter only when directly clicked by the mouse)
+                // event.wasStateRemoved // each state can be set or removed.
 
-    }
-            tv.render();    // Mandatory (and returns the node that's been double clicked)
+                // event.reset();  // optional
+            }
         }
 #       else //NO_IMGUIVARIOUSCONTROLS
         ImGui::Text("%s","Excluded from this build.\n");
