@@ -1452,8 +1452,18 @@ void TreeNodeIndent(int numIndents) {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems) return;
     ImGuiContext& g = *GImGui;
-    const ImGuiStyle& style = g.Style;
-    window->DC.CursorPos.x+= (g.FontSize+style.FramePadding.x*2)*numIndents;
+    window->DC.CursorPos.x+= (g.FontSize+g.Style.FramePadding.x*2)*numIndents;
+    //window->DC.IndentX += g.Style.IndentSpacing;
+    //window->DC.CursorPos.x = window->Pos.x + window->DC.IndentX*numIndents + window->DC.ColumnsOffsetX;
+}
+
+void TreeNodeUnindent(int numIndents) {
+    if (numIndents<=0) return;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems) return;
+    ImGuiContext& g = *GImGui;
+    window->DC.IndentX -= g.Style.IndentSpacing;
+    window->DC.CursorPos.x = window->Pos.x + window->DC.IndentX*numIndents + window->DC.ColumnsOffsetX;
 }
 
 }   // ImGui namespace
@@ -1469,6 +1479,7 @@ struct MyTreeViewHelperStruct {
     ImGuiWindow* window;
     float windowWidth;
     TreeViewNode::Event& event;
+    bool hasCbGlyphs,hasArrowGlyphs;
     struct ContextMenuDataStruct {
         TreeViewNode* activeNode;
         TreeView* parentTreeView;
@@ -1499,6 +1510,8 @@ struct MyTreeViewHelperStruct {
     MyTreeViewHelperStruct(TreeView& parent,TreeViewNode::Event& _event) : parentTreeView(parent),mustDrawAllNodesAsDisabled(false),event(_event) {
         window = ImGui::GetCurrentWindow();
         windowWidth = ImGui::GetWindowWidth();
+        hasCbGlyphs=TreeView::FontCheckBoxGlyphs[0][0]!='\0';
+        hasArrowGlyphs=TreeView::FontArrowGlyphs[0][0]!='\0';;
     }
     void fillEvent(TreeViewNode* _eventNode=NULL,TreeViewNode::State _eventFlag=TreeViewNode::STATE_NONE,bool _eventFlagRemoved=false) {
         event.node = _eventNode;
@@ -1552,9 +1565,9 @@ struct MyTreeViewHelperStruct {
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
     static void Serialize(ImGuiHelper::Serializer& s,TreeViewNode* n) {
         if (n->parentNode)  {
-            s.save(n->data.displayName,"name");
-            if (n->data.tooltip) s.save(n->data.tooltip,"tooltip");
-            if (n->data.userText) s.save(n->data.userText,"userText");
+            s.saveTextLines(n->data.displayName,"name");
+            if (n->data.tooltip) s.saveTextLines(n->data.tooltip,"tooltip");
+            if (n->data.userText) s.saveTextLines(n->data.userText,"userText");
             if (n->data.userId) s.save(&n->data.userId,"userId");
             s.save(&n->state,"state");
         }
@@ -1592,9 +1605,9 @@ struct MyTreeViewHelperStruct {
     static bool ParseCallback(ImGuiHelper::FieldType /*ft*/,int /*numArrayElements*/,void* pValue,const char* name,void* userPtr)    {
         ParseCallbackStruct& cbs = *((ParseCallbackStruct*)userPtr);
         TreeViewNode* n = cbs.node;
-        if (strcmp(name,"name")==0)             n->setDisplayName((const char*)pValue);
-        else if (strcmp(name,"tooltip")==0)     n->setTooltip((const char*)pValue);
-        else if (strcmp(name,"userText")==0)    n->setUserText((const char*)pValue);
+        if (strcmp(name,"name")==0)             ImGuiHelper::StringAppend(n->data.displayName,(const char*)pValue,false);
+        else if (strcmp(name,"tooltip")==0)     ImGuiHelper::StringAppend(n->data.tooltip,(const char*)pValue,true);
+        else if (strcmp(name,"userText")==0)    ImGuiHelper::StringAppend(n->data.userText,(const char*)pValue,true);
         else if (strcmp(name,"userId")==0)      n->getUserId() = *((int*)pValue);
         else if (strcmp(name,"state")==0)       n->state = *((int*)pValue);
         else if (strcmp(name,"numChildNodes")==0) {cbs.numChildNodes = *((int*)pValue);return true;}
@@ -1615,7 +1628,7 @@ struct MyTreeViewHelperStruct {
         else if (strcmp(name,"inheritDisabledLook")==0)         {tv.inheritDisabledLook = *((bool*)pValue);return true;}
         return false;
     }
-    static void Deserialize(ImGuiHelper::Deserializer& d,TreeViewNode* n,const char*& amount)  {
+    static void Deserialize(ImGuiHelper::Deserializer& d,TreeViewNode* n,const char*& amount,TreeView* tv,TreeView::TreeViewNodeCreationDelationCallback callback=NULL)  {
         if (!n->parentNode) {
             // It's a TreeView: we must load its own data
             ImGui::TreeView& tv = *(static_cast<ImGui::TreeView*>(n));
@@ -1628,7 +1641,8 @@ struct MyTreeViewHelperStruct {
             else {
                 for (int i=0;i<cbs.numChildNodes;i++) {
                     TreeViewNode* node = TreeViewNode::CreateNode(TreeViewNode::Data(),n);
-                    Deserialize(d,node,amount);
+                    Deserialize(d,node,amount,tv,callback);
+                    if (callback) callback(node,*tv,false,tv->treeViewNodeCreationDelationCbUserPtr);
                 }
             }
         }
@@ -1676,12 +1690,12 @@ struct MyTreeViewHelperStruct {
             if (canMoveUp && ImGui::MenuItem("Move up")) n->moveNodeTo(nodeIndex-1);
             if (canMoveDown && ImGui::MenuItem("Move down")) n->moveNodeTo(nodeIndex+1);
             if (canAddSiblings && ImGui::MenuItem("Create new sibling node")) {
-                TreeViewNode* n2 = TreeViewNode::CreateNode(TreeViewNode::Data("New node"),n->parentNode);   // Well, cheating a bit because n->parentNode must not be accessible. Real code becomes slightly longer (tv.CreateRootNode() in some cases)
+                TreeViewNode* n2 = n->addSiblingNode(TreeViewNode::Data("New node"));
                 n2->startRenamingMode();
             }
             if (canAddChildNodes && ImGui::MenuItem("Create new child node")) {
                 n->addState(TreeViewNode::STATE_OPEN);
-                TreeViewNode* n2 = TreeViewNode::CreateNode(TreeViewNode::Data("New node"),n);
+                TreeViewNode* n2 = n->addChildNode(TreeViewNode::Data("New node"));
                 n2->startRenamingMode();
             }
             if (canDeleteNode && ImGui::MenuItem("Delete")) {TreeViewNode::DeleteNode(n);n=NULL;}
@@ -1725,10 +1739,14 @@ TreeViewNode::~TreeViewNode() {
             }
         }
     }
+    if (parentNode) {
+        TreeView& tv = getTreeView();
+        if (tv.treeViewNodeCreationDelationCb) tv.treeViewNodeCreationDelationCb(this,tv,true,tv.treeViewNodeCreationDelationCbUserPtr);
+    }
     parentNode = NULL;
 }
 
-TreeViewNode::TreeViewNode(const Data& _data, TreeViewNode *_parentNode, int nodeIndex, bool addEmptyChildNodeVector) : data(_data) {
+TreeViewNode::TreeViewNode(const Data& _data, TreeViewNode *_parentNode, int nodeIndex, bool addEmptyChildNodeVector) : userPtr(NULL),data(_data) {
     parentNode = NULL;
     childNodes = NULL;
     state = 0;
@@ -1756,6 +1774,10 @@ TreeViewNode::TreeViewNode(const Data& _data, TreeViewNode *_parentNode, int nod
         childNodes = (ImVector<TreeViewNode*>*) ImGui::MemAlloc(sizeof(ImVector<TreeViewNode*>));
         IM_PLACEMENT_NEW(childNodes) ImVector<TreeViewNode*>();
     }
+    if (parentNode) {
+        TreeView& tv = getTreeView();
+        if (tv.treeViewNodeCreationDelationCb) tv.treeViewNodeCreationDelationCb(this,tv,false,tv.treeViewNodeCreationDelationCbUserPtr);
+    }
 }
 
 
@@ -1767,7 +1789,7 @@ TreeViewNode *TreeViewNode::CreateNode(const Data& _data, TreeViewNode *_parentN
 
 void TreeViewNode::DeleteNode(TreeViewNode *n) {
     if (n)  {
-    n->~TreeViewNode();
+        n->~TreeViewNode();
         ImGui::MemFree(n);
     }
 }
@@ -1840,6 +1862,12 @@ int TreeViewNode::getNumSiblings(bool includeMe) const	{
     if (!parentNode) return (includeMe ? 1 : 0);
     const int num = parentNode->getNumChildNodes();
     return (includeMe ? num : (num-1));
+}
+
+void TreeViewNode::swapWith(TreeViewNode *n) {
+    // To test
+    {TreeViewNode* tmp = parentNode;parentNode=n->parentNode;n->parentNode = tmp;}
+    {ImVector<TreeViewNode*>* tmp = childNodes;childNodes=n->childNodes;n->childNodes=tmp;}
 }
 
 void TreeViewNode::sortChildNodes(bool recursive,int (*comp)(const void *, const void *)) {
@@ -1968,6 +1996,8 @@ TreeView::TreeView(Mode _selectionMode, bool _allowMultipleSelection, Mode _chec
     treeViewNodeDrawIconCbUserPtr = NULL;
     treeViewNodeAfterDrawCb = NULL;
     treeViewNodeAfterDrawCbUserPtr = NULL;
+    treeViewNodeCreationDelationCb = NULL;
+    treeViewNodeCreationDelationCbUserPtr = NULL;
     inited = false;
 
     selectionMode = _selectionMode;
@@ -2012,27 +2042,44 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
     int customColorState = (state&STATE_COLOR1) ? 1 : (state&STATE_COLOR2) ? 2 : (state&STATE_COLOR3) ? 3 : 0;
 
     ImGui::PushID(this);
-    if (allowCheckBox) ImGui::AlignFirstTextHeightToWidgets();
+    if (allowCheckBox && !tvhs.hasCbGlyphs) ImGui::AlignFirstTextHeightToWidgets();
 
     if (!isLeafNode) {
-        ImGui::SetNextTreeNodeOpen(stateopen,ImGuiSetCond_Always);
-        ImGui::TreeNodeIndent(numIndents-1);
-        // Probably we could use a faster method to just draw a coloured triangle with no text and check if it's clicked.
-        // That way we could change the color of the arrow to fit our STATE_COLORX flags... (see: ImGui::TreeNodeBehavior(...))
-        // Current colors for the arrow are:
-        // const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
-        mustTreePop = ImGui::TreeNode("","%s","");
-        arrowHovered=ImGui::IsItemHovered();itemHovered|=arrowHovered;
+        if (!tvhs.hasArrowGlyphs)  {
+            ImGui::SetNextTreeNodeOpen(stateopen,ImGuiSetCond_Always);
+            ImGui::TreeNodeIndent(numIndents-1);
+            mustTreePop = ImGui::TreeNode("","%s","");
+            arrowHovered=ImGui::IsItemHovered();
+        }
+        else {
+            ImGui::TreeNodeIndent(numIndents-1);
+            ImGui::Text("%s",stateopen?&TreeView::FontArrowGlyphs[1][0]:&TreeView::FontArrowGlyphs[0][0]);
+            arrowHovered=ImGui::IsItemHovered();
+            //if (ImGui::GetIO().MouseClicked[0] && arrowHovered) stateopen=!stateopen;
+            //if (stateopen) mustTreePop=true;
+        }
+        itemHovered|=arrowHovered;
         ImGui::SameLine();
     }
     else {
+        //if (!tvhs.hasArrowGlyphs)
         ImGui::TreeNodeIndent(numIndents);
+        //else tvhs.window->DC.CursorPos.x+= (g.FontSize+style.FramePadding.x*2)*numIndents;
+
     }
 
     if (allowCheckBox)  {
         bool statechecked = (state&STATE_CHECKED);
 
-        if (ImGui::Checkbox("###chb",&statechecked))   {
+        bool checkedChanged = false;
+        if (!tvhs.hasCbGlyphs) checkedChanged = ImGui::Checkbox("###chb",&statechecked);
+        else {
+            ImGui::Text("%s",statechecked?&TreeView::FontCheckBoxGlyphs[1][0]:&TreeView::FontCheckBoxGlyphs[0][0]);
+            checkedChanged = ImGui::GetIO().MouseClicked[0] && ImGui::IsItemHovered();
+            if (checkedChanged) statechecked=!statechecked;
+        }
+
+        if (checkedChanged)   {
             toggleState(STATE_CHECKED);
             tvhs.fillEvent(this,STATE_CHECKED,!(state&STATE_CHECKED));
             if (tv.allowAutoCheckboxBehaviour)  {
@@ -2110,7 +2157,10 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
     }
     if (tv.treeViewNodeAfterDrawCb) tv.treeViewNodeAfterDrawCb(this,tv,tvhs.windowWidth,tv.treeViewNodeAfterDrawCbUserPtr);
 
-    if (mustTreePop) ImGui::TreePop();
+    if (mustTreePop) {
+        if (!tvhs.hasArrowGlyphs) ImGui::TreePop();
+        else ImGui::TreeNodeUnindent();
+    }
 
     ImGui::PopID();
 
@@ -2257,8 +2307,14 @@ void TreeView::setTextColorForStateColor(int aStateColorFlag, const ImVec4 &text
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
         bool TreeView::load(ImGuiHelper::Deserializer& d,const char*& amount)   {
             if (!d.isValid()) return false;
-            this->clear();
-            MyTreeViewHelperStruct::Deserialize(d,this,amount);
+            clear();
+            // The idea is to call the creation callbacks after Node::Data has been created
+            // Our serialization code instead creates empty Nodes before filling Data
+            // Here is our workaround/hack:
+            TreeView::TreeViewNodeCreationDelationCallback oldCb = treeViewNodeCreationDelationCb;
+            treeViewNodeCreationDelationCb = NULL;
+            MyTreeViewHelperStruct::Deserialize(d,this,amount,this,oldCb);
+            treeViewNodeCreationDelationCb = oldCb;
             return true;
         }
         bool TreeView::load(const char* filename)   {
@@ -2279,9 +2335,27 @@ void TreeView::setTextColorForStateColor(int aStateColorFlag, const ImVec4 &text
             }
             return ok;
         }
+
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 //--------------------------------------------------------------------------------
+
+char TreeView::FontCheckBoxGlyphs[2][5]={{'\0','\0','\0','\0','\0'},{'\0','\0','\0','\0','\0'}};
+char TreeView::FontArrowGlyphs[2][5]={{'\0','\0','\0','\0','\0'},{'\0','\0','\0','\0','\0'}};
+
+void TreeView::SetFontCheckBoxGlyphs(const char *emptyState, const char *fillState) {
+    if (emptyState && strlen(emptyState)>0 && strlen(emptyState)<5 && fillState && strlen(fillState)>0 && strlen(fillState)<5) {
+        strcpy(&FontCheckBoxGlyphs[0][0],emptyState);
+        strcpy(&FontCheckBoxGlyphs[1][0],fillState);
+    }
+}
+void TreeView::SetFontArrowGlyphs(const char *leftArrow, const char *downArrow) {
+    if (leftArrow && strlen(leftArrow)>0 && strlen(leftArrow)<5 && downArrow && strlen(downArrow)>0 && strlen(downArrow)<5) {
+        strcpy(&FontArrowGlyphs[0][0],leftArrow);
+        strcpy(&FontArrowGlyphs[1][0],downArrow);
+    }
+}
+
 
 // Tree view stuff ends here ==============================================================
 

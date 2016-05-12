@@ -726,9 +726,38 @@ bool Serializer::saveCustomFieldTypeHeader(const char* name, int numTextLines) {
     return true;
 }
 
-
-
 #endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+
+void StringSet(char *&destText, const char *text, bool allowNullDestText) {
+    if (destText) {ImGui::MemFree(destText);destText=NULL;}
+    const char e = '\0';
+    if (!text && !allowNullDestText) text=&e;
+    if (text)  {
+        const int sz = strlen(text);
+        destText = (char*) ImGui::MemAlloc(sz+1);strcpy(destText,text);
+    }
+}
+void StringAppend(char *&destText, const char *textToAppend, bool allowNullDestText, bool prependLineFeedIfDestTextIsNotEmpty, bool mustAppendLineFeed) {
+    const int textToAppendSz = textToAppend ? strlen(textToAppend) : 0;
+    if (textToAppendSz==0) {
+        if (!destText && !allowNullDestText) {destText = (char*) ImGui::MemAlloc(1);strcpy(destText,"");}
+        return;
+    }
+    const int destTextSz = destText ? strlen(destText) : 0;
+    const bool mustPrependLF = prependLineFeedIfDestTextIsNotEmpty && (destTextSz>0);
+    const bool mustAppendLF = mustAppendLineFeed;// && (destText);
+    const int totalTextSz = textToAppendSz + destTextSz + (mustPrependLF?1:0) + (mustAppendLF?1:0);
+    ImVector<char> totalText;totalText.resize(totalTextSz+1);
+    totalText[0]='\0';
+    if (destText) {
+        strcpy(&totalText[0],destText);
+        ImGui::MemFree(destText);destText=NULL;
+    }
+    if (mustPrependLF) strcat(&totalText[0],"\n");
+    strcat(&totalText[0],textToAppend);
+    if (mustAppendLF) strcat(&totalText[0],"\n");
+    destText = (char*) ImGui::MemAlloc(totalTextSz+1);strcpy(destText,&totalText[0]);
+}
 
 } //namespace ImGuiHelper
 #endif //NO_IMGUIHELPER_SERIALIZATION
@@ -742,12 +771,12 @@ namespace ImGui {
 #ifndef NO_IMGUIHELPER_SERIALIZATION
 #ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
 bool GzDecompressFromFile(const char* filePath,ImVector<char>& rv,bool clearRvBeforeUsage)   {
-if (clearRvBeforeUsage) rv.clear();
-ImVector<char> f_data;
-if (!ImGuiHelper::GetFileContent(filePath,f_data,true,"rb",false)) return false;
-//----------------------------------------------------
-return GzDecompressFromMemory(&f_data[0],f_data.size(),rv,clearRvBeforeUsage);
-//----------------------------------------------------
+    if (clearRvBeforeUsage) rv.clear();
+    ImVector<char> f_data;
+    if (!ImGuiHelper::GetFileContent(filePath,f_data,true,"rb",false)) return false;
+    //----------------------------------------------------
+    return GzDecompressFromMemory(&f_data[0],f_data.size(),rv,clearRvBeforeUsage);
+    //----------------------------------------------------
 }
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #endif //NO_IMGUIHELPER_SERIALIZATION

@@ -295,6 +295,7 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
 
 // Moves: window->DC.CursorPos.x+= the indent(s) of a TreeNode
 void TreeNodeIndent(int numIndents=1);
+void TreeNodeUnindent(int numIndents=1);
 
 // Basic tree view implementation
 // TODO: See if we can switch context-menu with a single-shot RMB click (when a menu is still open)
@@ -311,7 +312,10 @@ public:
         STATE_DEFAULT   = 1<<4,     // user state (but its look is hard-coded)
         STATE_DISABLED  = 1<<5,     // user state (but its look is hard-coded)
 
-        // Leaving space for other hard coded states
+        // user states (without any specific look)
+        STATE_USER5     = 1<<6,
+        STATE_USER6     = 1<<7,
+        STATE_USER7     = 1<<8,
 
         // user states (but its look can be set in TreeView::getTextColorForStateColor(...))
         STATE_COLOR1    = 1<<9,
@@ -321,7 +325,8 @@ public:
         // user states (without any specific look)
         STATE_USER1     = 1<<12,
         STATE_USER2     = 1<<13,
-        STATE_USER3     = 1<<14
+        STATE_USER3     = 1<<14,
+        STATE_USER4     = 1<<15
     };
     mutable int state;
 
@@ -374,15 +379,15 @@ public:
             SetString(userText,_userText,true);
             userId = _id;
         }        
-        inline static void SetString(char*& outText,const char* text,bool allowNNull=true) {
-            if (outText) {ImGui::MemFree(outText);outText=NULL;}
+        inline static void SetString(char*& destText,const char* text,bool allowNullDestText=true) {
+            if (destText) {ImGui::MemFree(destText);destText=NULL;}
             const char e = '\0';
-            if (!text && !allowNNull) text=&e;
+            if (!text && !allowNullDestText) text=&e;
             if (text)  {
                 const int sz = strlen(text);
-                outText = (char*) ImGui::MemAlloc(sz+1);strcpy(outText,text);
+                destText = (char*) ImGui::MemAlloc(sz+1);strcpy(destText,text);
             }
-        }
+        }       
         const Data& operator=(const Data& o) {
             set(o.displayName,o.tooltip,o.userText,o.userId);
             return *this;
@@ -398,8 +403,12 @@ protected:
 
 public:
 
-    TreeViewNode* addChildNode(const Data& _data,int nodeIndex=-1,bool addEmptyChildNodeVector=false)    {
+    inline TreeViewNode* addChildNode(const Data& _data,int nodeIndex=-1,bool addEmptyChildNodeVector=false)    {
         return CreateNode(_data,this,nodeIndex,addEmptyChildNodeVector);
+    }
+    inline TreeViewNode* addSiblingNode(const Data& _data,int parentNodeIndex=-1)    {
+        IM_ASSERT(parentNode);
+        return CreateNode(_data,parentNode,parentNodeIndex);
     }
     static void DeleteNode(TreeViewNode* n);
 
@@ -418,6 +427,10 @@ public:
     void addEmptyChildNodeVector();         // Only works if "childNodes==NULL" (and allocates it)
     void removeEmptyChildNodeVector();      // Only works if (childNodes->size()==0" (and deallocates it)
     int getNumSiblings(bool includeMe=false) const;
+    void swapWith(TreeViewNode* n); // untested
+    void startRenamingMode();       // starts renaming the node
+    bool isInRenamingMode() const;
+
 
     void sortChildNodes(bool recursive,int (*comp)(const void *, const void *));
     void sortChildNodesByDisplayName(bool recursive=false,bool reverseOrder=false);
@@ -476,9 +489,10 @@ public:
     inline const int& getUserId() const {return data.userId;}
     inline void setUserId(int uid) {data.userId=uid;}
 
-    void startRenamingMode();
-    bool isInRenamingMode() const;
 
+
+
+    void *userPtr;  // Not mine
 
 protected:
 
@@ -565,6 +579,11 @@ public:
     typedef void (*TreeViewNodeAfterDrawCallback)(TreeViewNode* node,TreeView& parent,float windowWidth,void* userPtr);
     void setTreeViewNodeAfterDrawCb(TreeViewNodeAfterDrawCallback cb,void* userPtr=NULL) {treeViewNodeAfterDrawCb = cb;treeViewNodeAfterDrawCbUserPtr = userPtr;}
     inline TreeViewNodeAfterDrawCallback getTreeViewNodeAfterDrawCb() const {return treeViewNodeAfterDrawCb;}
+    // called after a node is created and before it's deleted (usable for TreeViewNode::userPtrs)
+    typedef void (*TreeViewNodeCreationDelationCallback)(TreeViewNode* node,TreeView& parent,bool delation,void* userPtr);
+    void setTreeViewNodeCreationDelationCb(TreeViewNodeCreationDelationCallback cb,void* userPtr=NULL) {treeViewNodeCreationDelationCb = cb;treeViewNodeCreationDelationCbUserPtr = userPtr;}
+    inline TreeViewNodeCreationDelationCallback getTreeViewNodeCreationDelationCb() const {return treeViewNodeCreationDelationCb;}
+
 
     void *userPtr;                  // user stuff, not mine
 
@@ -592,6 +611,8 @@ public:
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 //--------------------------------------------------------------------------------
 
+    static void SetFontCheckBoxGlyphs(const char* emptyState,const char* fillState);
+    static void SetFontArrowGlyphs(const char* leftArrow,const char* downArrow);
 
     // TODO: Fix stuff in this area ------------------------------------------------
     // we leave these public...     // to make protected
@@ -611,11 +632,17 @@ protected:
     void* treeViewNodeDrawIconCbUserPtr;
     TreeViewNodeAfterDrawCallback treeViewNodeAfterDrawCb;
     void* treeViewNodeAfterDrawCbUserPtr;
+    TreeViewNodeCreationDelationCallback treeViewNodeCreationDelationCb;
+    void* treeViewNodeCreationDelationCbUserPtr;
 
     bool inited;
     mutable ImVec4 stateColors[6];  // 3 pairs of textColor-textDisabledColor
 
     mutable Event lastEvent;
+
+    static char FontCheckBoxGlyphs[2][5];
+    static char FontArrowGlyphs[2][5];
+
 
 protected:
     TreeView(const TreeView&) {}

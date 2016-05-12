@@ -159,8 +159,17 @@ static bool MyTreeViewNodeDrawIconCallback(ImGui::TreeViewNode* n, ImGui::TreeVi
         ImGui::SameLine();  // Mandatory
         return hovered;
     }
+    else {
+        // Maybe we should skip ImGui::GetTextLineHeight() pixels here...
+    }
     return false;
     // Of course it's possible (and faster) to add icons from a ttf file...
+}
+static void MyTreeViewNodeCreationDelationCallback(ImGui::TreeViewNode* n, ImGui::TreeView&,bool delation,void* ) {
+    IM_ASSERT(delation ? (n->userPtr!=NULL) : (n->userPtr==NULL));
+    if (delation) ImGui::MemFree(n->userPtr);
+    else n->userPtr = ImGui::MemAlloc(25);
+    fprintf(stderr,"%s: [%s]\n",n->getDisplayName(),delation?"Deletion":"Creation");
 }
 #endif //NO_IMGUIVARIOUSCONTROLS
 
@@ -667,6 +676,14 @@ void DrawGL()	// Mandatory
             // but we need to perform some tests here...
 
             static ImGui::TreeView tv;
+            if (!tv.isInited()) {
+                // Here we add some optional callbacks (can be commented out):
+                if (myImageTextureId2) tv.setTreeViewNodeDrawIconCb(&MyTreeViewNodeDrawIconCallback);
+                // there are other callbacks we can set... expecially the popup menu that defaults to the "testing" one...
+                //tv.setTreeViewNodeCreationDelationCb(&MyTreeViewNodeCreationDelationCallback);
+            }
+
+
             static bool resetTv = false;    // triggered by an ImGui::Button below...
             if (!tv.isInited() || resetTv) {                
                 if (resetTv)    {
@@ -678,10 +695,6 @@ void DrawGL()	// Mandatory
                     tv.allowAutoCheckboxBehaviour=true;
                     tv.inheritDisabledLook=true;
                 }
-
-                // Here we add some optional callbacks (can be commented out):
-                if (!tv.isInited() && myImageTextureId2) tv.setTreeViewNodeDrawIconCb(&MyTreeViewNodeDrawIconCallback);
-                // there are other callbacks we can set... expecially the popup menu that defaults to the "testing" one...
 
                 // Here we add some nodes for testing:
                 ImGui::TreeViewNode* n = tv.addRootNode(ImGui::TreeViewNodeData("Some nations","Some nations here"));
@@ -704,6 +717,12 @@ void DrawGL()	// Mandatory
                 n->setUserId(3);    // (optional) used in the icon callback
                 n = tv.addRootNode(ImGui::TreeViewNodeData("ThirdRoot Node","This is both a root and a leaf node."),2); // put this node at place 2 (0 based).
                 n->setUserId(4);    // (optional) used in the icon callback
+
+
+                // Test: static methods for using custom glyphs
+                //ImGui::TreeView::SetFontCheckBoxGlyphs("[ ]","[x]");
+                //ImGui::TreeView::SetFontArrowGlyphs(">","v");
+
             }
 
             // Optional tuff to change some tv options on the fly -------------------------------------

@@ -155,6 +155,12 @@ protected:
 #endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #endif //NO_IMGUIHELPER_SERIALIZATION
 
+// Optional String Helper methods:
+// "destText" must be released with ImGui::MemFree(destText). It should always work.
+void StringSet(char*& destText,const char* text,bool allowNullDestText=true);
+// "destText" must be released with ImGui::MemFree(destText). It should always work.
+void StringAppend(char*& destText, const char* textToAppend, bool allowNullDestText=true, bool prependLineFeedIfDestTextIsNotEmpty = true, bool mustAppendLineFeed = false);
+
 } // ImGuiHelper
 
 #ifndef NO_IMGUIKNOWNCOLOR_DEFINITIONS
