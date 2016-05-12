@@ -1666,10 +1666,13 @@ struct MyTreeViewHelperStruct {
         const bool canAddSiblings = true;
         const bool canAddChildNodes = true;
         const bool canDeleteNode = true;
+	const bool canForceCheckboxVisibility = tv.checkboxMode!=TreeViewNode::MODE_ALL;
+	const bool canBeHidden = true;
 
         if ((canBeSetToDefault || canBeEnabledOrDisabled || itsChildNodesAreSortable
              || canBeRenamed || canMoveUp || canMoveDown
-             || canAddSiblings || canAddChildNodes || canDeleteNode)
+	     || canAddSiblings || canAddChildNodes || canDeleteNode
+	     || canForceCheckboxVisibility || canBeHidden)
                 && ImGui::BeginPopup(TreeView::GetTreeViewNodePopupMenuName()))   {
             ImGui::PushID(n);
             if (canBeSetToDefault && ImGui::MenuItem("Set as default root item"))  {
@@ -1699,7 +1702,9 @@ struct MyTreeViewHelperStruct {
                 n2->startRenamingMode();
             }
             if (canDeleteNode && ImGui::MenuItem("Delete")) {TreeViewNode::DeleteNode(n);n=NULL;}
-            ImGui::PopID();
+	    if (canForceCheckboxVisibility && ImGui::MenuItem("Toggle force checkbox")) n->toggleState(TreeViewNode::STATE_FORCE_CHECKBOX);
+	    if (canBeHidden && ImGui::MenuItem("Hide")) n->addState(TreeViewNode::STATE_HIDDEN);
+	    ImGui::PopID();
             ImGui::EndPopup();
         }
 
@@ -1864,10 +1869,25 @@ int TreeViewNode::getNumSiblings(bool includeMe) const	{
     return (includeMe ? num : (num-1));
 }
 
-void TreeViewNode::swapWith(TreeViewNode *n) {
+TreeViewNode *TreeViewNode::getSiblingNode(int nodeIndexInParentHierarchy)  {
+    if (!parentNode || !parentNode->childNodes || nodeIndexInParentHierarchy<0 || nodeIndexInParentHierarchy>=parentNode->childNodes->size()) return NULL;
+    return (*parentNode->childNodes)[nodeIndexInParentHierarchy];
+}
+const TreeViewNode *TreeViewNode::getSiblingNode(int nodeIndexInParentHierarchy) const	{
+    if (!parentNode || !parentNode->childNodes || nodeIndexInParentHierarchy<0 || nodeIndexInParentHierarchy>=parentNode->childNodes->size()) return NULL;
+    return (*parentNode->childNodes)[nodeIndexInParentHierarchy];
+}
+int TreeViewNode::getDepth() const  {
+    const TreeViewNode* n = this;int depth = -1;
+    while ((n = n->parentNode)) ++depth;
+    return depth;
+}
+
+void TreeViewNode::Swap(TreeViewNode *&n1, TreeViewNode *&n2) {
     // To test
-    {TreeViewNode* tmp = parentNode;parentNode=n->parentNode;n->parentNode = tmp;}
-    {ImVector<TreeViewNode*>* tmp = childNodes;childNodes=n->childNodes;n->childNodes=tmp;}
+    if (!n1 || !n2) return;
+    {TreeViewNode* tmp = n1->parentNode;n1->parentNode=n2->parentNode;n2->parentNode = tmp;}
+    {ImVector<TreeViewNode*>* tmp = n1->childNodes;n1->childNodes=n2->childNodes;n2->childNodes=tmp;}
 }
 
 void TreeViewNode::sortChildNodes(bool recursive,int (*comp)(const void *, const void *)) {
@@ -2021,6 +2041,7 @@ TreeView::~TreeView() {
 
 
 void TreeViewNode::render(void* ptr,int numIndents)   {
+    if (state&STATE_HIDDEN) return;
     MyTreeViewHelperStruct& tvhs = *((MyTreeViewHelperStruct*) ptr);
     TreeView& tv = tvhs.parentTreeView;
 
@@ -2032,7 +2053,7 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
     bool isLeafNode = !childNodes;
 
     const unsigned int mode = getMode();
-    const bool allowCheckBox = MatchMode(tv.checkboxMode,mode);
+    const bool allowCheckBox = (state&STATE_FORCE_CHECKBOX) || MatchMode(tv.checkboxMode,mode);
     const bool allowSelection = MatchMode(tv.selectionMode,mode);
 
     bool stateopen = (state&STATE_OPEN);
@@ -2045,20 +2066,17 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
     if (allowCheckBox && !tvhs.hasCbGlyphs) ImGui::AlignFirstTextHeightToWidgets();
 
     if (!isLeafNode) {
+	ImGui::TreeNodeIndent(numIndents-1);
         if (!tvhs.hasArrowGlyphs)  {
             ImGui::SetNextTreeNodeOpen(stateopen,ImGuiSetCond_Always);
             ImGui::TreeNodeIndent(numIndents-1);
-            mustTreePop = ImGui::TreeNode("","%s","");
-            arrowHovered=ImGui::IsItemHovered();
+            mustTreePop = ImGui::TreeNode("","%s","");            
         }
         else {
-            ImGui::TreeNodeIndent(numIndents-1);
-            ImGui::Text("%s",stateopen?&TreeView::FontArrowGlyphs[1][0]:&TreeView::FontArrowGlyphs[0][0]);
+	    ImGui::Text("%s",stateopen?&TreeView::FontArrowGlyphs[1][0]:&TreeView::FontArrowGlyphs[0][0]);
             arrowHovered=ImGui::IsItemHovered();
-            //if (ImGui::GetIO().MouseClicked[0] && arrowHovered) stateopen=!stateopen;
-            //if (stateopen) mustTreePop=true;
         }
-        itemHovered|=arrowHovered;
+	arrowHovered=ImGui::IsItemHovered();itemHovered|=arrowHovered;
         ImGui::SameLine();
     }
     else {
@@ -2157,10 +2175,7 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
     }
     if (tv.treeViewNodeAfterDrawCb) tv.treeViewNodeAfterDrawCb(this,tv,tvhs.windowWidth,tv.treeViewNodeAfterDrawCbUserPtr);
 
-    if (mustTreePop) {
-        if (!tvhs.hasArrowGlyphs) ImGui::TreePop();
-        else ImGui::TreeNodeUnindent();
-    }
+    if (mustTreePop) ImGui::TreePop();
 
     ImGui::PopID();
 

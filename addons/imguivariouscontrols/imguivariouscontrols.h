@@ -311,11 +311,11 @@ public:
         STATE_CHECKED   = 1<<3,
         STATE_DEFAULT   = 1<<4,     // user state (but its look is hard-coded)
         STATE_DISABLED  = 1<<5,     // user state (but its look is hard-coded)
+        STATE_FORCE_CHECKBOX  = 1<<6, // checkbox always visible (even if disabled in its TreeView)
+        STATE_HIDDEN    = 1<<7,       // node (and its child nodes) not visible at all
 
         // user states (without any specific look)
-        STATE_USER5     = 1<<6,
-        STATE_USER6     = 1<<7,
-        STATE_USER7     = 1<<8,
+        STATE_USER5     = 1<<8,
 
         // user states (but its look can be set in TreeView::getTextColorForStateColor(...))
         STATE_COLOR1    = 1<<9,
@@ -426,11 +426,14 @@ public:
     void deleteAllChildNodes(bool leaveEmptyChildNodeVector=false);
     void addEmptyChildNodeVector();         // Only works if "childNodes==NULL" (and allocates it)
     void removeEmptyChildNodeVector();      // Only works if (childNodes->size()==0" (and deallocates it)
-    int getNumSiblings(bool includeMe=false) const;
-    void swapWith(TreeViewNode* n); // untested
+    int getNumSiblings(bool includeMe=true) const;
+    TreeViewNode* getSiblingNode(int nodeIndexInParentHierarchy=-1);
+    const TreeViewNode* getSiblingNode(int nodeIndexInParentHierarchy=-1) const;
+    int getDepth() const;   // root nodes have depth = 0
+
+    static void Swap(TreeViewNode*& n1,TreeViewNode*& n2); // untested
     void startRenamingMode();       // starts renaming the node
     bool isInRenamingMode() const;
-
 
     void sortChildNodes(bool recursive,int (*comp)(const void *, const void *));
     void sortChildNodesByDisplayName(bool recursive=false,bool reverseOrder=false);
