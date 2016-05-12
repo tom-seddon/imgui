@@ -556,6 +556,9 @@
  - style: WindowPadding needs to be EVEN needs the 0.5 multiplier probably have a subtle effect on clip rectangle
  - text: simple markup language for color change?
  - font: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
+ - font: small opt: for monospace font (like the defalt one) we can trim IndexXAdvance as long as trailing value is == FallbackXAdvance
+ - font: add support for kerning, probably optional. perhaps default to (32..128)^2 matrix ~ 36KB then hash fallback.
+ - font: add a simpler CalcTextSizeA() api? current one ok but not welcome if user needs to call it directly (without going through ImGui::CalcTextSize)
  - font: fix AddRemapChar() to work before font has been built.
  - log: LogButtons() options for specifying depth and/or hiding depth slider
  - log: have more control over the log scope (e.g. stop logging when leaving current tree node scope)
@@ -621,8 +624,7 @@
 #pragma clang diagnostic ignored "-Wglobal-constructors"    // warning : declaration requires a global destructor           // similar to above, not sure what the exact difference it.
 #pragma clang diagnostic ignored "-Wsign-conversion"        // warning : implicit conversion changes signedness             //
 #pragma clang diagnostic ignored "-Wint-to-void-pointer-cast" // warning : cast to 'void *' from smaller integer type 'int' //
-#endif
-#ifdef __GNUC__
+#elif defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wunused-function"          // warning: 'xxxx' defined but not used
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"      // warning: cast to pointer from integer of different size
 #pragma GCC diagnostic ignored "-Wformat"                   // warning: format '%p' expects argument of type 'void*', but argument 6 has type 'ImGuiWindow*'
@@ -696,14 +698,14 @@ static void             ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
 // Context
 //-----------------------------------------------------------------------------
 
-// We access everything through this pointer (always assumed to be != NULL)
-// You can swap the pointer to a different context by calling ImGui::SetCurrentContext()
+// Default context, default font atlas.
+// New contexts always point by default to this font atlas. It can be changed by reassigning the GetIO().Fonts variable.
 static ImGuiContext     GImDefaultContext;
-ImGuiContext*           GImGui = &GImDefaultContext;
-
-// Statically allocated default font atlas. This is merely a maneuver to keep ImFontAtlas definition at the bottom of the .h file (otherwise it'd be inside ImGuiIO)
-// Also we wouldn't be able to new() one at this point, before users have a chance to setup their allocator.
 static ImFontAtlas      GImDefaultFontAtlas;
+
+// Current context pointer. Implicitely used by all ImGui functions. Always assumed to be != NULL. Change to a different context by calling ImGui::SetCurrentContext()
+// ImGui is currently not thread-safe because of this variable. If you want thread-safety to allow N threads to access N different contexts, you might work around it by (A) having two instances of the ImGui code under different namespaces or (B) change this variable to be TLS. Further development aim to make this context pointer explicit to all calls. Also read https://github.com/ocornut/imgui/issues/586
+ImGuiContext*           GImGui = &GImDefaultContext;
 
 //-----------------------------------------------------------------------------
 // User facing structures
@@ -1642,6 +1644,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     DrawList->_OwnerName = Name;
     RootWindow = NULL;
     RootNonPopupWindow = NULL;
+    ParentWindow = NULL;
 
     FocusIdxAllCounter = FocusIdxTabCounter = -1;
     FocusIdxAllRequestCurrent = FocusIdxTabRequestCurrent = IM_INT_MAX;
@@ -2085,7 +2088,10 @@ void ImGui::NewFrame()
     if (ImGuiWindow* modal_window = GetFrontMostModalRootWindow())
     {
         g.ModalWindowDarkeningRatio = ImMin(g.ModalWindowDarkeningRatio + g.IO.DeltaTime * 6.0f, 1.0f);
-        if (g.HoveredRootWindow != modal_window)
+        ImGuiWindow* window = g.HoveredRootWindow;
+        while (window && window != modal_window)
+            window = window->ParentWindow;
+        if (!window)
             g.HoveredRootWindow = g.HoveredWindow = NULL;
     }
     else
@@ -3760,6 +3766,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
     for (root_non_popup_idx = root_idx; root_non_popup_idx > 0; root_non_popup_idx--)
         if (!(g.CurrentWindowStack[root_non_popup_idx]->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
             break;
+    window->ParentWindow = parent_window;
     window->RootWindow = g.CurrentWindowStack[root_idx];
     window->RootNonPopupWindow = g.CurrentWindowStack[root_non_popup_idx];      // This is merely for displaying the TitleBgActive color.
 
@@ -9172,7 +9179,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
                 continue;
 
             bool hovered, held;
-            ButtonBehavior(column_rect, column_id, &hovered, &held, true);
+            ButtonBehavior(column_rect, column_id, &hovered, &held);
             if (hovered || held)
                 g.MouseCursor = ImGuiMouseCursor_ResizeEW;
 

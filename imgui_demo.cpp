@@ -31,8 +31,7 @@
 #pragma clang diagnostic ignored "-Wformat-security"            // warning : warning: format string is not a string literal
 #pragma clang diagnostic ignored "-Wexit-time-destructors"      // warning : declaration requires an exit-time destructor       // exit-time destruction order is undefined. if MemFree() leads to users code that has been disabled before exit it might cause problems. ImGui coding style welcomes static/globals.
 #pragma clang diagnostic ignored "-Wreserved-id-macro"          // warning : macro name is a reserved identifier                // 
-#endif
-#ifdef __GNUC__
+#elif defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"          // warning: cast to pointer from integer of different size
 #pragma GCC diagnostic ignored "-Wformat-security"              // warning : format string is not a string literal (potentially insecure)
 #pragma GCC diagnostic ignored "-Wdouble-promotion"             // warning: implicit conversion from 'float' to 'double' when passing argument to function
@@ -1244,6 +1243,9 @@ void ImGui::ShowTestWindow(bool* p_open)
             {
                 ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!\n\n");
                 ImGui::Separator();
+
+                //static int dummy_i = 0;
+                //ImGui::Combo("Combo", &dummy_i, "Delete\0Delete harder\0");
 
                 static bool dont_ask_me_next_time = false;
                 ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
@@ -2459,7 +2461,7 @@ static void ShowExampleAppLongText(bool* p_open)
 #else
 
 void ImGui::ShowTestWindow(bool*) {}
-void ImGui::ShowUserGuide(bool*) {}
-void ImGui::ShowStyleEditor(bool*) {}
+void ImGui::ShowUserGuide() {}
+void ImGui::ShowStyleEditor(ImGuiStyle*) {}
 
 #endif
