@@ -94,8 +94,8 @@ class Deserializer {
     bool allocate(size_t sizeToAllocate,const char* optionalTextToCopy=NULL,size_t optionalTextToCopySize=0);
     public:
     Deserializer() : f_data(NULL),f_size(0) {}
-    Deserializer(const char* filename);
-    Deserializer(const char* text,size_t textSizeInBytes);
+    Deserializer(const char* filename);                     // From file
+    Deserializer(const char* text,size_t textSizeInBytes);  // From memory (and optionally from file through GetFileContent(...))
     ~Deserializer() {clear();}
     bool isValid() const {return (f_data && f_size>0);}
 
@@ -121,13 +121,12 @@ protected:
 class ISerializable;
 class Serializer {
 
-
     ISerializable* f;
     void clear();
 
     public:
-    Serializer(const char* filename);   // To file
-    Serializer(int memoryBufferCapacity=2048);                       // To memory (and optionally to file)
+    Serializer(const char* filename);               // To file
+    Serializer(int memoryBufferCapacity=2048);      // To memory (and optionally to file through WriteBufferToFile(...))
     ~Serializer();
     bool isValid() const {return (f);}
 
@@ -148,10 +147,12 @@ class Serializer {
     // To serialize FT_CUSTOM:
     bool saveCustomFieldTypeHeader(const char* name, int numTextLines=1); //e.g. for 4 lines "[CUSTOM-4:MyCustomFieldTypeName]\n". Then add 4 lines using getPointer() below.
 
-    // These are only available when this class is constructed with the Serializer() constructor
+    // These 2 are only available when this class is constructed with the
+    // Serializer(int memoryBufferCapacity) constructor
     const char* getBuffer() const;
     int getBufferSize() const;
     static bool WriteBufferToFile(const char* filename, const char* buffer, int bufferSize);
+
 protected:
     void operator=(const Serializer&) {}
     Serializer(const Serializer&) {}

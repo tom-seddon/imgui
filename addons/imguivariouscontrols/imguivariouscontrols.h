@@ -615,7 +615,10 @@ public:
 //--------------------------------------------------------------------------------
 
     static void SetFontCheckBoxGlyphs(const char* emptyState,const char* fillState);
+    static inline bool HasCustomCheckBoxGlyphs() {return FontCheckBoxGlyphs[0][0]!='\0';}
     static void SetFontArrowGlyphs(const char* leftArrow,const char* downArrow);
+    static inline bool HasCustomArrowGlyphs() {return FontArrowGlyphs[0][0]!='\0';}
+
 
     // TODO: Fix stuff in this area ------------------------------------------------
     // we leave these public...     // to make protected

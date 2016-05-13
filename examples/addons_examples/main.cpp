@@ -717,12 +717,6 @@ void DrawGL()	// Mandatory
                 n->setUserId(3);    // (optional) used in the icon callback
                 n = tv.addRootNode(ImGui::TreeViewNodeData("ThirdRoot Node","This is both a root and a leaf node."),2); // put this node at place 2 (0 based).
                 n->setUserId(4);    // (optional) used in the icon callback
-
-
-                // Test: static methods for using custom glyphs
-                //ImGui::TreeView::SetFontCheckBoxGlyphs("[ ]","[x]");
-                //ImGui::TreeView::SetFontArrowGlyphs(">","v");
-
             }
 
             // Optional tuff to change some tv options on the fly -------------------------------------
@@ -758,6 +752,12 @@ void DrawGL()	// Mandatory
             }
             ImGui::SameLine();
             ImGui::Checkbox("Inherit Disabled Look##TreeViewInheritDisabledLook",&tv.inheritDisabledLook);
+            // Test: static methods for using custom glyphs
+            bool customArrow = ImGui::TreeView::HasCustomArrowGlyphs();
+            if (ImGui::Checkbox("Use custom arrows##TreeViewCustomArrows",&customArrow)) ImGui::TreeView::SetFontArrowGlyphs(customArrow?">":"",customArrow?"v":"");
+            ImGui::SameLine();
+            bool customCheckBox = ImGui::TreeView::HasCustomCheckBoxGlyphs();
+            if (ImGui::Checkbox("Use custom check boxes##TreeViewCustomCheckBoxes",&customCheckBox)) ImGui::TreeView::SetFontCheckBoxGlyphs(customCheckBox?"[ ]":"",customCheckBox?"[x]":"");
 #           if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
             ImGui::Separator();
             static const char* saveName = "myTreeView.layout";

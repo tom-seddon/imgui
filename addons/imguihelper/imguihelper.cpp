@@ -657,10 +657,7 @@ public:
     }
     void close() {if (f) fclose(f);f=NULL;}
     bool isValid() const {return (f);}
-    int printV(const char* fmt, va_list args) {
-        //return vprintf(stderr,fmt,args);   // Dbg (TO REMOVE)
-        return vfprintf(f,fmt,args);
-    }
+    int printV(const char* fmt, va_list args) {return vfprintf(f,fmt,args);}
     int getTypeID() const {return 0;}
 protected:
     FILE* f;
