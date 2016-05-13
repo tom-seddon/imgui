@@ -75,9 +75,6 @@ enum FieldType {
 
 }   // ImGui
 
-#ifndef NO_IMGUIHELPER_SERIALIZATION
-#include <stdio.h> // FILE*. Why must I include this if only a FILE* appears in this header ?
-#endif //NO_IMGUIHELPER_SERIALIZATION
 
 // These classed are supposed to be used internally
 namespace ImGuiHelper {
@@ -121,13 +118,17 @@ protected:
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+class ISerializable;
 class Serializer {
-    FILE* f;        // stdio.h
+
+
+    ISerializable* f;
     void clear();
-    bool saveToFile(const char* filename);
+
     public:
-    Serializer(const char* filename=NULL);
-    ~Serializer() {clear();}
+    Serializer(const char* filename);   // To file
+    Serializer(int memoryBufferCapacity=2048);                       // To memory (and optionally to file)
+    ~Serializer();
     bool isValid() const {return (f);}
 
     bool save(FieldType ft, const float* pValue, const char* name, int numArrayElements=1,int prec=3);
@@ -146,7 +147,11 @@ class Serializer {
 
     // To serialize FT_CUSTOM:
     bool saveCustomFieldTypeHeader(const char* name, int numTextLines=1); //e.g. for 4 lines "[CUSTOM-4:MyCustomFieldTypeName]\n". Then add 4 lines using getPointer() below.
-    FILE* getPointer() {return f;}  // remember to add an additional '\n' at the end of all the text lines
+
+    // These are only available when this class is constructed with the Serializer() constructor
+    const char* getBuffer() const;
+    int getBufferSize() const;
+    static bool WriteBufferToFile(const char* filename, const char* buffer, int bufferSize);
 protected:
     void operator=(const Serializer&) {}
     Serializer(const Serializer&) {}

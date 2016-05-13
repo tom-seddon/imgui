@@ -2323,7 +2323,7 @@ void TreeView::setTextColorForStateColor(int aStateColorFlag, const ImVec4 &text
         bool TreeView::load(ImGuiHelper::Deserializer& d,const char*& amount)   {
             if (!d.isValid()) return false;
             clear();
-            // The idea is to call the creation callbacks after Node::Data has been created
+	    // We want to call the creation callbacks after Node::Data has been created
             // Our serialization code instead creates empty Nodes before filling Data
             // Here is our workaround/hack:
             TreeView::TreeViewNodeCreationDelationCallback oldCb = treeViewNodeCreationDelationCb;
@@ -2363,12 +2363,14 @@ void TreeView::SetFontCheckBoxGlyphs(const char *emptyState, const char *fillSta
         strcpy(&FontCheckBoxGlyphs[0][0],emptyState);
         strcpy(&FontCheckBoxGlyphs[1][0],fillState);
     }
+    else FontCheckBoxGlyphs[0][0]=FontCheckBoxGlyphs[1][0]='\0';
 }
 void TreeView::SetFontArrowGlyphs(const char *leftArrow, const char *downArrow) {
     if (leftArrow && strlen(leftArrow)>0 && strlen(leftArrow)<5 && downArrow && strlen(downArrow)>0 && strlen(downArrow)<5) {
         strcpy(&FontArrowGlyphs[0][0],leftArrow);
         strcpy(&FontArrowGlyphs[1][0],downArrow);
     }
+    else FontArrowGlyphs[0][0]=FontArrowGlyphs[1][0]='\0';
 }
 
 

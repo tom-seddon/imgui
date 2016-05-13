@@ -626,31 +626,119 @@ bool FileExists(const char *filePath)   {
 }
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-void Serializer::clear() {if (f) {fclose(f);f=NULL;}}
-bool Serializer::saveToFile(const char *filename)   {
-    clear();
-    f = fopen(filename,"wt");
-    return (f);
+class ISerializable {
+public:
+    ISerializable() {}
+    virtual ~ISerializable() {}
+    virtual void close()=0;
+    virtual bool isValid() const=0;
+    int print(const char* fmt, ...);
+    virtual int printV(const char* fmt, va_list args)=0;
+    virtual int getTypeID() const=0;
+};
+int ISerializable::print(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    int rv = this->printV(fmt, args);
+    va_end(args);
+    return rv;
 }
-Serializer::Serializer(const char *filename) {
-    f=NULL;
-    if (filename) saveToFile(filename);
+class SerializeToFile : public ISerializable {
+public:
+    SerializeToFile(const char* filename) : f(NULL) {
+        saveToFile(filename);
+    }
+    SerializeToFile() : f(NULL) {}
+    ~SerializeToFile() {close();}
+    bool saveToFile(const char* filename) {
+        close();
+        f = fopen(filename,"wt");
+        return (f);
+    }
+    void close() {if (f) fclose(f);f=NULL;}
+    bool isValid() const {return (f);}
+    int printV(const char* fmt, va_list args) {
+        //return vprintf(stderr,fmt,args);   // Dbg (TO REMOVE)
+        return vfprintf(f,fmt,args);
+    }
+    int getTypeID() const {return 0;}
+protected:
+    FILE* f;
+};
+class SerializeToBuffer : public ISerializable {
+public:
+    SerializeToBuffer(int initialCapacity=2048) {b.reserve(initialCapacity);b.resize(1);b[0]='\0';}
+    ~SerializeToBuffer() {close();}
+    bool saveToFile(const char* filename) {
+        if (!isValid()) return false;
+        FILE* f = fopen(filename,"wt");
+        if (!f) return false;
+        fwrite((void*) &b[0],b.size(),1,f);
+        fclose(f);f=NULL;
+        return true;
+    }
+    void close() {b.clear();ImVector<char> o;b.swap(o);b.resize(1);b[0]='\0';}
+    bool isValid() const {return b.size()>0;}
+    int printV(const char* fmt, va_list args) {
+        const int startSz = b.size();
+        const int additionalSize = vsnprintf(NULL,0,fmt,args);    // since C99
+        b.resize(startSz+additionalSize);
+        const int rv = vsprintf(&b[startSz-1],fmt,args);
+        IM_ASSERT(additionalSize==rv);
+        //b[startSz+additionalSize] = '\0'; // optional
+        return rv;
+    }
+    inline const char* getBuffer() const {return b.size()>0 ? &b[0] : NULL;}
+    inline int getBufferSize() const {return b.size();}
+    int getTypeID() const {return 1;}
+protected:
+    ImVector<char> b;
+};
+const char* Serializer::getBuffer() const   {
+    return (f && f->getTypeID()==1 && f->isValid()) ? static_cast<SerializeToBuffer*>(f)->getBuffer() : NULL;
+}
+int Serializer::getBufferSize() const {
+    return (f && f->getTypeID()==1 && f->isValid()) ? static_cast<SerializeToBuffer*>(f)->getBufferSize() : 0;
+}
+bool Serializer::WriteBufferToFile(const char* filename,const char* buffer,int bufferSize)   {
+    if (!buffer) return false;
+    FILE* f = fopen(filename,"wt");
+    if (!f) return false;
+    fwrite((void*) buffer,bufferSize,1,f);
+    fclose(f);
+    return true;
 }
 
-template <typename T> inline static bool SaveTemplate(FILE* f,FieldType ft, const T* pValue, const char* name, int numArrayElements=1, int prec=-1)   {
+void Serializer::clear() {if (f) {f->close();}}
+Serializer::Serializer(const char *filename) {
+    f=(SerializeToFile*) ImGui::MemAlloc(sizeof(SerializeToFile));
+    IM_PLACEMENT_NEW((SerializeToFile*)f) SerializeToFile(filename);
+}
+Serializer::Serializer(int memoryBufferCapacity) {
+    f=(SerializeToBuffer*) ImGui::MemAlloc(sizeof(SerializeToBuffer));
+    IM_PLACEMENT_NEW((SerializeToBuffer*)f) SerializeToBuffer(memoryBufferCapacity);
+}
+Serializer::~Serializer() {
+    if (f) {
+        f->~ISerializable();
+        ImGui::MemFree(f);
+        f=NULL;
+    }
+}
+template <typename T> inline static bool SaveTemplate(ISerializable* f,FieldType ft, const T* pValue, const char* name, int numArrayElements=1, int prec=-1)   {
     if (!f || ft==ImGui::FT_COUNT  || ft==ImGui::FT_CUSTOM || numArrayElements<0 || numArrayElements>4 || !pValue || !name || name[0]=='\0') return false;
     // name
-    fprintf(f, "[%s",FieldTypeNames[ft]);
+    f->print( "[%s",FieldTypeNames[ft]);
     if (numArrayElements==0) numArrayElements=1;
-    if (numArrayElements>1) fprintf(f, "-%d",numArrayElements);
-    fprintf(f, ":%s]\n",name);
+    if (numArrayElements>1) f->print( "-%d",numArrayElements);
+    f->print( ":%s]\n",name);
     // value
     const char* precision = FieldTypeFormatsWithCustomPrecision[ft];
     for (int t=0;t<numArrayElements;t++) {
-        if (t>0) fprintf(f," ");
-        fprintf(f,precision,prec,pValue[t]);
+        if (t>0) f->print(" ");
+        f->print(precision,prec,pValue[t]);
     }
-    fprintf(f,"\n\n");
+    f->print("\n\n");
     return true;
 }
 bool Serializer::save(FieldType ft, const float* pValue, const char* name, int numArrayElements,  int prec)   {
@@ -684,12 +772,12 @@ bool Serializer::save(const char* pValue,const char* name,int pValueSize)    {
     if (numArrayElements<0) numArrayElements=0;
 
     // name
-    fprintf(f, "[%s",FieldTypeNames[ft]);
+    f->print( "[%s",FieldTypeNames[ft]);
     if (numArrayElements==0) numArrayElements=1;
-    if (numArrayElements>1) fprintf(f, "-%d",numArrayElements);
-    fprintf(f, ":%s]\n",name);
+    if (numArrayElements>1) f->print( "-%d",numArrayElements);
+    f->print( ":%s]\n",name);
     // value
-    fprintf(f,"%s\n\n",pValue);
+    f->print("%s\n\n",pValue);
     return true;
 }
 bool Serializer::saveTextLines(const char* pValue,const char* name)   {
@@ -707,22 +795,22 @@ bool Serializer::saveTextLines(const char* pValue,const char* name)   {
     if (numArrayElements==0) return false;
 
     // name
-    fprintf(f, "[%s",FieldTypeNames[ft]);
+    f->print( "[%s",FieldTypeNames[ft]);
     if (numArrayElements==0) numArrayElements=1;
-    if (numArrayElements>1) fprintf(f, "-%d",numArrayElements);
-    fprintf(f, ":%s]\n",name);
+    if (numArrayElements>1) f->print( "-%d",numArrayElements);
+    f->print( ":%s]\n",name);
     // value
-    fprintf(f,"%s",pValue);
-    if (!endsWithNewLine)  fprintf(f,"\n");
-    fprintf(f,"\n");
+    f->print("%s",pValue);
+    if (!endsWithNewLine)  f->print("\n");
+    f->print("\n");
     return true;
 }
 bool Serializer::saveCustomFieldTypeHeader(const char* name, int numTextLines) {
     // name
-    fprintf(f, "[%s",FieldTypeNames[ImGui::FT_CUSTOM]);
+    f->print( "[%s",FieldTypeNames[ImGui::FT_CUSTOM]);
     if (numTextLines==0) numTextLines=1;
-    if (numTextLines>1) fprintf(f, "-%d",numTextLines);
-    fprintf(f, ":%s]\n",name);
+    if (numTextLines>1) f->print( "-%d",numTextLines);
+    f->print( ":%s]\n",name);
     return true;
 }
 
