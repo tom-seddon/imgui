@@ -293,10 +293,6 @@ struct AnimatedImage {
 bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspectRatio,float& zoom,ImVec2& zoomCenter,int panMouseButtonDrag=1,int resetZoomAndPanMouseButton=2,const ImVec2& zoomMaxAndZoomStep=ImVec2(16.f,1.025f));
 
 
-// Moves: window->DC.CursorPos.x+= the indent(s) of a TreeNode
-void TreeNodeIndent(int numIndents=1);
-void TreeNodeUnindent(int numIndents=1);
-
 // Basic tree view implementation
 // TODO: See if we can switch context-menu with a single-shot RMB click (when a menu is still open)
 class TreeViewNode {
@@ -598,16 +594,14 @@ public:
 //-------------------------------------------------------------------------------
 #       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-protected:
-        bool save(ImGuiHelper::Serializer& s);
 public:
+        bool save(ImGuiHelper::Serializer& s);
         bool save(const char* filename);
         static bool Save(const char* filename, TreeView **pTreeViews, int numTreeviews);
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-protected:
-        bool load(ImGuiHelper::Deserializer& d,const char*& amount);
 public:
+        bool load(ImGuiHelper::Deserializer& d,const char** pOptionalBufferStart=NULL);
         bool load(const char* filename);
         static bool Load(const char* filename,TreeView** pTreeViews,int numTreeviews);
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD

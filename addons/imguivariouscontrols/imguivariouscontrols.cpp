@@ -1446,26 +1446,6 @@ static void DrawSplitter(float& size0, float& size1,const char* label="##Splitte
 }
 */
 
-
-void TreeNodeIndent(int numIndents) {
-    if (numIndents<=0) return;
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems) return;
-    ImGuiContext& g = *GImGui;
-    window->DC.CursorPos.x+= (g.FontSize+g.Style.FramePadding.x*2)*numIndents;
-    //window->DC.IndentX += g.Style.IndentSpacing;
-    //window->DC.CursorPos.x = window->Pos.x + window->DC.IndentX*numIndents + window->DC.ColumnsOffsetX;
-}
-
-void TreeNodeUnindent(int numIndents) {
-    if (numIndents<=0) return;
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems) return;
-    ImGuiContext& g = *GImGui;
-    window->DC.IndentX -= g.Style.IndentSpacing;
-    window->DC.CursorPos.x = window->Pos.x + window->DC.IndentX*numIndents + window->DC.ColumnsOffsetX;
-}
-
 }   // ImGui namespace
 
 
@@ -1478,6 +1458,7 @@ struct MyTreeViewHelperStruct {
     bool mustDrawAllNodesAsDisabled;
     ImGuiWindow* window;
     float windowWidth;
+    float arrowOffset;
     TreeViewNode::Event& event;
     bool hasCbGlyphs,hasArrowGlyphs;
     struct ContextMenuDataStruct {
@@ -1511,7 +1492,8 @@ struct MyTreeViewHelperStruct {
         window = ImGui::GetCurrentWindow();
         windowWidth = ImGui::GetWindowWidth();
         hasCbGlyphs=TreeView::FontCheckBoxGlyphs[0][0]!='\0';
-        hasArrowGlyphs=TreeView::FontArrowGlyphs[0][0]!='\0';;
+        hasArrowGlyphs=TreeView::FontArrowGlyphs[0][0]!='\0';
+        arrowOffset = hasArrowGlyphs ? (ImGui::CalcTextSize(&TreeView::FontArrowGlyphs[0][0]).x+GImGui->Style.ItemSpacing.x) : (GImGui->FontSize+GImGui->Style.ItemSpacing.x);
     }
     void fillEvent(TreeViewNode* _eventNode=NULL,TreeViewNode::State _eventFlag=TreeViewNode::STATE_NONE,bool _eventFlagRemoved=false) {
         event.node = _eventNode;
@@ -2041,6 +2023,7 @@ TreeView::~TreeView() {
 
 
 void TreeViewNode::render(void* ptr,int numIndents)   {
+    // basically it should be: numIndents == getDepth() + 1; AFAICS
     if (state&STATE_HIDDEN) return;
     MyTreeViewHelperStruct& tvhs = *((MyTreeViewHelperStruct*) ptr);
     TreeView& tv = tvhs.parentTreeView;
@@ -2065,25 +2048,18 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
     ImGui::PushID(this);
     if (allowCheckBox && !tvhs.hasCbGlyphs) ImGui::AlignFirstTextHeightToWidgets();
 
+    tvhs.window->DC.CursorPos.x+= tvhs.arrowOffset*(numIndents-(isLeafNode ? 0 : 1))+(tvhs.hasArrowGlyphs?(GImGui->Style.FramePadding.x*2):0.f);
     if (!isLeafNode) {
-	ImGui::TreeNodeIndent(numIndents-1);
         if (!tvhs.hasArrowGlyphs)  {
             ImGui::SetNextTreeNodeOpen(stateopen,ImGuiSetCond_Always);
-            ImGui::TreeNodeIndent(numIndents-1);
-            mustTreePop = ImGui::TreeNode("","%s","");            
+            mustTreePop = ImGui::TreeNode("","%s","");
         }
         else {
-	    ImGui::Text("%s",stateopen?&TreeView::FontArrowGlyphs[1][0]:&TreeView::FontArrowGlyphs[0][0]);
+            ImGui::Text("%s",stateopen?&TreeView::FontArrowGlyphs[1][0]:&TreeView::FontArrowGlyphs[0][0]);
             arrowHovered=ImGui::IsItemHovered();
         }
-	arrowHovered=ImGui::IsItemHovered();itemHovered|=arrowHovered;
+        arrowHovered=ImGui::IsItemHovered();itemHovered|=arrowHovered;
         ImGui::SameLine();
-    }
-    else {
-        //if (!tvhs.hasArrowGlyphs)
-        ImGui::TreeNodeIndent(numIndents);
-        //else tvhs.window->DC.CursorPos.x+= (g.FontSize+style.FramePadding.x*2)*numIndents;
-
     }
 
     if (allowCheckBox)  {
@@ -2176,7 +2152,6 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
     if (tv.treeViewNodeAfterDrawCb) tv.treeViewNodeAfterDrawCb(this,tv,tvhs.windowWidth,tv.treeViewNodeAfterDrawCbUserPtr);
 
     if (mustTreePop) ImGui::TreePop();
-
     ImGui::PopID();
 
     if (arrowHovered)   {
@@ -2213,7 +2188,7 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
     if (isStatePresent(STATE_OPEN))  {
         //---------------------------------------------------
         for (int i=0,isz=childNodes->size();i<isz;i++)   {
-            TreeViewNode* n = (*childNodes)[i];                        
+            TreeViewNode* n = (*childNodes)[i];
             if (n) {
                 const bool oldMustDrawAllNodesAsDisabled = tvhs.mustDrawAllNodesAsDisabled;
                 if (tv.inheritDisabledLook && (state&STATE_DISABLED)) tvhs.mustDrawAllNodesAsDisabled = true;
@@ -2239,7 +2214,7 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
 bool TreeView::render() {
     inited = true;
     lastEvent.reset();
-    if (!childNodes || childNodes->size()==0) return NULL;
+    if (!childNodes || childNodes->size()==0) return false;
 
     static int frameCnt = -1;
     ImGuiContext& g = *GImGui;
@@ -2265,7 +2240,7 @@ bool TreeView::render() {
     for (int i=0,isz=childNodes->size();i<isz;i++)   {
         TreeViewNode* n = (*childNodes)[i];
         tvhs.mustDrawAllNodesAsDisabled = false;
-        if (n) n->render(&tvhs);
+        if (n) n->render(&tvhs,1);
     }
     ImGui::PopID();
     ImGui::EndGroup();
@@ -2320,22 +2295,23 @@ void TreeView::setTextColorForStateColor(int aStateColorFlag, const ImVec4 &text
         }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-        bool TreeView::load(ImGuiHelper::Deserializer& d,const char*& amount)   {
+        bool TreeView::load(ImGuiHelper::Deserializer& d, const char **pOptionalBufferStart)   {
             if (!d.isValid()) return false;
             clear();
-	    // We want to call the creation callbacks after Node::Data has been created
+            // We want to call the creation callbacks after Node::Data has been created
             // Our serialization code instead creates empty Nodes before filling Data
             // Here is our workaround/hack:
             TreeView::TreeViewNodeCreationDelationCallback oldCb = treeViewNodeCreationDelationCb;
             treeViewNodeCreationDelationCb = NULL;
+            const char* amount = pOptionalBufferStart ? (*pOptionalBufferStart) : 0;
             MyTreeViewHelperStruct::Deserialize(d,this,amount,this,oldCb);
+            if (pOptionalBufferStart) *pOptionalBufferStart = amount;
             treeViewNodeCreationDelationCb = oldCb;
             return true;
         }
         bool TreeView::load(const char* filename)   {
             ImGuiHelper::Deserializer d(filename);
-            const char* amount = 0;
-            return load(d,amount);
+            return load(d);
         }
         bool TreeView::Load(const char* filename,TreeView** pTreeViews,int numTreeviews) {
             IM_ASSERT(pTreeViews && numTreeviews>0);
@@ -2346,11 +2322,10 @@ void TreeView::setTextColorForStateColor(int aStateColorFlag, const ImVec4 &text
             ImGuiHelper::Deserializer d(filename);
             const char* amount = 0; bool ok = true;
             for (int i=0;i<numTreeviews;i++)   {
-                ok|=pTreeViews[i]->load(d,amount);
+                ok|=pTreeViews[i]->load(d,&amount);
             }
             return ok;
         }
-
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 //--------------------------------------------------------------------------------
