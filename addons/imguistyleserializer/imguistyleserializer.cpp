@@ -335,7 +335,10 @@ void ChangeStyleColors(ImGuiStyle& style,float satThresholdForInvertingLuminance
 }
 static inline void InvertStyleColors(ImGuiStyle& style)  {ChangeStyleColors(style,.1f,0.f);}
 static inline void ChangeStyleColorsHue(ImGuiStyle& style,float shiftHue=0.f)  {ChangeStyleColors(style,0.f,shiftHue);}
-
+static inline ImVec4 ConvertTitleBgColFromPrevVersion(const ImVec4& win_bg_col, const ImVec4& title_bg_col)	{
+    float new_a = 1.0f - ((1.0f - win_bg_col.w) * (1.0f - title_bg_col.w)), k = title_bg_col.w / new_a;
+    return ImVec4((win_bg_col.x * win_bg_col.w + title_bg_col.x) * k, (win_bg_col.y * win_bg_col.w + title_bg_col.y) * k, (win_bg_col.z * win_bg_col.w + title_bg_col.z) * k, new_a);
+}
 
 bool ResetStyle(int styleEnum,ImGuiStyle& style) {
     if (styleEnum<0 || styleEnum>=ImGuiStyle_Count) return false;
@@ -377,9 +380,9 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_FrameBg]               = ImVec4(0.80f, 0.80f, 0.39f, 0.26f);
 	style.Colors[ImGuiCol_FrameBgHovered]        = ImVec4(0.90f, 0.80f, 0.80f, 0.40f);
 	style.Colors[ImGuiCol_FrameBgActive]         = ImVec4(0.90f, 0.65f, 0.65f, 0.45f);
-	style.Colors[ImGuiCol_TitleBg]               = ImVec4(0.26f, 0.27f, 0.74f, 1.00f);
+	style.Colors[ImGuiCol_TitleBg]               = ImGui::ConvertTitleBgColFromPrevVersion(style.Colors[ImGuiCol_WindowBg],ImVec4(0.26f, 0.27f, 0.74f, 1.00f));
 	style.Colors[ImGuiCol_TitleBgCollapsed]      = ImVec4(0.28f, 0.28f, 0.76f, 0.16f);
-	style.Colors[ImGuiCol_TitleBgActive]         = ImVec4(0.50f, 0.50f, 1.00f, 0.55f);
+	style.Colors[ImGuiCol_TitleBgActive]         = ImGui::ConvertTitleBgColFromPrevVersion(style.Colors[ImGuiCol_WindowBg],ImVec4(0.50f, 0.50f, 1.00f, 0.55f));
 	style.Colors[ImGuiCol_MenuBarBg]             = ImVec4(0.40f, 0.40f, 0.55f, 0.80f);
 	style.Colors[ImGuiCol_ScrollbarBg]           = ImVec4(1.00f, 1.00f, 1.00f, 0.18f);
 	style.Colors[ImGuiCol_ScrollbarGrab]         = ImVec4(0.67f, 0.58f, 0.00f, 1.00f);

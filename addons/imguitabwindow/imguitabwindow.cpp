@@ -298,8 +298,7 @@ bool TabLabelStyle::Edit(TabLabelStyle &s)  {
 #if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 #include "../imguihelper/imguihelper.h"
-bool TabLabelStyle::Save(const TabLabelStyle &style, const char *filename)    {
-    ImGuiHelper::Serializer s(filename);
+bool TabLabelStyle::Save(const TabLabelStyle &style, ImGuiHelper::Serializer& s) {
     if (!s.isValid()) return false;
 
     s.save(ImGui::FT_FLOAT,&style.fillColorGradientDeltaIn0_05,"fillColorGradientDeltaIn0_05");
@@ -368,10 +367,11 @@ static bool TabLabelStyleParser(ImGuiHelper::FieldType ft,int /*numArrayElements
     }
     return false;
 }
-bool TabLabelStyle::Load(TabLabelStyle &style, const char *filename)  {
-    ImGuiHelper::Deserializer d(filename);
+bool TabLabelStyle::Load(TabLabelStyle &style,ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart)  {
     if (!d.isValid()) return false;
-    d.parse(TabLabelStyleParser,(void*)&style);
+    const char* amount = pOptionalBufferStart ? (*pOptionalBufferStart) : 0;
+    amount = d.parse(TabLabelStyleParser,(void*)&style,amount);
+    if (pOptionalBufferStart) *pOptionalBufferStart=amount;
     return true;
 }
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
@@ -2058,11 +2058,13 @@ bool TabWindow::Save(const char *filename, TabWindow *pTabWindows, int numTabWin
 }
 #endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-bool TabWindow::load(ImGuiHelper::Deserializer &d, const char *&amount) {
+bool TabWindow::load(ImGuiHelper::Deserializer &d, const char **pOptionalBufferStart) {
     if (!d.isValid()) return false;
     this->clear();      // Well, shouldn't we ask for modified unclosed tab labels here ?
 
+    const char* amount = pOptionalBufferStart ? (*pOptionalBufferStart) : 0;
     mainNode->deserialize(d,NULL,amount,this);
+    if (pOptionalBufferStart) *pOptionalBufferStart = amount;
 
     mainNode->mergeEmptyLeafNodes(&activeNode);	// optional, but should fix hierarchy problems
     if (!activeNode) activeNode=mainNode;
@@ -2073,8 +2075,7 @@ bool TabWindow::load(ImGuiHelper::Deserializer &d, const char *&amount) {
 }
 bool TabWindow::load(const char* filename)  {
     ImGuiHelper::Deserializer d(filename);
-    const char* amount = 0;
-    return load(d,amount);
+    return load(d);
 }
 bool TabWindow::Load(const char *filename, TabWindow *pTabWindows, int numTabWindows)   {
     IM_ASSERT(pTabWindows && numTabWindows>0);
@@ -2084,7 +2085,7 @@ bool TabWindow::Load(const char *filename, TabWindow *pTabWindows, int numTabWin
     ImGuiHelper::Deserializer d(filename);
     const char* amount = 0; bool ok = true;
     for (int i=0;i<numTabWindows;i++)   {
-        ok|=pTabWindows[i].load(d,amount);
+        ok|=pTabWindows[i].load(d,&amount);
     }
     return ok;
 }

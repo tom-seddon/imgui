@@ -60,8 +60,7 @@ bool NodeGraphEditor::Style::Edit(NodeGraphEditor::Style& s) {
 #if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 #include "../imguihelper/imguihelper.h"
-bool NodeGraphEditor::Style::Save(const NodeGraphEditor::Style &style, const char *filename)    {
-    ImGuiHelper::Serializer s(filename);
+bool NodeGraphEditor::Style::Save(const NodeGraphEditor::Style &style,ImGuiHelper::Serializer& s)    {
     if (!s.isValid()) return false;
 
     ImVec4 tmpColor = ImColor(style.color_background);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_background",4);
@@ -130,10 +129,10 @@ static bool StyleParser(ImGuiHelper::FieldType ft,int /*numArrayElements*/,void*
     }
     return false;
 }
-bool NodeGraphEditor::Style::Load(NodeGraphEditor::Style &style, const char *filename)  {
-    ImGuiHelper::Deserializer d(filename);
+bool NodeGraphEditor::Style::Load(NodeGraphEditor::Style &style,  ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart)  {
     if (!d.isValid()) return false;
-    d.parse(StyleParser,(void*)&style);
+    const char* offset = d.parse(StyleParser,(void*)&style,pOptionalBufferStart?(*pOptionalBufferStart):NULL);
+    if (pOptionalBufferStart) *pOptionalBufferStart=offset;
     return true;
 }
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
@@ -1356,7 +1355,7 @@ FieldInfo &FieldInfoVector::addFieldColor(float *pdata, bool useAlpha, const cha
     return f;
 }
 FieldInfo &FieldInfoVector::addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,FieldInfo::CopyFieldDelegate copyFieldDelegate, void *userData
-//------WIP----------------------------------------------------------------------
+//-------------------------------------------------------------------------------
 #       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 	,FieldInfo::SerializeFieldDelegate serializeFieldDelegate,
@@ -1374,7 +1373,7 @@ FieldInfo &FieldInfoVector::addFieldCustom(FieldInfo::RenderFieldDelegate render
     f.renderFieldDelegate=renderFieldDelegate;
     f.copyFieldDelegate=copyFieldDelegate;
     f.userData = userData;
-//------WIP----------------------------------------------------------------------
+//-------------------------------------------------------------------------------
 #       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
     f.serializeFieldDelegate=serializeFieldDelegate;
@@ -1623,11 +1622,10 @@ bool FieldInfo::render(int nodeWidth)   {
     return changed;
 }
 
-//------WIP----------------------------------------------------------------------
+//-------------------------------------------------------------------------------
 #       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-bool NodeGraphEditor::save(const char* filename)    {
-    ImGuiHelper::Serializer s(filename);
+bool NodeGraphEditor::save(ImGuiHelper::Serializer& s)    {
     if (!s.isValid()) return false;
     const int numNodes = nodes.size();
     const int numLinks = links.size();
@@ -1748,12 +1746,11 @@ static bool NodeGraphEditorParseCallback3(ImGuiHelper::FieldType /*ft*/,int /*nu
     }
     return false;
 }
-bool NodeGraphEditor::load(const char* filename)    {
-    ImGuiHelper::Deserializer d(filename);
+bool NodeGraphEditor::load(ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart)    {
     if (!d.isValid() || !nodeFactoryFunctionPtr) return false;
     clear();
     //--------------------------------------------
-    const char* amount = 0;
+    const char* amount = pOptionalBufferStart ? (*pOptionalBufferStart) : 0;
     NodeGraphEditorParseCallback1Struct cbs;
     amount = d.parse(NodeGraphEditorParseCallback1,(void*)&cbs,amount);
     scrolling = cbs.scrolling;
@@ -1787,6 +1784,7 @@ bool NodeGraphEditor::load(const char* filename)    {
     maxConnectorNameWidth = 0;
     oldFontWindowScale = 0;
     //--------------------------------------------
+    if (pOptionalBufferStart) *pOptionalBufferStart = amount;
     return true;
     //--------------------------------------------
     //return true;

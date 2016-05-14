@@ -376,10 +376,18 @@ struct NodeGraphEditor	{
 
 #       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-        static bool Save(const Style& style,const char* filename);
+        static bool Save(const Style& style,ImGuiHelper::Serializer& s);
+        static inline bool Save(const Style &style, const char *filename)    {
+            ImGuiHelper::Serializer s(filename);
+            return Save(style,s);
+        }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-        static bool Load(Style& style,const char* filename);
+        static bool Load(Style& style, ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart=NULL);
+        static inline bool Load(Style& style,const char* filename) {
+            ImGuiHelper::Deserializer d(filename);
+            return Load(style,d);
+        }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 
@@ -524,13 +532,21 @@ struct NodeGraphEditor	{
     void setLinkCallback(LinkCallback cb) {linkCallback=cb;}
     void setNodeEditedCallbackTimeThreshold(int seconds) {nodeEditedTimeThreshold=seconds;}
 
-//------WIP----------------------------------------------------------------------
+//-------------------------------------------------------------------------------
 #       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-        bool save(const char* filename);
+        bool save(ImGuiHelper::Serializer& s);
+        inline bool save(const char *filename)    {
+            ImGuiHelper::Serializer s(filename);
+            return save(s);
+        }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-        bool load(const char* filename);
+        bool load(ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart=NULL);
+        inline bool load(const char* filename) {
+            ImGuiHelper::Deserializer d(filename);
+            return load(d);
+        }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 //--------------------------------------------------------------------------------

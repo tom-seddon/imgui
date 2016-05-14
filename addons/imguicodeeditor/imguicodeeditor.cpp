@@ -475,8 +475,7 @@ bool CodeEditor::Style::Edit(CodeEditor::Style& s) {
 #if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 #include "../imguihelper/imguihelper.h"
-bool CodeEditor::Style::Save(const CodeEditor::Style &style, const char *filename)    {
-    ImGuiHelper::Serializer s(filename);
+bool CodeEditor::Style::Save(const CodeEditor::Style &style,ImGuiHelper::Serializer& s)    {
     if (!s.isValid()) return false;
 
     ImVec4 tmpColor = ImColor(style.color_background);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_background",4);
@@ -571,10 +570,10 @@ static bool StyleParser(ImGuiHelper::FieldType ft,int /*numArrayElements*/,void*
     }
     return false;
 }
-bool CodeEditor::Style::Load(CodeEditor::Style &style, const char *filename)  {
-    ImGuiHelper::Deserializer d(filename);
+bool CodeEditor::Style::Load(CodeEditor::Style &style, ImGuiHelper::Deserializer& d, const char **pOptionalBufferStart)  {
     if (!d.isValid()) return false;
-    d.parse(StyleParser,(void*)&style);
+    const char* offset = d.parse(StyleParser,(void*)&style,pOptionalBufferStart?(*pOptionalBufferStart):NULL);
+    if (pOptionalBufferStart) *pOptionalBufferStart=offset;
     return true;
 }
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD

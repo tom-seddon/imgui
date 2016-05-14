@@ -210,10 +210,18 @@ static void Reset(TabLabelStyle& style) {style = TabLabelStyle();}
 
 #if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-static bool Save(const TabLabelStyle& style,const char* filename);
+static bool Save(const TabLabelStyle& style,ImGuiHelper::Serializer& s);
+static inline bool Save(const TabLabelStyle &style, const char *filename)    {
+    ImGuiHelper::Serializer s(filename);
+    return Save(style,s);
+}
 #endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-static bool Load(TabLabelStyle& TabLabelStyle,const char* filename);
+static bool Load(TabLabelStyle& style, ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart=NULL);
+static inline bool Load(TabLabelStyle& style,const char* filename) {
+    ImGuiHelper::Deserializer d(filename);
+    return Load(style,d);
+}
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #endif //NO_IMGUIHELPER_SERIALIZATION
 
@@ -436,16 +444,14 @@ mutable void* userPtr;
 //-------------------------------------------------------------------------------
 #       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-protected:
-        bool save(ImGuiHelper::Serializer& s);
 public:
+        bool save(ImGuiHelper::Serializer& s);
         bool save(const char* filename);
         static bool Save(const char* filename,TabWindow* pTabWindows,int numTabWindows);
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-protected:
-        bool load(ImGuiHelper::Deserializer& d,const char*& amount);
 public:
+        bool load(ImGuiHelper::Deserializer& d,const char ** pOptionalBufferStart=NULL);
         bool load(const char* filename);
         static bool Load(const char* filename,TabWindow* pTabWindows,int numTabWindows);
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD

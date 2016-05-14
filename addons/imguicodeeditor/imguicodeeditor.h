@@ -261,10 +261,18 @@ public:
 
 #       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-        static bool Save(const Style& style,const char* filename);
+        static bool Save(const Style& style,ImGuiHelper::Serializer& s);
+        static inline bool Save(const Style &style, const char *filename)    {
+            ImGuiHelper::Serializer s(filename);
+            return Save(style,s);
+        }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-        static bool Load(Style& style,const char* filename);
+        static bool Load(Style& style, ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart=NULL);
+        static inline bool Load(Style& style,const char* filename) {
+            ImGuiHelper::Deserializer d(filename);
+            return Load(style,d);
+        }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 
