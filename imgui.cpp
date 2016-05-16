@@ -1645,7 +1645,7 @@ void ImGuiListClipper::End()
     if (ItemsCount < 0)
         return;
     // In theory here we should assert that ImGui::GetCursorPosY() == StartPosY + DisplayEnd * ItemsHeight, but it feels saner to just seek at the end and not assert/crash the user.
-    if (ItemsCount < INT_MAX)
+    if (ItemsCount < IM_INT_MAX)
         SetCursorPosYAndSetupDummyPrevLine(StartPosY + ItemsCount * ItemsHeight, ItemsHeight); // advance cursor
     ItemsCount = -1;
     StepNo = 3;
@@ -9120,6 +9120,17 @@ void ImGui::SameLine(float pos_x, float spacing_w)
     }
     window->DC.CurrentLineHeight = window->DC.PrevLineHeight;
     window->DC.CurrentLineTextBaseOffset = window->DC.PrevLineTextBaseOffset;
+}
+
+void ImGui::NewLine()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+    if (window->DC.CurrentLineHeight > 0.0f)     // In the event that we are on a line with items that is smaller that FontSize high, we will preserve its height.
+        ItemSize(ImVec2(0,0));
+    else
+        ItemSize(ImVec2(0.0f, GImGui->FontSize));
 }
 
 void ImGui::NextColumn()
