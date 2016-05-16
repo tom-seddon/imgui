@@ -42,6 +42,8 @@ IMGUI_BASE_PATH=../..
 #DEFINES+= YES_IMGUIDOCK	# Testing only! To remove
 #DEFINES+= YES_IMGUISDF		# Testing only! To remove
 #DEFINES+= YES_IMGUISOLOUD_ALL #YES_IMGUISOLOUD_MODPLUG #YES_IMGUISOLOUD_SPEECH		# Testing only (with use_sdl2)! To remove
+#DEFINES+= YES_IMGUITINYFILEDIALOGS	# Testing only! To remove
+
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 
@@ -80,6 +82,7 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguipdfviewer.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguidock.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.h"			    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguitinyfiledialogs.h"			    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisoloud.h"
 
 

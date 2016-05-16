@@ -144,6 +144,10 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #			define YES_IMGUISDF
 #		endif //NO_IMGUISDF
 #	endif //IMGUI_USE_AUTO_BINDING_OPENGL
+#	ifndef NO_IMGUITINYFILEDIALOGS
+#		undef YES_IMGUITINYFILEDIALOGS
+#		define YES_IMGUITINYFILEDIALOGS
+#	endif //NO_IMGUITINYFILEDIALOGS
 #	ifndef YES_IMGUISOLOUD
 #		undef YES_IMGUISOLOUD
 #		define YES_IMGUISOLOUD
@@ -159,6 +163,9 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #ifdef YES_IMGUISDF
 #include "./imguiyesaddons/imguisdf.h"
 #endif //YES_IMGUISDF
+#ifdef YES_IMGUITINYFILEDIALOGS
+#include "./imguiyesaddons/imguitinyfiledialogs.h"
+#endif //YES_IMGUITINYFILEDIALOGS
 #ifdef YES_IMGUISOLOUD
 #include "./imguiyesaddons/imguisoloud.h" // Better leave it at the end
 #endif //YES_IMGUISOLOUD

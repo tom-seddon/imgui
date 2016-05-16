@@ -539,6 +539,94 @@ void DrawGL()	// Mandatory
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUIFILESYSTEM
 
+        // imguitinyfiledialogs tests (-->> not portable to emscripten and mobile platforms I guess <<--):
+#       ifdef YES_IMGUITINYFILEDIALOGS
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguitinyfiledialogs (yes_addon)");ImGui::Separator();
+        {
+            const char* startingFolder = "./";
+            const char* optionalFileFilterPatterns[7] = {"*.jpg","*.jpeg","*.png","*.tiff","*.bmp","*.gif","*.txt"};
+            static ImVector<char> path0;  // The vector is necessary for "aAllowMultipleSelects".
+                                          // I don't want to use an ImString here (too easy and some users might exclude it)
+            if (path0.size()==0) {path0.resize(1);path0[0]='\0';}
+            static char paths[2][1024] = {"",""};   // tinydialogs hard codes the MAX_PATH to 1024 AFAICS
+
+            //------------------------------------------------------------------------------------------
+            // 1 - ChooseFileDialogButton setup:
+            //------------------------------------------------------------------------------------------
+            ImGui::Text("Please choose a file: ");ImGui::SameLine();
+            if (ImGui::Button("...##tinyfiledialogs1")) {
+                const char* chosenPath =
+                tfd::openFileDialog ("Choose a file",                   // aTitle
+                                     startingFolder,                    // aDefaultPathAndFile
+                                     0,//7,                             // aNumOfFilterPatterns
+                                     NULL,//optionalFileFilterPatterns, // char const * const * const aFilterPatterns , /* NULL {"*.jpg","*.png"} */
+                                     NULL,                              // char const * const aSingleFilterDescription , /* NULL | "image files" */
+                                     0//1                               // aAllowMultipleSelects 0 or 1 (returned paths are chained using the '|' char...)
+                                     ) ;
+                if (chosenPath) {
+                    path0.resize(strlen(chosenPath)+1);
+                    strcpy(&path0[0],chosenPath);
+                }
+            }
+            if (path0[0]!='\0') ImGui::TextWrapped("Chosen path(s): \"%s\"",&path0[0]);
+
+            //------------------------------------------------------------------------------------------
+            // 2 - ChooseFolderDialogButton setup:
+            //------------------------------------------------------------------------------------------
+            ImGui::Text("Please choose a folder: ");ImGui::SameLine();
+            if (ImGui::Button("...##tinyfiledialogs2")) {
+                const char* chosenPath =
+                tfd::selectFolderDialog ("Choose a folder",             // aTitle
+                                     startingFolder                     // aDefaultPath
+                                     ) ;
+                if (chosenPath) strcpy(&paths[0][0],chosenPath);
+            }
+            if (paths[0][0]!='\0') ImGui::Text("Chosen folder: \"%s\"",&paths[0][0]);
+
+            //------------------------------------------------------------------------------------------
+            // 3 - SaveFileDialogButton setup:
+            //------------------------------------------------------------------------------------------
+            ImGui::Text("Please pretend to save the dummy file 'myFilename.png' to: ");ImGui::SameLine();
+            if (ImGui::Button("...##tinyfiledialogs3")) {
+                const char* chosenPath =
+                tfd::saveFileDialog ("Choose a save path",              // aTitle
+                                     "myFilename.png",                  // aDefaultPathAndFile
+                                     7,                                 // aNumOfFilterPatterns
+                                     optionalFileFilterPatterns,        // char const * const * const aFilterPatterns , /* NULL {"*.jpg","*.png"} */
+                                     NULL                               // char const * const aSingleFilterDescription , /* NULL | "image files" */
+                                     ) ;
+                if (chosenPath) strcpy(&paths[1][0],chosenPath);
+            }
+            if (paths[1][0]!='\0') ImGui::Text("Chosen save path: \"%s\"",&paths[1][0]);
+
+            //------------------------------------------------------------------------------------------
+            // 4 - ChooseColorButton setup: (this does not seem to work as expected on Linux)
+            //------------------------------------------------------------------------------------------
+            static ImVec4 chosenColor(1,1,1,1);
+            ImGui::AlignFirstTextHeightToWidgets();ImGui::Text("Please choose a color:");ImGui::SameLine();
+            ImGui::PushID(20);  // (I reuse ImGui::ColorButton(...) below without pushing any ID)
+            if (ImGui::ColorButton(chosenColor))    {
+                unsigned char aoResultRGB[3] = {(unsigned char)(chosenColor.x*255.f),(unsigned char)(chosenColor.y*255.f),(unsigned char)(chosenColor.z*255.f)};
+
+                char const * hexString =            /* returns the hexcolor as a string "#FF0000" */
+                tfd::colorChooser(
+                            "Choose a color",       //aTitle , /* "" */
+                            NULL,                   //char const * const aDefaultHexRGB , /* NULL or "#FF0000" */
+                            aoResultRGB,            /* { 0 , 255 , 255 } used only if aDefaultHexRGB is NULL */
+                            aoResultRGB             /* { 0 , 0 , 0 } aDefaultRGB and aoResultRGB can be the same array */
+                            );
+                if (hexString) {
+                    chosenColor.x = ((float)aoResultRGB[0])/255.0f;
+                    chosenColor.y = ((float)aoResultRGB[1])/255.0f;
+                    chosenColor.z = ((float)aoResultRGB[2])/255.0f;
+                }
+            }
+            ImGui::PopID();
+            ImGui::SameLine();ImGui::TextDisabled(" (Does this work or not?)");
+
+        }
+#       endif //YES_IMGUITINYFILEDIALOGS
+
         // DateChooser Test:
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguidatechooser");ImGui::Separator();
 #       ifndef NO_IMGUIDATECHOOSER
@@ -855,7 +943,7 @@ void DrawGL()	// Mandatory
 #       endif //DOES_NOT_WORK
 
 #       ifdef YES_IMGUISDF
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguisdf");ImGui::Separator();
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguisdf (yes_addon)");ImGui::Separator();
         // Well, we should move the init stuff to InitGL(), clean up textures, etc. (all skipped to avoid multiple preprocessor branches around this file)
         static ImTextureID sdfTexture = 0;
         static ImGui::SdfTextChunk* sdfTextChunk = NULL;
@@ -899,7 +987,7 @@ void DrawGL()	// Mandatory
 #       endif //YES_IMGUISDF
 
 #       ifdef YES_IMGUISOLOUD
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguisoloud");ImGui::Separator();
+        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguisoloud (yes_addon)");ImGui::Separator();
         // Well, we should move the init stuff to InitGL(), clean up textures, etc. (all skipped to avoid multiple preprocessor branches spread around this file)
 
         // Code dirty-copied from the SoLoud Welcome example (I'm a newbie...)

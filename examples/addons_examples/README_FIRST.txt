@@ -77,6 +77,7 @@ Currently "yes addons" are:
 -> imguidock.h/cpp:		no dependencies. License: MIT. [from: https://github.com/nem0/LumixEngine/blob/master/src/editor/imgui/imgui_dock.h]
 -> imguisdf.h/cpp:		no dependencies, but needs OpenGL with Shaders.
 -> imguisoloud.h/cpp:		depends on STL. License:  ZLib/LibPNG (and others more liberal) Link: [http://sol.gfxile.net/soloud/index.html]
+-> imguitinyfiledialogs.h/cpp:	depends on Comdlg32.lib and Ole32.lib on Windows. Link: [http://tinyfiledialogs.sourceforge.net]
 
 ===========================================
 HOW TO USE IMGUI ADDONS IN YOUR PROJECTS:
