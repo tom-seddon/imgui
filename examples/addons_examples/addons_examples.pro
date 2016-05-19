@@ -39,11 +39,12 @@ IMGUI_BASE_PATH=../..
 #DEFINES+= IMGUI_WIP	    # to remove (dev only)
 #DEFINES+=IMGUIBINDINGS_RESTORE_GL_STATE
 
-#DEFINES+= YES_IMGUIDOCK	# Testing only! To remove
-#DEFINES+= YES_IMGUISDF		# Testing only! To remove
+#DEFINES+= YES_IMGUIDOCK
+#DEFINES+= YES_IMGUISDF
 #DEFINES+= YES_IMGUISOLOUD_ALL #YES_IMGUISOLOUD_MODPLUG #YES_IMGUISOLOUD_SPEECH		# Testing only (with use_sdl2)! To remove
-#DEFINES+= YES_IMGUITINYFILEDIALOGS	# Testing only! To remove
-
+#DEFINES+= YES_IMGUITINYFILEDIALOGS
+DEFINES+= YES_IMGUISQLITE   # To remove
+LIBS+= -lsqlite3	    # To remove
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 
@@ -82,7 +83,8 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguipdfviewer.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguidock.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.h"			    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguitinyfiledialogs.h"			    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguitinyfiledialogs.h"	    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisqlite3.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisoloud.h"
 
 

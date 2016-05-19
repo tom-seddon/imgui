@@ -632,17 +632,9 @@ public:
     virtual ~ISerializable() {}
     virtual void close()=0;
     virtual bool isValid() const=0;
-    int print(const char* fmt, ...);
-    virtual int printV(const char* fmt, va_list args)=0;
+    virtual int print(const char* fmt, ...)=0;
     virtual int getTypeID() const=0;
 };
-int ISerializable::print(const char* fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    int rv = this->printV(fmt, args);
-    va_end(args);
-    return rv;
-}
 class SerializeToFile : public ISerializable {
 public:
     SerializeToFile(const char* filename) : f(NULL) {
@@ -657,7 +649,12 @@ public:
     }
     void close() {if (f) fclose(f);f=NULL;}
     bool isValid() const {return (f);}
-    int printV(const char* fmt, va_list args) {return vfprintf(f,fmt,args);}
+    int print(const char* fmt, ...) {
+        va_list args;va_start(args, fmt);
+        const int rv = vfprintf(f,fmt,args);
+        va_end(args);
+        return rv;
+    }
     int getTypeID() const {return 0;}
 protected:
     FILE* f;
@@ -676,13 +673,21 @@ public:
     }
     void close() {b.clear();ImVector<char> o;b.swap(o);b.resize(1);b[0]='\0';}
     bool isValid() const {return b.size()>0;}
-    int printV(const char* fmt, va_list args) {
+    int print(const char* fmt, ...) {
+        va_list args,args2;
+        va_start(args, fmt);
+        va_copy(args2,args);                                    // since C99 (MANDATORY! otherwise we must reuse va_start(args2,fmt): slow)
+        const int additionalSize = vsnprintf(NULL,0,fmt,args);  // since C99
+        va_end(args);
+        //IM_ASSERT(additionalSize>0);
+
         const int startSz = b.size();
-        const int additionalSize = vsnprintf(NULL,0,fmt,args);    // since C99
         b.resize(startSz+additionalSize);
-        const int rv = vsprintf(&b[startSz-1],fmt,args);
-        IM_ASSERT(additionalSize==rv);
-        //b[startSz+additionalSize] = '\0'; // optional
+        const int rv = vsprintf(&b[startSz-1],fmt,args2);
+        va_end(args2);
+        //IM_ASSERT(additionalSize==rv);
+        //IM_ASSERT(v[startSz+additionalSize-1]=='\0');
+
         return rv;
     }
     inline const char* getBuffer() const {return b.size()>0 ? &b[0] : NULL;}

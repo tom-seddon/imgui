@@ -148,6 +148,10 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #		undef YES_IMGUITINYFILEDIALOGS
 #		define YES_IMGUITINYFILEDIALOGS
 #	endif //NO_IMGUITINYFILEDIALOGS
+#	if (!defined(NO_IMGUISQLITE3) && !defined(NO_IMGUISQLITE))
+#		undef YES_IMGUISQLITE3
+#		define YES_IMGUISQLITE3
+#	endif //NO_IMGUISQLITE3
 #	ifndef YES_IMGUISOLOUD
 #		undef YES_IMGUISOLOUD
 #		define YES_IMGUISOLOUD
@@ -166,6 +170,13 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #ifdef YES_IMGUITINYFILEDIALOGS
 #include "./imguiyesaddons/imguitinyfiledialogs.h"
 #endif //YES_IMGUITINYFILEDIALOGS
+#if (defined(YES_IMGUISQLITE3) || defined(YES_IMGUISQLITE))
+#undef YES_IMGUISQLITE3
+#define YES_IMGUISQLITE3
+#undef YES_IMGUISQLITE
+#define YES_IMGUISQLITE
+#include "./imguiyesaddons/imguisqlite3.h"
+#endif //YES_IMGUISQLITE3
 #ifdef YES_IMGUISOLOUD
 #include "./imguiyesaddons/imguisoloud.h" // Better leave it at the end
 #endif //YES_IMGUISOLOUD

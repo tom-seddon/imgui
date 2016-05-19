@@ -24,16 +24,16 @@ The best solution I've found is the java program: runnable-hiero.jar, available 
 This is how I usually generate the fonts using Hiero:
 I strictly follow all the guidelines under "Generating the font" in https://github.com/libgdx/libgdx/wiki/Distance-field-fonts,
 with the following changes:
-0) I always choose a bold font (and I prefer bold-condensed whnever available).
+0) I always choose a bold font (and I prefer bold-condensed whenever available).
 1) I always use "Rendering" set to "Java".
-2) I can add additional codepoints directly in the "Sample Text" edit box (after them I select "Glyph cache" and "reset cache" to update them).
+2) I can add additional codepoints directly in the "Sample Text" edit box (after that I select "Glyph cache" and "reset cache" to update them).
 3) I always output a single .png page (support for multiple pages is yet to come).
 4) The "Scale" value must be the last to be set: the docs suggest 32, but if you have a fast PC try something bigger (48 or 64).
 5) The output .png size can be easily reduced by using 3rd party programs (e.g. pngnq -n 48 myImage.png).
 */
 
 // HOW TO USE IT:
-/* See main.cpp compiled with YES_IMGUISDF */
+/* See main.cpp compiled with YES_IMGUISDF defined at the project level */
 
 // TODO:
 /*

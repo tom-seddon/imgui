@@ -97,6 +97,9 @@
 #ifdef YES_IMGUITINYFILEDIALOGS
 #include "./imguiyesaddons/imguitinyfiledialogs.cpp"
 #endif //YES_IMGUITINYFILEDIALOGS
+#ifdef YES_IMGUISQLITE3
+#include "./imguiyesaddons/imguisqlite3.cpp"
+#endif //YES_IMGUIsQLITE3
 #ifdef YES_IMGUISOLOUD
 #include "./imguiyesaddons/imguisoloud.cpp" // This is huge. Better adding it as the last addon.
 #endif //YES_IMGUISOLOUD
