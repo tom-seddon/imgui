@@ -12,7 +12,7 @@ Instead four project files are provided:
 Even if you use another IDE, in case of compilation problems, it can still be useful to open these files with a text editor and see their content.
 
 You can test the two examples (without compiling them) in your web browser by clicking on the two .html files inside the html subfolder (although not all the addons might be active in this build).
-If you want to compile the examples to .html, please read at the bottom of this page.
+If you want to compile the examples to .html yourself, or you can't run the examples in your web browser, please read at the bottom of this page.
 
 UPDATE: There's a third demo named main3.cpp, but it's currently used to develop imguicodeeditor (see below).
 
@@ -223,6 +223,22 @@ em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp .
 In short I suggest you use the SDL2 binding when building with the emscripten compiler, because you can use native cursors (that are missing from GLFW < 3.1), and unicode support (that is missing from GLUT).
 GLFW can be a possible alternative only for version 3.1 or above.
 
+================================================
+FAQ: HOW TO RUN THE (LOCAL) HTML DEMOS
+================================================
+If the html demos (in the html subfolder) don't run in your browser:
+->  see if the demos work when they are hosted on a web server. Try these links:
+    https://rawgit.com/Flix01/imgui/2015-10-Addons/examples/addons_examples/html/main.html
+    https://rawgit.com/Flix01/imgui/2015-10-Addons/examples/addons_examples/html/main2.html
+    https://rawgit.com/Flix01/imgui/2015-10-Addons/examples/addons_examples/html/main3.html
+    If they work they should work locally if you use the Firefox web browser.
+    On other browsers you may get exceptions that, in the Javascript console, look like: "XMLHttpRequest cannot load".
+    Here is how to solve them (from the emscripten docs):
+    "Unfortunately Chrome and Internet Explorer do not support file:// XHR requests, and can’t directly load the local
+    file in which preloaded data is stored. For these browsers you’ll need to serve the files using a webserver.
+    The easiest way to do this is to use the python SimpleHTTPServer"
+    (in the html subfolder do python -m SimpleHTTPServer 8080 and then open http://localhost:8080/main.html from your browser).
 
+->  otherwise it must be something in your system or in the configuration of your browser.
 
 

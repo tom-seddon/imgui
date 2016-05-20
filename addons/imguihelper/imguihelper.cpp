@@ -848,6 +848,23 @@ void StringAppend(char *&destText, const char *textToAppend, bool allowNullDestT
     if (mustAppendLF) strcat(&totalText[0],"\n");
     destText = (char*) ImGui::MemAlloc(totalTextSz+1);strcpy(destText,&totalText[0]);
 }
+int StringAppend(ImVector<char>& v,const char* fmt, ...) {
+    IM_ASSERT(v.size()>0 && v[v.size()-1]=='\0');
+    va_list args,args2;
+
+    va_start(args, fmt);
+    va_copy(args2,args);                                    // since C99 (MANDATORY! otherwise we must reuse va_start(args2,fmt): slow)
+    const int additionalSize = vsnprintf(NULL,0,fmt,args);  // since C99
+    va_end(args);
+
+    const int startSz = v.size();
+    v.resize(startSz+additionalSize);
+    const int rv = vsprintf(&v[startSz-1],fmt,args2);
+    va_end(args2);
+
+    return rv;
+}
+
 
 } //namespace ImGuiHelper
 #endif //NO_IMGUIHELPER_SERIALIZATION

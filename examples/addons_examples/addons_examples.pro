@@ -43,8 +43,8 @@ IMGUI_BASE_PATH=../..
 #DEFINES+= YES_IMGUISDF
 #DEFINES+= YES_IMGUISOLOUD_ALL #YES_IMGUISOLOUD_MODPLUG #YES_IMGUISOLOUD_SPEECH		# Testing only (with use_sdl2)! To remove
 #DEFINES+= YES_IMGUITINYFILEDIALOGS
-DEFINES+= YES_IMGUISQLITE   # To remove
-LIBS+= -lsqlite3	    # To remove
+#DEFINES+= YES_IMGUISQLITE   # To remove
+#LIBS+= -lsqlite3	    # To remove
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 

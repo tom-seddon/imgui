@@ -166,6 +166,10 @@ protected:
 void StringSet(char*& destText,const char* text,bool allowNullDestText=true);
 // "destText" must be released with ImGui::MemFree(destText). It should always work.
 void StringAppend(char*& destText, const char* textToAppend, bool allowNullDestText=true, bool prependLineFeedIfDestTextIsNotEmpty = true, bool mustAppendLineFeed = false);
+// Appends a formatted string to a char vector (= no need to free memory)
+// v can't be empty (it must at least be: v.size()==1 && v[0]=='\0')
+// returns the number of chars appended.
+int StringAppend(ImVector<char>& v,const char* fmt, ...);
 
 } // ImGuiHelper
 
