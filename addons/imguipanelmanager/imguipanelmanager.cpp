@@ -435,10 +435,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             window->ItemWidthDefault = (float)(int)(g.FontSize * 16.0f);
 
         // Prepare for focus requests
-        window->FocusIdxAllRequestCurrent = (window->FocusIdxAllRequestNext == IM_INT_MAX || window->FocusIdxAllCounter == -1) ? IM_INT_MAX : (window->FocusIdxAllRequestNext + (window->FocusIdxAllCounter+1)) % (window->FocusIdxAllCounter+1);
-        window->FocusIdxTabRequestCurrent = (window->FocusIdxTabRequestNext == IM_INT_MAX || window->FocusIdxTabCounter == -1) ? IM_INT_MAX : (window->FocusIdxTabRequestNext + (window->FocusIdxTabCounter+1)) % (window->FocusIdxTabCounter+1);
+        window->FocusIdxAllRequestCurrent = (window->FocusIdxAllRequestNext == INT_MAX || window->FocusIdxAllCounter == -1) ? INT_MAX : (window->FocusIdxAllRequestNext + (window->FocusIdxAllCounter+1)) % (window->FocusIdxAllCounter+1);
+        window->FocusIdxTabRequestCurrent = (window->FocusIdxTabRequestNext == INT_MAX || window->FocusIdxTabCounter == -1) ? INT_MAX : (window->FocusIdxTabRequestNext + (window->FocusIdxTabCounter+1)) % (window->FocusIdxTabCounter+1);
         window->FocusIdxAllCounter = window->FocusIdxTabCounter = -1;
-        window->FocusIdxAllRequestNext = window->FocusIdxTabRequestNext = IM_INT_MAX;
+        window->FocusIdxAllRequestNext = window->FocusIdxTabRequestNext = INT_MAX;
 
         // Apply scrolling
         if (window->ScrollTarget.x < FLT_MAX)
