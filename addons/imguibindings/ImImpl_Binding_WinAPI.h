@@ -308,6 +308,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
 
     InitImGui(pOptionalInitParams);
     InitGL();
+    if (gImGuiPostInitGLCallback) gImGuiPostInitGLCallback();
     ResizeGL(width,height);
 
     ImGuiIO& io = ImGui::GetIO();
@@ -397,6 +398,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
             for (size_t i = 0; i < 5; i++) io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
         }
 
+        if (gImGuiPreDrawGLCallback) gImGuiPreDrawGLCallback();
         DrawGL();
 
         static const int numFramesDelay = 12;
@@ -420,6 +422,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
         else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
         SwapBuffers( hDC );
+        if (gImGuiPostDrawGLCallback) gImGuiPostDrawGLCallback();
 
         // Reset additional special keys composed states (mandatory):
         for (int i=0;i<12;i++) {gImGuiFunctionKeyPressed[i] = gImGuiFunctionKeyReleased[i]= false;}

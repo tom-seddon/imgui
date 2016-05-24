@@ -312,6 +312,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
 
     InitImGui(pOptionalInitParams);
     InitGL();
+    if (gImGuiPostInitGLCallback) gImGuiPostInitGLCallback();
     ResizeGL(width,height);
 
     ImGuiIO& io = ImGui::GetIO();
@@ -414,6 +415,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
                 for (size_t i = 0; i < 5; i++) io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
             }
 
+            if (gImGuiPreDrawGLCallback) gImGuiPreDrawGLCallback();
             DrawGL();
 
             curFramesDelay = -1;
@@ -436,8 +438,11 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
 
             // Rendering---------------------------------------------------------------------
             g_pd3dDevice->EndScene();
+
+            g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
+            if (gImGuiPostDrawGLCallback) gImGuiPostDrawGLCallback();
         }
-        g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
+        else g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
         //--------------------------------------------------------------------------------
 
         // Reset additional special keys composed states (mandatory):

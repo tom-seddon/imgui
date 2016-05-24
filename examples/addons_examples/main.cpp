@@ -991,77 +991,104 @@ void DrawGL()	// Mandatory
 
 #       ifdef YES_IMGUISOLOUD
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguisoloud (yes_addon)");ImGui::Separator();
-        // Well, we should move the init stuff to InitGL(), clean up textures, etc. (all skipped to avoid multiple preprocessor branches spread around this file)
 
         // Code dirty-copied from the SoLoud Welcome example (I'm a newbie...)
         static SoLoud::Soloud soloud; // Engine core
 
-        static bool enableSoLoud = false;
-        if (ImGui::Checkbox("Start SoLoud Test",&enableSoLoud))    {
-            if (enableSoLoud)   {
-                // Initialize SoLoud (automatic back-end selection)
-                // also, enable visualization for FFT calc
-                soloud.init();
-                soloud.setVisualizationEnable(1);
+        static bool soloudEnabled = false;
+        if (!soloudEnabled && ImGui::Checkbox("Start SoLoud Test",&soloudEnabled))    {
+            soloud.init();// Initialize SoLoud (the opposite should be: soloud.stopAll();soloud.deinit();)
+            //soloud.setVisualizationEnable(1); // enable visualization for FFT calc
 
-                static SoLoud::WavStream ogg; // (SoLoud::Wav still works with ogg too)
-                ogg.load("tetsno.ogg");       // Load an ogg file in streaming mode (however if I set it to loop, then it plays multiple times at the same time if I click the check box twice...)
-                soloud.play(ogg);
+#           ifndef NO_IMGUISOLOUD_WAV   // Wav audiosource (SoLoud::WavStream and SoLoud::Wav (i.e. .wav,.ogg) is enabled by default. All the rest must be manually enabled a.t.p.l.)
+            // Here we play some files soon after initing SoLoud:
+            static SoLoud::WavStream ogg; // (SoLoud::Wav still works with ogg too)
+            ogg.load("tetsno.ogg");       // Load an ogg file in streaming mode
+            soloud.play(ogg);
 
-                static SoLoud::Wav wav;                 // One sample source
-                wav.load("AKWF_c604_0024.wav");       // Load a wave file
-                //wav.setLooping(1);                          // Tell SoLoud to loop the sound
-                /*int handle1 = */soloud.play(wav);             // Play it
-                //soloud.setVolume(handle1, 0.5f);            // Set volume; 1.0f is "normal"
-                //soloud.setPan(handle1, -0.2f);              // Set pan; -1 is left, 1 is right
-                //soloud.setRelativePlaySpeed(handle1, 0.9f); // Play a bit slower; 1.0f is normal
+            static SoLoud::Wav wav;                 // One sample source
+            wav.load("AKWF_c604_0024.wav");       // Load a wave file
+            //wav.setLooping(1);                          // Tell SoLoud to loop the sound
+            /*int handle1 = */soloud.play(wav);             // Play it
+            //soloud.setVolume(handle1, 0.5f);            // Set volume; 1.0f is "normal"
+            //soloud.setPan(handle1, -0.2f);              // Set pan; -1 is left, 1 is right
+            //soloud.setRelativePlaySpeed(handle1, 0.9f); // Play a bit slower; 1.0f is normal
+#           endif //NO_IMGUISOLOUD_WAV
 
-                // extra sources need additional definitions (at the project level not here), unless you define YES_IMGUISOLOUD_ALL (a.t.p.l. not here).
-                // For example:
-#               ifdef YES_IMGUISOLOUD_SFXR
+/*          // These should work too (AFAIK), but audio files are missing...
+#           ifdef YES_IMGUISOLOUD_MODPLUG
+            static SoLoud::Modplug mod;
+            mod.load("audio/BRUCE.S3M");
+            soloud.play(mod);
+#           endif //YES_IMGUISOLOUD_MODPLUG
+#           ifdef YES_IMGUISOLOUD_MONOTONE
+            static SoLoud::Monotone mon;
+            mon.load("audio/Jakim - Aboriginal Derivatives.mon");
+            soloud.play(mon);
+#           endif //YES_IMGUISOLOUD_MONOTONE
+#           ifdef YES_IMGUISOLOUD_TEDSID
+            static SoLoud::TedSid ted;
+            ted.load("audio/ted_storm.prg.dump");
+            soloud.play(ted);
+            static SoLoud::TedSid sid;
+            sid.load("audio/Modulation.sid.dump");
+            soloud.play(sid);
+#           endif //YES_IMGUISOLOUD_TEDSID
+*/
+            // (soloud.getVoiceCount()==0) can be used to check if any sound is playing
+        }
+        if (soloudEnabled && ImGui::TreeNode("SoLoud Stuff"))   {
+            // extra sources need additional definitions (at the project level not here), unless you define YES_IMGUISOLOUD_ALL (a.t.p.l. not here).
+            // For example:
+#           ifdef YES_IMGUISOLOUD_SFXR
+            static const char* presets[]= {"NONE","COIN","LASER","EXPLOSION","POWERUP","HURT","JUMP","BLIP"};
+            static int chosen=0;
+            ImGui::PushItemWidth(ImGui::GetWindowWidth()/3);
+            bool sfxOk = ImGui::Combo("Sound Effext##SoLoudSundEffect",&chosen,&presets[0],sizeof presets/sizeof presets[0],sizeof presets/sizeof presets[0]);
+            ImGui::PopItemWidth();
+            if (chosen>0)   {
+                ImGui::SameLine();
+                sfxOk|=ImGui::Button("play again##SoLoudSundEffectPlay");
+            }
+            if (sfxOk && chosen>0)   {
                 static SoLoud::Sfxr sfxr;
-                sfxr.loadPreset(SoLoud::Sfxr::COIN,0);
+                sfxr.loadPreset(chosen-1,0);
                 soloud.play(sfxr);
-#               endif //YES_IMGUISOLOUD_SFXR
-#               ifdef YES_IMGUISOLOUD_SPEECH
-                // Configure sound source
+            }
+#           endif //YES_IMGUISOLOUD_SFXR
+#           ifdef YES_IMGUISOLOUD_SPEECH
+            static char buf[512]={0};
+            if (buf[0]==0) strcpy(&buf[0],"Hello world!");
+            ImGui::PushItemWidth(ImGui::GetWindowWidth()/2);
+            bool ttsOk = ImGui::InputText("Text to speech##SoLoudTTS",buf,sizeof(buf),ImGuiInputTextFlags_EnterReturnsTrue);
+            ImGui::PopItemWidth();
+            ImGui::SameLine();
+            ttsOk|=ImGui::Button("speak##SoLoudSundEffectSpeak");
+            if (ttsOk) {
                 static SoLoud::Speech speech; // A sound source (speech, in this case)
-                speech.setText("Hello, world.");
+                speech.setText(buf);
                 speech.setVolume(7);
                 soloud.play(speech);    // Play the sound source (we could do this several times if we wanted)
-#               endif //YES_IMGUISOLOUD_SPEECH
-
-
-/*             // These should work too (AFAIK), but audio files are missing...
-#               ifdef YES_IMGUISOLOUD_MODPLUG
-                static SoLoud::Modplug mod;
-                mod.load("audio/BRUCE.S3M");
-                soloud.play(mod);
-#               endif //YES_IMGUISOLOUD_MODPLUG
-#               ifdef YES_IMGUISOLOUD_MONOTONE
-                static SoLoud::Monotone mon;
-                mon.load("audio/Jakim - Aboriginal Derivatives.mon");
-                soloud.play(mon);
-#               endif //YES_IMGUISOLOUD_MONOTONE
-#               ifdef YES_IMGUISOLOUD_TEDSID
-                static SoLoud::TedSid ted;
-                ted.load("audio/ted_storm.prg.dump");
-                soloud.play(ted);
-                static SoLoud::TedSid sid;
-                sid.load("audio/Modulation.sid.dump");
-                soloud.play(sid);
-#               endif //YES_IMGUISOLOUD_TEDSID
-*/
-
             }
-            else {
-                soloud.stopAll();
-                soloud.deinit();     // Does this clean all the sources too ?
+#           endif //YES_IMGUISOLOUD_SPEECH
+#           ifdef IMGUISOLOUD_HAS_BASICPIANO    // This is an automatic definition (that depends on other definitions)
+            const bool pianoEnabled = ImGui::TreeNode("Play piano using the PC keyboard");
+            if (ImGui::IsItemHovered()) {
+                if (pianoEnabled) ImGui::SetTooltip("%s","...listening to PC\nkeys [qwertyuiop]...\nclose this node\nwhen done, please");
+                else ImGui::SetTooltip("%s","open this node\nand start playing!");
             }
-        }
-        if (enableSoLoud && soloud.getVoiceCount()==0)  {
-            soloud.deinit();    // Does this clean all the sources too ?
-            enableSoLoud = false;
+            if (pianoEnabled)      {
+                static ImGuiSoloud::BasicPiano piano;
+                if (!piano.isInited()) {
+                    piano.init(soloud);
+                }
+                piano.play();
+                piano.renderGUI();
+
+                ImGui::TreePop();
+            }
+#           endif
+            ImGui::TreePop();
         }
 #       endif //YES_IMGUISOLOUD
 

@@ -106,12 +106,24 @@ The TED / SID support is based on tedplay (c) 2012 Attila Grosz, used under Unli
 
 
 #ifdef YES_IMGUISOLOUD_ALL
-#   define YES_IMGUISOLOUD_SPEECH
-#   define YES_IMGUISOLOUD_MODPLUG
-#   define YES_IMGUISOLOUD_MONOTONE
-#   define YES_IMGUISOLOUD_SFXR
-#   define YES_IMGUISOLOUD_TEDSID
+#   ifndef NO_IMGUISOLOUD_SPEECH
+#       define YES_IMGUISOLOUD_SPEECH
+#   endif //NO_IMGUISOLOUD_SPEECH
+#   ifndef NO_IMGUISOLOUD_MODPLUG
+#       define YES_IMGUISOLOUD_MODPLUG
+#   endif //NO_IMGUISOLOUD_MODPLUG
+#   ifndef NO_IMGUISOLOUD_MONOTONE
+#       define YES_IMGUISOLOUD_MONOTONE
+#   endif //NO_IMGUISOLOUD_MONOTONE
+#   ifndef NO_IMGUISOLOUD_SFXR
+#       define YES_IMGUISOLOUD_SFXR
+#   endif //NO_IMGUISOLOUD_SFXR
+#   ifndef NO_IMGUISOLOUD_TEDSID
+#       define YES_IMGUISOLOUD_TEDSID
+#   endif //NO_IMGUISOLOUD_TEDSID
+#   ifndef NO_IMGUISOLOUD_VIC
 #   define YES_IMGUISOLOUD_VIC
+#   endif //NO_IMGUISOLOUD_VIC
 #endif //YES_IMGUISOLOUD_ALL
 
 #ifdef WITH_MODPLUG
@@ -1318,6 +1330,7 @@ namespace SoLoud
 		result openFileToMem(File *aFile);
 	};
 };
+#ifndef NO_IMGUISOLOUD_WAV
 //----soloud_wav.h-----------------------------------------------------------------------------------------------
 #define SOLOUD_WAV_H
 struct stb_vorbis;
@@ -1408,7 +1421,7 @@ namespace SoLoud
 		result parse(File *aFile);
 	};
 };
-
+#endif //NO_IMGUISOLOUD_WAV
 //----demos/piano/soloud_basicwave.h--------------------------------------------------------------------------------
 #ifndef NO_IMGUISOLOUD_BASICWAVE    // I would like to "embed" the whole piano demo someway too
 #define BASICWAVE_H
@@ -1431,7 +1444,7 @@ namespace SoLoud
     public:
         enum WAVEFORMS
         {
-            SINE,
+            SINE = 0,
             TRIANGLE,
             SQUARE,
             SAW,
@@ -2108,8 +2121,62 @@ namespace SoLoud
 namespace ImGuiSoloud {
 
 #ifndef NO_IMGUISOLOUD_BASICWAVE
-// TODO: create a struct that bundles the Soloud::Piano example
+// a class that bundles the Soloud::Piano example (in the SoLoud repository)
+// TODO: should be a static class or a singleton: multiple instances simply don't work!
+// In addition it relies on the ImGui::GetIO().KeyDown[] values (its first 128 values must match the ASCII values and the keyboard must be a "QWERTY"):
+// however we can pass "pOptional18KeysOverrideFromFDiesisToB" to override them (maybe we could make a GUI for that).
+#define IMGUISOLOUD_HAS_BASICPIANO
+class BasicPiano {
+protected:
+    struct Plonked  {
+        int mHandle;
+        float mRel;
+    };
+public:
+    BasicPiano();
+    ~BasicPiano() {}
+    inline bool isInited() const {return inited;}
+    void init(SoLoud::Soloud& gSoloud,const int* pOptional18KeysOverrideFromFDiesisToB=NULL);
+    void play();
+    void renderGUI();
+protected:
+    SoLoud::Soloud* pSoloud;			// SoLoud engine core
+    SoLoud::Bus gBus;
+    int bushandle;
+    static int DefaultKeys[18];     // From F# to B [by default, with each char casted to int: "1q2w3er5t6yu8i9o0p"]
 
+    SoLoud::Basicwave gWave;		// Simple wave audio source
+
+    // Filters
+#   ifdef SOLOUD_ECHOFILTER_H
+    SoLoud::EchoFilter gEchoFilter;
+#   endif
+#   ifdef SOLOUD_BQRFILTER_H
+    SoLoud::BiquadResonantFilter gBQRFilter;
+#   endif
+#   ifdef SOLOUD_LOFIFILTER_H
+    SoLoud::LofiFilter gLofiFilter;
+#   endif
+#   ifdef SOLOUD_DCREMOVAL_H
+    SoLoud::DCRemovalFilter gDCRemovalFilter;
+#   endif
+
+    int gWaveSelect;
+    int gFilterSelect;
+
+    Plonked gPlonked[128];
+    float gAttack;
+    float gRelease;
+    float filter_param0[4];
+    float filter_param1[4];
+    float filter_param2[4];
+    bool inited;
+    void plonk(float rel, float vol = 0x50);
+    void unplonk(float rel);
+    void replonk(float vol = 0x50);
+    void operator=(const BasicPiano&) {}
+    BasicPiano(const BasicPiano&) {}
+};
 #endif //NO_IMGUISOLOUD_BASICWAVE
 
 } // namespace ImGuiSoloud

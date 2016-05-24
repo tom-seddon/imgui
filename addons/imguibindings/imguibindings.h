@@ -120,6 +120,10 @@ extern bool gImGuiBindingMouseDblClicked[5];
 extern bool gImGuiFunctionKeyDown[12];
 extern bool gImGuiFunctionKeyPressed[12];
 extern bool gImGuiFunctionKeyReleased[12];
+typedef void (*ImImplVoidDelegate)();
+extern ImImplVoidDelegate gImGuiPostInitGLCallback;
+extern ImImplVoidDelegate gImGuiPreDrawGLCallback;
+extern ImImplVoidDelegate gImGuiPostDrawGLCallback;
 // --------------------------------------------------------------------------------------------------------------
 
 struct ImImpl_InitParams	{

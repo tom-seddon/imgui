@@ -6267,6 +6267,7 @@ namespace SoLoud
 	}
 }
 
+#ifndef NO_IMGUISOLOUD_WAV
 //----soloud_file_hack_on.h---------------------------------------------------------------------------------------
 #define IMGUISOLOUD_FILE_HACK_ON // basically SoLoud uses a custom stb_vorbis.c (please see it) that is wrapped around this. I'm now trying to refactor the code to use "default" stb_vorbis.c.
 #ifdef IMGUISOLOUD_FILE_HACK_ON	// Probably meaningless, but I'm just condensing code in a single blob now...
@@ -7188,6 +7189,7 @@ namespace SoLoud
 	}
 
 };
+#endif //NO_IMGUISOLOUD_WAV
 
 //----../src/audiosource/modplug/soloud_modplug.cpp-----------------------------------------------------------------------------------------------
 #ifdef YES_IMGUISOLOUD_MODPLUG
@@ -16646,6 +16648,210 @@ namespace ImGuiSoloud {
 
 #ifndef NO_IMGUISOLOUD_BASICWAVE
 // TODO: create a struct that bundles the Soloud::Piano example
+BasicPiano::BasicPiano() {
+    pSoloud = NULL;
+    bushandle = 0;
+    memset(&gPlonked[0],'\0',128*sizeof(Plonked));
+    gAttack = 0.02f;
+    gRelease = 0.5f;
+    filter_param0[0]=0;filter_param0[1]=0;filter_param0[2]=1;filter_param0[3]=1;
+    filter_param1[0]=8000;filter_param1[1]=0;filter_param1[2]=1000;filter_param1[3]=0;
+    filter_param2[0]=3;filter_param2[1]=0;filter_param2[2]=2;filter_param2[3]=0;
+    gFilterSelect = 0;
+    inited = false;
+
+    gWaveSelect = 2; // SoLoud::Basicwave::SQUARE
+    gWave.setWaveform(gWaveSelect);
+}
+
+void BasicPiano::init(SoLoud::Soloud &gSoloud, const int *pOptional18KeysOverrideFromFDiesisToB) {
+    inited = true;
+
+    pSoloud = &gSoloud;
+    //gSoloud.init(SoLoud::Soloud::CLIP_ROUNDOFF | SoLoud::Soloud::ENABLE_VISUALIZATION);
+
+    pSoloud->setGlobalVolume(0.75);
+    pSoloud->setPostClipScaler(0.75);
+    bushandle = pSoloud->play(gBus);
+
+#   ifdef SOLOUD_LOFIFILTER_H
+    gBus.setFilter(0, &gLofiFilter);
+#   endif
+#   ifdef SOLOUD_ECHOFILTER_H
+    gEchoFilter.setParams(0.5f, 0.5f);
+    gBus.setFilter(1, &gEchoFilter);
+#   endif
+#   ifdef SOLOUD_DCREMOVAL_H
+    gBus.setFilter(3, &gDCRemovalFilter);
+#   endif
+
+    if (pOptional18KeysOverrideFromFDiesisToB) {
+        for (int i=0;i<18;i++) DefaultKeys[i] = pOptional18KeysOverrideFromFDiesisToB[i];
+    }
+}
+
+int BasicPiano::DefaultKeys[18] = {(int)'1',(int)'q',(int)'2',(int)'w',(int)'3',(int)'e',(int)'r',(int)'5',(int)'t',(int)'6',
+                                   (int)'y',(int)'u',(int)'8',(int)'i',(int)'9',(int)'o',(int)'0',(int)'p'};
+
+void BasicPiano::play() {
+    if (!inited) return;
+
+    pSoloud->setFilterParameter(bushandle, 0, 0, filter_param0[0]);
+    pSoloud->setFilterParameter(bushandle, 1, 0, filter_param0[1]);
+    pSoloud->setFilterParameter(bushandle, 2, 0, filter_param0[2]);
+    pSoloud->setFilterParameter(bushandle, 3, 0, filter_param0[3]);
+
+    pSoloud->setFilterParameter(bushandle, 0, 1, filter_param1[0]);
+    pSoloud->setFilterParameter(bushandle, 0, 2, filter_param2[0]);
+    ImGuiIO& io = ImGui::GetIO();
+
+    static bool KeysDown[128]={0};
+
+#   define NOTEKEY(x, p)\
+    if (io.KeysDown[x] && !KeysDown[x]) { plonk((float)pow(0.943875f, p));KeysDown[x]=true;} \
+    if (!io.KeysDown[x] && KeysDown[x]) { unplonk((float)pow(0.943875f, p));KeysDown[x]=false;}
+
+    for (int i=0;i<18;i++) {
+        NOTEKEY(DefaultKeys[i],18-i);
+    }
+
+    /*
+    NOTEKEY((int)'1', 18); // F#
+    NOTEKEY((int)'q', 17); // G
+    NOTEKEY((int)'2', 16); // G#
+    NOTEKEY((int)'w', 15); // A
+    NOTEKEY((int)'3', 14); // A#
+    NOTEKEY((int)'e', 13); // B
+    NOTEKEY((int)'r', 12); // C
+    NOTEKEY((int)'5', 11); // C#
+    NOTEKEY((int)'t', 10); // D
+    NOTEKEY((int)'6', 9); // D#
+    NOTEKEY((int)'y', 8); // E
+    NOTEKEY((int)'u', 7); // F
+    NOTEKEY((int)'8', 6); // F#
+    NOTEKEY((int)'i', 5); // G
+    NOTEKEY((int)'9', 4); // G#
+    NOTEKEY((int)'o', 3); // A
+    NOTEKEY((int)'0', 2); // A#
+    NOTEKEY((int)'p', 1); // B
+    */
+
+#   undef NOTEKEY
+}
+
+void BasicPiano::renderGUI() {
+    if (!inited) return;
+    ImGui::PushID(this);
+    static const char* forms[] = {"Sine","Triangle","Square","Saw","InverseSaw"};
+    ImGui::PushItemWidth(ImGui::GetWindowWidth()/3);
+    if (ImGui::Combo("Waveform##SoLoudPianoWaveForm",&gWaveSelect,&forms[0],sizeof forms/sizeof forms[0],sizeof forms/sizeof forms[0])) {
+        gWave.setWaveform(gWaveSelect);
+    }
+    ImGui::PopItemWidth();
+#   ifdef SOLOUD_BQRFILTER_H
+    if (ImGui::TreeNode("BQRFilter"))
+    {
+        if (ImGui::RadioButton("None", gFilterSelect == 0))
+        {
+            gFilterSelect = 0;
+            gBus.setFilter(2, 0);
+        }
+        if (ImGui::RadioButton("Lowpass", gFilterSelect == 1))
+        {
+            gFilterSelect = 1;
+            gBQRFilter.setParams(SoLoud::BiquadResonantFilter::LOWPASS, 44100, 1000, 2);
+            gBus.setFilter(2, &gBQRFilter);
+        }
+        if (ImGui::RadioButton("Highpass", gFilterSelect == 2))
+        {
+            gFilterSelect = 2;
+            gBQRFilter.setParams(SoLoud::BiquadResonantFilter::HIGHPASS, 44100, 1000, 2);
+            gBus.setFilter(2, &gBQRFilter);
+        }
+        if (ImGui::RadioButton("Bandpass", gFilterSelect == 3))
+        {
+            gFilterSelect = 3;
+            gBQRFilter.setParams(SoLoud::BiquadResonantFilter::BANDPASS, 44100, 1000, 2);
+            gBus.setFilter(2, &gBQRFilter);
+        }
+        ImGui::SliderFloat("Wet##4", &filter_param0[2], 0, 1);
+        filter_param1[2] = pSoloud->getFilterParameter(bushandle, 2, 2);
+        if (ImGui::SliderFloat("Frequency##4", &filter_param1[2], 0, 8000))
+        {
+            pSoloud->setFilterParameter(bushandle, 2, 2, filter_param1[2]);
+        }
+        if (ImGui::SliderFloat("Resonance##4", &filter_param2[2], 1, 20))
+        {
+            pSoloud->setFilterParameter(bushandle, 2, 3, filter_param2[2]);
+        }
+        if (ImGui::Button("Oscillate +/- 1kHz"))
+        {
+            float from = filter_param1[2] - 500;
+            if (from < 0) from = 0;
+            pSoloud->oscillateFilterParameter(bushandle, 2, 2, from, from + 1000, 1);
+        }
+        ImGui::TreePop();
+    }
+#   endif
+#   ifdef SOLOUD_LOFIFILTER_H
+    if (ImGui::TreeNode("Lofi filter"))
+    {
+        ImGui::SliderFloat("Wet##2", &filter_param0[0], 0, 1);
+        ImGui::SliderFloat("Rate##2", &filter_param1[0], 1000, 8000);
+        ImGui::SliderFloat("Bit depth##2", &filter_param2[0], 0, 8);
+        ImGui::TreePop();
+    }
+#   endif
+#   ifdef SOLOUD_ECHOFILTER_H
+    if (ImGui::TreeNode("Echo filter"))
+    {
+        ImGui::SliderFloat("Wet##3", &filter_param0[1], 0, 1);
+        ImGui::TreePop();
+    }
+#   endif
+#   ifdef SOLOUD_DCREMOVAL_H
+    if (ImGui::TreeNode("DC Removal filter"))
+    {
+        ImGui::SliderFloat("Wet##1", &filter_param0[3], 0, 1);
+        ImGui::TreePop();
+    }
+#   endif
+    ImGui::PopID();
+}
+
+void BasicPiano::plonk(float rel, float vol) {
+    int i = 0;
+    while (gPlonked[i].mHandle != 0 && i < 128) i++;
+    if (i == 128) return;
+    vol = (vol + 10) / (float)(0x7f + 10);
+    vol *= vol;
+    int handle = gBus.play(gWave, 0);
+    pSoloud->fadeVolume(handle, vol, gAttack);
+    pSoloud->setRelativePlaySpeed(handle, 2 * rel);
+    gPlonked[i].mHandle = handle;
+    gPlonked[i].mRel = rel;
+}
+void BasicPiano::unplonk(float rel) {
+    int i = 0;
+    while (gPlonked[i].mRel != rel &&i < 128) i++;
+    if (i == 128) return;
+    pSoloud->fadeVolume(gPlonked[i].mHandle, 0, gRelease);
+    pSoloud->scheduleStop(gPlonked[i].mHandle, gRelease);
+    gPlonked[i].mHandle = 0;
+}
+void BasicPiano::replonk(float vol)  {
+    int i = 0;
+    while (gPlonked[i].mHandle != 0 && i < 128) i++;
+    if (i == 128) return;
+    vol = (vol + 10) / (float)(0x7f + 10);
+    vol *= vol;
+    for (i = 0; i < 128; i++)   {
+        if (gPlonked[i].mHandle != 0)   {
+            pSoloud->fadeVolume(gPlonked[i].mHandle, vol, 0.1);
+        }
+    }
+}
+
 
 #endif //NO_IMGUISOLOUD_BASICWAVE
 

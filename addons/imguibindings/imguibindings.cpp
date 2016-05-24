@@ -12,6 +12,9 @@ bool gImGuiBindingMouseDblClicked[5]={false,false,false,false,false};
 bool gImGuiFunctionKeyDown[12]={false,false,false,false,false,false,false,false,false,false,false,false};
 bool gImGuiFunctionKeyPressed[12]={false,false,false,false,false,false,false,false,false,false,false,false};
 bool gImGuiFunctionKeyReleased[12]={false,false,false,false,false,false,false,false,false,false,false,false};
+ImImplVoidDelegate gImGuiPostInitGLCallback   = NULL;
+ImImplVoidDelegate gImGuiPreDrawGLCallback    = NULL;
+ImImplVoidDelegate gImGuiPostDrawGLCallback   = NULL;
 // --------------------------------------------------------------------------------------------------------------
 
 struct ImImpl_PrivateParams  {

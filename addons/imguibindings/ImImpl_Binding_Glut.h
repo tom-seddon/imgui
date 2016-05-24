@@ -240,6 +240,7 @@ static void GlutDrawGL()    {
     }
     for (size_t i = 0; i < 5; i++) io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
 
+    if (gImGuiPreDrawGLCallback) gImGuiPreDrawGLCallback();
     DrawGL();
 
     static const int numFramesDelay = 12;
@@ -263,6 +264,8 @@ static void GlutDrawGL()    {
     else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
     glutSwapBuffers();
+    if (gImGuiPostDrawGLCallback) gImGuiPostDrawGLCallback();
+
     if (!gImGuiPaused)	for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
 
     // Reset additional special keys composed states (mandatory):
@@ -459,6 +462,7 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
     gImGuiDynamicFPSInsideImGui = pOptionalInitParams ? pOptionalInitParams->gFpsDynamicInsideImGui : false;
 
     InitGL();
+    if (gImGuiPostInitGLCallback) gImGuiPostInitGLCallback();
     ResizeGL((int)io.DisplaySize.x,(int)io.DisplaySize.y);
 	
 #   ifdef __FREEGLUT_EXT_H__

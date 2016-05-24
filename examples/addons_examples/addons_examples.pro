@@ -45,6 +45,7 @@ IMGUI_BASE_PATH=../..
 #DEFINES+= YES_IMGUITINYFILEDIALOGS
 #DEFINES+= YES_IMGUISQLITE   # To remove
 #LIBS+= -lsqlite3	    # To remove
+#PKGCONFIG += alsa
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 

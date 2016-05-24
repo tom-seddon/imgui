@@ -330,7 +330,7 @@ static void ImImplMainLoopFrame(void* pDone)	{
         for (size_t i = 0; i < 5; i++) io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
     }
 
-
+    if (gImGuiPreDrawGLCallback) gImGuiPreDrawGLCallback();
     DrawGL();
 
 
@@ -354,6 +354,7 @@ static void ImImplMainLoopFrame(void* pDone)	{
     else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
     SDL_GL_SwapWindow(window);
+    if (gImGuiPostDrawGLCallback) gImGuiPostDrawGLCallback();
 
     // Reset additional special keys composed states (mandatory):
     for (int i=0;i<12;i++) {gImGuiFunctionKeyPressed[i] = gImGuiFunctionKeyReleased[i]= false;}
@@ -383,6 +384,7 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
     ImGuiIO& io = ImGui::GetIO();           
     
     InitGL();
+    if (gImGuiPostInitGLCallback) gImGuiPostInitGLCallback();
     ResizeGL((int) io.DisplaySize.x,(int) io.DisplaySize.y);
 	
     gImGuiInverseFPSClampInsideImGui = pOptionalInitParams ? ((pOptionalInitParams->gFpsClampInsideImGui!=0) ? (1.0f/pOptionalInitParams->gFpsClampInsideImGui) : 1.0f) : -1.0f;

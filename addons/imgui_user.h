@@ -74,8 +74,10 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #       else //IMGUI_USE_SDL2_BINDING
 #           if (defined(_WIN32) || defined(_WIN64))
 #               define WITH_WINMM
+//#           elif (defined(__linux__))
+//#               define WITH_ALSA        // needs the alsa lib (PKGCONFIG += alsa in QtCreator)
 #           else // (defined(_WIN32) || defined(_WIN64))
-#               define WITH_OPENAL          // Or maybe some other specific for Linux...
+#               define WITH_OPENAL          // Or maybe some other specific for Linux... nope: this can link dynamically
 #           endif // (defined(_WIN32) || defined(_WIN64))
 #       endif //IMGUI_USE_SDL2_BINDING
 #   endif // NO_SOLOUD_BINDING
