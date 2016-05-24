@@ -45,6 +45,7 @@ Currently the extra imgui widgets that are available are:
 							-> InputTextMultilineWithHorizontalScrolling (Roflraging posted it to the ImGui Issue Section here: https://github.com/ocornut/imgui/issues/383. Thank you Roflraging!).
 							-> ImageButtonWithText and ImageWithZoomAndPan.
 							-> The ImageAnimation struct, that can be used to display animated images or animated buttons from frames in a texture or from a .gif image.
+							-> TreeView (a generic TreeView implementation).
 -> imguinodegrapheditor:	-> Based on the code posted by Omar, the creator of ImGui.
 -> imguicodeeditor (WIP, UNUSABLE)	this is an attempt to develop a code editor using ImGui only (without direct STL support).
 					However, developing such a control is a huge challange, and I'm not sure when and if it will eventually be functional.
