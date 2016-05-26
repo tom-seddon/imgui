@@ -1697,10 +1697,10 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
             else                        strcpy(I.wndTitle,"Please choose a file");
         }
         else                            strcpy(I.wndTitle,windowTitle);
-        strcat(I.wndTitle,"##");
+	strcat(I.wndTitle,"##");
         char tmpWndTitleNumber[12];
         ImFormatString(tmpWndTitleNumber,11,"%d",I.uniqueNumber);
-        strcat(I.wndTitle,tmpWndTitleNumber);
+	strcat(I.wndTitle,tmpWndTitleNumber);
         I.wndPos = windowPos;
         I.wndSize = windowSize;
 	if (I.wndSize.x<=0) I.wndSize.x = Dialog::WindowSize.x;
@@ -1788,31 +1788,34 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
 #       endif //DEBUG_HISTORY
     }
 
-//#   define USE_MODAL_WINDOWS    // in-file definition (DOES NOT WORK: my code is too complicated for this to work)
+#   define USE_MODAL_WINDOWS    // in-file definition (DOES NOT WORK: my code is too complicated for this to work)
     if (I.rescan) {
         I.rescan = false; // Mandatory
 #       ifndef USE_MODAL_WINDOWS
         ImGui::Begin(I.wndTitle, &I.open, I.wndSize,windowAlpha);
 #       else //USE_MODAL_WINDOWS
-        ImGui::OpenPopup(I.wndTitle);
+	//fprintf(stderr,"ImGui::OpenPopup(\"%s\");\n",I.wndTitle);
+	ImGui::OpenPopup(I.wndTitle);
         //ImGuiWindowFlags flags = ImGuiWindowFlags_Popup|ImGuiWindowFlags_Modal|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings;
         //const bool popupOk = ImGui::Begin(I.wndTitle, &I.open, I.wndSize,windowAlpha,flags);
-        const bool popupOk = ImGui::BeginPopupModal(I.wndTitle, &I.open);//, I.wndSize,windowAlpha);
-        if (!popupOk) return rv;
+	const bool popupOk = ImGui::BeginPopupModal(I.wndTitle, &I.open);//, I.wndSize,windowAlpha);
+	//fprintf(stderr,"ImGui::BeginPopupModal(\"%s\",%s) = %s;\n",I.wndTitle,I.open?"true":"false",popupOk?"true":"false");
+	if (!popupOk) return rv;
 #       endif //USE_MODAL_WINDOWS
-        ImGui::SetWindowPos(I.wndPos);
-        ImGui::SetWindowSize(I.wndSize);
+	ImGui::SetWindowPos(I.wndPos);
+	ImGui::SetWindowSize(I.wndSize);
         //fprintf(stderr,"\"%s\" wndPos={%1.2f,%1.2f}\n",wndTitle.c_str(),wndPos.x,wndPos.y);
     }
 #   ifndef USE_MODAL_WINDOWS
     else ImGui::Begin(I.wndTitle, &I.open,ImVec2(0,0),windowAlpha);
 #   else //USE_MODAL_WINDOWS
     else {
-        //ImGui::OpenPopup(I.wndTitle);
+	//ImGui::OpenPopup(I.wndTitle);
         //ImGuiWindowFlags flags = ImGuiWindowFlags_Popup|ImGuiWindowFlags_Modal|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings;
         //const bool popupOk = ImGui::Begin(I.wndTitle, &I.open, ImVec2(0,0),windowAlpha,flags);
-        const bool popupOk = ImGui::BeginPopupModal(I.wndTitle, &I.open);//,ImVec2(0,0),windowAlpha);
-        if (!popupOk) return rv;
+	const bool popupOk = ImGui::BeginPopupModal(I.wndTitle, &I.open);//,ImVec2(0,0),windowAlpha);
+	//fprintf(stderr,"ImGui::BeginPopupModal(\"%s\",%s) = %s;\n",I.wndTitle,I.open?"true":"false",popupOk?"true":"false");
+	if (!popupOk) return rv;
     }
 #   endif //USE_MODAL_WINDOWS
     ImGui::Separator();
@@ -1862,6 +1865,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
 #           ifndef USE_MODAL_WINDOWS
             ImGui::End();
 #           else //USE_MODAL_WINDOWS
+	    fprintf(stderr,"ImGui::EndPopup(\"%s\");\n",I.wndTitle);
             ImGui::EndPopup();
 #           endif //USE_MODAL_WINDOWS
 
@@ -2407,52 +2411,70 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
 #   ifndef USE_MODAL_WINDOWS
     ImGui::End();
 #   else //USE_MODAL_WINDOWS
+    //fprintf(stderr,"ImGui::EndPopup(\"%s\");\n",I.wndTitle);
     ImGui::EndPopup();
 #   endif //USE_MODAL_WINDOWS
-#   undef USE_MODAL_WINDOWS     // Warning: from now on USE_MODAL_WINDOWS is undefined
     return rv;
 }
 
 const char* Dialog::chooseFileDialog(bool dialogTriggerButton,const char* directory,const char* fileFilterExtensionString,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha) {
     if (dialogTriggerButton)    {internal->rescan = true;internal->chosenPath[0]='\0';}
     if (dialogTriggerButton || (!internal->rescan && strlen(getChosenPath())==0)) {
-        if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
+	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,false,false,"",fileFilterExtensionString,windowTitle,windowSize,windowPos,windowAlpha);
 #       ifdef IMGUI_USE_MINIZIP
         if (cp[0]!='\0') internal->unz.close();
 #       endif // IMGUI_USE_MINIZIP
-        //if (cp[0]!='\0') fprintf(stderr,"%d\n",(int)internal->open);
+#	ifdef USE_MODAL_WINDOWS
+	if (cp[0]!='\0') {
+	    if (GImGui->OpenPopupStack.size()>0 && GImGui->OpenPopupStack[0].ParentWindow)
+		ImGui::FocusWindow(GImGui->OpenPopupStack[0].ParentWindow);
+	    //ClosePopupToLevel(0);
+	}
+#	endif //USE_MODAL_WINDOWS
         return cp;
     }
-    //return getChosenPath();
     return "";
 }
 const char* Dialog::chooseFolderDialog(bool dialogTriggerButton,const char* directory,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha)  {
     if (dialogTriggerButton) {internal->rescan = true;internal->chosenPath[0]='\0';}
     if (dialogTriggerButton || (!internal->rescan && strlen(getChosenPath())==0)) {
-        if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
+	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,true,false,"","",windowTitle,windowSize,windowPos,windowAlpha);
 #       ifdef IMGUI_USE_MINIZIP
         if (cp[0]!='\0') internal->unz.close();
 #       endif // IMGUI_USE_MINIZIP
+#	ifdef USE_MODAL_WINDOWS
+	if (cp[0]!='\0') {
+	    if (GImGui->OpenPopupStack.size()>0 && GImGui->OpenPopupStack[0].ParentWindow)
+		ImGui::FocusWindow(GImGui->OpenPopupStack[0].ParentWindow);
+	    //ClosePopupToLevel(0);
+	}
+#	endif //USE_MODAL_WINDOWS
         return cp;
     }
-    //return getChosenPath();
     return "";
 }
 const char* Dialog::saveFileDialog(bool dialogTriggerButton,const char* directory,const char* startingFileNameEntry,const char* fileFilterExtensionString,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha)    {
     if (dialogTriggerButton) {internal->rescan = true;internal->chosenPath[0]='\0';}
     if (dialogTriggerButton || (!internal->rescan && strlen(getChosenPath())==0)) {
-        if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
+	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,false,true,startingFileNameEntry,fileFilterExtensionString,windowTitle,windowSize,windowPos,windowAlpha);
 #       ifdef IMGUI_USE_MINIZIP
         if (cp[0]!='\0') internal->unz.close();
 #       endif // IMGUI_USE_MINIZIP
-        return cp;
+#	ifdef USE_MODAL_WINDOWS
+	if (cp[0]!='\0') {
+	    if (GImGui->OpenPopupStack.size()>0 && GImGui->OpenPopupStack[0].ParentWindow)
+		ImGui::FocusWindow(GImGui->OpenPopupStack[0].ParentWindow);
+	    //ClosePopupToLevel(0);
+	}
+#	endif //USE_MODAL_WINDOWS
     }
-    //return getChosenPath();
     return "";
 }
+
+#   undef USE_MODAL_WINDOWS     // Warning: from now on USE_MODAL_WINDOWS is undefined
 
 
 #ifndef IMGUIFS_NO_EXTRA_METHODS
