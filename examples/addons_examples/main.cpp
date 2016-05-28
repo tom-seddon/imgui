@@ -250,6 +250,8 @@ const char* fileName = "myTest.conf";
     offset = d.parse(&Parser::ParseCallback,NULL,offset);
 }
 #endif //TEST_SERIALIZER
+
+
 }
 void ResizeGL(int /*w*/,int /*h*/)	// Mandatory
 {

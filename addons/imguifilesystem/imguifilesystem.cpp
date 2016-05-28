@@ -211,7 +211,12 @@ public:
 */
         }
         else {
+/*#           ifdef __EMSCRIPTEN__
+            if (strcmp(path,"/proc/self/fd")) {strcpy(rv,path);return;}
+            else realpath(path, rv);
+#           else // __EMSCRIPTEN__*/
             realpath(path, rv);
+//#           endif // __EMSCRIPTEN__
 /*
 #           ifdef __EMSCRIPTEN__        // v.1.35.7 needs it because of a bug in realpath failing on all the folders
             if (!rv || strlen(rv)==0) {
@@ -488,7 +493,13 @@ public:
                 const char* pName = &eps[cnt]->d_name[0];
                 sz = strlen(pName);
 		if (sz>0) {
-		    if (strcmp(pName,".")!=0 && strcmp(pName,"..")!=0 && pName[0]!='.' && pName[sz-1]!='~')    {
+            if (strcmp(pName,".")!=0 && strcmp(pName,"..")!=0 && pName[0]!='.' && pName[sz-1]!='~'
+#               ifdef __EMSCRIPTEN__
+                && (!(
+                    strcmp(pName,"fd")==0 && strcmp(directoryNameWithoutSlash,"/proc/self")==0
+                ))
+#               endif //__EMSCRIPTEN__
+            )    {
 			strcpy(tempString,directoryNameWithoutSlash);
 			strcat(tempString,"/");
 			strcat(tempString,pName);
@@ -2427,9 +2438,10 @@ const char* Dialog::chooseFileDialog(bool dialogTriggerButton,const char* direct
 #       endif // IMGUI_USE_MINIZIP
 #	ifdef USE_MODAL_WINDOWS
 	if (cp[0]!='\0') {
-	    if (GImGui->OpenPopupStack.size()>0 && GImGui->OpenPopupStack[0].ParentWindow)
-		ImGui::FocusWindow(GImGui->OpenPopupStack[0].ParentWindow);
-	    //ClosePopupToLevel(0);
+        //fprintf(stderr,"GImGui->OpenPopupStack.size()=%d\n",GImGui->OpenPopupStack.size());
+        if (GImGui->OpenPopupStack.size()==1 && GImGui->OpenPopupStack[0].ParentWindow)
+            ImGui::FocusWindow(GImGui->OpenPopupStack[0].ParentWindow);
+        else ClosePopupToLevel(0);  // this can probably be removed
 	}
 #	endif //USE_MODAL_WINDOWS
         return cp;
@@ -2446,9 +2458,10 @@ const char* Dialog::chooseFolderDialog(bool dialogTriggerButton,const char* dire
 #       endif // IMGUI_USE_MINIZIP
 #	ifdef USE_MODAL_WINDOWS
 	if (cp[0]!='\0') {
-	    if (GImGui->OpenPopupStack.size()>0 && GImGui->OpenPopupStack[0].ParentWindow)
-		ImGui::FocusWindow(GImGui->OpenPopupStack[0].ParentWindow);
-	    //ClosePopupToLevel(0);
+        //fprintf(stderr,"GImGui->OpenPopupStack.size()=%d\n",GImGui->OpenPopupStack.size());
+        if (GImGui->OpenPopupStack.size()==1 && GImGui->OpenPopupStack[0].ParentWindow)
+            ImGui::FocusWindow(GImGui->OpenPopupStack[0].ParentWindow);
+        else ClosePopupToLevel(0);  // this can probably be removed
 	}
 #	endif //USE_MODAL_WINDOWS
         return cp;
@@ -2465,9 +2478,10 @@ const char* Dialog::saveFileDialog(bool dialogTriggerButton,const char* director
 #       endif // IMGUI_USE_MINIZIP
 #	ifdef USE_MODAL_WINDOWS
 	if (cp[0]!='\0') {
-	    if (GImGui->OpenPopupStack.size()>0 && GImGui->OpenPopupStack[0].ParentWindow)
-		ImGui::FocusWindow(GImGui->OpenPopupStack[0].ParentWindow);
-	    //ClosePopupToLevel(0);
+        //fprintf(stderr,"GImGui->OpenPopupStack.size()=%d\n",GImGui->OpenPopupStack.size());
+        if (GImGui->OpenPopupStack.size()==1 && GImGui->OpenPopupStack[0].ParentWindow)
+            ImGui::FocusWindow(GImGui->OpenPopupStack[0].ParentWindow);
+        else ClosePopupToLevel(0);  // this can probably be removed
 	}
 #	endif //USE_MODAL_WINDOWS
     }
