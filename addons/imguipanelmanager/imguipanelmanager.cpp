@@ -601,15 +601,6 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 window->DrawList->AddRectFilled(menu_bar_rect.GetTL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, 1|2);
             }
 
-            // Borders
-            if (flags & ImGuiWindowFlags_ShowBorders)
-            {
-                window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), window_rounding);
-                window->DrawList->AddRect(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_Border), window_rounding);
-                if (!(flags & ImGuiWindowFlags_NoTitleBar))
-                    window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border));
-            }
-
             // Scrollbars
             if (window->ScrollbarX)
                 Scrollbar(window, true);
@@ -626,11 +617,25 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 window->DrawList->PathArcToFast(ImVec2(br.x - window_rounding, br.y - window_rounding), window_rounding, 0, 3);
                 window->DrawList->PathFill(resize_col);
             }
+
+            // Borders
+            if (flags & ImGuiWindowFlags_ShowBorders)
+            {
+                window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), window_rounding);
+                window->DrawList->AddRect(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_Border), window_rounding);
+                if (!(flags & ImGuiWindowFlags_NoTitleBar))
+                    window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border));
+            }
         }
+
+        // Update ContentsRegionMax. All the variable it depends on are set above in this function.
+        window->ContentsRegionRect.Min.x = -window->Scroll.x + window->WindowPadding.x;
+        window->ContentsRegionRect.Min.y = -window->Scroll.y + window->WindowPadding.y + window->TitleBarHeight() + window->MenuBarHeight();
+        window->ContentsRegionRect.Max.x = -window->Scroll.x - window->WindowPadding.x + (window->SizeContentsExplicit.x != 0.0f ? window->SizeContentsExplicit.x : (window->Size.x - window->ScrollbarSizes.x));
+        window->ContentsRegionRect.Max.y = -window->Scroll.y - window->WindowPadding.y + (window->SizeContentsExplicit.y != 0.0f ? window->SizeContentsExplicit.y : (window->Size.y - window->ScrollbarSizes.y));
 
         // Setup drawing context
         window->DC.IndentX = 0.0f + window->WindowPadding.x - window->Scroll.x;
-        //window->DC.GroupOffsetX = 0.0f;
         window->DC.ColumnsOffsetX = 0.0f;
         window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.IndentX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding.y - window->Scroll.y);
         window->DC.CursorPos = window->DC.CursorStartPos;

@@ -84,6 +84,26 @@ extern const int MAX_PATH_BYTES;
 #   endif //IMGUI_USE_MINIZIP
 #endif //IMGUIFS_NO_EXTRA_METHODS
 
+enum FileExtensionType {
+    FET_NONE=0,
+    FET_HPP,
+    FET_CPP,
+    FET_IMAGE,
+    FET_PDF,
+    FET_DOCUMENT,
+    FET_TEXT,
+    FET_DATABASE,
+    FET_SPREADSHEET,
+    FET_PRESENTATION,
+    FET_ARCHIVE,
+    FET_AUDIO,
+    FET_VIDEO,
+    FET_XML,
+    FET_HTML,
+    FET_COUNT
+};
+
+
 struct Dialog {
     public:
 
@@ -108,6 +128,12 @@ struct Dialog {
     static bool WrapMode;           // (true)
     static ImVec2 WindowSize;       // (600,400) [initial window size when not defined in argument "windowSize"]
     static ImVec4 WindowLTRBOffsets;// (0,0,0,0)    [it might turn useful when using toolbars]
+
+    typedef bool (*DrawFileIconDelegate) (int fileExtensionType,const ImVec4* pOptionalColorOverride); // must return "true" if the icon is set.
+    static DrawFileIconDelegate DrawFileIconCallback;
+    typedef bool (*DrawFolderIconDelegate) (bool useOpenFolderIconIfAvailable,const ImVec4* pOptionalColorOverride);// must return "true" if the icon is set.
+    static DrawFolderIconDelegate DrawFolderIconCallback;
+
 
     private:
     struct Internal* internal;
@@ -149,6 +175,7 @@ extern void DirectoryGetDirectories(const char* directoryName,PathStringVector& 
 extern void DirectoryGetFiles(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut=NULL, Sorting sorting= SORT_ORDER_ALPHABETIC);
 extern bool FileExists(const char* path);
 extern bool FileGetContent(const char* path,ImVector<unsigned char>& bufferOut,const char* password=NULL);  // password is used if it's a file inside a zip path when IMGUI_USE_MINIZIP is defined (e.g. path="C://MyDocuments/myzipfile.zip/myzipFile/something.txt")
+extern int FileGetExtensionType(const char* path);  // returns one of the FileExtensionType enums, or -1. Slow: you'd better cache the result wherever possible.
 #ifdef IMGUI_USE_MINIZIP
 class UnZipFile {
 public:

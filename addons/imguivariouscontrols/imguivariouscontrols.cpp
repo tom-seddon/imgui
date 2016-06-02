@@ -2266,9 +2266,9 @@ ImVec4 *TreeView::getTextDisabledColorForStateColor(int aStateColorFlag) const  
 }
 
 void TreeView::setTextColorForStateColor(int aStateColorFlag, const ImVec4 &textColor, float disabledTextColorAlphaFactor) const    {
-    if (aStateColorFlag&STATE_COLOR1) {stateColors[0] = textColor; stateColors[1].w = stateColors[0].w * disabledTextColorAlphaFactor;}
-    if (aStateColorFlag&STATE_COLOR2) {stateColors[2] = textColor; stateColors[3].w = stateColors[2].w * disabledTextColorAlphaFactor;}
-    if (aStateColorFlag&STATE_COLOR3) {stateColors[4] = textColor; stateColors[5].w = stateColors[4].w * disabledTextColorAlphaFactor;}
+    if (aStateColorFlag&STATE_COLOR1) {stateColors[0] = textColor; stateColors[1] = stateColors[0]; stateColors[1].w = stateColors[0].w * disabledTextColorAlphaFactor;}
+    if (aStateColorFlag&STATE_COLOR2) {stateColors[2] = textColor; stateColors[3] = stateColors[2]; stateColors[3].w = stateColors[2].w * disabledTextColorAlphaFactor;}
+    if (aStateColorFlag&STATE_COLOR3) {stateColors[4] = textColor; stateColors[5] = stateColors[4]; stateColors[5].w = stateColors[4].w * disabledTextColorAlphaFactor;}
 }
 
 //-------------------------------------------------------------------------------

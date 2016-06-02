@@ -445,7 +445,7 @@ protected:
     }
 
 };
-const SortingHelper::SorterSignature SortingHelper::Sorters[] = {&SortingHelper::Alphasort,&SortingHelper::Alphasortinverse,&SortingHelper::Lastmodsort,&SortingHelper::Lastmodsortinverse,&SortingHelper::Sizesort,&SortingHelper::Sizesortinverse,&Typesort,&SortingHelper::Typesortinverse};
+const SortingHelper::SorterSignature SortingHelper::Sorters[] = {&SortingHelper::Alphasort,&SortingHelper::Alphasortinverse,&SortingHelper::Lastmodsort,&SortingHelper::Lastmodsortinverse,&SortingHelper::Sizesort,&SortingHelper::Sizesortinverse,&SortingHelper::Typesort,&SortingHelper::Typesortinverse};
 SortingHelper::SorterSignature SortingHelper::sorter;
 struct stat SortingHelper::stat1;
 struct stat SortingHelper::stat2;
@@ -1234,6 +1234,96 @@ bool FileGetContent(const char* path,ImVector<unsigned char>& bufferOut,const ch
 #endif // IMGUIFS_NO_EXTRA_METHODS
 // End definitions of some helper classes----------------------------------------------------------------------------------------
 
+// Internal Usage----------------------------------------------------------------------------------------
+struct ImGuiFsDrawIconStruct {
+    ImVector<char> v;
+    ImVector<int> vStarters;              // size = number of strings in v
+    ImVector<int> vStartersLengths;       // same size as vStarters
+    ImVector<int> vStartersCounts;        // same size as vStarters (map to ICON_FA_XXX)
+    int add(const char* exts) {
+    IM_ASSERT(exts && strlen(exts)>1);
+    int cnt = 0;
+    const int vStartersCountValue = vStartersCounts.size()>0 ? (vStartersCounts[vStartersCounts.size()-1]+1) : 0;
+    static char tmp[512];
+    IM_ASSERT(strlen(exts)<511);
+    strcpy(tmp,exts);
+    char* token = strtok(tmp,";");
+    int sz = 0,vSz=0;
+    while(token) {
+        sz=strlen(token);
+        vSz=v.size();
+        vStarters.push_back(vSz);
+        vStartersLengths.push_back(sz);
+        vStartersCounts.push_back(vStartersCountValue);
+        v.resize(vSz+sz+1);
+        strcpy(&v[vSz],token);
+
+        token = strtok(NULL,";");
+        ++cnt;
+    }
+    IM_ASSERT(cnt>0);
+
+    return cnt;
+    }
+    ImGuiFsDrawIconStruct() {
+    v.reserve(1024);
+    vStarters.reserve(400);vStartersLengths.reserve(400);
+    vStartersCounts.reserve(400);
+
+    add("bin");                                     // ICON_FA_FILE_O
+    add("h;hpp;hh;hxx;inl");                        // ICON_FA_H_SQUARE
+    add("cpp;c;cxx;cc");                            // ICON_FA_PLUS_SQUARE
+    add("jpg;jpeg;png;bmp;ico;gif;tif;tiff;tga");   // ICON_FA_FILE_IMAGE_O
+    add("pdf");                                     // ICON_FA_FILE_PDF_O
+    add("doc;docx;odt;ott;uot");                    // ICON_FA_FILE_WORD_O
+    add("txt;setting;settings;layout;ini;md;sh;bat");// ICON_FA_FILE_TEXT_O
+    add("db;sql;sqlite");                           // ICON_FA_DATABASE
+    add("ods;ots;uos;xlsx;xls");                    // ICON_FA_FILE_EXCEL_O
+    add("odp;otp;uop;pptx;ppt");                    // ICON_FA_FILE_POWERPOINT_O
+    add("7z;zip;bz2;gz;lz;lzma;ar;rar");            // ICON_FA_FILE_ARCHIVE_O
+    add("mp3;wav;ogg;spx;opus;mid;mod;flac");       // ICON_FA_FILE_AUDIO_O
+    add("mp4;flv;avi;ogv;theora;mkv;webm;mpg");     // ICON_FA_FILE_VIDEO_O
+    add("xml");                                     // ICON_FA_FILE_CODE_O
+    add("htm;html");                                // ICON_FA_FILE_CODE_O
+
+    }
+    int getExtensionType(const char* ext,bool caseSensitiveMatch=false) const {
+        if (!ext) return -1;
+        if (ext[0]=='.') ext+=1;
+        const int extLen = strlen(ext);
+        if (extLen==0) return -1;
+        typedef int (*strcmpdelegate) (const char*, const char*);
+        const strcmpdelegate myStrCmp = caseSensitiveMatch ? &strcmp : &strcasecmp;
+        int start=0,startLen=0;
+        for (int si = 0,siSz=vStarters.size();si<siSz;si++) {
+            startLen = vStartersLengths[si];
+            if (extLen!=startLen) continue;
+            start = vStarters[si];
+            if (myStrCmp(&v[start],ext)==0) return vStartersCounts[si];
+        }
+        return -1;
+    }
+    inline void fillExtensionTypesFromFilenames(ImVector<int>& fileExtensionTypes,const FilenameStringVector& fileNames)  {
+    fileExtensionTypes.resize(fileNames.size());
+    for (int i=0,isz=fileNames.size();i<isz;i++) fileExtensionTypes[i] = getExtensionType(strrchr(fileNames[i],'.'));
+    }
+
+    inline bool drawIcon(int extensionType,const ImVec4* pOptionalColorOverride=NULL) const {
+    return ImGuiFs::Dialog::DrawFileIconCallback ? ImGuiFs::Dialog::DrawFileIconCallback(extensionType,pOptionalColorOverride) : false;
+    }
+    inline bool drawIcon(const char* ext,bool caseSensitiveMatch=false,const ImVec4* pOptionalColorOverride=NULL) const {
+    const int extType = getExtensionType(ext,caseSensitiveMatch);
+    return drawIcon(extType,pOptionalColorOverride);
+    }
+};
+static ImGuiFsDrawIconStruct MyImGuiFsDrawIconStruct;
+#ifndef IMGUIFS_NO_EXTRA_METHODS
+int FileGetExtensionType(const char* path) {
+    return MyImGuiFsDrawIconStruct.getExtensionType(strrchr(path,'.'));
+}
+#endif // IMGUIFS_NO_EXTRA_METHODS
+//-------------------------------------------------------------------------------------------------------
+
 // Internal usage----------------------------------------------------------------------------------------
 struct FolderInfo    {
     char fullFolder[MAX_PATH_BYTES];
@@ -1426,6 +1516,7 @@ public:
 struct Internal {
     PathStringVector dirs,files;
     FilenameStringVector dirNames,fileNames,currentSplitPath;
+    ImVector<int> fileExtensionTypes;
     char currentFolder[MAX_PATH_BYTES];
     bool forceRescan;
     bool open;
@@ -1553,6 +1644,9 @@ bool Internal::BrowsingPerRow = false;
 bool Dialog::WrapMode = true;
 ImVec2 Dialog::WindowSize(600,400);
 ImVec4 Dialog::WindowLTRBOffsets(0,0,0,0);
+Dialog::DrawFileIconDelegate Dialog::DrawFileIconCallback=NULL;
+Dialog::DrawFolderIconDelegate Dialog::DrawFolderIconCallback=NULL;
+
 
 Dialog::Dialog(bool noKnownDirectoriesSection,bool noCreateDirectorySection,bool noFilteringSection,bool detectKnownDirectoriesAtEachOpening,bool addDisplayByOption,bool dontFilterSaveFilePathsEnteredByTheUser)    {
     internal = (Internal*) ImGui::MemAlloc(sizeof(Internal));
@@ -1673,7 +1767,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
         I.editLocationCheckButtonPressed = false;
         I.history.reset(); // reset history
         I.history.switchTo(I.currentFolder);    // init history
-        I.dirs.clear();I.files.clear();I.dirNames.clear();I.fileNames.clear();I.currentSplitPath.clear();
+    I.dirs.clear();I.files.clear();I.dirNames.clear();I.fileNames.clear();I.currentSplitPath.clear();I.fileExtensionTypes.clear();
         strcpy(&I.newDirectoryName[0],"New Folder");
         if (_saveFileName) {
             //strcpy(&I.saveFileName[0],_saveFileName);
@@ -1727,9 +1821,10 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
         if (!isSelectFolderDialog)  {
             if (!fileFilterExtensionString || strlen(fileFilterExtensionString)==0) Directory::GetFiles(I.currentFolder,I.files,&I.fileNames,(Sorting)I.sortingMode);
             else                                        Directory::GetFiles(I.currentFolder,I.files,fileFilterExtensionString,NULL,&I.fileNames,(Sorting)I.sortingMode);
+        if (Dialog::DrawFileIconCallback) MyImGuiFsDrawIconStruct.fillExtensionTypesFromFilenames(I.fileExtensionTypes,I.fileNames);
        }
         else {
-            I.files.clear();I.fileNames.clear();
+        I.files.clear();I.fileNames.clear();I.fileExtensionTypes.clear();
             I.saveFileName[0]='\0';
             char currentFolderName[MAX_FILENAME_BYTES];
             Path::GetFileName(I.currentFolder,currentFolderName);
@@ -1799,7 +1894,6 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
     const bool popupOk = ImGui::BeginPopupModal(I.wndTitle, &I.open);//, I.wndSize,windowAlpha);
 	if (!popupOk) return rv;
 #       endif //USE_MODAL_WINDOWS
-        //fprintf(stderr,"\"%s\" wndPos={%1.2f,%1.2f}\n",wndTitle.c_str(),wndPos.x,wndPos.y);
     }
 #   ifndef USE_MODAL_WINDOWS
     else ImGui::Begin(I.wndTitle, &I.open,ImVec2(0,0),windowAlpha);
@@ -2073,10 +2167,12 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
             ImGui::PushStyleColor(ImGuiCol_Button,ColorSet[Internal::ImGuiCol_Dialog_Directory_Background]);
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ColorSet[Internal::ImGuiCol_Dialog_Directory_Hover]);
             ImGui::PushStyleColor(ImGuiCol_ButtonActive,ColorSet[Internal::ImGuiCol_Dialog_Directory_Pressed]);
+            //const ImVec4& iconsColor = ColorSet[Internal::ImGuiCol_Dialog_Directory_Text];
 
             for (int i=0,sz=(int)pUserKnownDirectories->size();i<sz;i++)  {
                 const char* userKnownFolder = (*pUserKnownDirectories)[i];
                 const char* userKnownFolderDisplayName = (*pUserKnownDirectoryDisplayNames)[i];
+                //if (Dialog::DrawFolderIconCallback && Dialog::DrawFolderIconCallback(false,&iconsColor)) ImGui::SameLine();
                 if (ImGui::SmallButton(userKnownFolderDisplayName) && strcmp(userKnownFolder,I.currentFolder)!=0) {
                     strcpy(I.currentFolder,userKnownFolder);
                     strcpy(I.editLocationInputText,I.currentFolder);
@@ -2295,10 +2391,12 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
             ImGui::PushStyleColor(ImGuiCol_Button,ColorSet[Internal::ImGuiCol_Dialog_Directory_Background]);
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ColorSet[Internal::ImGuiCol_Dialog_Directory_Hover]);
             ImGui::PushStyleColor(ImGuiCol_ButtonActive,ColorSet[Internal::ImGuiCol_Dialog_Directory_Pressed]);
+            const ImVec4& iconsColor = ColorSet[Internal::ImGuiCol_Dialog_Directory_Text];
 
             for (int i=0,sz=(int)I.dirs.size();i<sz;i++) {
                 const char* dirName = &I.dirNames[i][0];
                 if (I.filter.PassFilter(dirName)) {
+                    if (Dialog::DrawFolderIconCallback && Dialog::DrawFolderIconCallback(false,&iconsColor)) ImGui::SameLine();
                     if (ImGui::SmallButton(dirName)) {
                         strcpy(I.currentFolder,I.dirs[i]);
                         strcpy(I.editLocationInputText,I.currentFolder);
@@ -2326,6 +2424,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
             ImGui::PushStyleColor(ImGuiCol_Button,ColorSet[Internal::ImGuiCol_Dialog_File_Background]);
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ColorSet[Internal::ImGuiCol_Dialog_File_Hover]);
             ImGui::PushStyleColor(ImGuiCol_ButtonActive,ColorSet[Internal::ImGuiCol_Dialog_File_Pressed]);
+            const ImVec4* pIconsColor = &ColorSet[Internal::ImGuiCol_Dialog_File_Text];
 
 #           ifdef IMGUI_USE_MINIZIP
             //const FolderInfo* fi = I.history.getCurrentFolderInfo();
@@ -2337,8 +2436,8 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
             if (old!=acceptZipFilesForBrowsing) {
                 old = acceptZipFilesForBrowsing;
                 fprintf(stderr,"acceptZipFilesForBrowsing=%s %d %d\n",acceptZipFilesForBrowsing?"true":"false",fi->splitPathIndexOfZipFile,fi->splitPathIndex);
-            }*/
-#           endif //IMGUI_USE_MINIZIP
+            }*/        
+#           endif //IMGUI_USE_MINIZIP	    
 
             for (int i=0,sz=(int)I.files.size();i<sz;i++) {
                 const char* fileName = &I.fileNames[i][0];
@@ -2352,6 +2451,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
                             ImGui::PushStyleColor(ImGuiCol_Button,ColorSet[Internal::ImGuiCol_Dialog_ZipDirectory_Background]);
                             ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ColorSet[Internal::ImGuiCol_Dialog_ZipDirectory_Hover]);
                             ImGui::PushStyleColor(ImGuiCol_ButtonActive,ColorSet[Internal::ImGuiCol_Dialog_ZipDirectory_Pressed]);
+                            pIconsColor = &ColorSet[Internal::ImGuiCol_Dialog_ZipDirectory_Text];
                         }
                         else if (!hasZipExtension && isZipFile) {
                             ImGui::PopStyleColor(4);
@@ -2359,10 +2459,12 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
                             ImGui::PushStyleColor(ImGuiCol_Button,ColorSet[Internal::ImGuiCol_Dialog_File_Background]);
                             ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ColorSet[Internal::ImGuiCol_Dialog_File_Hover]);
                             ImGui::PushStyleColor(ImGuiCol_ButtonActive,ColorSet[Internal::ImGuiCol_Dialog_File_Pressed]);
+                            pIconsColor = &ColorSet[Internal::ImGuiCol_Dialog_File_Text];
                         }
                         isZipFile = hasZipExtension;
                     }
 #                   endif //IMGUI_USE_MINIZIP
+                    if (Dialog::DrawFileIconCallback && Dialog::DrawFileIconCallback(I.fileExtensionTypes[i],pIconsColor)) ImGui::SameLine();
                     if (ImGui::SmallButton(fileName)) {
                         if (!isSaveFileDialog)  {
                             strcpy(rv,I.files[i]);

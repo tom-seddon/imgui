@@ -216,7 +216,7 @@ TabLabelStyle::TabLabelStyle()    {
     colors[Col_TabLabelBorder]             = ImColor(23,27,30,255);
     colors[Col_TabLabelText]               = ImColor(160,164,167,255);
 
-    const float alphaSelected = 0.725f;
+    const float alphaSelected = 1.0f;//0.725f;
     colors[Col_TabLabelSelected]           = ColorDarken(colors[Col_TabLabel],.1125f,alphaSelected);
     colors[Col_TabLabelSelectedHovered]    = ColorLighten(colors[Col_TabLabelSelected],.125f,alphaSelected);
     colors[Col_TabLabelSelectedActive]     = ColorLighten(colors[Col_TabLabelSelectedHovered],.125f,alphaSelected);
@@ -229,7 +229,7 @@ TabLabelStyle::TabLabelStyle()    {
     colors[Col_TabLabelCloseButtonTextHovered]   = colors[Col_TabLabelText];
 
     fillColorGradientDeltaIn0_05 = 0.2f;//0.05f; // vertical gradient if > 0 (looks nice but it's very slow)
-    rounding = 9.f;
+    rounding = 6.f;//9.f
     borderWidth = 2.f;
 
     closeButtonRounding = 0.f;

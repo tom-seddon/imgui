@@ -15,6 +15,11 @@ static bool gShowMainMenuBar = true;
 #include "fonts/Icons/FontAwesome/definitions.h"
 static void DrawAllFontAwesomeIcons();  // defined at the bottom of this file
 
+#ifndef NO_IMGUIFILESYSTEM  // Optional stuff to enhance file system dialogs with icons
+static bool MyFSDrawFileIconCb(int extensionType,const ImVec4* pOptionalColorOverride); // defined at the bottom of this file
+static bool MyFSDrawFolderIconCb(bool useOpenFolderIconIfAvailable,const ImVec4* pOptionalColorOverride); // defined at the bottom of this file
+#endif //NO_IMGUIFILESYSTEM
+
 // Completely optional styled checkboxes by dougbinks (copied and pasted from: https://gist.github.com/dougbinks/8089b4bbaccaaf6fa204236978d165a9)
 // They seem to work better with monospace fonts (unluckily we don't use them in this demo)
 namespace ImGui {
@@ -256,6 +261,13 @@ if (!myImageTextureId2) myImageTextureId2 = ImImpl_LoadTexture("./myNumbersTextu
     ImGui::TabWindow::SetTabLabelGroupPopupMenuDrawerCallback(&TabLabelGroupPopupMenuProvider,NULL);    // Optional (fired when RMB is clicked on an empty spot in the tab area)
 #endif //NO_IMGUITABWINDOW
 
+#ifdef TEST_ICONS_INSIDE_TTF
+#ifndef NO_IMGUIFILESYSTEM  // Optional stuff to enhance file system dialogs with icons
+ImGuiFs::Dialog::DrawFileIconCallback = &MyFSDrawFileIconCb;
+ImGuiFs::Dialog::DrawFolderIconCallback = &MyFSDrawFolderIconCb;
+#endif //NO_IMGUIFILESYSTEM
+#endif //TEST_ICONS_INSIDE_TTF
+
 }
 
 static void ShowExampleMenuFile()
@@ -401,6 +413,15 @@ static void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
             ImGui::Separator();ImGui::Spacing();
 
             ImGui::Button( ICON_FA_FILE "  File" ); // use string literal concatenation, ouputs a file icon and File
+#           ifndef NO_IMGUIFILESYSTEM // Testing icons inside ImGuiFs::Dialog
+            ImGui::AlignFirstTextHeightToWidgets();ImGui::Text("File:");ImGui::SameLine();
+            static ImGuiFs::Dialog dlg;
+            ImGui::InputText("###fsdlg",(char*)dlg.getChosenPath(),ImGuiFs::MAX_PATH_BYTES,ImGuiInputTextFlags_ReadOnly);
+            ImGui::SameLine();
+            const bool browseButtonPressed = ImGui::Button("...##fsdlg");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","file chooser dialog\nwith FontAwesome icons");
+            dlg.chooseFileDialog(browseButtonPressed);
+#           endif //NO_IMGUIFILESYSTEM
             if (ImGui::TreeNode("All FontAwesome Icons")){
                 DrawAllFontAwesomeIcons();
                 ImGui::TreePop();
@@ -853,6 +874,43 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
 
 
 #ifdef TEST_ICONS_INSIDE_TTF
+#ifndef NO_IMGUIFILESYSTEM
+bool MyFSDrawFileIconCb(int extensionType,const ImVec4* pOptionalColorOverride=NULL) {
+    using namespace ImGuiFs;
+    if (extensionType<0 || extensionType>=FET_COUNT) extensionType=0;   // FET_NONE, or just return false to skip icon drawing
+    static const char* icons[FET_COUNT] = {
+        ICON_FA_FILE_O,                 // FET_NONE
+        ICON_FA_H_SQUARE,               // FET_HPP
+        ICON_FA_PLUS_SQUARE,            // FET_CPP
+        ICON_FA_FILE_IMAGE_O,           // FET_IMAGE
+        ICON_FA_FILE_PDF_O,             // FET_PDF
+        ICON_FA_FILE_WORD_O,            // FET_DOCUMENT
+        ICON_FA_FILE_TEXT_O,            // FET_TEXT
+        ICON_FA_DATABASE,               // FET_DATABASE
+        ICON_FA_FILE_EXCEL_O,           // FET_SPREADSHEET
+        ICON_FA_FILE_POWERPOINT_O,      // FET_PRESENTATION
+        ICON_FA_FILE_ARCHIVE_O,         // FET_ARCHIVE
+        ICON_FA_FILE_AUDIO_O,           // FET_AUDIO
+        ICON_FA_FILE_VIDEO_O,           // FET_VIDEO
+        ICON_FA_FILE_CODE_O,            // FET_XML
+        ICON_FA_FILE_CODE_O             // FET_HTML
+    };
+    if (!pOptionalColorOverride) ImGui::Text("%s",icons[extensionType]);
+    else ImGui::TextColored(*pOptionalColorOverride,"%s",icons[extensionType]);
+    return true;
+}
+bool MyFSDrawFolderIconCb(bool useOpenFolderIconIfAvailable,const ImVec4* pOptionalColorOverride) {
+    if (!pOptionalColorOverride) {
+        if (useOpenFolderIconIfAvailable) ImGui::Text(ICON_FA_FOLDER_OPEN);
+        else  ImGui::Text(ICON_FA_FOLDER);
+    }
+    else {
+        if (useOpenFolderIconIfAvailable) ImGui::TextColored(*pOptionalColorOverride,ICON_FA_FOLDER_OPEN);
+        else  ImGui::TextColored(*pOptionalColorOverride,ICON_FA_FOLDER);
+    }
+    return true;
+}
+#endif //NO_IMGUIFILESYSTEM
 void DrawAllFontAwesomeIcons() {
                 ImGui::Text( ICON_FA_GLASS );//80\x80"
                 ImGui::SameLine();ImGui::Text( ICON_FA_MUSIC );//80\x81"
