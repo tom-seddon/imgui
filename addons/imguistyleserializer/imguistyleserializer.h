@@ -21,6 +21,9 @@ enum ImGuiStyleEnum {
 };
 
 namespace ImGui	{
+// Warning: this file does not depend on imguihelper (so it's easier to reuse it in stand alone projects).
+// The drawback is that it's not possible to serialize/deserialize a style together with other stuff (for example 2 styles together) into/from a single file.
+// And it's not possible to serialize/deserialize a style into/from a memory buffer too.
 #ifndef NO_IMGUISTYLESERIALIZER_SAVESTYLE
 bool SaveStyle(const char* filename,const ImGuiStyle& style);
 #endif //NO_IMGUISTYLESERIALIZER_SAVESTYLE

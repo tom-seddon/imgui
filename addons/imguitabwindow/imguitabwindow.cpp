@@ -13,21 +13,22 @@ namespace DrawListHelper {
 // Two main additions:
 // 1) PathFillAndStroke in the same method (so that we don't have to build the path twice)
 // 2) VerticalGradient: looks good but must be very slow (I keep converting ImU32 <-> ImVec4 hundreds of times to lerp values)
+// TODO: speed up gradient code [If possible use ImU32 everywhere (even if it looks worse and is not endian-independent)
 inline static void GetVerticalGradientTopAndBottomColors(ImU32 c,float fillColorGradientDeltaIn0_05,ImU32& tc,ImU32& bc)  {
-    if (fillColorGradientDeltaIn0_05<=0) {tc=bc=c;return;}
+    if (fillColorGradientDeltaIn0_05==0) {tc=bc=c;return;}
+    const bool negative = (fillColorGradientDeltaIn0_05<0);
+    if (negative) fillColorGradientDeltaIn0_05=-fillColorGradientDeltaIn0_05;
     if (fillColorGradientDeltaIn0_05>0.5f) fillColorGradientDeltaIn0_05=0.5f;
+    // Can we do it without the double conversion ImU32 -> ImVec4 -> ImU32 ?
     const ImVec4 cf = ColorConvertU32ToFloat4(c);
-    ImVec4 tmp(cf.x+fillColorGradientDeltaIn0_05<=1.f?cf.x+fillColorGradientDeltaIn0_05:1.f,
-               cf.y+fillColorGradientDeltaIn0_05<=1.f?cf.y+fillColorGradientDeltaIn0_05:1.f,
-               cf.z+fillColorGradientDeltaIn0_05<=1.f?cf.z+fillColorGradientDeltaIn0_05:1.f,
-               cf.w+fillColorGradientDeltaIn0_05<=1.f?cf.w+fillColorGradientDeltaIn0_05:1.f);
-    tc = ColorConvertFloat4ToU32(tmp);
-    tmp=ImVec4(cf.x-fillColorGradientDeltaIn0_05>0.f?cf.x-fillColorGradientDeltaIn0_05:0.f,
-               cf.y-fillColorGradientDeltaIn0_05>0.f?cf.y-fillColorGradientDeltaIn0_05:0.f,
-               cf.z-fillColorGradientDeltaIn0_05>0.f?cf.z-fillColorGradientDeltaIn0_05:0.f,
-               cf.w-fillColorGradientDeltaIn0_05>0.f?cf.w-fillColorGradientDeltaIn0_05:0.f);
-    bc = ColorConvertFloat4ToU32(tmp);
+    ImVec4 tmp(cf.x+fillColorGradientDeltaIn0_05,cf.y+fillColorGradientDeltaIn0_05,cf.z+fillColorGradientDeltaIn0_05,cf.w+fillColorGradientDeltaIn0_05);
+    if (tmp.x>1.f) tmp.x=1.f;if (tmp.y>1.f) tmp.y=1.f;if (tmp.z>1.f) tmp.z=1.f;if (tmp.w>1.f) tmp.w=1.f;
+    if (negative) bc = ColorConvertFloat4ToU32(tmp); else tc = ColorConvertFloat4ToU32(tmp);
+    tmp=ImVec4(cf.x-fillColorGradientDeltaIn0_05,cf.y-fillColorGradientDeltaIn0_05,cf.z-fillColorGradientDeltaIn0_05,cf.w-fillColorGradientDeltaIn0_05);
+    if (tmp.x<0.f) tmp.x=0.f;if (tmp.y<0.f) tmp.y=0.f;if (tmp.z<0.f) tmp.z=0.f;if (tmp.w<0.f) tmp.w=0.f;
+    if (negative) tc = ColorConvertFloat4ToU32(tmp); else bc = ColorConvertFloat4ToU32(tmp);
 }
+// Can we do it from ImU32 ct and cb, without conversion to ImVec4 ?
 inline static ImU32 GetVerticalGradient(const ImVec4& ct,const ImVec4& cb,float DH,float H)    {
     IM_ASSERT(H!=0);
     const float fa = DH/H;
@@ -194,43 +195,35 @@ inline static ImU32 ColorMergeWithAlpha(ImU32 c,float alphaMult) {
 }
 inline static ImU32 ColorDarken(ImU32 c,float value,float optionalAlphaToSet=-1.f) {
     ImVec4 f = ImGui::ColorConvertU32ToFloat4(c);
-    f.x-=value;if (f.x<0) f.x=0;
-    f.y-=value;if (f.y<0) f.y=0;
-    f.z-=value;if (f.z<0) f.z=0;
+    f.x-=value;if (f.x<0) f.x=0;else if (f.x>1) f.x=1;
+    f.y-=value;if (f.y<0) f.y=0;else if (f.y>1) f.y=1;
+    f.z-=value;if (f.z<0) f.z=0;else if (f.z>1) f.z=1;
     if (optionalAlphaToSet>=0 && optionalAlphaToSet<=1) f.w = optionalAlphaToSet;
     return ImGui::ColorConvertFloat4ToU32(f);
 }
-inline static ImU32 ColorLighten(ImU32 c,float value,float optionalAlphaToSet=-1.f) {
-    ImVec4 f = ImGui::ColorConvertU32ToFloat4(c);
-    f.x+=value;if (f.x>1) f.x=1;
-    f.y+=value;if (f.y>1) f.y=1;
-    f.z+=value;if (f.z>1) f.z=1;
-    if (optionalAlphaToSet>=0 && optionalAlphaToSet<=1) f.w = optionalAlphaToSet;
-    return ImGui::ColorConvertFloat4ToU32(f);
-}
+inline static ImU32 ColorLighten(ImU32 c,float value,float optionalAlphaToSet=-1.f) {return ColorDarken(c,-value,optionalAlphaToSet);}
 TabLabelStyle::TabLabelStyle()    {
 
-    colors[Col_TabLabel]                   = ImColor(39,44,48,255);
-    colors[Col_TabLabelHovered]            = ImColor(59,64,68,255);
-    colors[Col_TabLabelActive]             = ImColor(78,86,82,255);
-    colors[Col_TabLabelBorder]             = ImColor(23,27,30,255);
-    colors[Col_TabLabelText]               = ImColor(160,164,167,255);
+    colors[Col_TabLabelSelected]                   = ImColor(49,54,58,255);
+    colors[Col_TabLabelSelectedActive] = colors[Col_TabLabelSelectedHovered] = colors[Col_TabLabelSelected];
+    colors[Col_TabLabelSelectedText]               = ImColor(210,214,217,255);
+    colors[Col_TabLabelSelectedBorder]             = ImColor(23,27,40,250);
 
     const float alphaSelected = 1.0f;//0.725f;
-    colors[Col_TabLabelSelected]           = ColorDarken(colors[Col_TabLabel],.1125f,alphaSelected);
-    colors[Col_TabLabelSelectedHovered]    = ColorLighten(colors[Col_TabLabelSelected],.125f,alphaSelected);
-    colors[Col_TabLabelSelectedActive]     = ColorLighten(colors[Col_TabLabelSelectedHovered],.125f,alphaSelected);
-    colors[Col_TabLabelSelectedBorder]     = ColorDarken(colors[Col_TabLabelBorder],.05f,alphaSelected);
-    colors[Col_TabLabelSelectedText]       = ImColor(130,134,137,150);
+    colors[Col_TabLabel]           = ColorDarken(colors[Col_TabLabelSelected],.135f,alphaSelected);
+    colors[Col_TabLabelHovered]    = ColorLighten(colors[Col_TabLabel],.1f,alphaSelected);
+    colors[Col_TabLabelActive]     = colors[Col_TabLabelHovered];
+    colors[Col_TabLabelText]       = ImColor(140,144,147,200);
+    colors[Col_TabLabelBorder]     = ColorDarken(colors[Col_TabLabelSelectedBorder],.0225f,alphaSelected);
 
     colors[Col_TabLabelCloseButtonHovered]       = ImColor(166,0,11,255);
     colors[Col_TabLabelCloseButtonActive]        = ImColor(206,40,51,255);
-    colors[Col_TabLabelCloseButtonBorder]        = colors[Col_TabLabelBorder];
-    colors[Col_TabLabelCloseButtonTextHovered]   = colors[Col_TabLabelText];
+    colors[Col_TabLabelCloseButtonTextHovered]   = colors[Col_TabLabelSelectedText];
+    colors[Col_TabLabelCloseButtonBorder]        = colors[Col_TabLabelSelectedBorder];
 
-    fillColorGradientDeltaIn0_05 = 0.2f;//0.05f; // vertical gradient if > 0 (looks nice but it's very slow)
-    rounding = 6.f;//9.f
-    borderWidth = 2.f;
+    fillColorGradientDeltaIn0_05 = 0.070f;//0.125f;//0.2f;//0.05f; // vertical gradient if > 0 (looks nice but it's very slow)
+    rounding = 5.f;//6.f;//9.f
+    borderWidth = 1.f;
 
     closeButtonRounding = 0.f;
     closeButtonBorderWidth = 1.f;
@@ -249,6 +242,65 @@ TabLabelStyle::TabLabelStyle()    {
     tabWindowSplitterColor               = ImVec4(1,1,1,1);
     tabWindowSplitterSize                = 8.f;
 
+    TabLabelStyle::LightenBackground(*this,0.06f);
+
+}
+void ChangeTabLabelStyleColors(TabLabelStyle& style,float satThresholdForInvertingLuminance,float shiftHue)  {
+    if (satThresholdForInvertingLuminance>=1.f && shiftHue==0.f) return;
+    for (int i = 0; i < TabLabelStyle::Col_TabLabel_Count; i++)	{
+	ImVec4 col = ImGui::ColorConvertU32ToFloat4(style.colors[i]);
+	float H, S, V;
+	ImGui::ColorConvertRGBtoHSV( col.x, col.y, col.z, H, S, V );
+	if( S <= satThresholdForInvertingLuminance)  { V = 1.0 - V; }
+	if (shiftHue) {H+=shiftHue;if (H>1) H-=1.f;else if (H<0) H+=1.f;}
+	ImGui::ColorConvertHSVtoRGB( H, S, V, col.x, col.y, col.z );
+	style.colors[i] = ImGui::ColorConvertFloat4ToU32(col);
+    }
+}
+bool TabLabelStyle::EditFast(TabLabelStyle &s)  {
+    bool rv = false;
+    static bool resetCurrentStyle = false;
+    resetCurrentStyle = ImGui::Button("Reset Current Style To: ###TabLabelStyleResetTo");
+    ImGui::SameLine();
+    static int styleEnumNum = 0;
+    ImGui::PushItemWidth(135);
+    ImGui::Combo("###TabLabelStyleEnumCombo",&styleEnumNum,ImGui::GetDefaultTabLabelStyleNames(),(int) ImGuiTabLabelStyle_Count,(int) ImGuiTabLabelStyle_Count);
+    ImGui::PopItemWidth();
+    /*if (ImGui::IsItemHovered()) {
+        if   (styleEnumNum==0)      ImGui::SetTooltip("%s","\"Default\"\nThis is the default\nImGui theme");
+        else if (styleEnumNum==1)   ImGui::SetTooltip("%s","\"Gray\"\nThis is the default\ntheme of this demo");
+        else if (styleEnumNum==2)   ImGui::SetTooltip("%s","\"OSX\"\nPosted by @itamago here:\nhttps://github.com/ocornut/imgui/pull/511\n(hope I can use it)");
+        else if (styleEnumNum==3)   ImGui::SetTooltip("%s","\"DarkOpaque\"\nA dark-grayscale style with\nno transparency (by default)");
+        else if (styleEnumNum==4)   ImGui::SetTooltip("%s","\"OSXOpaque\"\nPosted by @dougbinks here:\nhttps://gist.github.com/dougbinks/8089b4bbaccaaf6fa204236978d165a9\n(hope I can use it)");
+    }*/
+
+    ImGui::SameLine();
+    static float hueShift = 0;
+    ImGui::PushItemWidth(50);
+    ImGui::DragFloat("HueShift##tablabelstyleShiftHue",&hueShift,.005f,0,1,"%.2f");
+    ImGui::PopItemWidth();
+    if (hueShift!=0)   {
+        ImGui::SameLine();
+        if (ImGui::SmallButton("reset##tablabelstyleReset")) {hueShift=0.f;}
+    }
+    const bool mustInvertColors = ImGui::Button("Invert Colors:##tablabelstyleInvertColors");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(50);
+    static float invertColorThreshold = .1f;
+    ImGui::DragFloat("Saturation Threshold##tablabelstyleLumThres",&invertColorThreshold,.005f,0.f,0.5f,"%.2f");
+    ImGui::PopItemWidth();
+    if (mustInvertColors)  ChangeTabLabelStyleColors(s,invertColorThreshold);
+    if (resetCurrentStyle)  {
+        ImGui::ResetTabLabelStyle(styleEnumNum,s);
+        if (hueShift!=0) ChangeTabLabelStyleColors(s,0.f,hueShift);
+        rv = true;
+    }
+    if (ImGui::Button("Invert Selected Look")) {InvertSelectedLook(s);rv=true;}
+    ImGui::SameLine();
+    if (ImGui::Button("Lighten Tab Colors")) {TabLabelStyle::LightenBackground(s,0.05f);rv=true;}
+    ImGui::SameLine();
+    if (ImGui::Button("Darken Tab Colors")) {TabLabelStyle::DarkenBackground(s,0.05f);rv=true;}
+    return rv;
 }
 bool TabLabelStyle::Edit(TabLabelStyle &s)  {
     bool changed = false;
@@ -256,45 +308,182 @@ bool TabLabelStyle::Edit(TabLabelStyle &s)  {
     const char prec[] = "%1.1f";
     ImGui::PushID(&s);
 
+    static bool useSimplifiedInterface = true;
+    if (ImGui::Button(useSimplifiedInterface ? "Use Complex Interface###TLSInter" : "Use Simple Interface###TLSInter")) useSimplifiedInterface = !useSimplifiedInterface;
+    ImGui::Separator();
+
+    if (useSimplifiedInterface)	{
+        changed|=EditFast(s);
+        ImGui::Separator();
+    }
+
     ImGui::Text("Tab Labels:");
+    ImGui::PushItemWidth(50);
     changed|=ImGui::DragFloat("fillColorGradientDeltaIn0_05",&s.fillColorGradientDeltaIn0_05,0.01f,0.f,.5f,"%1.3f");
     changed|=ImGui::DragFloat("rounding",&s.rounding,dragSpeed,0.0f,16.f,prec);
     changed|=ImGui::DragFloat("borderWidth",&s.borderWidth,.01f,0.f,5.f,"%1.2f");
     ImGui::Spacing();
 
-    changed|=ImGui::DragFloat("closeButtonRounding",&s.closeButtonRounding,dragSpeed,0.0f,16.f,prec);
-    changed|=ImGui::DragFloat("closeButtonBorderWidth",&s.closeButtonBorderWidth,.01f,0.f,5.f,"%1.2f");
+    if (!useSimplifiedInterface)    {
+	changed|=ImGui::DragFloat("closeButtonRounding",&s.closeButtonRounding,dragSpeed,0.0f,16.f,prec);
+	changed|=ImGui::DragFloat("closeButtonBorderWidth",&s.closeButtonBorderWidth,.01f,0.f,5.f,"%1.2f");
+    }
     changed|=ImGui::DragFloat("closeButtonTextWidth",&s.closeButtonTextWidth,.01f,0.f,5.f,"%1.2f");
     ImGui::Spacing();
+    ImGui::PopItemWidth();
 
     changed|=ImGui::Checkbox("antialiasing",&s.antialiasing);
     ImGui::Spacing();
 
     ImGui::Text("Colors:");
+    ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.5f);
     for (int item = 0,itemSz=(int)TabLabelStyle::Col_TabLabel_Count;item<itemSz;item++) {
-        ImVec4 tmp = ImColor(s.colors[item]);
+	if (useSimplifiedInterface && (item==Col_TabLabelActive || item==Col_TabLabelSelectedActive
+				       || item==Col_TabLabelSelectedHovered)) continue;
+	if (item==Col_TabLabelSelected || item==Col_TabLabelCloseButtonHovered) ImGui::Spacing();
+	ImVec4 tmp = ImColor(s.colors[item]);
         const bool color_changed = ImGui::ColorEdit4(TabLabelStyle::ColorNames[item],&tmp.x);
-        if (color_changed) s.colors[item] = ImColor(tmp);
+	if (color_changed) {
+	    s.colors[item] = ImGui::ColorConvertFloat4ToU32(tmp);
+	    if (useSimplifiedInterface) {
+		switch (item) {
+		case Col_TabLabelHovered:
+		    s.colors[Col_TabLabelActive] = s.colors[Col_TabLabelHovered];
+		break;
+		case Col_TabLabelSelected:
+		    s.colors[Col_TabLabelSelectedActive] = s.colors[Col_TabLabelSelectedHovered] = s.colors[Col_TabLabelSelected];
+		break;
+		default:
+		break;
+		}
+	    }
+	}
         changed|=color_changed;
     }
+    ImGui::PopItemWidth();
     ImGui::Spacing();
 
-    ImGui::Text("Fonts (needs TabLabelStyle::ImGuiFonts[TAB_STATE_COUNT]):");
-    for (int item = 0,itemSz=(int)TabLabelStyle::TAB_STATE_COUNT;item<itemSz;item++) {
-        changed|=ImGui::Combo(TabStateNames[item],&s.fontStyles[item],&FontStyleNames[0],FONT_STYLE_COUNT);
+    ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.5f);
+    if (!useSimplifiedInterface)    {
+	ImGui::Text("Fonts (needs TabLabelStyle::ImGuiFonts[TAB_STATE_COUNT]):");
+	for (int item = 0,itemSz=(int)TabLabelStyle::TAB_STATE_COUNT;item<itemSz;item++) {
+	    changed|=ImGui::Combo(TabStateNames[item],&s.fontStyles[item],&FontStyleNames[0],FONT_STYLE_COUNT);
+	}
+	ImGui::Spacing();
     }
-    ImGui::Spacing();
 
-    ImGui::Text("TabWindow:");
-    changed|=ImGui::ColorEdit4("tabWindowLabelBackgroundColor",&s.tabWindowLabelBackgroundColor.x);
-    changed|=ImGui::Checkbox("tabWindowLabelShowAreaSeparator",&s.tabWindowLabelShowAreaSeparator);
-    changed|=ImGui::ColorEdit4("tabWindowSplitterColor",&s.tabWindowSplitterColor.x);
-    changed|=ImGui::DragFloat("tabWindowSplitterSize",&s.tabWindowSplitterSize,1,4,16,"%1.0f");
-    ImGui::Spacing();
+    if (!useSimplifiedInterface)    {
+	ImGui::Text("TabWindow:");
+	changed|=ImGui::ColorEdit4("tabWindowLabelBackgroundColor",&s.tabWindowLabelBackgroundColor.x);
+	changed|=ImGui::Checkbox("tabWindowLabelShowAreaSeparator",&s.tabWindowLabelShowAreaSeparator);
+	changed|=ImGui::ColorEdit4("tabWindowSplitterColor",&s.tabWindowSplitterColor.x);
+	ImGui::PushItemWidth(50);
+	changed|=ImGui::DragFloat("tabWindowSplitterSize",&s.tabWindowSplitterSize,1,4,16,"%1.0f");
+	ImGui::PopItemWidth();
+	ImGui::Spacing();
+    }
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
     return changed;
 }
+
+void TabLabelStyle::InvertSelectedLook(TabLabelStyle &style)    {
+    ImU32 tmp(0);TabLabelStyle &s = style;
+    tmp = s.colors[Col_TabLabel]; s.colors[Col_TabLabel] = s.colors[Col_TabLabelSelected]; s.colors[Col_TabLabelSelected] = tmp;
+    tmp = s.colors[Col_TabLabelHovered]; s.colors[Col_TabLabelHovered] = s.colors[Col_TabLabelSelectedHovered]; s.colors[Col_TabLabelSelectedHovered] = tmp;
+    tmp = s.colors[Col_TabLabelActive]; s.colors[Col_TabLabelActive] = s.colors[Col_TabLabelSelectedActive]; s.colors[Col_TabLabelSelectedActive] = tmp;
+    tmp = s.colors[Col_TabLabelBorder]; s.colors[Col_TabLabelBorder] = s.colors[Col_TabLabelSelectedBorder]; s.colors[Col_TabLabelSelectedBorder] = tmp;
+    tmp = s.colors[Col_TabLabelText]; s.colors[Col_TabLabelText] = s.colors[Col_TabLabelSelectedText]; s.colors[Col_TabLabelSelectedText] = tmp;
+}
+void TabLabelStyle::ShiftHue(TabLabelStyle &style, float amountIn0_1)   {ChangeTabLabelStyleColors(style,0.f,amountIn0_1);}
+void TabLabelStyle::InvertColors(TabLabelStyle &style, float saturationThreshould)  {ChangeTabLabelStyleColors(style,saturationThreshould,0.f);}
+void TabLabelStyle::LightenBackground(TabLabelStyle &style, float amount)   {
+    TabLabelStyle &s = style;
+    s.colors[Col_TabLabel]                  = ColorLighten(s.colors[Col_TabLabel],amount);
+    s.colors[Col_TabLabelHovered]           = ColorLighten(s.colors[Col_TabLabelHovered],amount);
+    s.colors[Col_TabLabelActive]            = ColorLighten(s.colors[Col_TabLabelActive],amount);
+    //s.colors[Col_TabLabelBorder]          = ColorLighten(s.colors[Col_TabLabelBorder],amount);
+    //s.colors[Col_TabLabelText]            = ColorLighten(s.colors[Col_TabLabelText],amount);
+
+    s.colors[Col_TabLabelSelected]          = ColorLighten(s.colors[Col_TabLabelSelected],amount);
+    s.colors[Col_TabLabelSelectedHovered]   = ColorLighten(s.colors[Col_TabLabelSelectedHovered],amount);
+    s.colors[Col_TabLabelSelectedActive]    = ColorLighten(s.colors[Col_TabLabelSelectedActive],amount);
+    //s.colors[Col_TabLabelSelectedBorder]  = ColorLighten(s.colors[Col_TabLabelSelectedBorder],amount);
+    //s.colors[Col_TabLabelSelectedText]    = ColorLighten(s.colors[Col_TabLabelSelectedText],amount);
+}
+void TabLabelStyle::DarkenBackground(TabLabelStyle &style, float amount)    {LightenBackground(style,-amount);}
+
+bool ResetTabLabelStyle(int tabLabelStyleEnum,ImGui::TabLabelStyle& style) {    
+    if (tabLabelStyleEnum<0 || tabLabelStyleEnum>=ImGuiTabLabelStyle_Count) return false;
+    style = TabLabelStyle();
+    switch (tabLabelStyleEnum) {
+    case ImGuiTabLabelStyle_Red:
+    case ImGuiTabLabelStyle_Green:
+    case ImGuiTabLabelStyle_Blue:
+    case ImGuiTabLabelStyle_Yellow:
+    case ImGuiTabLabelStyle_Orange:
+    style.fillColorGradientDeltaIn0_05 = 0.08f;
+    style.rounding = 5.9f;
+    //style.borderWidth = 2.f;
+
+    style.colors[TabLabelStyle::Col_TabLabelSelected] = ImGui::ColorConvertFloat4ToU32(ImVec4(0.549,0.188,0.141,1.000));
+    style.colors[TabLabelStyle::Col_TabLabelSelectedActive] = style.colors[TabLabelStyle::Col_TabLabelSelectedHovered] = style.colors[TabLabelStyle::Col_TabLabelSelected] = ImGui::ColorConvertFloat4ToU32(ImVec4(0.549,0.188,0.141,1.000));
+    style.colors[TabLabelStyle::Col_TabLabelSelectedText]   = ImGui::ColorConvertFloat4ToU32(ImVec4(0.863,1.000,0.965,1.000));
+    style.colors[TabLabelStyle::Col_TabLabelSelectedBorder] = ImGui::ColorConvertFloat4ToU32(ImVec4(0.537,0.125,0.125,1.000));
+
+    style.colors[TabLabelStyle::Col_TabLabel]           = ImGui::ColorConvertFloat4ToU32(ImVec4(0.337,0.192,0.173,0.961));
+    style.colors[TabLabelStyle::Col_TabLabelHovered]    = ImGui::ColorConvertFloat4ToU32(ImVec4(0.525,0.306,0.263,0.961));
+    style.colors[TabLabelStyle::Col_TabLabelActive]     = style.colors[TabLabelStyle::Col_TabLabelHovered];
+    style.colors[TabLabelStyle::Col_TabLabelText]       = ImGui::ColorConvertFloat4ToU32(ImVec4(0.655,0.745,0.718,0.961));
+    style.colors[TabLabelStyle::Col_TabLabelBorder]     = ImGui::ColorConvertFloat4ToU32(ImVec4(0.337,0.000,0.000,0.961));
+
+    /*
+    style.tabWindowLabelBackgroundColor = ImGui::ColorConvertFloat4ToU32(ImVec4(1.000,0.609,0.396,0.608));
+    style.tabWindowLabelShowAreaSeparator]=true;
+    */
+    if (tabLabelStyleEnum == ImGuiTabLabelStyle_Green)          TabLabelStyle::ShiftHue(style,0.28f);
+    else if (tabLabelStyleEnum == ImGuiTabLabelStyle_Blue)      TabLabelStyle::ShiftHue(style,0.52f);
+    else if (tabLabelStyleEnum == ImGuiTabLabelStyle_Yellow)    TabLabelStyle::ShiftHue(style,0.14f);
+    else if (tabLabelStyleEnum == ImGuiTabLabelStyle_Orange)    TabLabelStyle::ShiftHue(style,0.08f);
+
+    //if (tabLabelStyleEnum == ImGuiStyle_OSXInverse) TabLabelStyle::InvertColors(style);
+    break;
+    case ImGuiTabLabelStyle_Foxy:
+    case ImGuiTabLabelStyle_FoxyInverse:
+    style.fillColorGradientDeltaIn0_05 = 0.f;//0.08f;
+    style.rounding = 6.f;
+    //style.borderWidth = 2.f;
+
+    style.colors[TabLabelStyle::Col_TabLabelSelected] = ImColor(213,212,211,255);
+    style.colors[TabLabelStyle::Col_TabLabelSelectedActive] = style.colors[TabLabelStyle::Col_TabLabelSelectedHovered] = style.colors[TabLabelStyle::Col_TabLabelSelected] = style.colors[TabLabelStyle::Col_TabLabelSelected];
+    style.colors[TabLabelStyle::Col_TabLabelSelectedText]   = ImColor(30,26,53,255);
+    style.colors[TabLabelStyle::Col_TabLabelSelectedBorder] = ImColor(136,137,135,255);
+
+    style.colors[TabLabelStyle::Col_TabLabel]           = ImColor(60,59,55,255);
+    style.colors[TabLabelStyle::Col_TabLabelHovered]    = ImColor(104,103,100,255);
+    style.colors[TabLabelStyle::Col_TabLabelActive]     = style.colors[TabLabelStyle::Col_TabLabelHovered];
+    style.colors[TabLabelStyle::Col_TabLabelText]       = ImColor(223,219,210,255);
+    style.colors[TabLabelStyle::Col_TabLabelBorder]     = ImColor(60,59,55,255);
+
+    style.colors[TabLabelStyle::Col_TabLabelCloseButtonBorder] = style.colors[TabLabelStyle::Col_TabLabelCloseButtonHovered];
+
+    if (tabLabelStyleEnum == ImGuiTabLabelStyle_FoxyInverse) {
+        TabLabelStyle::InvertSelectedLook(style);
+        style.colors[TabLabelStyle::Col_TabLabelActive] = style.colors[TabLabelStyle::Col_TabLabelHovered] = ImColor(154,153,150,255);
+        style.colors[TabLabelStyle::Col_TabLabelSelectedActive] = style.colors[TabLabelStyle::Col_TabLabelSelectedHovered] = style.colors[TabLabelStyle::Col_TabLabelSelected] = style.colors[TabLabelStyle::Col_TabLabelSelected];
+    }
+    break;
+    default:
+    break;
+    }
+
+    return true;
+}
+static const char* DefaultTabLabelStyleNames[ImGuiTabLabelStyle_Count]={"Default","Red","Green","Blue","Yellow","Orange","Foxy","FoxyInverse"};
+const char** GetDefaultTabLabelStyleNames() {return &DefaultTabLabelStyleNames[0];}
+
+
 #if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 #include "../imguihelper/imguihelper.h"
@@ -341,7 +530,7 @@ static bool TabLabelStyleParser(ImGuiHelper::FieldType ft,int /*numArrayElements
 	else if (strcmp(name,"closeButtonRounding")==0)			s.closeButtonRounding = tmp.x;
 	else if (strcmp(name,"closeButtonBorderWidth")==0)		s.closeButtonBorderWidth = tmp.x;
 	else if (strcmp(name,"closeButtonTextWidth")==0)		s.closeButtonTextWidth = tmp.x;
-	else if (strcmp(name,"tabWindowSplitterSize")==0)		s.tabWindowSplitterSize = tmp.x;
+	else if (strcmp(name,"tabWindowSplitterSize")==0)		{s.tabWindowSplitterSize = tmp.x;return true;}	// Returning true at the end allows queuing serialized elements in a single file
     break;
     case ImGui::FT_INT:
 	for (int i=0;i<TabLabelStyle::TAB_STATE_COUNT;i++)  {
@@ -357,7 +546,9 @@ static bool TabLabelStyleParser(ImGuiHelper::FieldType ft,int /*numArrayElements
 	else if (strcmp(name,"tabWindowSplitterColor")==0)		    s.tabWindowSplitterColor = ImColor(tmp);
 	else {
 	    for (int i=0;i<TabLabelStyle::Col_TabLabel_Count;i++)  {
-		if (strcmp(name,TabLabelStyle::ColorNames[i])==0)	    {s.colors[i] = ImColor(tmp);break;}
+		if (strcmp(name,TabLabelStyle::ColorNames[i])==0)	    {
+		    s.colors[i] = ImColor(tmp);break;
+		}
 	    }
 	}
     break;
@@ -475,7 +666,7 @@ static bool TabButton(const char *label, bool selected, bool *pCloseButtonPresse
     if (!drawListOverride) drawListOverride = window->DrawList;
 
     // Canvas
-    DrawListHelper::ImDrawListAddRectWithVerticalGradient(drawListOverride,bb.Min, bb.Max,col,tabStyle.fillColorGradientDeltaIn0_05,tabStyle.colors[selected ? TabLabelStyle::Col_TabLabelSelectedBorder : TabLabelStyle::Col_TabLabelBorder],tabStyle.rounding,1|2,tabStyle.borderWidth,tabStyle.antialiasing);
+    DrawListHelper::ImDrawListAddRectWithVerticalGradient(drawListOverride,bb.Min, bb.Max,col,(selected || hovered || held)?tabStyle.fillColorGradientDeltaIn0_05:(-tabStyle.fillColorGradientDeltaIn0_05),tabStyle.colors[selected ? TabLabelStyle::Col_TabLabelSelectedBorder : TabLabelStyle::Col_TabLabelBorder],tabStyle.rounding,1|2,tabStyle.borderWidth,tabStyle.antialiasing);
 
     // Text
     ImGui::PushStyleColor(ImGuiCol_Text,ImGui::ColorConvertU32ToFloat4(colText));

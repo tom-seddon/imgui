@@ -1321,6 +1321,9 @@ static ImGuiFsDrawIconStruct MyImGuiFsDrawIconStruct;
 int FileGetExtensionType(const char* path) {
     return MyImGuiFsDrawIconStruct.getExtensionType(strrchr(path,'.'));
 }
+void FileGetExtensionTypesFromFilenames(ImVector<int>& fileExtensionTypesOut,const FilenameStringVector& fileNames)  {
+    MyImGuiFsDrawIconStruct.fillExtensionTypesFromFilenames(fileExtensionTypesOut,fileNames);
+}
 #endif // IMGUIFS_NO_EXTRA_METHODS
 //-------------------------------------------------------------------------------------------------------
 

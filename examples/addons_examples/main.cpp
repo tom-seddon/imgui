@@ -859,27 +859,34 @@ void DrawGL()	// Mandatory
         // Based on the code by krys-spectralpixel (https://github.com/krys-spectralpixel), posted here: https://github.com/ocornut/imgui/issues/261
         ImGui::Spacing();
         ImGui::Text("TabLabels (based on the code by krys-spectralpixel):");
-        static const char* tabNames[] = {"Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
+        static const char* tabNames[] = {"TabLabelStyle","Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle"};
         static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
-        static const char* tabTooltips[numTabs] = {"Render Tab Tooltip","This tab cannot be closed","Scene Tab Tooltip","","Object Tab Tooltip","","","","","Tired to add tooltips...",""};
+        static const char* tabTooltips[numTabs] = {"Edit the style of these labels","Render Tab Tooltip","This tab cannot be closed","Scene Tab Tooltip","","Object Tab Tooltip","","","","","Tired to add tooltips..."};
         static int tabItemOrdering[numTabs] = {0,1,2,3,4,5,6,7,8,9,10,11};
         static int selectedTab = 0;
         static int optionalHoveredTab = 0;
-        static bool allowTabLabelDragAndDrop=true;static bool tabLabelWrapMode = true;static bool allowClosingTabs = true;
+        static bool allowTabLabelDragAndDrop=true;static bool tabLabelWrapMode = false;static bool allowClosingTabs = false;
         int justClosedTabIndex=-1,justClosedTabIndexInsideTabItemOrdering = -1,oldSelectedTab = selectedTab;
+
+        ImGui::Checkbox("Wrap Mode##TabLabelWrapMode",&tabLabelWrapMode);
+        ImGui::SameLine();ImGui::Checkbox("Drag And Drop##TabLabelDragAndDrop",&allowTabLabelDragAndDrop);
+        ImGui::SameLine();ImGui::Checkbox("Closable##TabLabelClosing",&allowClosingTabs);
+        ImGui::SameLine();if (ImGui::SmallButton("Reset Tabs")) {for (int i=0;i<numTabs;i++) tabItemOrdering[i] = i;}
+
         /*const bool tabSelectedChanged =*/ ImGui::TabLabels(numTabs,tabNames,selectedTab,tabTooltips,tabLabelWrapMode,&optionalHoveredTab,&tabItemOrdering[0],allowTabLabelDragAndDrop,allowClosingTabs,&justClosedTabIndex,&justClosedTabIndexInsideTabItemOrdering);
         // Optional stuff
         if (justClosedTabIndex==1) {
             tabItemOrdering[justClosedTabIndexInsideTabItemOrdering] = justClosedTabIndex;   // Prevent the user from closing Tab "Layers"
             selectedTab = oldSelectedTab;   // This is safer, in case we had closed the selected tab
         }
-        // Draw tab page
-        ImGui::Spacing();ImGui::Text("Tab Page For Tab: \"%s\" here.",tabNames[selectedTab]);
-        ImGui::Checkbox("Wrap Mode##TabLabelWrapMode",&tabLabelWrapMode);
-        ImGui::SameLine();ImGui::Checkbox("Drag And Drop##TabLabelDragAndDrop",&allowTabLabelDragAndDrop);
-        ImGui::SameLine();ImGui::Checkbox("Closable##TabLabelClosing",&allowClosingTabs);
-        ImGui::SameLine();if (ImGui::SmallButton("Reset Tabs")) {for (int i=0;i<numTabs;i++) tabItemOrdering[i] = i;}
         //if (optionalHoveredTab>=0) ImGui::Text("Mouse is hovering Tab Label: \"%s\".\n\n",tabNames[optionalHoveredTab]);
+
+        // Draw tab page
+        ImGui::BeginChild("MyTabLabelsChild",ImVec2(0,120),true);
+            ImGui::Text("Tab Page For Tab: \"%s\" here.",tabNames[selectedTab]);
+            if (selectedTab==0) ImGui::TabLabelStyle::Edit(ImGui::TabLabelStyle().Get());
+        ImGui::EndChild();
+
 #       else //NO_IMGUITABWINDOW
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUITABWINDOW

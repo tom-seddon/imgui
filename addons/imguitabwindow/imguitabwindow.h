@@ -148,6 +148,18 @@ Please see: https://github.com/ocornut/imgui/issues for further info
 
 namespace ImGui {
 
+enum ImGuiTabLabelStyleEnum {
+    ImGuiTabLabelStyle_Default=0,
+    ImGuiTabLabelStyle_Red,
+    ImGuiTabLabelStyle_Green,
+    ImGuiTabLabelStyle_Blue,
+    ImGuiTabLabelStyle_Yellow,
+    ImGuiTabLabelStyle_Orange,
+    ImGuiTabLabelStyle_Foxy,
+    ImGuiTabLabelStyle_FoxyInverse,
+
+    ImGuiTabLabelStyle_Count
+};
 struct TabLabelStyle {
 enum Colors {
     Col_TabLabel = 0,
@@ -206,7 +218,16 @@ TabLabelStyle();
 
 void reset() {Reset(*this);}
 static bool Edit(TabLabelStyle& style);
+static bool EditFast(TabLabelStyle &s);
 static void Reset(TabLabelStyle& style) {style = TabLabelStyle();}
+
+// These modify the style: some operation are not loseless!
+static void InvertSelectedLook(TabLabelStyle& style);
+static void ShiftHue(TabLabelStyle& style,float amountIn0_1);
+static void InvertColors(TabLabelStyle& style,float saturationThreshould=0.1f); // in [0.f,0.5f] AFAIR
+static void LightenBackground(TabLabelStyle& style,float amount=0.15f);
+static void DarkenBackground(TabLabelStyle& style,float amount=0.15f);
+
 
 #if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
@@ -236,6 +257,12 @@ static const char* FontStyleNames[FONT_STYLE_COUNT];
 static const char* TabStateNames[TAB_STATE_COUNT];
 static const ImFont* ImGuiFonts[FONT_STYLE_COUNT];
 };
+bool ResetTabLabelStyle(int tabLabelStyleEnum, TabLabelStyle& style);
+const char** GetDefaultTabLabelStyleNames();   // ImGuiTabLabelStyle_Count names re returned
+// satThresholdForInvertingLuminance: in [0,1] if == 0.f luminance is not inverted at all
+// shiftHue: in [0,1] if == 0.f hue is not changed at all
+void ChangeTabLabelStyleColors(TabLabelStyle& style,float satThresholdForInvertingLuminance=.1f,float shiftHue=0.f);
+
 
 class TabWindow {
 public:

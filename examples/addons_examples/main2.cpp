@@ -420,7 +420,7 @@ static void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
             ImGui::SameLine();
             const bool browseButtonPressed = ImGui::Button("...##fsdlg");
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","file chooser dialog\nwith FontAwesome icons");
-            dlg.chooseFileDialog(browseButtonPressed);
+            dlg.chooseFileDialog(browseButtonPressed,dlg.getLastDirectory());
 #           endif //NO_IMGUIFILESYSTEM
             if (ImGui::TreeNode("All FontAwesome Icons")){
                 DrawAllFontAwesomeIcons();

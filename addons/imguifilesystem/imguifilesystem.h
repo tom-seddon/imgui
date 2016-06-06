@@ -176,6 +176,7 @@ extern void DirectoryGetFiles(const char* directoryName,PathStringVector& result
 extern bool FileExists(const char* path);
 extern bool FileGetContent(const char* path,ImVector<unsigned char>& bufferOut,const char* password=NULL);  // password is used if it's a file inside a zip path when IMGUI_USE_MINIZIP is defined (e.g. path="C://MyDocuments/myzipfile.zip/myzipFile/something.txt")
 extern int FileGetExtensionType(const char* path);  // returns one of the FileExtensionType enums, or -1. Slow: you'd better cache the result wherever possible.
+extern void FileGetExtensionTypesFromFilenames(ImVector<int>& fileExtensionTypesOut,const FilenameStringVector& fileNames); // Same as above, except that now FilenameStringVector are chars of MAX_FILENAME_BYTES, usually shorter than MAX_PATH_BYTES
 #ifdef IMGUI_USE_MINIZIP
 class UnZipFile {
 public:
