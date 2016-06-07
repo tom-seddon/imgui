@@ -83,6 +83,7 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #   endif // NO_SOLOUD_BINDING
 #endif //YES_IMGUISOLOUD
 
+
 #undef IMGUI_USE_AUTO_BINDING
 #undef IMGUI_USE_AUTO_BINDING_OPENGL
 #undef IMGUI_USE_AUTO_BINDING_DIRECT3D
@@ -158,6 +159,10 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #		undef YES_IMGUISOLOUD
 #		define YES_IMGUISOLOUD
 #	endif //YES_IMGUISOLOUD
+//#	ifndef YES_IMGUIFREETYPE	// We leave YES_IMGUIFREETYPE out
+//#		undef YES_IMGUIFREETYPE
+//#		define YES_IMGUIFREETYPE
+//#	endif //YES_IMGUIFREETYPE
 #endif //YES_IMGUIADDONS_ALL
 
 #ifdef YES_IMGUIPDFVIEWER
@@ -179,6 +184,9 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #define YES_IMGUISQLITE
 #include "./imguiyesaddons/imguisqlite3.h"
 #endif //YES_IMGUISQLITE3
+#ifdef YES_IMGUIFREETYPE
+#include "./imguiyesaddons/imguifreetype.h"
+#endif //YES_IMGUIFREETYPE
 #ifdef YES_IMGUISOLOUD
 #include "./imguiyesaddons/imguisoloud.h" // Better leave it at the end
 #endif //YES_IMGUISOLOUD

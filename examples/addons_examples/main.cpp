@@ -1317,6 +1317,11 @@ int main(int argc, char** argv)
 {
 
 #   ifndef USE_ADVANCED_SETUP
+
+/*#ifdef YES_IMGUIFREETYPE    // Testing only (to remove)
+ImGuiFreeType::DefaultRasterizationFlags = ImGuiFreeType::Bold|ImGuiFreeType::Oblique;
+#endif //YES_IMGUIFREETYPE*/
+
     // Basic
     ImImpl_Main(NULL,argc,argv);
 

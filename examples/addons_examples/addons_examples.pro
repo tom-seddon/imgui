@@ -47,6 +47,8 @@ IMGUI_BASE_PATH=../..
 #DEFINES+= YES_IMGUISQLITE   # To remove
 #LIBS+= -lsqlite3	    # To remove
 #PKGCONFIG += alsa
+#DEFINES+= YES_IMGUIFREETYPE
+#PKGCONFIG += freetype2
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 
@@ -87,6 +89,7 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.h"			    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguitinyfiledialogs.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisqlite3.h"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imgufreetype.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisoloud.h"
 
 

@@ -79,6 +79,7 @@ Currently "yes addons" are:
 -> imguisoloud.h/cpp:		depends on STL. License:  ZLib/LibPNG (and others more liberal) Link: [http://sol.gfxile.net/soloud/index.html]
 -> imguitinyfiledialogs.h/cpp:	depends on Comdlg32.lib and Ole32.lib on Windows. Link: [http://tinyfiledialogs.sourceforge.net]
 -> imguisqlite3.h/cpp:		depends on -lsqlite3. It's CppSQLite from [http://www.codeproject.com/KB/database/CppSQLite.aspx]
+-> imguifreetype.h/cpp:		depends on freetype2. License: MIT. It allows better font hinting, and Bold and Oblique variations of the .ttf font. Link: [https://github.com/Vuhdo/imgui_freetype]
 
 ===========================================
 HOW TO USE IMGUI ADDONS IN YOUR PROJECTS:

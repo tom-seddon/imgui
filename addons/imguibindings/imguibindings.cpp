@@ -152,6 +152,7 @@ void ImImpl_ClearColorBuffer(const ImVec4& bgColor)  {
 }
 #endif //defined(IMGUI_USE_DIRECT3D9_BINDING)
 
+
 void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     if (pOptionalInitParams && pOptionalInitParams->skipBuildingFonts) return;
     ImGuiIO& io = ImGui::GetIO();
@@ -247,8 +248,11 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     unsigned char* pixels;
     int width, height;
     //fprintf(stderr,"Loading font texture\n");
+#   ifndef YES_IMGUIFREETYPE
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-
+#   else //YES_IMGUIFREETYPE
+    ImGuiFreeType::GetTexDataAsRGBA32(io.Fonts,&pixels, &width, &height,NULL,ImGuiFreeType::DefaultRasterizationFlags,&ImGuiFreeType::DefaultRasterizationFlagVector);
+#   endif //YES_IMGUIFREETYPE
 
     ImImpl_GenerateOrUpdateTexture(gImImplPrivateParams.fontTex,width,height,4,pixels,false,true,true);
 
