@@ -263,8 +263,9 @@ static void GlutDrawGL()    {
     }
     else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
+    if (gImGuiPreDrawGLSwapBuffersCallback) gImGuiPreDrawGLSwapBuffersCallback();
     glutSwapBuffers();
-    if (gImGuiPostDrawGLCallback) gImGuiPostDrawGLCallback();
+    if (gImGuiPostDrawGLSwapBuffersCallback) gImGuiPostDrawGLSwapBuffersCallback();
 
     if (!gImGuiPaused)	for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
 

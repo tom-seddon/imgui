@@ -439,8 +439,9 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
             // Rendering---------------------------------------------------------------------
             g_pd3dDevice->EndScene();
 
+            if (gImGuiPreDrawGLSwapBuffersCallback) gImGuiPreDrawGLSwapBuffersCallback();
             g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
-            if (gImGuiPostDrawGLCallback) gImGuiPostDrawGLCallback();
+            if (gImGuiPostDrawGLSwapBuffersCallback) gImGuiPostDrawGLSwapBuffersCallback();
         }
         else g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
         //--------------------------------------------------------------------------------

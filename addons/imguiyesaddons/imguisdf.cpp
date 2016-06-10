@@ -503,8 +503,18 @@ struct SdfShaderProgram {
             "varying vec4 Frag_Colour;\n"
 #       endif //IMIMPL_SHADER_GL3
             "uniform vec2 alphaAndShadow;\n"
+#       ifdef YES_IMGUISDF_MSDF_MODE    // never tested
+            "float median(float r, float g, float b) {\n"
+            "    return max(min(r, g), min(max(r, g), b));\n"
+            "}\n"
+#       endif //YES_IMGUISDF_MSDF_MODE
             "void main(void) {\n"
+#       ifndef YES_IMGUISDF_MSDF_MODE
             "float dist = texture2D(Texture, Frag_UV.st).a; // retrieve distance from texture\n"
+#       else //YES_IMGUISDF_MSDF_MODE   // never tested
+            "vec3 dist3 = texture2D(Texture, Frag_UV.st).rgb; // retrieve distance from texture\n"
+            "float dist = median(dist3.r, dist3.g, dist3.b);// - 0.5;\n"
+#       endif //YES_IMGUISDF_MSDF_MODE
             "float width = fwidth(dist);"
             "\n"
             "float alphaThreshold = 0.5;\n"
@@ -545,8 +555,18 @@ struct SdfShaderProgram {
             "varying vec4 Frag_Colour;\n"
 #       endif //IMIMPL_SHADER_GL3
             "uniform vec2 alphaAndShadow;\n"
+#       ifdef YES_IMGUISDF_MSDF_MODE    // never tested
+            "float median(float r, float g, float b) {\n"
+            "    return max(min(r, g), min(max(r, g), b));\n"
+            "}\n"
+#       endif //YES_IMGUISDF_MSDF_MODE
             "void main(void) {\n"
+#       ifndef YES_IMGUISDF_MSDF_MODE
             "float dist = texture2D(Texture, Frag_UV.st).a; // retrieve distance from texture\n"
+#       else //YES_IMGUISDF_MSDF_MODE   // never tested
+            "vec3 dist3 = texture2D(Texture, Frag_UV.st).rgb; // retrieve distance from texture\n"
+            "float dist = median(dist3.r, dist3.g, dist3.b);// - 0.5;\n"
+#       endif //YES_IMGUISDF_MSDF_MODE
             "float width = fwidth(dist);"
             "\n"
             "float alphaThreshold = 0.4;\n"

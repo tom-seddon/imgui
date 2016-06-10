@@ -12,9 +12,11 @@ bool gImGuiBindingMouseDblClicked[5]={false,false,false,false,false};
 bool gImGuiFunctionKeyDown[12]={false,false,false,false,false,false,false,false,false,false,false,false};
 bool gImGuiFunctionKeyPressed[12]={false,false,false,false,false,false,false,false,false,false,false,false};
 bool gImGuiFunctionKeyReleased[12]={false,false,false,false,false,false,false,false,false,false,false,false};
+int gImGuiNumTextureBindingsPerFrame;    // read-only
 ImImplVoidDelegate gImGuiPostInitGLCallback   = NULL;
 ImImplVoidDelegate gImGuiPreDrawGLCallback    = NULL;
-ImImplVoidDelegate gImGuiPostDrawGLCallback   = NULL;
+ImImplVoidDelegate gImGuiPreDrawGLSwapBuffersCallback = NULL;
+ImImplVoidDelegate gImGuiPostDrawGLSwapBuffersCallback = NULL;
 // --------------------------------------------------------------------------------------------------------------
 
 struct ImImpl_PrivateParams  {
@@ -1019,7 +1021,7 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     glVertexAttribPointer(gImImplPrivateParams.attrLocColour, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (const void*)(0 + 16));
 
 
-
+    gImGuiNumTextureBindingsPerFrame = 0;
     GLuint lastTex = 0,tex=0;
     glBindTexture(GL_TEXTURE_2D, lastTex);
     for (int n = 0; n < draw_data->CmdListsCount; n++)  {
@@ -1037,6 +1039,7 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
                 if (tex!=lastTex)   {
                     glBindTexture(GL_TEXTURE_2D, tex);
                     lastTex = tex;
+                    ++gImGuiNumTextureBindingsPerFrame;
                 }
                 glScissor((int)pcmd->ClipRect.x, (int)(fb_height - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
                 //fprintf(stderr,"    pcmd->ElemCount = %d    idx_buffer_offset = %d\n",pcmd->ElemCount,idx_buffer_offset);
@@ -1095,6 +1098,9 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     glLoadIdentity();
 
     // Render command lists
+    gImGuiNumTextureBindingsPerFrame = 0;
+    GLuint lastTex = 0,tex=0;
+    glBindTexture(GL_TEXTURE_2D, lastTex);
     #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
@@ -1114,7 +1120,12 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
             }
             else
             {
-                glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
+                tex = (GLuint)(intptr_t)pcmd->TextureId;
+                if (tex!=lastTex)   {
+                    glBindTexture(GL_TEXTURE_2D, tex);
+                    lastTex = tex;
+                    ++gImGuiNumTextureBindingsPerFrame;
+                }
                 glScissor((int)pcmd->ClipRect.x, (int)(fb_height - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
                 glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, GL_UNSIGNED_SHORT, idx_buffer);
             }
@@ -1257,6 +1268,9 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     g_pd3dDevice->SetTransform( D3DTS_PROJECTION, &mat );
 
     // Render command lists
+    gImGuiNumTextureBindingsPerFrame = 0;
+    LPDIRECT3DTEXTURE9 lastTex = NULL,tex=NULL;
+    //g_pd3dDevice->SetTexture(0, tex);     // Not sure this work with tex == NULL
     int vtx_offset = 0;
     int idx_offset = 0;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
@@ -1271,8 +1285,13 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
             }
             else
             {
+                tex = (LPDIRECT3DTEXTURE9)pcmd->TextureId;
+                if (tex!=lastTex)   {
+                    g_pd3dDevice->SetTexture( 0,  tex);
+                    lastTex = tex;
+                    ++gImGuiNumTextureBindingsPerFrame;
+                }
                 const RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
-                g_pd3dDevice->SetTexture( 0, (LPDIRECT3DTEXTURE9)pcmd->TextureId );
                 g_pd3dDevice->SetScissorRect( &r );
                 g_pd3dDevice->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->VtxBuffer.size(), idx_offset, pcmd->ElemCount/3 );
             }

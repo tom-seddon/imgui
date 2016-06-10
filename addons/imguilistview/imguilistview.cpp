@@ -15,7 +15,6 @@ bool ImGui::ListViewBase::render(float listViewHeight, const ImVector<int> *pOpt
     const bool mustFetchHeaderData = (int)m_headerData.size()<numColumns;
     if (mustFetchHeaderData) updateHeaderData();
 
-
     int columnSortingIndex = -1;
 
     static ImColor transparentColor(1,1,1,0);
@@ -281,9 +280,13 @@ bool ImGui::ListViewBase::render(float listViewHeight, const ImVector<int> *pOpt
                 else {
                     partOfTheCellClicked = false;
                     txt = NULL;
-                    if (hdType.headerType==HT_CUSTOM) txt = cd.customText;
+                    if (hdType.headerType==HT_CUSTOM) {
+                        txt = cd.customText;
+                        if (txt && txt[0]=='\0') txt=NULL;  // Optional
+                    }
                     else {
                         txt = GetTextFromCellFieldDataPtr(*hd,cd.fieldPtr);
+                        if (txt && txt[0]=='\0') txt=NULL;  // Optional
                         if (hdType.headerType==HT_COLOR)   {
                             const float *pFloat = (const float*) cd.fieldPtr;
                             const ImVec4 color = ImVec4(*pFloat,*(pFloat+1),*(pFloat+2),hdType.numArrayElements==3?1.f:(*(pFloat+3)));

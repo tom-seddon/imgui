@@ -283,7 +283,7 @@ void DrawGL()	// Mandatory
     static bool show_splitter_test_window = false;
     static bool show_dock_window = false;
     static bool show_tab_windows = false;
-
+    static bool show_performance = false;
 
     // 1. Show a simple window
     {
@@ -319,21 +319,13 @@ void DrawGL()	// Mandatory
 #       ifndef NO_IMGUITABWINDOW
         show_tab_windows ^= ImGui::Button("Show TabWindow Test");
 #       endif //NO_IMGUITABWINDOW
-
+        show_performance ^= ImGui::Button("Show performance");
 
         // Calculate and show framerate
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("Frame rate options");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","It might be necessary to move the mouse \"outside\" and \"inside\" ImGui for these options to update properly.");
         ImGui::Separator();
-        static float ms_per_frame[120] = { 0 };
-        static int ms_per_frame_idx = 0;
-        static float ms_per_frame_accum = 0.0f;
-        ms_per_frame_accum -= ms_per_frame[ms_per_frame_idx];
-        ms_per_frame[ms_per_frame_idx] = ImGui::GetIO().DeltaTime * 1000.0f;
-        ms_per_frame_accum += ms_per_frame[ms_per_frame_idx];
-        ms_per_frame_idx = (ms_per_frame_idx + 1) % 120;
-        const float ms_per_frame_avg = ms_per_frame_accum / 120;
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", ms_per_frame_avg, 1000.0f / ms_per_frame_avg);
+        ImGui::Text("Frame rate %.1f FPS (average %.3f ms/frame)",ImGui::GetIO().Framerate,1000.0f / ImGui::GetIO().Framerate);
         bool clampFPSOutsideImGui = gImGuiInverseFPSClampOutsideImGui > 0;
         ImGui::Checkbox("Clamp FPS when \"outside\" ImGui.",&clampFPSOutsideImGui);
         if (clampFPSOutsideImGui)    {
@@ -838,15 +830,15 @@ void DrawGL()	// Mandatory
 
             if (tv.render())    // Mandatory call. Makes tv.isInit() return true. Returns true when a node event has occurred.
             {
-                //ImGui::TreeViewEvent& event = tv.getLastEvent();
+                // ImGui::TreeViewEvent& event = tv.getLastEvent();
                 // event.node       // the ImGui::TreeViewNode* that's changed somehow (can be any node in the hierarchy)
-                // event.type =     // ImGui::TreeView::EVENT_STATE_DOUBLE_CLICKED     // node has been double clicked
-                // ImGui::TreeView::EVENT_END_EDITING              // successfully renamed
-                // ImGui::TreeView::EVENT_STATE_CHANGED            // the node state has changed and the other fields are valid
-                // event.state      // the ImGui::TreeView::STATE_ that's changed (only STATE_OPENED,STATE_SELECTED and STATE_CHECKED are monitored and the latter only when directly clicked by the mouse)
+                // event.type       // ImGui::TreeViewNode::EVENT_DOUBLE_CLICKED     // node has been double clicked
+                                    // ImGui::TreeViewNode::EVENT_RENAMED              // successfully renamed
+                                    // ImGui::TreeViewNode::EVENT_STATE_CHANGED            // the node state has changed and the other fields are valid
+                // event.state      // the ImGui::TreeViewNode::STATE_ that's changed (only STATE_OPENED,STATE_SELECTED and STATE_CHECKED are monitored and the latter only when directly clicked by the mouse)
                 // event.wasStateRemoved // each state can be set or removed.
 
-                // event.reset();  // optional
+                // event.reset();  // optional after processing... (don't call it, why call it?)
             }
         }
 #       else //NO_IMGUIVARIOUSCONTROLS
@@ -1244,6 +1236,12 @@ void DrawGL()	// Mandatory
         }
     }
 #   endif //NO_IMGUITABWINDOW
+    if (show_performance && ImGui::Begin("Performance Window",&show_performance,ImVec2(0,0),0.9f,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoResize))   {
+        ImGui::Text("Frame rate %.1f FPS",ImGui::GetIO().Framerate);
+        ImGui::Text("Num texture bindings per frame: %d",gImGuiNumTextureBindingsPerFrame);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Consider that we're using\njust a single extra texture\nwith all the icons (numbers).");
+        ImGui::End();
+    }
 
     // imguitoolbar test 2: two global toolbars one at the top and one at the left
 #   ifndef NO_IMGUITOOLBAR
@@ -1318,9 +1316,9 @@ int main(int argc, char** argv)
 
 #   ifndef USE_ADVANCED_SETUP
 
-/*#ifdef YES_IMGUIFREETYPE    // Testing only (to remove)
-ImGuiFreeType::DefaultRasterizationFlags = ImGuiFreeType::Bold|ImGuiFreeType::Oblique;
-#endif //YES_IMGUIFREETYPE*/
+//#ifdef YES_IMGUIFREETYPE    // Testing only (to remove)
+//ImGuiFreeType::DefaultRasterizationFlags = ImGuiFreeType::Bold|ImGuiFreeType::Oblique;
+//#endif //YES_IMGUIFREETYPE
 
     // Basic
     ImImpl_Main(NULL,argc,argv);

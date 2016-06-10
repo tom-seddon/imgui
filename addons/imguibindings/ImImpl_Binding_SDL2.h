@@ -353,8 +353,9 @@ static void ImImplMainLoopFrame(void* pDone)	{
     }
     else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
+    if (gImGuiPreDrawGLSwapBuffersCallback) gImGuiPreDrawGLSwapBuffersCallback();
     SDL_GL_SwapWindow(window);
-    if (gImGuiPostDrawGLCallback) gImGuiPostDrawGLCallback();
+    if (gImGuiPostDrawGLSwapBuffersCallback) gImGuiPostDrawGLSwapBuffersCallback();
 
     // Reset additional special keys composed states (mandatory):
     for (int i=0;i<12;i++) {gImGuiFunctionKeyPressed[i] = gImGuiFunctionKeyReleased[i]= false;}

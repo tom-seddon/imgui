@@ -421,8 +421,9 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
         }
         else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
+        if (gImGuiPreDrawGLSwapBuffersCallback) gImGuiPreDrawGLSwapBuffersCallback();
         SwapBuffers( hDC );
-        if (gImGuiPostDrawGLCallback) gImGuiPostDrawGLCallback();
+        if (gImGuiPostDrawGLSwapBuffersCallback) gImGuiPostDrawGLSwapBuffersCallback();
 
         // Reset additional special keys composed states (mandatory):
         for (int i=0;i<12;i++) {gImGuiFunctionKeyPressed[i] = gImGuiFunctionKeyReleased[i]= false;}

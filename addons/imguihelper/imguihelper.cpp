@@ -103,19 +103,18 @@ void Text(int fntIndex, const char *fmt,...)    {
 
 #ifndef NO_IMGUIHELPER_DRAW_METHODS
 inline static void GetVerticalGradientTopAndBottomColors(ImU32 c,float fillColorGradientDeltaIn0_05,ImU32& tc,ImU32& bc)  {
-    if (fillColorGradientDeltaIn0_05<=0) {tc=bc=c;return;}
+    if (fillColorGradientDeltaIn0_05==0) {tc=bc=c;return;}
+    const bool negative = (fillColorGradientDeltaIn0_05<0);
+    if (negative) fillColorGradientDeltaIn0_05=-fillColorGradientDeltaIn0_05;
     if (fillColorGradientDeltaIn0_05>0.5f) fillColorGradientDeltaIn0_05=0.5f;
+    // Can we do it without the double conversion ImU32 -> ImVec4 -> ImU32 ?
     const ImVec4 cf = ColorConvertU32ToFloat4(c);
-    ImVec4 tmp(cf.x+fillColorGradientDeltaIn0_05<=1.f?cf.x+fillColorGradientDeltaIn0_05:1.f,
-               cf.y+fillColorGradientDeltaIn0_05<=1.f?cf.y+fillColorGradientDeltaIn0_05:1.f,
-               cf.z+fillColorGradientDeltaIn0_05<=1.f?cf.z+fillColorGradientDeltaIn0_05:1.f,
-               cf.w+fillColorGradientDeltaIn0_05<=1.f?cf.w+fillColorGradientDeltaIn0_05:1.f);
-    tc = ColorConvertFloat4ToU32(tmp);
-    tmp=ImVec4(cf.x-fillColorGradientDeltaIn0_05>0.f?cf.x-fillColorGradientDeltaIn0_05:0.f,
-               cf.y-fillColorGradientDeltaIn0_05>0.f?cf.y-fillColorGradientDeltaIn0_05:0.f,
-               cf.z-fillColorGradientDeltaIn0_05>0.f?cf.z-fillColorGradientDeltaIn0_05:0.f,
-               cf.w-fillColorGradientDeltaIn0_05>0.f?cf.w-fillColorGradientDeltaIn0_05:0.f);
-    bc = ColorConvertFloat4ToU32(tmp);
+    ImVec4 tmp(cf.x+fillColorGradientDeltaIn0_05,cf.y+fillColorGradientDeltaIn0_05,cf.z+fillColorGradientDeltaIn0_05,cf.w+fillColorGradientDeltaIn0_05);
+    if (tmp.x>1.f) tmp.x=1.f;if (tmp.y>1.f) tmp.y=1.f;if (tmp.z>1.f) tmp.z=1.f;if (tmp.w>1.f) tmp.w=1.f;
+    if (negative) bc = ColorConvertFloat4ToU32(tmp); else tc = ColorConvertFloat4ToU32(tmp);
+    tmp=ImVec4(cf.x-fillColorGradientDeltaIn0_05,cf.y-fillColorGradientDeltaIn0_05,cf.z-fillColorGradientDeltaIn0_05,cf.w-fillColorGradientDeltaIn0_05);
+    if (tmp.x<0.f) tmp.x=0.f;if (tmp.y<0.f) tmp.y=0.f;if (tmp.z<0.f) tmp.z=0.f;if (tmp.w<0.f) tmp.w=0.f;
+    if (negative) tc = ColorConvertFloat4ToU32(tmp); else bc = ColorConvertFloat4ToU32(tmp);
 }
 inline static ImU32 GetVerticalGradient(const ImVec4& ct,const ImVec4& cb,float DH,float H)    {
     IM_ASSERT(H!=0);
@@ -255,8 +254,18 @@ void ImDrawListAddRect(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const I
 }
 void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColorTop, const ImU32 &fillColorBottom, const ImU32 &strokeColor, float rounding, int rounding_corners, float strokeThickness, bool antiAliased) {
     if (!dl || (((fillColorTop >> 24) == 0) && ((fillColorBottom >> 24) == 0) && ((strokeColor >> 24) == 0)))  return;
-    dl->PathRect(a, b, rounding, rounding_corners);
-    ImDrawListPathFillWithVerticalGradientAndStroke(dl,fillColorTop,fillColorBottom,strokeColor,true,strokeThickness,antiAliased,a.y,b.y);
+    if (rounding==0.f || rounding_corners==0) {
+        dl->AddRectFilledMultiColor(a,b,fillColorTop,fillColorTop,fillColorBottom,fillColorBottom); // Huge speedup!
+        if ((strokeColor>> 24)!= 0) {
+            dl->PathRect(a, b, rounding, rounding_corners);
+            dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, true, strokeThickness, antiAliased);
+            dl->PathClear();
+        }
+    }
+    else    {
+        dl->PathRect(a, b, rounding, rounding_corners);
+        ImDrawListPathFillWithVerticalGradientAndStroke(dl,fillColorTop,fillColorBottom,strokeColor,true,strokeThickness,antiAliased,a.y,b.y);
+    }
 }
 void ImDrawListPathArcTo(ImDrawList *dl, const ImVec2 &centre, const ImVec2 &radii, float amin, float amax, int num_segments)  {
     if (!dl) return;

@@ -1,7 +1,7 @@
 #ifndef IMGUIFREETYPE_H_
 #define IMGUIFREETYPE_H_
 
-// https://github.com/Vuhdo/imgui_freetype (MIT licensed)
+// Original repository: https://github.com/Vuhdo/imgui_freetype (MIT licensed)
 
 // USAGE:
 /*

@@ -89,7 +89,7 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.h"			    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguitinyfiledialogs.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisqlite3.h"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imgufreetype.h"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguifreetype.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisoloud.h"
 
 

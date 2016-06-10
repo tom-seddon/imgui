@@ -13,9 +13,20 @@ namespace DrawListHelper {
 // Two main additions:
 // 1) PathFillAndStroke in the same method (so that we don't have to build the path twice)
 // 2) VerticalGradient: looks good but must be very slow (I keep converting ImU32 <-> ImVec4 hundreds of times to lerp values)
-// TODO: speed up gradient code [If possible use ImU32 everywhere (even if it looks worse and is not endian-independent)
+// TODO: speed up gradient code [If possible use ImU32 everywhere (even if it looks worse and is not endian-independent)]
 inline static void GetVerticalGradientTopAndBottomColors(ImU32 c,float fillColorGradientDeltaIn0_05,ImU32& tc,ImU32& bc)  {
     if (fillColorGradientDeltaIn0_05==0) {tc=bc=c;return;}
+
+#   define CACHE_LAST_GRADIENT // Maybe useless, but when displaying a lot of tabs we can save some calls...
+#   ifdef CACHE_LAST_GRADIENT
+    //static unsigned int dbg = 0;
+    static ImU32 cacheColorIn=0;static float cacheGradientIn=0.f;static ImU32 cacheTopColorOut=0;static ImU32 cacheBottomColorOut=0;
+    if (cacheColorIn==c && cacheGradientIn==fillColorGradientDeltaIn0_05)   {tc=cacheTopColorOut;bc=cacheBottomColorOut;
+        //fprintf(stderr,"cached: %u\n",dbg++);
+    return;}
+    cacheColorIn=c;cacheGradientIn=fillColorGradientDeltaIn0_05;
+#   endif //CACHE_LAST_GRADIENT
+
     const bool negative = (fillColorGradientDeltaIn0_05<0);
     if (negative) fillColorGradientDeltaIn0_05=-fillColorGradientDeltaIn0_05;
     if (fillColorGradientDeltaIn0_05>0.5f) fillColorGradientDeltaIn0_05=0.5f;
@@ -27,6 +38,12 @@ inline static void GetVerticalGradientTopAndBottomColors(ImU32 c,float fillColor
     tmp=ImVec4(cf.x-fillColorGradientDeltaIn0_05,cf.y-fillColorGradientDeltaIn0_05,cf.z-fillColorGradientDeltaIn0_05,cf.w-fillColorGradientDeltaIn0_05);
     if (tmp.x<0.f) tmp.x=0.f;if (tmp.y<0.f) tmp.y=0.f;if (tmp.z<0.f) tmp.z=0.f;if (tmp.w<0.f) tmp.w=0.f;
     if (negative) tc = ColorConvertFloat4ToU32(tmp); else bc = ColorConvertFloat4ToU32(tmp);
+
+#   ifdef CACHE_LAST_GRADIENT
+    cacheTopColorOut=tc;cacheBottomColorOut=bc;
+    //fprintf(stderr,"uncached: %u\n",dbg++);
+#   undef CACHE_LAST_GRADIENT // Mandatory
+#   endif //CACHE_LAST_GRADIENT
 }
 // Can we do it from ImU32 ct and cb, without conversion to ImVec4 ?
 inline static ImU32 GetVerticalGradient(const ImVec4& ct,const ImVec4& cb,float DH,float H)    {
@@ -167,8 +184,18 @@ void ImDrawListAddRect(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const I
 }
 void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColorTop, const ImU32 &fillColorBottom, const ImU32 &strokeColor, float rounding, int rounding_corners, float strokeThickness, bool antiAliased) {
     if (!dl || (((fillColorTop >> 24) == 0) && ((fillColorBottom >> 24) == 0) && ((strokeColor >> 24) == 0)))  return;
-    dl->PathRect(a, b, rounding, rounding_corners);
-    ImDrawListPathFillWithVerticalGradientAndStroke(dl,fillColorTop,fillColorBottom,strokeColor,true,strokeThickness,antiAliased,a.y,b.y);
+    if (rounding==0.f || rounding_corners==0) {
+        dl->AddRectFilledMultiColor(a,b,fillColorTop,fillColorTop,fillColorBottom,fillColorBottom); // Huge speedup!
+        if ((strokeColor>> 24)!= 0) {
+            dl->PathRect(a, b, rounding, rounding_corners);
+            dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, true, strokeThickness, antiAliased);
+            dl->PathClear();
+        }
+    }
+    else    {
+        dl->PathRect(a, b, rounding, rounding_corners);
+        ImDrawListPathFillWithVerticalGradientAndStroke(dl,fillColorTop,fillColorBottom,strokeColor,true,strokeThickness,antiAliased,a.y,b.y);
+    }
 }
 void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColor, float fillColorGradientDeltaIn0_05, const ImU32 &strokeColor, float rounding, int rounding_corners, float strokeThickness, bool antiAliased)
 {
@@ -320,12 +347,15 @@ bool TabLabelStyle::Edit(TabLabelStyle &s)  {
     ImGui::Text("Tab Labels:");
     ImGui::PushItemWidth(50);
     changed|=ImGui::DragFloat("fillColorGradientDeltaIn0_05",&s.fillColorGradientDeltaIn0_05,0.01f,0.f,.5f,"%1.3f");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Zero gradient renders much faster\nwhen \"rounding\" is positive.");
     changed|=ImGui::DragFloat("rounding",&s.rounding,dragSpeed,0.0f,16.f,prec);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Small values render faster\nbut to really speed up gradients\nset this to zero.");
     changed|=ImGui::DragFloat("borderWidth",&s.borderWidth,.01f,0.f,5.f,"%1.2f");
     ImGui::Spacing();
 
     if (!useSimplifiedInterface)    {
 	changed|=ImGui::DragFloat("closeButtonRounding",&s.closeButtonRounding,dragSpeed,0.0f,16.f,prec);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","I suggest setting this to zero...");
 	changed|=ImGui::DragFloat("closeButtonBorderWidth",&s.closeButtonBorderWidth,.01f,0.f,5.f,"%1.2f");
     }
     changed|=ImGui::DragFloat("closeButtonTextWidth",&s.closeButtonTextWidth,.01f,0.f,5.f,"%1.2f");

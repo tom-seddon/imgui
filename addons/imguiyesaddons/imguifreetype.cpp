@@ -1,6 +1,6 @@
 #include "imguifreetype.h"
 
-// Coded by: https://github.com/Vuhdo/imgui_freetype
+// Original repository: https://github.com/Vuhdo/imgui_freetype
 // MIT licensed
 
 #include <stdint.h>
@@ -9,6 +9,7 @@
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
 #include FT_SYNTHESIS_H
+
 
 /*#define IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_PLACEMENT_NEW
@@ -22,9 +23,10 @@
 
 namespace ImGuiFreeType {
 
-
+#ifdef IMGUI_USE_AUTO_BINDING
 ImU32 DefaultRasterizationFlags = 0;
 ImVector<ImU32> DefaultRasterizationFlagVector;
+#endif //IMGUI_USE_AUTO_BINDING
 
 /// Font parameters and metrics.
 struct FontInfo {
@@ -150,7 +152,7 @@ public:
 
 
         // load the glyph we are looking for
-        FT_Int32 LoadFlags = FT_LOAD_NO_BITMAP;
+	FT_Int32 LoadFlags = FT_LOAD_NO_BITMAP;	// | FT_LOAD_COLOR;
         if( flags & ImGuiFreeType::DisableHinting )
             LoadFlags |= FT_LOAD_NO_HINTING;
         if( flags & ImGuiFreeType::ForceAutoHint )
@@ -163,7 +165,7 @@ public:
         else if( flags & ImGuiFreeType::MonoHinting )
             LoadFlags |= FT_LOAD_TARGET_MONO;
         else
-            LoadFlags |= FT_LOAD_TARGET_NORMAL;
+	    LoadFlags |= FT_LOAD_TARGET_NORMAL;
 
         uint32_t glyphIndex = FT_Get_Char_Index( m_face, codepoint );
         FT_Error error = FT_Load_Glyph( m_face, glyphIndex, LoadFlags );
@@ -183,12 +185,17 @@ public:
 
         // retrieve the glyph
         FT_Glyph glyphDesc;
-        error = FT_Get_Glyph( slot, &glyphDesc );
-        if( error != 0 )
+	error = FT_Get_Glyph( slot, &glyphDesc );
+
+
+	if( error != 0 )
             return false;
 
         // rasterize
-        error = FT_Glyph_To_Bitmap( &glyphDesc, FT_RENDER_MODE_NORMAL, 0, 1 );
+	error = FT_Glyph_To_Bitmap( &glyphDesc,
+				    FT_RENDER_MODE_NORMAL,
+				     0, 1 );
+
         if( error != 0 )
             return false;
         FT_BitmapGlyph freeTypeBitmap = ( FT_BitmapGlyph )glyphDesc;
@@ -220,7 +227,7 @@ private:
 };
 
 
-IMGUI_API bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 flags=0,const ImVector<ImU32>* pOptionalFlagVector=NULL) {
+bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 flags=0,const ImVector<ImU32>* pOptionalFlagVector=NULL) {
     using namespace ImGui;
     IM_ASSERT( atlas->ConfigData.Size > 0 );
 
@@ -370,7 +377,7 @@ IMGUI_API bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 flags=0,const ImVector<
 }
 
 
-IMGUI_API void GetTexDataAsAlpha8(ImFontAtlas* atlas,unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel,ImU32 flags,const ImVector<ImU32>* pOptionalFlagVector)   {
+void GetTexDataAsAlpha8(ImFontAtlas* atlas,unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel,ImU32 flags,const ImVector<ImU32>* pOptionalFlagVector)   {
     using namespace ImGui;
     // Build atlas on demand
     if (atlas->TexPixelsAlpha8 == NULL)
@@ -385,7 +392,7 @@ IMGUI_API void GetTexDataAsAlpha8(ImFontAtlas* atlas,unsigned char** out_pixels,
     if (out_height) *out_height = atlas->TexHeight;
     if (out_bytes_per_pixel) *out_bytes_per_pixel = 1;
 }
-IMGUI_API void GetTexDataAsRGBA32(ImFontAtlas* atlas,unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel,ImU32 flags,const ImVector<ImU32>* pOptionalFlagVector)    {
+void GetTexDataAsRGBA32(ImFontAtlas* atlas,unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel,ImU32 flags,const ImVector<ImU32>* pOptionalFlagVector)    {
     // Convert to RGBA32 format on demand
     // Although it is likely to be the most commonly used format, our font rendering is 1 channel / 8 bpp
     if (!atlas->TexPixelsRGBA32)

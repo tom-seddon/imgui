@@ -171,6 +171,10 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #ifdef YES_IMGUIDOCK
 #include "./imguiyesaddons/imguidock.h"
 #endif //YES_IMGUIDOCK
+#ifdef YES_IMGUISDF_MSDF_MODE
+#undef YES_IMGUISDF
+#define YES_IMGUISDF
+#endif //YES_IMGUISDF_MSDF_MODE
 #ifdef YES_IMGUISDF
 #include "./imguiyesaddons/imguisdf.h"
 #endif //YES_IMGUISDF
