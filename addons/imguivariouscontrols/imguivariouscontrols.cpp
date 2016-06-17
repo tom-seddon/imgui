@@ -1962,23 +1962,33 @@ const TreeViewNode *TreeViewNode::getFirstParentNodeWithoutState(int stateFlag,b
     while (n && n->parentNode) {if ((n->state&stateFlag)!=stateFlag) return n;if (!recursive) break;n=n->parentNode;}
     return NULL;
 }
-void TreeViewNode::getAllChildNodesWithState(ImVector<TreeViewNode *> &result, int stateFlag, bool recursive, bool clearResultBeforeUsage) const  {
+void TreeViewNode::getAllChildNodesWithState(ImVector<TreeViewNode *> &result, int stateFlag, bool recursive,bool returnOnlyLeafNodes, bool clearResultBeforeUsage) const  {
     if (clearResultBeforeUsage) result.clear();
     if (childNodes) {
         for (int i=0,isz=childNodes->size();i<isz;i++)   {
             const TreeViewNode* n = (*childNodes)[i];
-            if ((n->state&stateFlag)==stateFlag) result.push_back(const_cast<TreeViewNode*>(n));
-            if (recursive) n->getAllChildNodesWithState(result,stateFlag,recursive,false);
+            if ((n->state&stateFlag)==stateFlag && (!returnOnlyLeafNodes || n->isLeafNode())) result.push_back(const_cast<TreeViewNode*>(n));
+            if (recursive) n->getAllChildNodesWithState(result,stateFlag,recursive,returnOnlyLeafNodes,false);
         }
     }
 }
-void TreeViewNode::getAllChildNodesWithoutState(ImVector<TreeViewNode *> &result, int stateFlag, bool recursive, bool clearResultBeforeUsage) const   {
+void TreeViewNode::getAllChildNodesWithoutState(ImVector<TreeViewNode *> &result, int stateFlag, bool recursive, bool returnOnlyLeafNodes, bool clearResultBeforeUsage) const   {
     if (clearResultBeforeUsage) result.clear();
     if (childNodes) {
         for (int i=0,isz=childNodes->size();i<isz;i++)   {
             const TreeViewNode* n = (*childNodes)[i];
-            if ((n->state&stateFlag)!=stateFlag) result.push_back(const_cast<TreeViewNode*>(n));
-            if (recursive) n->getAllChildNodesWithState(result,stateFlag,recursive,false);
+            if ((n->state&stateFlag)!=stateFlag && (!returnOnlyLeafNodes || n->isLeafNode())) result.push_back(const_cast<TreeViewNode*>(n));
+            if (recursive) n->getAllChildNodesWithState(result,stateFlag,recursive,returnOnlyLeafNodes,false);
+        }
+    }
+}
+void TreeViewNode::getAllChildNodes(ImVector<TreeViewNode *> &result, bool recursive, bool returnOnlyLeafNodes, bool clearResultBeforeUsage) const  {
+    if (clearResultBeforeUsage) result.clear();
+    if (childNodes) {
+        for (int i=0,isz=childNodes->size();i<isz;i++)   {
+            const TreeViewNode* n = (*childNodes)[i];
+            if (!returnOnlyLeafNodes || n->isLeafNode()) result.push_back(const_cast<TreeViewNode*>(n));
+            if (recursive) n->getAllChildNodes(result,recursive,returnOnlyLeafNodes,false);
         }
     }
 }

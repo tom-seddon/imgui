@@ -249,12 +249,12 @@ TabLabelStyle::TabLabelStyle()    {
     colors[Col_TabLabelCloseButtonBorder]        = colors[Col_TabLabelSelectedBorder];
 
     fillColorGradientDeltaIn0_05 = 0.070f;//0.125f;//0.2f;//0.05f; // vertical gradient if > 0 (looks nice but it's very slow)
-    rounding = 5.f;//6.f;//9.f
+    rounding = 0.f;//5.f;//6.f;//9.f
     borderWidth = 1.f;
 
     closeButtonRounding = 0.f;
     closeButtonBorderWidth = 1.f;
-    closeButtonTextWidth = 3.f;
+    closeButtonTextWidth = 2.5f;//3.f;
 
     //for (int i=0;i<TAB_STATE_COUNT;i++) fontStyles[i] = FONT_STYLE_BOLD;    // looks better for me
     fontStyles[TAB_STATE_NORMAL]            = FONT_STYLE_NORMAL;
@@ -293,14 +293,6 @@ bool TabLabelStyle::EditFast(TabLabelStyle &s)  {
     ImGui::PushItemWidth(135);
     ImGui::Combo("###TabLabelStyleEnumCombo",&styleEnumNum,ImGui::GetDefaultTabLabelStyleNames(),(int) ImGuiTabLabelStyle_Count,(int) ImGuiTabLabelStyle_Count);
     ImGui::PopItemWidth();
-    /*if (ImGui::IsItemHovered()) {
-        if   (styleEnumNum==0)      ImGui::SetTooltip("%s","\"Default\"\nThis is the default\nImGui theme");
-        else if (styleEnumNum==1)   ImGui::SetTooltip("%s","\"Gray\"\nThis is the default\ntheme of this demo");
-        else if (styleEnumNum==2)   ImGui::SetTooltip("%s","\"OSX\"\nPosted by @itamago here:\nhttps://github.com/ocornut/imgui/pull/511\n(hope I can use it)");
-        else if (styleEnumNum==3)   ImGui::SetTooltip("%s","\"DarkOpaque\"\nA dark-grayscale style with\nno transparency (by default)");
-        else if (styleEnumNum==4)   ImGui::SetTooltip("%s","\"OSXOpaque\"\nPosted by @dougbinks here:\nhttps://gist.github.com/dougbinks/8089b4bbaccaaf6fa204236978d165a9\n(hope I can use it)");
-    }*/
-
     ImGui::SameLine();
     static float hueShift = 0;
     ImGui::PushItemWidth(50);
@@ -454,30 +446,31 @@ bool ResetTabLabelStyle(int tabLabelStyleEnum,ImGui::TabLabelStyle& style) {
     case ImGuiTabLabelStyle_Yellow:
     case ImGuiTabLabelStyle_Orange:
     style.fillColorGradientDeltaIn0_05 = 0.08f;
-    style.rounding = 5.9f;
+    style.rounding = 0.f;//5.9f;
     //style.borderWidth = 2.f;
 
-    style.colors[TabLabelStyle::Col_TabLabelSelected] = ImGui::ColorConvertFloat4ToU32(ImVec4(0.549,0.188,0.141,1.000));
-    style.colors[TabLabelStyle::Col_TabLabelSelectedActive] = style.colors[TabLabelStyle::Col_TabLabelSelectedHovered] = style.colors[TabLabelStyle::Col_TabLabelSelected] = ImGui::ColorConvertFloat4ToU32(ImVec4(0.549,0.188,0.141,1.000));
+    style.colors[TabLabelStyle::Col_TabLabelSelected] = ImGui::ColorConvertFloat4ToU32(ImVec4(0.549,0.108,0.071,1.000));
+    style.colors[TabLabelStyle::Col_TabLabelSelectedActive] = style.colors[TabLabelStyle::Col_TabLabelSelectedHovered] = style.colors[TabLabelStyle::Col_TabLabelSelected];
     style.colors[TabLabelStyle::Col_TabLabelSelectedText]   = ImGui::ColorConvertFloat4ToU32(ImVec4(0.863,1.000,0.965,1.000));
-    style.colors[TabLabelStyle::Col_TabLabelSelectedBorder] = ImGui::ColorConvertFloat4ToU32(ImVec4(0.537,0.125,0.125,1.000));
+    style.colors[TabLabelStyle::Col_TabLabelSelectedBorder] = ImGui::ColorConvertFloat4ToU32(ImVec4(0.337,0.125,0.125,1.000));
 
-    style.colors[TabLabelStyle::Col_TabLabel]           = ImGui::ColorConvertFloat4ToU32(ImVec4(0.337,0.192,0.173,0.961));
-    style.colors[TabLabelStyle::Col_TabLabelHovered]    = ImGui::ColorConvertFloat4ToU32(ImVec4(0.525,0.306,0.263,0.961));
+    style.colors[TabLabelStyle::Col_TabLabel]           = ImGui::ColorConvertFloat4ToU32(ImVec4(0.337,0.162,0.143,0.981));
+    style.colors[TabLabelStyle::Col_TabLabelHovered]    = ImGui::ColorConvertFloat4ToU32(ImVec4(0.525,0.206,0.163,0.981));
     style.colors[TabLabelStyle::Col_TabLabelActive]     = style.colors[TabLabelStyle::Col_TabLabelHovered];
-    style.colors[TabLabelStyle::Col_TabLabelText]       = ImGui::ColorConvertFloat4ToU32(ImVec4(0.655,0.745,0.718,0.961));
-    style.colors[TabLabelStyle::Col_TabLabelBorder]     = ImGui::ColorConvertFloat4ToU32(ImVec4(0.337,0.000,0.000,0.961));
+    style.colors[TabLabelStyle::Col_TabLabelText]       = ImGui::ColorConvertFloat4ToU32(ImVec4(0.655,0.745,0.718,0.981));
+    style.colors[TabLabelStyle::Col_TabLabelBorder]     = ImGui::ColorConvertFloat4ToU32(ImVec4(0.537,0.200,0.200,0.881));
 
-    /*
-    style.tabWindowLabelBackgroundColor = ImGui::ColorConvertFloat4ToU32(ImVec4(1.000,0.609,0.396,0.608));
-    style.tabWindowLabelShowAreaSeparator]=true;
-    */
-    if (tabLabelStyleEnum == ImGuiTabLabelStyle_Green)          TabLabelStyle::ShiftHue(style,0.28f);
-    else if (tabLabelStyleEnum == ImGuiTabLabelStyle_Blue)      TabLabelStyle::ShiftHue(style,0.52f);
+    if (tabLabelStyleEnum == ImGuiTabLabelStyle_Green)          TabLabelStyle::ShiftHue(style,0.32f);
+    else if (tabLabelStyleEnum == ImGuiTabLabelStyle_Blue)      TabLabelStyle::ShiftHue(style,0.62f);
     else if (tabLabelStyleEnum == ImGuiTabLabelStyle_Yellow)    TabLabelStyle::ShiftHue(style,0.14f);
     else if (tabLabelStyleEnum == ImGuiTabLabelStyle_Orange)    TabLabelStyle::ShiftHue(style,0.08f);
 
-    //if (tabLabelStyleEnum == ImGuiStyle_OSXInverse) TabLabelStyle::InvertColors(style);
+    // reset close button colors after shifting hue
+    style.colors[TabLabelStyle::Col_TabLabelCloseButtonHovered]       = ImColor(166,0,11,255);
+    style.colors[TabLabelStyle::Col_TabLabelCloseButtonActive]        = ImColor(206,40,51,255);
+    style.colors[TabLabelStyle::Col_TabLabelCloseButtonTextHovered]   = style.colors[TabLabelStyle::Col_TabLabelSelectedText];
+    style.colors[TabLabelStyle::Col_TabLabelCloseButtonBorder]        = style.colors[TabLabelStyle::Col_TabLabelSelectedBorder];//ImGui::ColorConvertFloat4ToU32(ImVec4(0.0,0.00,0.00,1.0));//style.colors[TabLabelStyle::Col_TabLabelSelectedBorder];
+
     break;
     case ImGuiTabLabelStyle_Foxy:
     case ImGuiTabLabelStyle_FoxyInverse:
@@ -629,7 +622,7 @@ inline const TabLabelStyle& TabLabelStyleGetMergedWithAlphaForOverlayUsage()    
 //=======================================================================================
 // Main method to draw the tab label
 // The TabLabelStyle used by this method won't be merged with the Window Alpha (please provide a pOptionalStyleToUseIn using TabLabelStyle::GetMergedWithWindowAlpha() if needed).
-static bool TabButton(const char *label, bool selected, bool *pCloseButtonPressedOut=NULL, const char* textOverrideIn=NULL, ImVec2 *pJustReturnItsSizeHereOut=NULL, const TabLabelStyle* pOptionalStyleToUseIn=NULL,ImFont *fontOverride=NULL, ImVec2 *pOptionalJustDrawTabButtonGraphicsUnderMouseWithThisOffset=NULL, ImDrawList *drawListOverride=NULL,bool privateReuseLastCalculatedLabelSizeDoNotUse = false)  {
+static bool TabButton(const char *label, bool selected, bool *pCloseButtonPressedOut=NULL, const char* textOverrideIn=NULL, ImVec2 *pJustReturnItsSizeHereOut=NULL, const TabLabelStyle* pOptionalStyleToUseIn=NULL,ImFont *fontOverride=NULL, ImVec2 *pOptionalJustDrawTabButtonGraphicsUnderMouseWithThisOffset=NULL, ImDrawList *drawListOverride=NULL,bool privateReuseLastCalculatedLabelSizeDoNotUse = false,bool forceActiveColorLook = false)  {
     // Based on ImGui::ButtonEx(...)
     bool *pHoveredOut = NULL;           // removed from args (can be queried from outside)
     bool *pCloseButtonHovered = NULL;   // removed from args (who cares if the close button is hovered?)
@@ -687,6 +680,7 @@ static bool TabButton(const char *label, bool selected, bool *pCloseButtonPresse
         }
     }
     if (pHoveredOut) *pHoveredOut = hovered && !btnHovered;  // We may choose not to return "hovered" when the close btn is hovered.
+    if (forceActiveColorLook) {hovered = held = true;}
 
     // Render
 
@@ -1251,7 +1245,7 @@ struct TabWindowDragData {
             if (draggingTabSrcIsSelected) fontOverride = TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED]];
             else if (draggingTabSrc->getModified())  fontOverride = TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_MODIFIED]];
         }
-        ImGui::TabButton(NULL,false,draggingTabSrc->closable ? &mustCloseTab : NULL,draggingTabSrc->getLabel(),NULL,&tabStyle,(ImFont*)fontOverride,&start,drawList);
+        ImGui::TabButton(NULL,draggingTabSrcIsSelected,draggingTabSrc->closable ? &mustCloseTab : NULL,draggingTabSrc->getLabel(),NULL,&tabStyle,(ImFont*)fontOverride,&start,drawList,false,true);
     }
     inline void drawProhibitionSign(ImDrawList* drawList,const ImVec2& wp,const ImVec2& pos,float size,float alpha=0.5f)   {
         ImVec2 start(wp.x+pos.x-size*0.5f,wp.y+pos.y-size*0.5f);
@@ -2539,7 +2533,7 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
                     &GImGui->OverlayDrawList;
             const TabLabelStyle& tabStyle = TabLabelStyleGetMergedWithAlphaForOverlayUsage();
             ImFont* fontOverride = (ImFont*) (draggingTabWasSelected ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_NORMAL]]);
-            ImGui::TabButton(tabLabels[pOptionalItemOrdering[draggingTabIndex]],false,allowTabClosing ? &mustCloseTab : NULL,NULL,NULL,&tabStyle,fontOverride,&start,drawList);
+            ImGui::TabButton(tabLabels[pOptionalItemOrdering[draggingTabIndex]],draggingTabWasSelected,allowTabClosing ? &mustCloseTab : NULL,NULL,NULL,&tabStyle,fontOverride,&start,drawList,false,true);
             ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
 
             if (TabWindow::DockPanelIconTextureID)	{

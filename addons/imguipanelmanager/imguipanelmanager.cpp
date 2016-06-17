@@ -5,6 +5,7 @@
 bool gImGuiDockpanelManagerExtendedStyle = true;
 float gImGuiDockPanelManagerActiveResizeSize = 6.f;
 bool gImGuiDockPanelManagerAddExtraTitleBarResizing = false;
+bool gImGuiDockPanelManagerAlwaysDrawExternalBorders = true;
 
 // Static Helper Methods:
 namespace ImGui {
@@ -468,7 +469,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         {
             // Draw title bar only
             window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_TitleBgCollapsed), window_rounding);
-            if (flags & ImGuiWindowFlags_ShowBorders)
+            if ((flags & ImGuiWindowFlags_ShowBorders) || gImGuiDockPanelManagerAlwaysDrawExternalBorders)
             {
                 window->DrawList->AddRect(title_bar_rect.GetTL()+ImVec2(1,1), title_bar_rect.GetBR()+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), window_rounding);
                 window->DrawList->AddRect(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border), window_rounding);
@@ -619,7 +620,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             }
 
             // Borders
-            if (flags & ImGuiWindowFlags_ShowBorders)
+            if ((flags & ImGuiWindowFlags_ShowBorders) || gImGuiDockPanelManagerAlwaysDrawExternalBorders)
             {
                 window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), window_rounding);
                 window->DrawList->AddRect(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_Border), window_rounding);
@@ -721,7 +722,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
     // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
     const ImRect title_bar_rect = window->TitleBarRect();
-    const float border_size = (flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
+    const float border_size = ((flags & ImGuiWindowFlags_ShowBorders) || gImGuiDockPanelManagerAlwaysDrawExternalBorders) ? 1.0f : 0.0f;
     ImRect clip_rect;
     clip_rect.Min.x = title_bar_rect.Min.x + 0.5f + ImMax(border_size, window->WindowPadding.x*0.5f);
     clip_rect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight() + 0.5f + border_size;
@@ -788,9 +789,10 @@ void ImGui::PanelManager::Pane::AssociatedWindow::updateSizeInHoverMode(const Im
     if (!togglable)  {
         //fprintf(stderr,"ok \"%s\"\n",windowName);
         if (mgr.innerBarQuadSize.x<=0 || mgr.innerBarQuadSize.y<=0) mgr.calculateInnerBarQuadPlacement();
+        static const float DefaultHoverSizePortion = 0.2f;
         switch (pane.pos)   {
         case TOP:
-            if (sizeHoverMode<0) sizeHoverMode = ImGui::GetIO().DisplaySize.y * 0.25f;
+            if (sizeHoverMode<0) sizeHoverMode = ImGui::GetIO().DisplaySize.y * DefaultHoverSizePortion;
             if (sizeHoverMode<2.f * ImGui::GetStyle().WindowMinSize.x)   sizeHoverMode = 2.f * ImGui::GetStyle().WindowMinSize.x;// greater than "ImGui::GetStyle().WindowMinSize.x", otherwise the title bar is not accessible
             curPos.x = mgr.innerBarQuadPos.x;
             curPos.y = mgr.innerBarQuadPos.y;
@@ -799,7 +801,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::updateSizeInHoverMode(const Im
             curSize.y = sizeHoverMode;
             break;
         case LEFT:
-            if (sizeHoverMode<0) sizeHoverMode = ImGui::GetIO().DisplaySize.x * 0.25f;
+            if (sizeHoverMode<0) sizeHoverMode = ImGui::GetIO().DisplaySize.x * DefaultHoverSizePortion;
             if (sizeHoverMode<2.f * ImGui::GetStyle().WindowMinSize.x)   sizeHoverMode = 2.f * ImGui::GetStyle().WindowMinSize.x;// greater than "ImGui::GetStyle().WindowMinSize.x", otherwise the title bar is not accessible
             curPos.x = mgr.innerBarQuadPos.x;
             curPos.y = mgr.innerBarQuadPos.y;
@@ -808,7 +810,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::updateSizeInHoverMode(const Im
             curSize.y = mgr.innerBarQuadSize.y;
             break;
         case RIGHT:
-            if (sizeHoverMode<0) sizeHoverMode = ImGui::GetIO().DisplaySize.x * 0.25f;
+            if (sizeHoverMode<0) sizeHoverMode = ImGui::GetIO().DisplaySize.x * DefaultHoverSizePortion;
             curPos.y = mgr.innerBarQuadPos.y;
             if (sizeHoverMode > mgr.innerBarQuadSize.x) sizeHoverMode = mgr.innerBarQuadSize.x;
             curSize.x = sizeHoverMode;
@@ -816,7 +818,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::updateSizeInHoverMode(const Im
             curSize.y = mgr.innerBarQuadSize.y;
             break;
         case BOTTOM:
-            if (sizeHoverMode<0) sizeHoverMode = ImGui::GetIO().DisplaySize.y * 0.25f;
+            if (sizeHoverMode<0) sizeHoverMode = ImGui::GetIO().DisplaySize.y * DefaultHoverSizePortion;
             curPos.x = mgr.innerBarQuadPos.x;
             curSize.x =  mgr.innerBarQuadSize.x;
             if (sizeHoverMode > mgr.innerBarQuadSize.y) sizeHoverMode = mgr.innerBarQuadSize.y;
@@ -1247,7 +1249,7 @@ bool ImGui::PanelManager::render(Pane** pPanePressedOut, int *pPaneToolbuttonPre
 
         bool hoverButtonIndexChanged = (oldHoverButtonIndex!=hoverButtonIndex);
 
-        // new selected toolbuttons without valid windows should act like manual button (i.e. not take selection:
+        // new selected toolbuttons without valid windows should act like manual button (i.e. not take selection):
         if (selectedButtonIndexChanged && selectedButtonIndex>=0 && selectedButtonIndex<(int)bar.getNumButtons()) {
             const Pane::AssociatedWindow& wnd = pane.windows[selectedButtonIndex];
             if (!wnd.isValid()) {
@@ -1429,6 +1431,7 @@ void ImGui::PanelManager::updateSizes() const  {
     innerQuadSize = innerBarQuadSize;
     const ImVec2& winMinSize = ImGui::GetStyle().WindowMinSize;
 
+    static const float DefaultDockSizePortion = 0.25f;
     if (paneTop)    {
         const Pane& pane = *paneTop;
         const int selectedButtonIndex = pane.bar.getSelectedButtonIndex();
@@ -1440,7 +1443,7 @@ void ImGui::PanelManager::updateSizes() const  {
                 win.curPos.x = innerBarQuadPos.x;
                 win.curPos.y = innerBarQuadPos.y;
                 win.curSize.x = innerBarQuadSize.x;
-                if (win.size<0) win.size = ImGui::GetIO().DisplaySize.y * 0.25f;
+                if (win.size<0) win.size = ImGui::GetIO().DisplaySize.y * DefaultDockSizePortion;
                 else if (win.size<winMinSize.y) win.size=winMinSize.y;
                 if (win.size>innerBarQuadSize.y)  win.size = innerBarQuadSize.y;
                 win.curSize.y = win.size;
@@ -1462,7 +1465,7 @@ void ImGui::PanelManager::updateSizes() const  {
                 //
                 win.curPos.x = innerBarQuadPos.x;
                 win.curPos.y = innerQuadPos.y;
-                if (win.size<0) win.size = ImGui::GetIO().DisplaySize.x * 0.25f;
+                if (win.size<0) win.size = ImGui::GetIO().DisplaySize.x * DefaultDockSizePortion;
                 else if (win.size<winMinSize.x) win.size=winMinSize.x;
                 if (win.size>innerBarQuadSize.x)  win.size = innerBarQuadSize.x;
                 win.curSize.x = win.size;
@@ -1486,7 +1489,7 @@ void ImGui::PanelManager::updateSizes() const  {
                 //
                 win.curPos.y = innerQuadPos.y;
                 win.curSize.y = innerQuadSize.y;
-                if (win.size<0) win.size = ImGui::GetIO().DisplaySize.x * 0.25f;
+                if (win.size<0) win.size = ImGui::GetIO().DisplaySize.x * DefaultDockSizePortion;
                 else if (win.size<winMinSize.x) win.size=winMinSize.x;
                 if (win.size>innerQuadSize.x)  win.size = innerQuadSize.x;
                 win.curSize.x = win.size;
@@ -1508,7 +1511,7 @@ void ImGui::PanelManager::updateSizes() const  {
                 //
                 win.curPos.x = innerQuadPos.x;
                 win.curSize.x = innerQuadSize.x;
-                if (win.size<0) win.size = ImGui::GetIO().DisplaySize.y * 0.25f;
+                if (win.size<0) win.size = ImGui::GetIO().DisplaySize.y * DefaultDockSizePortion;
                 else if (win.size<winMinSize.y) win.size=winMinSize.y;
                 if (win.size>innerQuadSize.y)  win.size = innerQuadSize.y;
                 win.curSize.y = win.size;
@@ -1524,6 +1527,24 @@ void ImGui::PanelManager::updateSizes() const  {
     //fprintf(stderr,"innerBarQuad  (%1.1f,%1.1f,%1.1f,%1.1f)\n",innerBarQuadPos.x,innerBarQuadPos.y,innerBarQuadSize.x,innerBarQuadSize.y);
     //fprintf(stderr,"innerQuad     (%1.1f,%1.1f,%1.1f,%1.1f)\n",innerQuadPos.x,innerQuadPos.y,innerQuadSize.x,innerQuadSize.y);
 
+}
+
+void ImGui::PanelManager::closeHoverWindow() {
+    for (int i=0,isz=getNumPanes();i<isz;i++)   {
+        Pane& pane = panes[i];
+        Toolbar& bar = pane.bar;
+        for (int w=0,wsz=bar.buttons.size();w<wsz;w++)  {
+            Pane::AssociatedWindow& window = pane.windows[w];
+            if (w == bar.hoverButtonIndex>=0)    {
+                // The next two lines were outside the loop
+                window.dirty = true;
+                window.updateSizeInHoverMode(*this,pane,w);
+		window.dirty = true;
+                window.persistHoverFocus = false;
+                bar.hoverButtonIndex=-1;
+            }
+        }
+    }
 }
 
 const ImVec2& ImGui::PanelManager::getCentralQuadPosition() const   {
@@ -1584,4 +1605,164 @@ void ImGui::PanelManager::calculateInnerBarQuadPlacement() const {
 }
 
 
+
+#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+#include "../imguihelper/imguihelper.h"
+bool ImGui::PanelManager::Save(const PanelManager &mgr, ImGuiHelper::Serializer& s) {
+    if (!s.isValid()) return false;
+
+    const ImVec2& displaySize = ImGui::GetIO().DisplaySize;
+    IM_ASSERT(displaySize.x>=0 && displaySize.y>=0);
+
+    int sz = mgr.panes.size();s.save(&sz,"numPanes");
+    for (int ip=0,ipsz=mgr.panes.size();ip<ipsz;ip++)    {
+        const ImGui::PanelManager::Pane& pane = mgr.panes[ip];
+        int pos = (int)pane.pos;s.save(ImGui::FT_ENUM,&pos,"pos");
+        s.save(&pane.bar.selectedButtonIndex,"selectedButtonIndex");
+        IM_ASSERT(pane.bar.buttons.size()==pane.windows.size());
+        sz = pane.bar.buttons.size();s.save(&sz,"numPaneButtons");
+        for (int ib=0,ibsz=pane.bar.buttons.size();ib<ibsz;ib++)    {
+            const ImGui::Toolbar::Button& button = pane.bar.buttons[ib];
+            const ImGui::PanelManager::Pane::AssociatedWindow& window = pane.windows[ib];
+            int isPresent = window.isValid() ? 1:0;s.save(&isPresent,"isWindowPresent");
+            if (isPresent)  {
+                float tmp = window.size<0?window.size:(window.size/(pos<ImGui::PanelManager::TOP?displaySize.x:displaySize.y));
+                s.save(&tmp,"sizeFactor");
+                tmp = window.sizeHoverMode<0?window.sizeHoverMode:(window.sizeHoverMode/(pos<ImGui::PanelManager::TOP?displaySize.x:displaySize.y));
+                s.save(&tmp,"hoverModeSizeFactor");
+                int wf = (int) window.extraWindowFlags;s.save(ImGui::FT_ENUM,&wf,"extraWindowFlags");
+            }
+            int down = (button.isDown && button.isToggleButton) ? 1 : 0;
+            s.save(&down,"toggleButtonIsPressed");
+        }
+    }
+    static const char* endText="End";s.saveTextLines(endText,"endPanelManager");
+    return true;
+}
+#endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+#include "../imguihelper/imguihelper.h"
+struct ImGuiPanelManagerParserStruct {
+    ImVec2 displaySize;
+    ImGui::PanelManager* mgr;
+    ImGui::PanelManager::Pane* curPane;
+    ImGui::PanelManager::Pane::AssociatedWindow* curWindow;
+    int numPanes,curPaneNum;
+    int numButtons,curButtonNum;
+};
+static bool ImGuiPanelManagerParser(ImGuiHelper::FieldType ft,int /*numArrayElements*/,void* pValue,const char* name,void* userPtr)    {
+
+    ImGuiPanelManagerParserStruct& ps = *((ImGuiPanelManagerParserStruct*) userPtr);
+    ImGui::PanelManager& mgr = *ps.mgr;
+
+    switch (ft) {
+    case ImGui::FT_FLOAT:   {
+        if (strcmp(name,"sizeFactor")==0)			{
+            if (ps.curWindow && ps.curPane) {
+                ps.curWindow->size = *((float*)pValue);
+                if(ps.curWindow->size>0) ps.curWindow->size*=(ps.curPane->pos<ImGui::PanelManager::TOP?ps.displaySize.x:ps.displaySize.y);
+                fprintf(stderr,"Set size to window: %s\n",ps.curWindow->windowName?ps.curWindow->windowName:"NULL");
+            }
+            break;
+        }
+        else if (strcmp(name,"hoverModeSizeFactor")==0)	{
+            if (ps.curWindow && ps.curPane) {
+                ps.curWindow->sizeHoverMode = *((float*)pValue);
+                if (ps.curWindow->sizeHoverMode>0) ps.curWindow->sizeHoverMode*=(ps.curPane->pos<ImGui::PanelManager::TOP?ps.displaySize.x:ps.displaySize.y);
+                fprintf(stderr,"Set sizeHoverMode to window: %s\n",ps.curWindow->windowName?ps.curWindow->windowName:"NULL");
+            }
+            break;
+        }
+    }
+        break;
+    case ImGui::FT_ENUM:    {
+        if (strcmp(name,"pos")==0)	{
+            ++ps.curPaneNum;ps.curPane = NULL;ps.curButtonNum=-1;ps.numButtons=0;ps.curWindow=NULL;
+            if (ps.curPaneNum<ps.numPanes && ps.curPaneNum<(int)mgr.getNumPanes() && mgr.getPaneFromIndex(ps.curPaneNum)->pos==*((int*)pValue)) ps.curPane=mgr.getPaneFromIndex(ps.curPaneNum);
+            else fprintf(stderr,"Invalid pane\n");
+            break;
+        }
+        else if (strcmp(name,"extraWindowFlags")==0)	{
+            if (ps.curWindow) {
+                ps.curWindow->extraWindowFlags=*((int*)pValue);
+                fprintf(stderr,"Set extraWindowFlags to window: %s\n",ps.curWindow->windowName?ps.curWindow->windowName:"NULL");
+            }
+            else fprintf(stderr,"No window for extraWindowFlags\n");
+            break;
+        }
+    }
+        break;
+    case ImGui::FT_INT: {
+        if (strcmp(name,"numPanes")==0)	{
+            ps.numPanes=*((int*)pValue);ps.curPaneNum = -1;ps.curPane=NULL;
+            ps.numButtons = 0;ps.curButtonNum=-1;ps.curWindow=NULL;
+            fprintf(stderr,"ps.numPanes=%d\n",ps.numPanes);
+
+            break;
+        }
+        else if (strcmp(name,"selectedButtonIndex")==0)	{
+            if (ps.curPane) {
+                ps.curPane->bar.setSelectedButtonIndex(*((int*)pValue));
+                fprintf(stderr,"selectedButtonIndex=%d\n",*((int*)pValue));
+            }
+            break;
+        }
+        else if (strcmp(name,"numPaneButtons")==0)	{
+            ps.numButtons=*((int*)pValue);ps.curButtonNum=-1;ps.curWindow=NULL;
+            if (ps.curPane && (int)ps.curPane->bar.getNumButtons()!=ps.numButtons)	{
+                fprintf(stderr,"Skipping pane as ps.numButtons(=%d)!=%d\n",ps.numButtons,(int)ps.curPane->bar.getNumButtons());
+                ps.curPane = NULL;  // Skip if number does not match
+            }
+            if (ps.curPane) {
+                IM_ASSERT((int)ps.curPane->windows.size()==(int)ps.curPane->bar.getNumButtons());
+            }
+            break;
+        }
+        if (strcmp(name,"isWindowPresent")==0)		{
+            ++ps.curButtonNum;
+            if (ps.curPane && ps.curButtonNum<ps.numButtons && ps.curButtonNum<(int)ps.curPane->bar.getNumButtons())  ps.curWindow=&ps.curPane->windows[ps.curButtonNum];
+            else {ps.curPane = NULL;ps.curWindow = NULL;}
+            fprintf(stderr,"pane:%d/%d == %s button:%d/%d window == %s\n",ps.curPaneNum,ps.numPanes,ps.curPane?"OK":"NULL",ps.curButtonNum,ps.numButtons,ps.curWindow? (ps.curWindow->windowName?ps.curWindow->windowName:"OK"):"NULL");
+            //bool isWindowPresent = *((bool*)pValue) ? true : false;
+            break;
+        }
+        else if (strcmp(name,"toggleButtonIsPressed")==0)	{
+            bool down = *((int*)pValue) ? true : false;
+            if (ps.curPane && ps.curButtonNum<ps.numButtons && (int)ps.curPane->bar.getNumButtons()>ps.curButtonNum)	{
+                ImGui::Toolbar::Button& btn = *(ps.curPane->bar.getButton(ps.curButtonNum));
+                if (btn.isToggleButton) btn.isDown = down;
+            }
+            fprintf(stderr,"toggleButtonIsPressed[%d] = %s\n",ps.curButtonNum,down?"true":"false");
+
+            break;
+        }
+    }
+        break;
+    case ImGui::FT_TEXTLINE:
+        if (strcmp(name,"endPanelManager")==0) return true;
+        break;
+    default:
+        break;
+    }
+    return false;
+}
+bool ImGui::PanelManager::Load(PanelManager &mgr,ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart)  {
+    if (!d.isValid()) return false;
+    ImGuiPanelManagerParserStruct pmps;
+    pmps.mgr = &mgr;pmps.numButtons=pmps.curButtonNum=pmps.numPanes=pmps.curPaneNum=0;pmps.curPane=NULL;pmps.curWindow=NULL;
+    pmps.displaySize = ImGui::GetIO().DisplaySize;
+    IM_ASSERT(pmps.displaySize.x>=0 && pmps.displaySize.y>=0);
+
+    const char* amount = pOptionalBufferStart ? (*pOptionalBufferStart) : 0;
+    amount = d.parse(ImGuiPanelManagerParser,(void*)&pmps,amount);
+    if (pOptionalBufferStart) *pOptionalBufferStart=amount;
+
+    mgr.recalculatePositionAndSizes();
+    mgr.closeHoverWindow();
+
+    return true;
+}
+#endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#endif //NO_IMGUIHELPER_SERIALIZATION
 

@@ -460,8 +460,19 @@ public:
     const TreeViewNode* getFirstParentNodeWithoutState(int stateFlag,bool recursive=true) const;
 
     // if "recursive==true" deleting the "result nodes" in order shouldn't work, but probably it works in the reverse order (TO TEST)
-    void getAllChildNodesWithState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false,bool clearResultBeforeUsage=true) const;
-    void getAllChildNodesWithoutState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false,bool clearResultBeforeUsage=true) const;
+    void getAllChildNodesWithState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false, bool returnOnlyLeafNodes=false, bool clearResultBeforeUsage=true) const;
+    void getAllChildNodesWithoutState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false, bool returnOnlyLeafNodes=false, bool clearResultBeforeUsage=true) const;
+    void getAllChildNodes(ImVector<TreeViewNode*>& result,bool recursive = false,bool returnOnlyLeafNodes=false,bool clearResultBeforeUsage=true) const;
+
+    // Deleting the "result nodes" in order shouldn't work, but probably it works in the reverse order (TO TEST)
+    void getAllDescendants(ImVector<TreeViewNode*>& result,bool clearResultBeforeUsage=true) const {return getAllChildNodes(result,true,false,clearResultBeforeUsage);}
+    void getAllDescendantsWithState(ImVector<TreeViewNode*>& result,int stateFlag,bool clearResultBeforeUsage=true) const {return getAllChildNodesWithState(result,stateFlag,true,false,clearResultBeforeUsage);}
+    void getAllDescendantsWithoutState(ImVector<TreeViewNode*>& result,int stateFlag,bool clearResultBeforeUsage=true) const {return getAllChildNodesWithoutState(result,stateFlag,true,false,clearResultBeforeUsage);}
+
+    // Deleting the "result nodes" in order shouldn't work, but probably it works in the reverse order (TO TEST)
+    void getAllLeafNodes(ImVector<TreeViewNode*>& result,bool clearResultBeforeUsage=true) const {return getAllChildNodes(result,true,true,clearResultBeforeUsage);}
+    void getAllLeafNodesWithState(ImVector<TreeViewNode*>& result,int stateFlag,bool clearResultBeforeUsage=true) const {return getAllChildNodesWithState(result,stateFlag,true,true,clearResultBeforeUsage);}
+    void getAllLeafNodesWithoutState(ImVector<TreeViewNode*>& result,int stateFlag,bool clearResultBeforeUsage=true) const {return getAllChildNodesWithoutState(result,stateFlag,true,true,clearResultBeforeUsage);}
 
     // To remove
 /*
@@ -561,8 +572,19 @@ public:
     bool isStateMissingInAllDescendants(int stateFlag) const {return TreeViewNode::isStateMissingInAllDescendants(stateFlag);}
 
     // if "recursive==true" deleting the "result nodes" in order shouldn't work, but probably it works in the reverse order (TO TEST)
-    void getAllRootNodesWithState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false,bool clearResultBeforeUsage=true) const {TreeViewNode::getAllChildNodesWithState(result,stateFlag,recursive,clearResultBeforeUsage);}
-    void getAllRootNodesWithoutState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false,bool clearResultBeforeUsage=true) const {TreeViewNode::getAllChildNodesWithoutState(result,stateFlag,recursive,clearResultBeforeUsage);}
+    void getAllRootNodesWithState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false, bool returnOnlyLeafNodes=false,bool clearResultBeforeUsage=true) const {TreeViewNode::getAllChildNodesWithState(result,stateFlag,recursive,returnOnlyLeafNodes,clearResultBeforeUsage);}
+    void getAllRootNodesWithoutState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false, bool returnOnlyLeafNodes=false,bool clearResultBeforeUsage=true) const {TreeViewNode::getAllChildNodesWithoutState(result,stateFlag,recursive,returnOnlyLeafNodes,clearResultBeforeUsage);}
+    void getAllRootNodes(ImVector<TreeViewNode*>& result,bool recursive = false,bool returnOnlyLeafNodes=false,bool clearResultBeforeUsage=true) const {TreeViewNode::getAllChildNodes(result,recursive,returnOnlyLeafNodes,clearResultBeforeUsage);}
+
+    // deleting the "result nodes" in order shouldn't work, but probably it works in the reverse order (TO TEST)
+    void getAllNodes(ImVector<TreeViewNode*>& result,bool clearResultBeforeUsage=true) const {return getAllRootNodes(result,true,false,clearResultBeforeUsage);}
+    void getAllNodesWithState(ImVector<TreeViewNode*>& result,int stateFlag,bool clearResultBeforeUsage=true) const {return getAllRootNodesWithState(result,stateFlag,true,false,clearResultBeforeUsage);}
+    void getAllLeafNodesWithoutState(ImVector<TreeViewNode*>& result,int stateFlag,bool clearResultBeforeUsage=true) const {return getAllRootNodesWithoutState(result,stateFlag,true,true,clearResultBeforeUsage);}
+
+    // deleting the "result nodes" in order shouldn't work, but probably it works in the reverse order (TO TEST)
+    void getAllLeafNodes(ImVector<TreeViewNode*>& result,bool clearResultBeforeUsage=true) const {return getAllRootNodes(result,true,true,clearResultBeforeUsage);}
+    void getAllLeafNodesWithState(ImVector<TreeViewNode*>& result,int stateFlag,bool clearResultBeforeUsage=true) const {return getAllRootNodesWithState(result,stateFlag,true,true,clearResultBeforeUsage);}
+    void getAllNodesWithoutState(ImVector<TreeViewNode*>& result,int stateFlag,bool clearResultBeforeUsage=true) const {return getAllRootNodesWithoutState(result,stateFlag,true,false,clearResultBeforeUsage);}
 
 
     // Callbacks:

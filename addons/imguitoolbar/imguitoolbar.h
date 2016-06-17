@@ -322,8 +322,10 @@ public:
         this->displayPortion = _displayPortion;
         updatePositionAndSize();
     }
+    const ImVec4& getDisplayPortion() const {return this->displayPortion;}
 
     inline void disableTooltips(bool flag) {tooltipsDisabled=flag;}
+
 
     protected:
     char name[1024];

@@ -22,6 +22,11 @@ void TextColoredV(int fntIndex,const ImVec4& col, const char* fmt, va_list args)
 void TextColored(int fntIndex,const ImVec4& col, const char* fmt, ...) IM_PRINTFARGS(3);
 void TextV(int fntIndex,const char* fmt, va_list args);
 void Text(int fntIndex,const char* fmt, ...) IM_PRINTFARGS(2);
+
+// Handy if we want to use ImGui::Image(...) or ImGui::ImageButton(...) with a glyph
+bool GetTexCoordsFromGlyph(unsigned short glyph,ImVec2& uv0,ImVec2& uv1);
+// Returns the height of the main menu based on the current font and style
+float CalcMainMenuHeight();
 #endif //NO_IMGUIHELPER_FONT_METHODS
 
 #ifndef NO_IMGUIHELPER_DRAW_METHODS

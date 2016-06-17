@@ -99,6 +99,30 @@ void Text(int fntIndex, const char *fmt,...)    {
     va_end(args);
 }
 
+bool GetTexCoordsFromGlyph(unsigned short glyph, ImVec2 &uv0, ImVec2 &uv1) {
+    if (!GImGui->Font) return false;
+    const ImFont::Glyph* g = GImGui->Font->FindGlyph(glyph);
+    if (g)  {
+        uv0.x = g->U0; uv0.y = g->V0;
+        uv1.x = g->U1; uv1.y = g->V1;
+        return true;
+    }
+    return false;
+}
+float CalcMainMenuHeight()  {
+    if (GImGui->FontBaseSize>0) return GImGui->FontBaseSize + GImGui->Style.FramePadding.y * 2.0f;
+    else {
+        ImGuiIO& io = ImGui::GetIO();
+        ImGuiStyle& style = ImGui::GetStyle();
+        ImFont* font = ImGui::GetFont();
+        if (!font) {
+            if (io.Fonts->Fonts.size()>0) font = io.Fonts->Fonts[0];
+            else return (14)+style.FramePadding.y * 2.0f;
+        }
+        return (io.FontGlobalScale * font->Scale * font->FontSize) + style.FramePadding.y * 2.0f;
+    }
+}
+
 #endif //NO_IMGUIHELPER_FONT_METHODS
 
 #ifndef NO_IMGUIHELPER_DRAW_METHODS

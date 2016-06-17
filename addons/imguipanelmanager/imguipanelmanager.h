@@ -5,6 +5,24 @@
 
 namespace ImGui {
 
+// TODO: Load/Save layout:
+/* Just serializing these should be enough:
+ * numPanes
+ forech pane {
+ * pane.pos
+ * pane.bar.selectedButtonIndex
+ * pane.bar.numButtons [must equal pane.windows.size()==pane.bar.buttons.size()]
+ foreach button {
+ * pane.windows[i].isPresent    [pane.windows[i]!=NULL]
+ * pane.windows[i]->sizeFactor [size/displayWidthOrHeight]
+ * pane.windows[i]->sizeHoverMode [size/displayWidthOrHeight]
+ * pane.windows[i]->extraWindowFlags
+
+ * pane.bar.buttons[i].isDown [allow true only if it's a toggle button]
+ }
+ }
+*/
+
 struct PanelManager {
     enum Position {
         LEFT=   0,
@@ -157,7 +175,7 @@ struct PanelManager {
     bool getDockedWindowsBorder() const {return (dockedWindowsExtraFlags&ImGuiWindowFlags_ShowBorders);}
     void setDockedWindowsNoTitleBar(bool flag) {if (flag) dockedWindowsExtraFlags|=ImGuiWindowFlags_NoTitleBar;else {dockedWindowsExtraFlags&=~ImGuiWindowFlags_NoTitleBar;}}
     bool getDockedWindowsNoTitleBar() const {return (dockedWindowsExtraFlags&ImGuiWindowFlags_NoTitleBar);}
-
+    int getDockedWindowsExtraFlags() const {return dockedWindowsExtraFlags;}    // Basically it handles ImGuiWindowFlags_ShowBorders and ImGuiWindowFlags_NoTitleBar together
 
     size_t getNumPanes() const;
     bool isEmpty() const {return getNumPanes()==0;}
@@ -171,13 +189,19 @@ struct PanelManager {
     Pane* getPaneRight() {return paneRight;}
     Pane* getPaneTop() {return paneTop;}
     Pane* getPaneBottom() {return paneBottom;}
-
+    const Pane* getPaneFromIndex(int index) const {return (index>=0 && index<panes.size()) ? &panes[index] : NULL;}
+    Pane* getPaneFromIndex(int index)  {return (index>=0 && index<panes.size()) ? &panes[index] : NULL;}
 
     void setToolbarsScaling(float scalingX,float scalingY);
     void overrideAllExistingPanesDisplayProperties(const ImVec2& _opacityOffAndOn=ImVec2(-1.f,-1.f),const ImVec4& _bg_col=ImVec4(1,1,1,1));
 
 
     void updateSizes() const;
+    void closeHoverWindow();
+    void recalculatePositionAndSizes() {
+        innerBarQuadSize.x=innerBarQuadSize.y=0;
+        updateSizes();
+    }
 
     // These are what users usually need for filling the central space with a window
     // Better check the values before using them
@@ -192,8 +216,30 @@ struct PanelManager {
     // values < 0 are relative to to ImGui::GetIO()::DisplaySize
     void setDisplayPortion(const ImVec4& _displayPortion);
 
+
+#   if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+//  Warning: load and save mathods here just load and save the selected buttons and the associated window sizes: nothing else.
+//  Thus these methods cannot construct a PanelManager for you!
+//  Hp) ImGui::GetIO().displaySize must be valid on both load and save
+#   ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+    static bool Save(const PanelManager& mgr,ImGuiHelper::Serializer& s);
+    static inline bool Save(const PanelManager &mgr, const char *filename)    {
+        ImGuiHelper::Serializer s(filename);
+        return Save(mgr,s);
+    }
+#   endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#   ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+    static bool Load(PanelManager& mgr, ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart=NULL);
+    static inline bool Load(PanelManager& mgr,const char* filename) {
+        ImGuiHelper::Deserializer d(filename);
+        return Load(mgr,d);
+    }
+#   endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#   endif //NO_IMGUIHELPER_SERIALIZATION
+
     protected:
     void calculateInnerBarQuadPlacement() const;
+
 
 };
 
