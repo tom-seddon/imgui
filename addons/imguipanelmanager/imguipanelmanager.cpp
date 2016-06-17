@@ -128,11 +128,11 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     if (flags & ImGuiWindowFlags_Popup)
     {
         ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.CurrentPopupStack.Size];
-        window_was_visible &= (window->PopupID == popup_ref.PopupID);
+        window_was_visible &= (window->PopupId == popup_ref.PopupId);
         window_was_visible &= (window == popup_ref.Window);
         popup_ref.Window = window;
         g.CurrentPopupStack.push_back(popup_ref);
-        window->PopupID = popup_ref.PopupID;
+        window->PopupId = popup_ref.PopupId;
     }
 
     // Process SetNextWindow***() calls
@@ -396,8 +396,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         }
 
         // User moving window (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
-        KeepAliveID(window->MoveID);
-        if (g.ActiveId == window->MoveID)
+        KeepAliveID(window->MoveId);
+        if (g.ActiveId == window->MoveId)
         {
             if (g.IO.MouseDown[0])
             {
