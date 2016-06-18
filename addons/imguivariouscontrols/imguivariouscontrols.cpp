@@ -1566,6 +1566,7 @@ struct MyTreeViewHelperStruct {
             s.save(&tv.allowMultipleSelection,"allowMultipleSelection");
             tmp = (int) tv.checkboxMode;s.save(&tmp,"checkboxMode");
             s.save(&tv.allowAutoCheckboxBehaviour,"allowAutoCheckboxBehaviour");
+            s.save(&tv.collapseToLeafNodesAtNodeDepth,"collapseToLeafNodesAtNodeDepth");
             s.save(&tv.inheritDisabledLook,"inheritDisabledLook");
         }
         const int numChildNodes = n->childNodes ? n->childNodes->size() : -1;
@@ -1607,6 +1608,7 @@ struct MyTreeViewHelperStruct {
         else if (strcmp(name,"allowMultipleSelection")==0)      tv.allowMultipleSelection = *((bool*)pValue);
         else if (strcmp(name,"checkboxMode")==0)                tv.checkboxMode = *((int*)pValue);
         else if (strcmp(name,"allowAutoCheckboxBehaviour")==0)  tv.allowAutoCheckboxBehaviour = *((bool*)pValue);
+        else if (strcmp(name,"collapseToLeafNodesAtNodeDepth")==0) tv.collapseToLeafNodesAtNodeDepth = *((int*)pValue);
         else if (strcmp(name,"inheritDisabledLook")==0)         {tv.inheritDisabledLook = *((bool*)pValue);return true;}
         return false;
     }
