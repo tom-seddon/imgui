@@ -296,13 +296,6 @@ static bool LoadPanelManagerIfSupported() {
 #   endif //NO_IMGUIEMSCRIPTEN
     loadingOk=ImGui::PanelManager::Load(mgr,pSaveName);
 #   endif //!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !...
-#   ifndef NO_IMGUITABWINDOW
-    if (loadingOk)  {
-        // Sets the window border to all the TabWindows to match mgr settings
-        // (other flags are better set when assigning the single TabLabels)
-        ImGui::TabWindow::ExtraWindowFlags = mgr.getDockedWindowsBorder() ? ImGuiWindowFlags_ShowBorders : 0; // It's or-ed to all Tabs "BeginChild(...)" flags (with a special exception to make ImGuiWindowFlags_ShowBorders work as expected)
-    }
-#   endif //NO_IMGUITABWINDOW
     return loadingOk;
 }
 static bool SavePanelManagerIfSupported() {
@@ -699,14 +692,7 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
         else if (strcmp(wd.name,"Preferences")==0)    {
             ImGui::DragFloat("Window Alpha",&mgr.getDockedWindowsAlpha(),0.01f,0.f,1.f);
             bool border = mgr.getDockedWindowsBorder();
-            if (ImGui::Checkbox("Window Borders",&border)) {
-                mgr.setDockedWindowsBorder(border); // Sets the window border to all the docked windows
-#               ifndef NO_IMGUITABWINDOW
-                // Sets the window border to all the TabWindows (other flags are better set when assigning the single TabLabels)
-                ImGui::TabWindow::ExtraWindowFlags = border ? ImGuiWindowFlags_ShowBorders : 0; // It's or-ed to all Tabs "BeginChild(...)" flags (with a special exception to make ImGuiWindowFlags_ShowBorders work as expected)
-                // Please note that we have appended this line to LoadPanelManagerIfSupported() too.
-#               endif //NO_IMGUITABWINDOW
-            }
+            if (ImGui::Checkbox("Window Borders",&border)) mgr.setDockedWindowsBorder(border); // Sets the window border to all the docked windows
             ImGui::SameLine();
             bool noTitleBar = mgr.getDockedWindowsNoTitleBar();
             if (ImGui::Checkbox("No Window TitleBars",&noTitleBar)) mgr.setDockedWindowsNoTitleBar(noTitleBar);
@@ -726,7 +712,7 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
 #           endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #           ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
 	    ImGui::SameLine();if (ImGui::Button("Load Panel Manager Layout")) {
-		if (LoadPanelManagerIfSupported())   SetPanelManagerBoundsToIncludeMainMenuIfPresent();	// We must adjust gpShowMainMenuBar state here (we have used a manual toggle button for it)
+            if (LoadPanelManagerIfSupported())   SetPanelManagerBoundsToIncludeMainMenuIfPresent();	// That's because we must adjust gpShowMainMenuBar state here (we have used a manual toggle button for it)
 	    }
 	    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load %s",pmTooltip);
 #           endif //NO_IMGUIHELPER_SERIALIZATION_LOAD

@@ -2021,6 +2021,8 @@ TreeView::TreeView(Mode _selectionMode, bool _allowMultipleSelection, Mode _chec
     inheritDisabledLook = _inheritDisabledLook;
     userPtr = NULL;
 
+    collapseToLeafNodesAtNodeDepth = -1;
+
     stateColors[0] = ImVec4(1.f,0.f,0.f,1.f);stateColors[1] = stateColors[0];stateColors[1].w*=0.4f;
     stateColors[2] = ImVec4(0.f,1.f,0.f,1.f);stateColors[3] = stateColors[2];stateColors[3].w*=0.4f;
     stateColors[4] = ImVec4(0.f,0.f,1.f,1.f);stateColors[5] = stateColors[4];stateColors[5].w*=0.4f;
@@ -2039,170 +2041,176 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
     TreeView& tv = tvhs.parentTreeView;
 
     bool mustShowMenu = false;
-    bool mustTreePop = false;
-    bool mustTriggerSelection = false;
-    bool arrowHovered = false;
-    bool itemHovered = false;
     bool isLeafNode = !childNodes;
 
-    const unsigned int mode = getMode();
-    const bool allowCheckBox = (state&STATE_FORCE_CHECKBOX) || MatchMode(tv.checkboxMode,mode);
-    const bool allowSelection = MatchMode(tv.selectionMode,mode);
+    bool mustSkipToLeafNodes = !isLeafNode && tv.collapseToLeafNodesAtNodeDepth>=0 && numIndents-1>=tv.collapseToLeafNodesAtNodeDepth;
 
-    bool stateopen = (state&STATE_OPEN);
-    bool stateselected = (state&STATE_SELECTED);
-    bool mustdrawdisabled = (state&STATE_DISABLED) || tvhs.mustDrawAllNodesAsDisabled;
+    if (!mustSkipToLeafNodes)   {
+        bool mustTreePop = false;
+        bool mustTriggerSelection = false;
+        bool arrowHovered = false;
+        bool itemHovered = false;
 
-    int customColorState = (state&STATE_COLOR1) ? 1 : (state&STATE_COLOR2) ? 2 : (state&STATE_COLOR3) ? 3 : 0;
+        const unsigned int mode = getMode();
+        const bool allowCheckBox = (state&STATE_FORCE_CHECKBOX) || MatchMode(tv.checkboxMode,mode);
+        const bool allowSelection = MatchMode(tv.selectionMode,mode);
 
-    ImGui::PushID(this);
-    if (allowCheckBox && !tvhs.hasCbGlyphs) ImGui::AlignFirstTextHeightToWidgets();
+        bool stateopen = (state&STATE_OPEN);
+        bool stateselected = (state&STATE_SELECTED);
+        bool mustdrawdisabled = (state&STATE_DISABLED) || tvhs.mustDrawAllNodesAsDisabled;
 
-    tvhs.window->DC.CursorPos.x+= tvhs.arrowOffset*(numIndents-(isLeafNode ? 0 : 1))+(tvhs.hasArrowGlyphs?(GImGui->Style.FramePadding.x*2):0.f);
-    if (!isLeafNode) {
-        if (!tvhs.hasArrowGlyphs)  {
-            ImGui::SetNextTreeNodeOpen(stateopen,ImGuiSetCond_Always);
-            mustTreePop = ImGui::TreeNode("","%s","");
-        }
-        else {
-            ImGui::Text("%s",stateopen?&TreeView::FontArrowGlyphs[1][0]:&TreeView::FontArrowGlyphs[0][0]);
-            arrowHovered=ImGui::IsItemHovered();
-        }
-        arrowHovered=ImGui::IsItemHovered();itemHovered|=arrowHovered;
-        ImGui::SameLine();
-    }
+        int customColorState = (state&STATE_COLOR1) ? 1 : (state&STATE_COLOR2) ? 2 : (state&STATE_COLOR3) ? 3 : 0;
 
-    if (allowCheckBox)  {
-        bool statechecked = (state&STATE_CHECKED);
+        ImGui::PushID(this);
+        if (allowCheckBox && !tvhs.hasCbGlyphs) ImGui::AlignFirstTextHeightToWidgets();
 
-        bool checkedChanged = false;
-        if (!tvhs.hasCbGlyphs) checkedChanged = ImGui::Checkbox("###chb",&statechecked);
-        else {
-            ImGui::Text("%s",statechecked?&TreeView::FontCheckBoxGlyphs[1][0]:&TreeView::FontCheckBoxGlyphs[0][0]);
-            checkedChanged = ImGui::GetIO().MouseClicked[0] && ImGui::IsItemHovered();
-            if (checkedChanged) statechecked=!statechecked;
+        tvhs.window->DC.CursorPos.x+= tvhs.arrowOffset*(numIndents-(isLeafNode ? 0 : 1))+(tvhs.hasArrowGlyphs?(GImGui->Style.FramePadding.x*2):0.f);
+        if (!isLeafNode) {
+            if (!tvhs.hasArrowGlyphs)  {
+                ImGui::SetNextTreeNodeOpen(stateopen,ImGuiSetCond_Always);
+                mustTreePop = ImGui::TreeNode("","%s","");
+            }
+            else {
+                ImGui::Text("%s",stateopen?&TreeView::FontArrowGlyphs[1][0]:&TreeView::FontArrowGlyphs[0][0]);
+                arrowHovered=ImGui::IsItemHovered();
+            }
+            arrowHovered=ImGui::IsItemHovered();itemHovered|=arrowHovered;
+            ImGui::SameLine();
         }
 
-        if (checkedChanged)   {
-            toggleState(STATE_CHECKED);
-            tvhs.fillEvent(this,STATE_CHECKED,!(state&STATE_CHECKED));
-            if (tv.allowAutoCheckboxBehaviour)  {
-                if (childNodes && childNodes->size()>0)    {
-                    if (statechecked) addStateToAllDescendants(STATE_CHECKED);
-                    else if (isStatePresentInAllDescendants(STATE_CHECKED)) removeStateFromAllDescendants(STATE_CHECKED);
-                }
-                TreeViewNode* p = parentNode;
-                while (p && p->parentNode!=NULL) {
-                    if (!statechecked) p->removeState(STATE_CHECKED);
-                    else if (!(p->state&STATE_CHECKED)) {
-                        if (p->isStatePresentInAllDescendants(STATE_CHECKED)) p->addState(STATE_CHECKED);
+        if (allowCheckBox)  {
+            bool statechecked = (state&STATE_CHECKED);
+
+            bool checkedChanged = false;
+            if (!tvhs.hasCbGlyphs) checkedChanged = ImGui::Checkbox("###chb",&statechecked);
+            else {
+                ImGui::Text("%s",statechecked?&TreeView::FontCheckBoxGlyphs[1][0]:&TreeView::FontCheckBoxGlyphs[0][0]);
+                checkedChanged = ImGui::GetIO().MouseClicked[0] && ImGui::IsItemHovered();
+                if (checkedChanged) statechecked=!statechecked;
+            }
+
+            if (checkedChanged)   {
+                toggleState(STATE_CHECKED);
+                tvhs.fillEvent(this,STATE_CHECKED,!(state&STATE_CHECKED));
+                if (tv.allowAutoCheckboxBehaviour)  {
+                    if (childNodes && childNodes->size()>0)    {
+                        if (statechecked) addStateToAllDescendants(STATE_CHECKED);
+                        else if (isStatePresentInAllDescendants(STATE_CHECKED)) removeStateFromAllDescendants(STATE_CHECKED);
                     }
-                    p = p->parentNode;
+                    TreeViewNode* p = parentNode;
+                    while (p && p->parentNode!=NULL) {
+                        if (!statechecked) p->removeState(STATE_CHECKED);
+                        else if (!(p->state&STATE_CHECKED)) {
+                            if (p->isStatePresentInAllDescendants(STATE_CHECKED)) p->addState(STATE_CHECKED);
+                        }
+                        p = p->parentNode;
+                    }
+                }
+                //if (allowSelection) mustTriggerSelection = true;  // Nope, why? ... and actually I fire a single state event at a time, so I can't do it.
+            }
+            ImGui::SameLine();
+        }
+
+        if (tv.treeViewNodeDrawIconCb) itemHovered|=tv.treeViewNodeDrawIconCb(this,tv,tv.treeViewNodeDrawIconCbUserPtr);
+
+        if (this!=MyTreeViewHelperStruct::NameEditing.editingNode)  {
+            if (mustdrawdisabled) {
+                if (!customColorState) ImGui::PushStyleColor(ImGuiCol_Text, GImGui->Style.Colors[ImGuiCol_TextDisabled]);
+                else ImGui::PushStyleColor(ImGuiCol_Text, tv.stateColors[(customColorState-1)*2+1]);
+            }
+            if ((state&STATE_DEFAULT) || (allowSelection && stateselected)) {
+                const ImVec4 textColor = (!customColorState || mustdrawdisabled) ? GImGui->Style.Colors[ImGuiCol_Text] : tv.stateColors[(customColorState-1)*2];
+                ImVec2 shadowOffset(0,allowCheckBox ? (GImGui->Style.FramePadding.y*2) : 0);
+                float textSizeY = 0.f;
+                if (allowSelection && stateselected)	{
+                    const ImVec2 textSize = ImGui::CalcTextSize(data.displayName);textSizeY=textSize.y;
+                    const ImU32 fillColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.1f));
+                    tvhs.window->DrawList->AddRectFilled(tvhs.window->DC.CursorPos+shadowOffset,tvhs.window->DC.CursorPos+textSize,fillColor);
+                    const ImU32 borderColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.15f));
+                    tvhs.window->DrawList->AddRect(tvhs.window->DC.CursorPos+shadowOffset,tvhs.window->DC.CursorPos+textSize,borderColor,0.0f,0x0F,textSize.y*0.1f);
+                }
+                if (state&STATE_DEFAULT)    {
+                    shadowOffset.y*=0.5f;
+                    shadowOffset.x = (textSizeY!=0.f ? textSizeY : ImGui::GetTextLineHeight())*0.05f;
+                    if (shadowOffset.x<1) shadowOffset.x=1.f;
+                    shadowOffset.y+=shadowOffset.x;
+                    const ImU32 shadowColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.6f));
+                    tvhs.window->DrawList->AddText(tvhs.window->DC.CursorPos+shadowOffset,shadowColor,data.displayName);
                 }
             }
-            //if (allowSelection) mustTriggerSelection = true;  // Nope, why? ... and actually I fire a single state event at a time, so I can't do it.
-        }
-        ImGui::SameLine();
-    }
 
-    if (tv.treeViewNodeDrawIconCb) itemHovered|=tv.treeViewNodeDrawIconCb(this,tv,tv.treeViewNodeDrawIconCbUserPtr);
+            if (!customColorState || mustdrawdisabled) ImGui::Text("%s",data.displayName);
+            else ImGui::TextColored(tv.stateColors[(customColorState-1)*2],"%s",data.displayName);
 
-    if (this!=MyTreeViewHelperStruct::NameEditing.editingNode)  {
-        if (mustdrawdisabled) {
-            if (!customColorState) ImGui::PushStyleColor(ImGuiCol_Text, GImGui->Style.Colors[ImGuiCol_TextDisabled]);
-            else ImGui::PushStyleColor(ImGuiCol_Text, tv.stateColors[(customColorState-1)*2+1]);
-        }
-        if ((state&STATE_DEFAULT) || (allowSelection && stateselected)) {
-            const ImVec4 textColor = (!customColorState || mustdrawdisabled) ? GImGui->Style.Colors[ImGuiCol_Text] : tv.stateColors[(customColorState-1)*2];
-            ImVec2 shadowOffset(0,allowCheckBox ? (GImGui->Style.FramePadding.y*2) : 0);
-            float textSizeY = 0.f;
-            if (allowSelection && stateselected)	{
-                const ImVec2 textSize = ImGui::CalcTextSize(data.displayName);textSizeY=textSize.y;
-                const ImU32 fillColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.1f));
-                tvhs.window->DrawList->AddRectFilled(tvhs.window->DC.CursorPos+shadowOffset,tvhs.window->DC.CursorPos+textSize,fillColor);
-                const ImU32 borderColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.15f));
-                tvhs.window->DrawList->AddRect(tvhs.window->DC.CursorPos+shadowOffset,tvhs.window->DC.CursorPos+textSize,borderColor,0.0f,0x0F,textSize.y*0.1f);
+            if (mustdrawdisabled) ImGui::PopStyleColor();
+            if (ImGui::IsItemHovered()) {
+                itemHovered=true;
+                if (data.tooltip && strlen(data.tooltip)>0) ImGui::SetTooltip("%s",data.tooltip);
             }
-            if (state&STATE_DEFAULT)    {
-                shadowOffset.y*=0.5f;
-                shadowOffset.x = (textSizeY!=0.f ? textSizeY : ImGui::GetTextLineHeight())*0.05f;
-                if (shadowOffset.x<1) shadowOffset.x=1.f;
-                shadowOffset.y+=shadowOffset.x;
-                const ImU32 shadowColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.6f));
-                tvhs.window->DrawList->AddText(tvhs.window->DC.CursorPos+shadowOffset,shadowColor,data.displayName);
-            }
-        }
-
-        if (!customColorState || mustdrawdisabled) ImGui::Text("%s",data.displayName);
-        else ImGui::TextColored(tv.stateColors[(customColorState-1)*2],"%s",data.displayName);
-
-        if (mustdrawdisabled) ImGui::PopStyleColor();
-        if (ImGui::IsItemHovered()) {
-            itemHovered=true;
-            if (data.tooltip && strlen(data.tooltip)>0) ImGui::SetTooltip("%s",data.tooltip);
-        }
-    }
-    else {
-        char* ti = &MyTreeViewHelperStruct::NameEditing.textInput[0];
-        bool& mustFocus = MyTreeViewHelperStruct::NameEditing.mustFocusInputText;
-        if (mustFocus) {ImGui::SetKeyboardFocusHere();}
-        if (ImGui::InputText("###EditingName",ti,255,ImGuiInputTextFlags_EnterReturnsTrue)) {
-            if (strlen(ti)>0) {
-                setDisplayName(ti);
-                tvhs.event.node = this;
-                tvhs.event.type = EVENT_RENAMED;
-            }
-            MyTreeViewHelperStruct::NameEditing.reset();
         }
         else {
-            if (!mustFocus && !ImGui::IsItemActive()) MyTreeViewHelperStruct::NameEditing.reset();
-            mustFocus = false;
+            char* ti = &MyTreeViewHelperStruct::NameEditing.textInput[0];
+            bool& mustFocus = MyTreeViewHelperStruct::NameEditing.mustFocusInputText;
+            if (mustFocus) {ImGui::SetKeyboardFocusHere();}
+            if (ImGui::InputText("###EditingName",ti,255,ImGuiInputTextFlags_EnterReturnsTrue)) {
+                if (strlen(ti)>0) {
+                    setDisplayName(ti);
+                    tvhs.event.node = this;
+                    tvhs.event.type = EVENT_RENAMED;
+                }
+                MyTreeViewHelperStruct::NameEditing.reset();
+            }
+            else {
+                if (!mustFocus && !ImGui::IsItemActive()) MyTreeViewHelperStruct::NameEditing.reset();
+                mustFocus = false;
+            }
         }
-    }
-    if (tv.treeViewNodeAfterDrawCb) tv.treeViewNodeAfterDrawCb(this,tv,tvhs.windowWidth,tv.treeViewNodeAfterDrawCbUserPtr);
+        if (tv.treeViewNodeAfterDrawCb) tv.treeViewNodeAfterDrawCb(this,tv,tvhs.windowWidth,tv.treeViewNodeAfterDrawCbUserPtr);
 
-    if (mustTreePop) ImGui::TreePop();
-    ImGui::PopID();
+        if (mustTreePop) ImGui::TreePop();
+        ImGui::PopID();
 
-    if (arrowHovered)   {
-        if (ImGui::GetIO().MouseClicked[0] && childNodes) {
-            toggleState(STATE_OPEN);
-            tvhs.fillEvent(this,STATE_OPEN,!(state&STATE_OPEN));
-        }
-    }
-    else if (itemHovered) {
-        if (ImGui::GetIO().MouseDoubleClicked[0])		{
-            if (allowSelection) mustTriggerSelection = true;
-            tvhs.event.node = this;
-            tvhs.event.type = EVENT_DOUBLE_CLICKED;
-        }
-        else if (ImGui::GetIO().MouseClicked[0])		{
-            if (allowSelection) mustTriggerSelection = true;
-            else if (childNodes) {
+        if (arrowHovered)   {
+            if (ImGui::GetIO().MouseClicked[0] && childNodes) {
                 toggleState(STATE_OPEN);
                 tvhs.fillEvent(this,STATE_OPEN,!(state&STATE_OPEN));
             }
         }
-        else if (ImGui::GetIO().MouseClicked[1])	{
-            mustShowMenu = true;
-            if (allowSelection) mustTriggerSelection = true;
+        else if (itemHovered) {
+            if (ImGui::GetIO().MouseDoubleClicked[0])		{
+                if (allowSelection) mustTriggerSelection = true;
+                tvhs.event.node = this;
+                tvhs.event.type = EVENT_DOUBLE_CLICKED;
+            }
+            else if (ImGui::GetIO().MouseClicked[0])		{
+                if (allowSelection) mustTriggerSelection = true;
+                else if (childNodes) {
+                    toggleState(STATE_OPEN);
+                    tvhs.fillEvent(this,STATE_OPEN,!(state&STATE_OPEN));
+                }
+            }
+            else if (ImGui::GetIO().MouseClicked[1])	{
+                mustShowMenu = true;
+                if (allowSelection) mustTriggerSelection = true;
+            }
         }
+
+        if (mustTriggerSelection) {
+            if (!(ImGui::GetIO().KeyCtrl && tv.allowMultipleSelection)) tv.removeStateFromAllDescendants(STATE_SELECTED);
+            toggleState(STATE_SELECTED);
+            tvhs.fillEvent(this,STATE_SELECTED,!(state&STATE_SELECTED));
+        }
+
     }
 
-    if (mustTriggerSelection) {
-        if (!(ImGui::GetIO().KeyCtrl && tv.allowMultipleSelection)) tv.removeStateFromAllDescendants(STATE_SELECTED);
-        toggleState(STATE_SELECTED);
-        tvhs.fillEvent(this,STATE_SELECTED,!(state&STATE_SELECTED));
-    }
-
-    if (isStatePresent(STATE_OPEN))  {
+    if (isStatePresent(STATE_OPEN) || mustSkipToLeafNodes)  {
         //---------------------------------------------------
         for (int i=0,isz=childNodes->size();i<isz;i++)   {
             TreeViewNode* n = (*childNodes)[i];
             if (n) {
                 const bool oldMustDrawAllNodesAsDisabled = tvhs.mustDrawAllNodesAsDisabled;
                 if (tv.inheritDisabledLook && (state&STATE_DISABLED)) tvhs.mustDrawAllNodesAsDisabled = true;
-                n->render(&tvhs,numIndents+1);
+                n->render(&tvhs,numIndents+(mustSkipToLeafNodes?0:1));
                 tvhs.mustDrawAllNodesAsDisabled = oldMustDrawAllNodesAsDisabled;
             }
         }

@@ -586,6 +586,9 @@ public:
     void getAllLeafNodesWithState(ImVector<TreeViewNode*>& result,int stateFlag,bool clearResultBeforeUsage=true) const {return getAllRootNodesWithState(result,stateFlag,true,true,clearResultBeforeUsage);}
     void getAllNodesWithoutState(ImVector<TreeViewNode*>& result,int stateFlag,bool clearResultBeforeUsage=true) const {return getAllRootNodesWithoutState(result,stateFlag,true,false,clearResultBeforeUsage);}
 
+    // -1 = disabled. When >= 0 if node->getDepth()==collapseToLeafNodesAtNodeDepth the hierarchy is flattened to leaf nodes
+    void setCollapseNodesToLeafNodesAtDepth(int nodeDepth) const {collapseToLeafNodesAtNodeDepth=nodeDepth;}
+    int getCollapseNodesToLeafNodesAtDepth() const {return collapseToLeafNodesAtNodeDepth;}
 
     // Callbacks:
     typedef void (*TreeViewNodeCallback)(TreeViewNode* node,TreeView& parent,void* userPtr);
@@ -664,6 +667,8 @@ protected:
 
     static char FontCheckBoxGlyphs[2][5];
     static char FontArrowGlyphs[2][5];
+
+    mutable int collapseToLeafNodesAtNodeDepth; // -1 = disabled. When >= 0 if node->getDepth()>=collapseToLeafNodesAtNodeDepth the hierarchy is flattened to leaf nodes
 
 
 protected:

@@ -1290,6 +1290,8 @@ struct MyTabWindowHelperStruct {
     float textHeightWithSpacing;
     bool isWindowHovered;
 
+    ImGuiWindowFlags flags;
+
     MyTabWindowHelperStruct(TabWindow* _tabWindow) {
         isMouseDragging = ImGui::IsMouseDragging(0,2.f);
         isRMBclicked = ImGui::IsMouseClicked(1);
@@ -1311,6 +1313,8 @@ struct MyTabWindowHelperStruct {
         textHeightWithSpacing = ImGui::GetTextLineHeightWithSpacing();
 
         isWindowHovered = ImGui::IsRootWindowOrAnyChildFocused();
+
+	flags = TabWindow::ExtraWindowFlags | ((ImGui::GetCurrentWindow()->Flags&ImGuiWindowFlags_ShowBorders) ? ImGuiWindowFlags_ShowBorders : 0);
     }
     ~MyTabWindowHelperStruct() {
 	restoreStyleVars();
@@ -1624,7 +1628,7 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
 
 	//----------------------------------------------------------------
         mhs.restoreStyleVars();     // needs matching
-        const ImGuiWindowFlags childFlags = TabWindow::ExtraWindowFlags | (selectedTab ? selectedTab->wndFlags : 0);
+	const ImGuiWindowFlags childFlags = mhs.flags | (selectedTab ? selectedTab->wndFlags : 0);
         ImGui::BeginChild("user",ImVec2(0,0),false,(childFlags&(~ImGuiWindowFlags_ShowBorders)));
         if (childFlags&ImGuiWindowFlags_ShowBorders) {
             // This kind of handling the ImGuiWindowFlags_ShowBorders flag on its own is necessary to achieve what we want
