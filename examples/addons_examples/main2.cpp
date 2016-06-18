@@ -296,6 +296,13 @@ static bool LoadPanelManagerIfSupported() {
 #   endif //NO_IMGUIEMSCRIPTEN
     loadingOk=ImGui::PanelManager::Load(mgr,pSaveName);
 #   endif //!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !...
+#   ifndef NO_IMGUITABWINDOW
+    if (loadingOk)  {
+        // Sets the window border to all the TabWindows to match mgr settings
+        // (other flags are better set when assigning the single TabLabels)
+        ImGui::TabWindow::ExtraWindowFlags = mgr.getDockedWindowsBorder() ? ImGuiWindowFlags_ShowBorders : 0; // It's or-ed to all Tabs "BeginChild(...)" flags (with a special exception to make ImGuiWindowFlags_ShowBorders work as expected)
+    }
+#   endif //NO_IMGUITABWINDOW
     return loadingOk;
 }
 static bool SavePanelManagerIfSupported() {
@@ -504,7 +511,7 @@ if (mgr.isEmpty()) {
     mgr.overrideAllExistingPanesDisplayProperties(ImVec2(0.25f,0.9f),ImVec4(0.85,0.85,0.85,1));
 
     // These line is only necessary to accomodate space for the global menu bar we're using:
-    SetPanelManagerBoundsToIncludeMainMenuIfPresent();
+    SetPanelManagerBoundsToIncludeMainMenuIfPresent();  
 
 }
 
@@ -692,8 +699,14 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
         else if (strcmp(wd.name,"Preferences")==0)    {
             ImGui::DragFloat("Window Alpha",&mgr.getDockedWindowsAlpha(),0.01f,0.f,1.f);
             bool border = mgr.getDockedWindowsBorder();
-            if (ImGui::Checkbox("Window Borders",&border)) mgr.setDockedWindowsBorder(border);
-	    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","This affects the docked windows\n(and in this demo the central window).\nHowever AFAIR when ImGui::TabWindow is used\neach Tab can have custom flags\nthat are not affected by this property.");
+            if (ImGui::Checkbox("Window Borders",&border)) {
+                mgr.setDockedWindowsBorder(border); // Sets the window border to all the docked windows
+#               ifndef NO_IMGUITABWINDOW
+                // Sets the window border to all the TabWindows (other flags are better set when assigning the single TabLabels)
+                ImGui::TabWindow::ExtraWindowFlags = border ? ImGuiWindowFlags_ShowBorders : 0; // It's or-ed to all Tabs "BeginChild(...)" flags (with a special exception to make ImGuiWindowFlags_ShowBorders work as expected)
+                // Please note that we have appended this line to LoadPanelManagerIfSupported() too.
+#               endif //NO_IMGUITABWINDOW
+            }
             ImGui::SameLine();
             bool noTitleBar = mgr.getDockedWindowsNoTitleBar();
             if (ImGui::Checkbox("No Window TitleBars",&noTitleBar)) mgr.setDockedWindowsNoTitleBar(noTitleBar);

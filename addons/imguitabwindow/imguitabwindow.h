@@ -468,6 +468,8 @@ bool startCloseAllDialog(ImVector<TabLabel*>* ptabs=NULL,bool allowCancelDialog=
 
 mutable void* userPtr;
 
+static ImGuiWindowFlags ExtraWindowFlags;
+
 //-------------------------------------------------------------------------------
 #       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE

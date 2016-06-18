@@ -1662,7 +1662,6 @@ static bool ImGuiPanelManagerParser(ImGuiHelper::FieldType ft,int /*numArrayElem
             if (ps.curWindow && ps.curPane) {
                 ps.curWindow->size = *((float*)pValue);
                 if(ps.curWindow->size>0) ps.curWindow->size*=(ps.curPane->pos<ImGui::PanelManager::TOP?ps.displaySize.x:ps.displaySize.y);
-                fprintf(stderr,"Set size to window: %s\n",ps.curWindow->windowName?ps.curWindow->windowName:"NULL");
             }
             break;
         }
@@ -1670,7 +1669,6 @@ static bool ImGuiPanelManagerParser(ImGuiHelper::FieldType ft,int /*numArrayElem
             if (ps.curWindow && ps.curPane) {
                 ps.curWindow->sizeHoverMode = *((float*)pValue);
                 if (ps.curWindow->sizeHoverMode>0) ps.curWindow->sizeHoverMode*=(ps.curPane->pos<ImGui::PanelManager::TOP?ps.displaySize.x:ps.displaySize.y);
-                fprintf(stderr,"Set sizeHoverMode to window: %s\n",ps.curWindow->windowName?ps.curWindow->windowName:"NULL");
             }
             break;
         }
@@ -1680,15 +1678,13 @@ static bool ImGuiPanelManagerParser(ImGuiHelper::FieldType ft,int /*numArrayElem
         if (strcmp(name,"pos")==0)	{
             ++ps.curPaneNum;ps.curPane = NULL;ps.curButtonNum=-1;ps.numButtons=0;ps.curWindow=NULL;
             if (ps.curPaneNum<ps.numPanes && ps.curPaneNum<(int)mgr.getNumPanes() && mgr.getPaneFromIndex(ps.curPaneNum)->pos==*((int*)pValue)) ps.curPane=mgr.getPaneFromIndex(ps.curPaneNum);
-            else fprintf(stderr,"Invalid pane\n");
+            //else fprintf(stderr,"Invalid pane\n");
             break;
         }
         else if (strcmp(name,"extraWindowFlags")==0)	{
             if (ps.curWindow) {
                 ps.curWindow->extraWindowFlags=*((int*)pValue);
-                fprintf(stderr,"Set extraWindowFlags to window: %s\n",ps.curWindow->windowName?ps.curWindow->windowName:"NULL");
             }
-            else fprintf(stderr,"No window for extraWindowFlags\n");
             break;
         }
     }
@@ -1697,21 +1693,17 @@ static bool ImGuiPanelManagerParser(ImGuiHelper::FieldType ft,int /*numArrayElem
         if (strcmp(name,"numPanes")==0)	{
             ps.numPanes=*((int*)pValue);ps.curPaneNum = -1;ps.curPane=NULL;
             ps.numButtons = 0;ps.curButtonNum=-1;ps.curWindow=NULL;
-            fprintf(stderr,"ps.numPanes=%d\n",ps.numPanes);
-
             break;
         }
         else if (strcmp(name,"selectedButtonIndex")==0)	{
             if (ps.curPane) {
                 ps.curPane->bar.setSelectedButtonIndex(*((int*)pValue));
-                fprintf(stderr,"selectedButtonIndex=%d\n",*((int*)pValue));
             }
             break;
         }
         else if (strcmp(name,"numPaneButtons")==0)	{
             ps.numButtons=*((int*)pValue);ps.curButtonNum=-1;ps.curWindow=NULL;
             if (ps.curPane && (int)ps.curPane->bar.getNumButtons()!=ps.numButtons)	{
-                fprintf(stderr,"Skipping pane as ps.numButtons(=%d)!=%d\n",ps.numButtons,(int)ps.curPane->bar.getNumButtons());
                 ps.curPane = NULL;  // Skip if number does not match
             }
             if (ps.curPane) {
@@ -1723,7 +1715,7 @@ static bool ImGuiPanelManagerParser(ImGuiHelper::FieldType ft,int /*numArrayElem
             ++ps.curButtonNum;
             if (ps.curPane && ps.curButtonNum<ps.numButtons && ps.curButtonNum<(int)ps.curPane->bar.getNumButtons())  ps.curWindow=&ps.curPane->windows[ps.curButtonNum];
             else {ps.curPane = NULL;ps.curWindow = NULL;}
-            fprintf(stderr,"pane:%d/%d == %s button:%d/%d window == %s\n",ps.curPaneNum,ps.numPanes,ps.curPane?"OK":"NULL",ps.curButtonNum,ps.numButtons,ps.curWindow? (ps.curWindow->windowName?ps.curWindow->windowName:"OK"):"NULL");
+            //fprintf(stderr,"pane:%d/%d == %s button:%d/%d window == %s\n",ps.curPaneNum,ps.numPanes,ps.curPane?"OK":"NULL",ps.curButtonNum,ps.numButtons,ps.curWindow? (ps.curWindow->windowName?ps.curWindow->windowName:"OK"):"NULL");
             //bool isWindowPresent = *((bool*)pValue) ? true : false;
             break;
         }
@@ -1733,8 +1725,6 @@ static bool ImGuiPanelManagerParser(ImGuiHelper::FieldType ft,int /*numArrayElem
                 ImGui::Toolbar::Button& btn = *(ps.curPane->bar.getButton(ps.curButtonNum));
                 if (btn.isToggleButton) btn.isDown = down;
             }
-            fprintf(stderr,"toggleButtonIsPressed[%d] = %s\n",ps.curButtonNum,down?"true":"false");
-
             break;
         }
     }

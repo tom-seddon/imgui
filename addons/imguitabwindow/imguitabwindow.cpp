@@ -1357,6 +1357,8 @@ TabWindow::TabLabelGroupPopupMenuCallback TabWindow::TabLabelGroupPopupMenuDrawe
 void* TabWindow::TabLabelGroupPopupMenuDrawerUserPtr=NULL;
 TabWindow::TabLabelFactoryCallback TabWindow::TabLabelFactoryCb=NULL;
 TabWindow::TabLabelFileCallback TabWindow::TabLabelSaveCb=NULL;
+ImGuiWindowFlags TabWindow::ExtraWindowFlags = 0;
+
 
 void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *ptr)
 {   
@@ -1622,7 +1624,12 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
 
 	//----------------------------------------------------------------
         mhs.restoreStyleVars();     // needs matching
-        ImGui::BeginChild("user",ImVec2(0,0),false,selectedTab ? selectedTab->wndFlags : 0);
+        const ImGuiWindowFlags childFlags = TabWindow::ExtraWindowFlags | (selectedTab ? selectedTab->wndFlags : 0);
+        ImGui::BeginChild("user",ImVec2(0,0),false,(childFlags&(~ImGuiWindowFlags_ShowBorders)));
+        if (childFlags&ImGuiWindowFlags_ShowBorders) {
+            // This kind of handling the ImGuiWindowFlags_ShowBorders flag on its own is necessary to achieve what we want
+            GImGui->CurrentWindow->Flags|=childFlags;//Changed from ImGui::GetCurrentWindow()-> (faster)
+        }
         if (/*selectedTab &&*/ TabWindow::WindowContentDrawerCb) {
             TabWindow::WindowContentDrawerCb(selectedTab,*mhs.tabWindow,TabWindow::WindowContentDrawerUserPtr);
         }
