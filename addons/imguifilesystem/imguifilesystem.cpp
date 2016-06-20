@@ -1647,6 +1647,7 @@ bool Internal::BrowsingPerRow = false;
 bool Dialog::WrapMode = true;
 ImVec2 Dialog::WindowSize(600,400);
 ImVec4 Dialog::WindowLTRBOffsets(0,0,0,0);
+ImGuiWindowFlags Dialog::ExtraWindowFlags = 0;
 Dialog::DrawFileIconDelegate Dialog::DrawFileIconCallback=NULL;
 Dialog::DrawFolderIconDelegate Dialog::DrawFolderIconCallback=NULL;
 
@@ -1884,33 +1885,22 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
 #       endif //DEBUG_HISTORY
     }
 
-#   define USE_MODAL_WINDOWS    // in-file definition (tweakable)
     if (I.rescan) {
         I.rescan = false; // Mandatory
-#       ifndef USE_MODAL_WINDOWS
-        ImGui::SetNextWindowPos(I.wndPos);
-        ImGui::SetNextWindowSize(I.wndSize);
-        ImGui::Begin(I.wndTitle, &I.open, I.wndSize,windowAlpha);
-#       else //USE_MODAL_WINDOWS
         ImGui::OpenPopup(I.wndTitle);
         ImGui::SetNextWindowPos(I.wndPos);ImGui::SetNextWindowSize(I.wndSize);
-    const bool popupOk = ImGui::BeginPopupModal(I.wndTitle, &I.open);//, I.wndSize,windowAlpha);
-	if (!popupOk) return rv;
-#       endif //USE_MODAL_WINDOWS
+        const bool popupOk = ImGui::BeginPopupModal(I.wndTitle, &I.open,Dialog::ExtraWindowFlags);
+        if (!popupOk) return rv;
     }
-#   ifndef USE_MODAL_WINDOWS
-    else ImGui::Begin(I.wndTitle, &I.open,ImVec2(0,0),windowAlpha);
-#   else //USE_MODAL_WINDOWS
-    else {        
-    if (I.forceSetWindowPositionAndSize) {
-        I.forceSetWindowPositionAndSize = false;
-        ImGui::SetNextWindowPos(I.wndPos);
-        ImGui::SetNextWindowSize(I.wndSize);
+    else {
+        if (I.forceSetWindowPositionAndSize) {
+            I.forceSetWindowPositionAndSize = false;
+            ImGui::SetNextWindowPos(I.wndPos);
+            ImGui::SetNextWindowSize(I.wndSize);
+        }
+        const bool popupOk = ImGui::BeginPopupModal(I.wndTitle, &I.open,Dialog::ExtraWindowFlags);
+        if (!popupOk) return rv;
     }
-    const bool popupOk = ImGui::BeginPopupModal(I.wndTitle, &I.open);//,ImVec2(0,0),windowAlpha);
-    if (!popupOk) return rv;
-    }
-#   endif //USE_MODAL_WINDOWS
     ImGui::Separator();
 
     //------------------------------------------------------------------------------------
@@ -1955,12 +1945,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
         // -------------------------------------------------------
 
         if (historyBackClicked || historyForwardClicked)    {
-#           ifndef USE_MODAL_WINDOWS
-            ImGui::End();
-#           else //USE_MODAL_WINDOWS
-	    fprintf(stderr,"ImGui::EndPopup(\"%s\");\n",I.wndTitle);
             ImGui::EndPopup();
-#           endif //USE_MODAL_WINDOWS
 
             if (historyBackClicked)         I.history.goBack();
             else if (historyForwardClicked) I.history.goForward();
@@ -2243,81 +2228,8 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
     // End filtering entries -------------------------------------------------------------
     // End collapsable regions------------------------------------------------------------
 
-    // Selection field -------------------------------------------------------------------
-    if (isSaveFileDialog || isSelectFolderDialog)   {
-        ImGui::Separator();
-        bool selectionButtonPressed = false;
-
-        static int id;
-        ImGui::PushID(&id);
-        if (isSaveFileDialog)   {
-            ImGui::AlignFirstTextHeightToWidgets();
-            ImGui::Text("File:");ImGui::SameLine();
-            ImGui::InputText("##saveFileName",&I.saveFileName[0],MAX_FILENAME_BYTES);
-            ImGui::SameLine();
-        }
-        else {
-            ImGui::AlignFirstTextHeightToWidgets();
-            ImGui::Text("Folder:");ImGui::SameLine();
-
-            static const ImVec4 sf(1.0,0.8,0.5,1);      // delected folder color factor
-            ImVec4& c = ColorSet[Internal::ImGuiCol_Dialog_SelectedFolder_Text];
-            const ImVec4& r = style.Colors[ImGuiCol_Text];
-            Internal::ColorCombine(c,r,sf);
-
-            ImGui::TextColored(ColorSet[Internal::ImGuiCol_Dialog_SelectedFolder_Text],"%s",&I.saveFileName[0]);//,MAX_FILENAME_BYTES);
-            ImGui::SameLine();
-        }
-
-        if (isSelectFolderDialog)  selectionButtonPressed = ImGui::Button("Select");
-        else selectionButtonPressed = ImGui::Button("Save");
-
-        ImGui::PopID();
-
-        if (selectionButtonPressed) {
-            if (isSelectFolderDialog) {
-                strcpy(rv,I.currentFolder);
-                I.open = true;
-            }
-            else if (isSaveFileDialog)  {
-                if (strlen(I.saveFileName)>0)  {
-                    bool pathOk = true;
-                    if (I.mustFilterSaveFilePathWithFileFilterExtensionString && fileFilterExtensionString && strlen(fileFilterExtensionString)>0)    {
-                        pathOk = false;
-                        char saveFileNameExtension[MAX_FILENAME_BYTES];Path::GetExtension(I.saveFileName,saveFileNameExtension);
-                        const bool saveFileNameHasExtension = strlen(saveFileNameExtension)>0;
-                        //-------------------------------------------------------------------
-			FilenameStringVector wExts;String::Split(fileFilterExtensionString,wExts,';');
-                        const size_t wExtsSize = wExts.size();
-                        if (!saveFileNameHasExtension)   {
-                            if (wExtsSize==0) pathOk = true;    // Bad situation, better allow this case
-                            else strcat(I.saveFileName,wExts[0]);
-                        }
-                        else    {
-                            // saveFileNameHasExtension
-                            for (size_t i = 0;i<wExtsSize;i++)	{
-                                const char* ext = wExts[i];
-                                if (strcmp(ext,saveFileNameExtension)==0)   {
-                                    pathOk = true;
-                                    break;
-                                }
-                            }
-                            if (!pathOk && wExtsSize>0) strcat(I.saveFileName,wExts[0]);
-                        }
-                    }
-                    if (pathOk) {
-                        char savePath[MAX_PATH_BYTES];
-                        Path::Combine(I.currentFolder,I.saveFileName,savePath,false);
-                        strcpy(rv,savePath);
-                        I.open = true;
-                    }
-                }
-            }
-        }
-
-        //ImGui::Spacing();
-    }
-    // End selection field----------------------------------------------------------------
+    // Reserve space for selection field------------------------------------------
+    //----------------------------------------------------------------------------
 
     ImGui::Separator();
     // sorting --------------------------------------------------------------------
@@ -2381,7 +2293,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
     // MAIN BROWSING FRAME:
     //-----------------------------------------------------------------------------
     {
-        ImGui::BeginChild("BrowsingFrame");
+        ImGui::BeginChild("BrowsingFrame",ImVec2(0,(isSaveFileDialog || isSelectFolderDialog)?(ImGui::GetContentRegionAvail().y-1.2f*ImGui::GetTextLineHeightWithSpacing()-ImGui::GetStyle().WindowPadding.y):0));
         // ImGui::SetScrollPosHere();   // possible future ref: while drawing to place the scroll bar
         ImGui::Columns(I.numBrowsingColumns);
 
@@ -2509,12 +2421,99 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
 
     }
     //-----------------------------------------------------------------------------
-#   ifndef USE_MODAL_WINDOWS
-    ImGui::End();
-#   else //USE_MODAL_WINDOWS
+    // Selection field -------------------------------------------------------------------
+    if (isSaveFileDialog || isSelectFolderDialog)   {
+        ImGui::Separator();
+        bool selectionButtonPressed = false;
+
+        static int id;
+	float lastTwoButtonsWidth = 0;
+        ImGui::PushID(&id);
+        if (isSaveFileDialog)   {
+	    ImGui::AlignFirstTextHeightToWidgets();
+            ImGui::Text("File:");ImGui::SameLine();
+	    lastTwoButtonsWidth = ImGui::CalcTextSize("Save Cancel").x+2.0f*(style.FramePadding.x+style.ItemSpacing.x)+style.WindowPadding.x;
+	    ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth()-lastTwoButtonsWidth);
+	    ImGui::InputText("##saveFileNameDialog",&I.saveFileName[0],MAX_FILENAME_BYTES);
+	    ImGui::PopItemWidth();
+            ImGui::SameLine();
+        }
+        else {	    
+            ImGui::AlignFirstTextHeightToWidgets();
+
+	    static const ImVec4 sf(1.0,0.8,0.5,1);      // selected folder color factor
+	    ImVec4& c = ColorSet[Internal::ImGuiCol_Dialog_SelectedFolder_Text];
+	    const ImVec4& r = style.Colors[ImGuiCol_Text];
+	    Internal::ColorCombine(c,r,sf);
+	    ImGui::TextColored(ColorSet[Internal::ImGuiCol_Dialog_SelectedFolder_Text],"Folder:");
+
+	    //ImGui::Text("Folder:");	// Faster alternative to the 5 lines above
+
+	    ImGui::SameLine();
+	    lastTwoButtonsWidth = ImGui::CalcTextSize("Select Cancel").x+2.0f*(style.FramePadding.x+style.ItemSpacing.x)+style.WindowPadding.x;
+	    ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth()-lastTwoButtonsWidth);
+	    ImGui::InputText("##selectFileNameDialog",&I.saveFileName[0],MAX_FILENAME_BYTES,ImGuiInputTextFlags_ReadOnly);
+	    ImGui::PopItemWidth();
+	    ImGui::SameLine();
+        }
+
+	bool mustCancel = false;
+	if (ImGui::Button("Cancel")) mustCancel = true;ImGui::SameLine();   // Optional line
+
+        if (isSelectFolderDialog)  selectionButtonPressed = ImGui::Button("Select");
+        else selectionButtonPressed = ImGui::Button("Save");
+
+
+        ImGui::PopID();
+
+	if (selectionButtonPressed) {
+	    if (isSelectFolderDialog) {
+		strcpy(rv,I.currentFolder);
+		I.open = true;
+	    }
+	    else if (isSaveFileDialog)  {
+		if (strlen(I.saveFileName)>0)  {
+		    bool pathOk = true;
+		    if (I.mustFilterSaveFilePathWithFileFilterExtensionString && fileFilterExtensionString && strlen(fileFilterExtensionString)>0)    {
+			pathOk = false;
+			char saveFileNameExtension[MAX_FILENAME_BYTES];Path::GetExtension(I.saveFileName,saveFileNameExtension);
+			const bool saveFileNameHasExtension = strlen(saveFileNameExtension)>0;
+			//-------------------------------------------------------------------
+			FilenameStringVector wExts;String::Split(fileFilterExtensionString,wExts,';');
+			const size_t wExtsSize = wExts.size();
+			if (!saveFileNameHasExtension)   {
+			    if (wExtsSize==0) pathOk = true;    // Bad situation, better allow this case
+			    else strcat(I.saveFileName,wExts[0]);
+			}
+			else    {
+			    // saveFileNameHasExtension
+			    for (size_t i = 0;i<wExtsSize;i++)	{
+				const char* ext = wExts[i];
+				if (strcmp(ext,saveFileNameExtension)==0)   {
+				    pathOk = true;
+				    break;
+				}
+			    }
+			    if (!pathOk && wExtsSize>0) strcat(I.saveFileName,wExts[0]);
+			}
+		    }
+		    if (pathOk) {
+			char savePath[MAX_PATH_BYTES];
+			Path::Combine(I.currentFolder,I.saveFileName,savePath,false);
+			strcpy(rv,savePath);
+			I.open = true;
+		    }
+		}
+	    }
+	}
+	else if (mustCancel && rv[0]==0) ImGui::CloseCurrentPopup();
+	//ImGui::Separator();
+        //ImGui::Spacing();
+    }
+    // End selection field----------------------------------------------------------------
+
     if (rv[0]!=0) ImGui::CloseCurrentPopup();
     ImGui::EndPopup();
-#   endif //USE_MODAL_WINDOWS
     return rv;
 }
 
@@ -2555,7 +2554,6 @@ const char* Dialog::saveFileDialog(bool dialogTriggerButton,const char* director
     return "";
 }
 
-#   undef USE_MODAL_WINDOWS     // Warning: from now on USE_MODAL_WINDOWS is undefined
 
 
 #ifndef IMGUIFS_NO_EXTRA_METHODS
@@ -2583,27 +2581,4 @@ bool FileExists(const char* path) {
 } // namespace ImGuiFs
 
 
-            /*//test modal dialogs (to remove)
-            if (ImGui::Button("Delete.."))
-                ImGui::OpenPopup("Delete?");
-            if (ImGui::BeginPopupModal("Delete?", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-            {
-                ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!\n\n");
-                ImGui::Separator();
 
-                static bool dont_ask_me_next_time = false;
-                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
-                ImGui::Checkbox("Don't ask me next time", &dont_ask_me_next_time);
-                ImGui::PopStyleVar();
-
-                ImGui::BeginChild("Test",ImVec2(200,20),true,0);
-                ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!\n\n");
-                ImGui::Separator();
-
-                ImGui::EndChild();
-
-                if (ImGui::Button("OK", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
-                ImGui::SameLine();
-                if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
-                ImGui::EndPopup();
-            }*/

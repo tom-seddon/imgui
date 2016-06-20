@@ -128,6 +128,7 @@ struct Dialog {
     static bool WrapMode;           // (true)
     static ImVec2 WindowSize;       // (600,400) [initial window size when not defined in argument "windowSize"]
     static ImVec4 WindowLTRBOffsets;// (0,0,0,0)    [it might turn useful when using toolbars]
+    static ImGuiWindowFlags ExtraWindowFlags;   // (0) [it might turn useful if we want ImGuiWindowFlags_ShowBorders]
 
     typedef bool (*DrawFileIconDelegate) (int fileExtensionType,const ImVec4* pOptionalColorOverride); // must return "true" if the icon is set.
     static DrawFileIconDelegate DrawFileIconCallback;

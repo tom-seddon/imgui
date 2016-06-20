@@ -2597,6 +2597,63 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
     return selection_changed;
 }
 
+//-------------------------------------------------------------------------------
+#   if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+        bool TabLabelsSave(ImGuiHelper::Serializer& s,int selectedIndex,const int* pOptionalItemOrdering,int numTabs)   {
+            if (!s.isValid()) return false;
+            if (numTabs<0 || !pOptionalItemOrdering) numTabs=0;
+            s.save(&numTabs,"TabLabelsNumTabs");
+            s.save(&selectedIndex,"TabLabelsSelectedIndex");
+            for (int i=0;i<numTabs;i+=4) {
+                int num = numTabs-i;if (num>4) num=4;
+                s.save(&pOptionalItemOrdering[i],"TabLabelsOrdering",num);
+            }
+            return true;
+        }
+        bool TabLabelsSave(const char* filename,int selectedIndex,const int* pOptionalItemOrdering,int numTabs) {
+            ImGuiHelper::Serializer s(filename);
+            return TabLabelsSave(s,selectedIndex,pOptionalItemOrdering,numTabs);
+        }
+#       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+        struct TabLabelsParser {
+            int* pSelectedIndex;int* pOptionalItemOrdering;int numTabs,numSavedTabs,cnt;
+            TabLabelsParser(int* _pSelectedIndex,int* _pOptionalItemOrdering,int _numTabs) : pSelectedIndex(_pSelectedIndex),pOptionalItemOrdering(_pOptionalItemOrdering),numTabs(_numTabs),numSavedTabs(0),cnt(0) {}
+            static bool Parse(ImGuiHelper::FieldType /*ft*/,int numArrayElements,void* pValue,const char* name,void* userPtr) {
+                TabLabelsParser& P = *((TabLabelsParser*) userPtr);
+                const int* pValueInt = (const int*) pValue;
+                if (strcmp(name,"TabLabelsNumTabs")==0) P.numSavedTabs = *pValueInt;
+                else if (strcmp(name,"TabLabelsSelectedIndex")==0)  {
+                    if (P.pSelectedIndex) *P.pSelectedIndex = *pValueInt;
+                    if (P.numSavedTabs==0) return true;
+                }
+                else if (strcmp(name,"TabLabelsOrdering")==0) {
+                    for (int i=0;i<numArrayElements;i++) {
+                        if (P.numSavedTabs>0 && P.pOptionalItemOrdering && P.cnt<P.numTabs)   P.pOptionalItemOrdering[P.cnt] = pValueInt[i];
+                        P.cnt++;
+                    }
+                    if (P.cnt==P.numSavedTabs) return true;
+                }
+                return false;
+            }
+        };
+        bool TabLabelsLoad(ImGuiHelper::Deserializer& d,int* pSelectedIndex,int* pOptionalItemOrdering,int numTabs,const char ** pOptionalBufferStart)  {
+            if (!d.isValid()) return false;
+            const char* amount = pOptionalBufferStart ? (*pOptionalBufferStart) : 0;
+            TabLabelsParser parser(pSelectedIndex,pOptionalItemOrdering,numTabs);
+            amount = d.parse(&TabLabelsParser::Parse,(void*)&parser,amount);
+            if (pOptionalBufferStart) *pOptionalBufferStart = amount;
+            return true;
+        }
+        bool TabLabelsLoad(const char* filename,int* pSelectedIndex,int* pOptionalItemOrdering,int numTabs) {
+            ImGuiHelper::Deserializer d(filename);
+            return TabLabelsLoad(d,pSelectedIndex,pOptionalItemOrdering,numTabs);
+        }
+#       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#   endif //NO_IMGUIHELPER_SERIALIZATION
+//--------------------------------------------------------------------------------
+
 
 ImTextureID TabWindow::DockPanelIconTextureID = NULL;
 const unsigned char* TabWindow::GetDockPanelIconImagePng(int* bufferSizeOut) {

@@ -519,6 +519,20 @@ typedef TabWindow::TabLabel TabWindowLabel;
 */
 bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const char** tabLabelTooltips=NULL , bool wrapMode=true, int* pOptionalHoveredIndex=NULL, int* pOptionalItemOrdering=NULL, bool allowTabReorder=true, bool allowTabClosing=false, int* pOptionalClosedTabIndex=NULL,int * pOptionalClosedTabIndexInsideItemOrdering=NULL);
 
+// Untested attempt to provide serialization for ImGui::TabLabels(...): only "selectedIndex" and "pOptionalItemOrdering" are serialized.
+//-------------------------------------------------------------------------------
+#   if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+        bool TabLabelsSave(ImGuiHelper::Serializer& s,int selectedIndex,const int* pOptionalItemOrdering=NULL,int numTabs=0);
+        bool TabLabelsSave(const char* filename,int selectedIndex,const int* pOptionalItemOrdering=NULL,int numTabs=0);
+#       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+        bool TabLabelsLoad(ImGuiHelper::Deserializer& d,int* pSelectedIndex,int* pOptionalItemOrdering=NULL,int numTabs=0,const char ** pOptionalBufferStart=NULL);
+        bool TabLabelsLoad(const char* filename,int* pSelectedIndex,int* pOptionalItemOrdering=NULL,int numTabs=0);
+#       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#   endif //NO_IMGUIHELPER_SERIALIZATION
+//--------------------------------------------------------------------------------
+
 
 } // namespace ImGui
 
