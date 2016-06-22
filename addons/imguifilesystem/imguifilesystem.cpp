@@ -1614,6 +1614,27 @@ struct Internal {
 #       endif //IMGUI_USE_MINIZIP
     }
 
+    inline void calculateBrowsingDataTableSizes(const ImVec2& childWindowSize=ImVec2(-1,-1))    {
+        int approxNumEntriesPerColumn = 20;//(int) (20.f / browseSectionFontScale);// tweakable
+        if (childWindowSize.y>0) {
+            int numLinesThatFit = childWindowSize.y/ImGui::GetTextLineHeightWithSpacing();
+            if (numLinesThatFit<=0) numLinesThatFit=1;
+            approxNumEntriesPerColumn = numLinesThatFit;
+            //static int tmp = 0;if (tmp!=numLinesThatFit) {tmp=numLinesThatFit;fprintf(stderr,"childWindowSize.y = %f numLinesThatFit=%d\n",childWindowSize.y,numLinesThatFit);}
+        }
+        numBrowsingColumns = totalNumBrowsingEntries/approxNumEntriesPerColumn;
+        if (numBrowsingColumns<=0) {
+            numBrowsingColumns = 1;numBrowsingEntriesPerColumn = approxNumEntriesPerColumn;
+            return;
+        }
+        if (totalNumBrowsingEntries%approxNumEntriesPerColumn>(approxNumEntriesPerColumn/2)) ++numBrowsingColumns;
+        int maxNumBrowsingColumns = (childWindowSize.x>0) ? (childWindowSize.x/100) : 6;
+        if (maxNumBrowsingColumns<1) maxNumBrowsingColumns=1;
+        if (numBrowsingColumns>maxNumBrowsingColumns) numBrowsingColumns = maxNumBrowsingColumns;
+        numBrowsingEntriesPerColumn = totalNumBrowsingEntries/numBrowsingColumns;
+        if (totalNumBrowsingEntries%numBrowsingColumns!=0) ++numBrowsingEntriesPerColumn;
+    }
+
     // Just a convenience enum used internally
     enum Color {
         ImGuiCol_Dialog_Directory_Background,
@@ -1825,10 +1846,10 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
         if (!isSelectFolderDialog)  {
             if (!fileFilterExtensionString || strlen(fileFilterExtensionString)==0) Directory::GetFiles(I.currentFolder,I.files,&I.fileNames,(Sorting)I.sortingMode);
             else                                        Directory::GetFiles(I.currentFolder,I.files,fileFilterExtensionString,NULL,&I.fileNames,(Sorting)I.sortingMode);
-        if (Dialog::DrawFileIconCallback) MyImGuiFsDrawIconStruct.fillExtensionTypesFromFilenames(I.fileExtensionTypes,I.fileNames);
-       }
+            if (Dialog::DrawFileIconCallback) MyImGuiFsDrawIconStruct.fillExtensionTypesFromFilenames(I.fileExtensionTypes,I.fileNames);
+        }
         else {
-        I.files.clear();I.fileNames.clear();I.fileExtensionTypes.clear();
+            I.files.clear();I.fileNames.clear();I.fileExtensionTypes.clear();
             I.saveFileName[0]='\0';
             char currentFolderName[MAX_FILENAME_BYTES];
             Path::GetFileName(I.currentFolder,currentFolderName);
@@ -1850,6 +1871,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
             if (!isInsideZipFile)   {
                 if (!fileFilterExtensionString || strlen(fileFilterExtensionString)==0) Directory::GetFiles(I.currentFolder,I.files,&I.fileNames,(Sorting)I.sortingMode);
                 else                                        Directory::GetFiles(I.currentFolder,I.files,fileFilterExtensionString,NULL,&I.fileNames,(Sorting)I.sortingMode);
+                if (Dialog::DrawFileIconCallback) MyImGuiFsDrawIconStruct.fillExtensionTypesFromFilenames(I.fileExtensionTypes,I.fileNames);
             }
             else if (I.unz.isValid()) {
                 /*if (!fileFilterExtensionString || strlen(fileFilterExtensionString)==0)*/ I.unz.getFiles(zipPath,I.files,&I.fileNames,(Sorting)I.sortingMode,true);
@@ -1868,15 +1890,9 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
 #       endif //IMGUI_USE_MINIZIP
 
         I.history.getCurrentSplitPath(I.currentSplitPath);
-
-        const static int approxNumEntriesPerColumn = 20;//(int) (20.f / browseSectionFontScale);// tweakable
         I.totalNumBrowsingEntries = (int)(I.dirs.size()+I.files.size());
-        I.numBrowsingColumns = I.totalNumBrowsingEntries/approxNumEntriesPerColumn;
-        if (I.numBrowsingColumns<=0) I.numBrowsingColumns = 1;
-        if (I.totalNumBrowsingEntries%approxNumEntriesPerColumn>(approxNumEntriesPerColumn/2)) ++I.numBrowsingColumns;
-        if (I.numBrowsingColumns>6) I.numBrowsingColumns = 6;
-        I.numBrowsingEntriesPerColumn = I.totalNumBrowsingEntries/I.numBrowsingColumns;
-        if (I.totalNumBrowsingEntries%I.numBrowsingColumns!=0) ++I.numBrowsingEntriesPerColumn;
+
+        //I.calculateBrowsingDataTableSizes();    // can we move it down ?
 
         //#       define DEBUG_HISTORY
 #       ifdef DEBUG_HISTORY
@@ -2294,7 +2310,12 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
     //-----------------------------------------------------------------------------
     {
         ImGui::BeginChild("BrowsingFrame",ImVec2(0,(isSaveFileDialog || isSelectFolderDialog)?(ImGui::GetContentRegionAvail().y-1.2f*ImGui::GetTextLineHeightWithSpacing()-ImGui::GetStyle().WindowPadding.y):0));
-        // ImGui::SetScrollPosHere();   // possible future ref: while drawing to place the scroll bar
+
+        I.calculateBrowsingDataTableSizes(ImGui::GetWindowSize());  // (Actually we could save this call every frame, but it's difficult to detect whn we need it)
+
+        // ImGui::SetScrollPosHere();   // possible future ref: while drawing to place the scroll bar making a certain entry visible
+        // Also we don't do any maual clipping here (for long directories using a clipper might be useful)
+
         ImGui::Columns(I.numBrowsingColumns);
 
         static int id;
@@ -2427,38 +2448,38 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
         bool selectionButtonPressed = false;
 
         static int id;
-	float lastTwoButtonsWidth = 0;
+        float lastTwoButtonsWidth = 0;
         ImGui::PushID(&id);
         if (isSaveFileDialog)   {
-	    ImGui::AlignFirstTextHeightToWidgets();
+            ImGui::AlignFirstTextHeightToWidgets();
             ImGui::Text("File:");ImGui::SameLine();
-	    lastTwoButtonsWidth = ImGui::CalcTextSize("Save Cancel").x+2.0f*(style.FramePadding.x+style.ItemSpacing.x)+style.WindowPadding.x;
-	    ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth()-lastTwoButtonsWidth);
-	    ImGui::InputText("##saveFileNameDialog",&I.saveFileName[0],MAX_FILENAME_BYTES);
-	    ImGui::PopItemWidth();
+            lastTwoButtonsWidth = ImGui::CalcTextSize("Save Cancel").x+2.0f*(style.FramePadding.x+style.ItemSpacing.x)+style.WindowPadding.x;
+            ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth()-lastTwoButtonsWidth);
+            ImGui::InputText("##saveFileNameDialog",&I.saveFileName[0],MAX_FILENAME_BYTES);
+            ImGui::PopItemWidth();
             ImGui::SameLine();
         }
-        else {	    
+        else {
             ImGui::AlignFirstTextHeightToWidgets();
 
-	    static const ImVec4 sf(1.0,0.8,0.5,1);      // selected folder color factor
-	    ImVec4& c = ColorSet[Internal::ImGuiCol_Dialog_SelectedFolder_Text];
-	    const ImVec4& r = style.Colors[ImGuiCol_Text];
-	    Internal::ColorCombine(c,r,sf);
-	    ImGui::TextColored(ColorSet[Internal::ImGuiCol_Dialog_SelectedFolder_Text],"Folder:");
+            static const ImVec4 sf(1.0,0.8,0.5,1);      // selected folder color factor
+            ImVec4& c = ColorSet[Internal::ImGuiCol_Dialog_SelectedFolder_Text];
+            const ImVec4& r = style.Colors[ImGuiCol_Text];
+            Internal::ColorCombine(c,r,sf);
+            ImGui::TextColored(ColorSet[Internal::ImGuiCol_Dialog_SelectedFolder_Text],"Folder:");
 
-	    //ImGui::Text("Folder:");	// Faster alternative to the 5 lines above
+            //ImGui::Text("Folder:");	// Faster alternative to the 5 lines above
 
-	    ImGui::SameLine();
-	    lastTwoButtonsWidth = ImGui::CalcTextSize("Select Cancel").x+2.0f*(style.FramePadding.x+style.ItemSpacing.x)+style.WindowPadding.x;
-	    ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth()-lastTwoButtonsWidth);
-	    ImGui::InputText("##selectFileNameDialog",&I.saveFileName[0],MAX_FILENAME_BYTES,ImGuiInputTextFlags_ReadOnly);
-	    ImGui::PopItemWidth();
-	    ImGui::SameLine();
+            ImGui::SameLine();
+            lastTwoButtonsWidth = ImGui::CalcTextSize("Select Cancel").x+2.0f*(style.FramePadding.x+style.ItemSpacing.x)+style.WindowPadding.x;
+            ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth()-lastTwoButtonsWidth);
+            ImGui::InputText("##selectFileNameDialog",&I.saveFileName[0],MAX_FILENAME_BYTES,ImGuiInputTextFlags_ReadOnly);
+            ImGui::PopItemWidth();
+            ImGui::SameLine();
         }
 
-	bool mustCancel = false;
-	if (ImGui::Button("Cancel")) mustCancel = true;ImGui::SameLine();   // Optional line
+        bool mustCancel = false;
+        if (ImGui::Button("Cancel")) mustCancel = true;ImGui::SameLine();   // Optional line
 
         if (isSelectFolderDialog)  selectionButtonPressed = ImGui::Button("Select");
         else selectionButtonPressed = ImGui::Button("Save");
@@ -2466,48 +2487,48 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
 
         ImGui::PopID();
 
-	if (selectionButtonPressed) {
-	    if (isSelectFolderDialog) {
-		strcpy(rv,I.currentFolder);
-		I.open = true;
-	    }
-	    else if (isSaveFileDialog)  {
-		if (strlen(I.saveFileName)>0)  {
-		    bool pathOk = true;
-		    if (I.mustFilterSaveFilePathWithFileFilterExtensionString && fileFilterExtensionString && strlen(fileFilterExtensionString)>0)    {
-			pathOk = false;
-			char saveFileNameExtension[MAX_FILENAME_BYTES];Path::GetExtension(I.saveFileName,saveFileNameExtension);
-			const bool saveFileNameHasExtension = strlen(saveFileNameExtension)>0;
-			//-------------------------------------------------------------------
-			FilenameStringVector wExts;String::Split(fileFilterExtensionString,wExts,';');
-			const size_t wExtsSize = wExts.size();
-			if (!saveFileNameHasExtension)   {
-			    if (wExtsSize==0) pathOk = true;    // Bad situation, better allow this case
-			    else strcat(I.saveFileName,wExts[0]);
-			}
-			else    {
-			    // saveFileNameHasExtension
-			    for (size_t i = 0;i<wExtsSize;i++)	{
-				const char* ext = wExts[i];
-				if (strcmp(ext,saveFileNameExtension)==0)   {
-				    pathOk = true;
-				    break;
-				}
-			    }
-			    if (!pathOk && wExtsSize>0) strcat(I.saveFileName,wExts[0]);
-			}
-		    }
-		    if (pathOk) {
-			char savePath[MAX_PATH_BYTES];
-			Path::Combine(I.currentFolder,I.saveFileName,savePath,false);
-			strcpy(rv,savePath);
-			I.open = true;
-		    }
-		}
-	    }
-	}
-	else if (mustCancel && rv[0]==0) ImGui::CloseCurrentPopup();
-	//ImGui::Separator();
+        if (selectionButtonPressed) {
+            if (isSelectFolderDialog) {
+                strcpy(rv,I.currentFolder);
+                I.open = true;
+            }
+            else if (isSaveFileDialog)  {
+                if (strlen(I.saveFileName)>0)  {
+                    bool pathOk = true;
+                    if (I.mustFilterSaveFilePathWithFileFilterExtensionString && fileFilterExtensionString && strlen(fileFilterExtensionString)>0)    {
+                        pathOk = false;
+                        char saveFileNameExtension[MAX_FILENAME_BYTES];Path::GetExtension(I.saveFileName,saveFileNameExtension);
+                        const bool saveFileNameHasExtension = strlen(saveFileNameExtension)>0;
+                        //-------------------------------------------------------------------
+                        FilenameStringVector wExts;String::Split(fileFilterExtensionString,wExts,';');
+                        const size_t wExtsSize = wExts.size();
+                        if (!saveFileNameHasExtension)   {
+                            if (wExtsSize==0) pathOk = true;    // Bad situation, better allow this case
+                            else strcat(I.saveFileName,wExts[0]);
+                        }
+                        else    {
+                            // saveFileNameHasExtension
+                            for (size_t i = 0;i<wExtsSize;i++)	{
+                                const char* ext = wExts[i];
+                                if (strcmp(ext,saveFileNameExtension)==0)   {
+                                    pathOk = true;
+                                    break;
+                                }
+                            }
+                            if (!pathOk && wExtsSize>0) strcat(I.saveFileName,wExts[0]);
+                        }
+                    }
+                    if (pathOk) {
+                        char savePath[MAX_PATH_BYTES];
+                        Path::Combine(I.currentFolder,I.saveFileName,savePath,false);
+                        strcpy(rv,savePath);
+                        I.open = true;
+                    }
+                }
+            }
+        }
+        else if (mustCancel && rv[0]==0) ImGui::CloseCurrentPopup();
+        //ImGui::Separator();
         //ImGui::Spacing();
     }
     // End selection field----------------------------------------------------------------
