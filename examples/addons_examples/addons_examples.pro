@@ -40,7 +40,6 @@ IMGUI_BASE_PATH=../..
 #DEFINES+= IMGUI_WIP	    # to remove (dev only)
 #DEFINES+=IMGUIBINDINGS_RESTORE_GL_STATE
 
-#DEFINES+= YES_IMGUIDOCK
 #DEFINES+= YES_IMGUISDF
 #DEFINES+= YES_IMGUISOLOUD_ALL #YES_IMGUISOLOUD_MODPLUG #YES_IMGUISOLOUD_SPEECH		# Testing only (with use_sdl2)! To remove
 #DEFINES+= YES_IMGUITINYFILEDIALOGS
@@ -84,6 +83,7 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguicodeeditor/utf8helper.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguitabwindow/imguitabwindow.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiemscripten/imguiemscripten.h"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguidock/imguidock.h"			    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguipdfviewer.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguidock.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.h"			    \
@@ -153,6 +153,7 @@ OTHER_FILES+= $$IMGUI_BASE_PATH"/addons/imgui_user.inl"				    \
 	   $$IMGUI_BASE_PATH"/addons/imguicodeeditor/imguicodeeditor.cpp"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguitabwindow/imguitabwindow.cpp"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiemscripten/imguiemscripten.cpp"	    \
+	   $$IMGUI_BASE_PATH"/addons/imguidock/imguidock.h"			    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguipdfviewer.cpp"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguidock.cpp"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.cpp"		    \				

@@ -37,6 +37,7 @@ Currently the extra imgui widgets that are available are:
 -> imguipanelmanager:		a mini dock panel layout. Basically it uses imguitoolbar and optionally assigns an ImGui Window to some buttons. Please see main2.cpp for an extensive example on how to use it.
 -> imguitabwindow:			-> a self-partitioning ImGui::Window with TabLabels that can be dragged around. It's used in the central window of main2.cpp.
 							-> this addon also provides ImGui::TabLabels(...), for adding generic tabs in normal imgui windows.
+-> imguidock.h/cpp:			Lumix Engine's docking system [from: https://github.com/nem0/LumixEngine/blob/master/src/editor/imgui/imgui_dock.h].
 -> imguivariouscontrols:	a series of minor widgets, such as:
 							-> ProgressBar.
 							-> PopupMenuSimple	(a fast, single column, scrollable, popup menu).
@@ -74,7 +75,6 @@ And now there's a new kind of imgui addons, called "yes addons".
 
 Currently "yes addons" are:
 -> imguipdfviewer.h/cpp:	depends on -lpoppler-glib (that depends on glib-2.0 and cairo, and probably on STL as well).
--> imguidock.h/cpp:		no dependencies. License: MIT. [from: https://github.com/nem0/LumixEngine/blob/master/src/editor/imgui/imgui_dock.h]
 -> imguisdf.h/cpp:		no dependencies, but needs OpenGL with Shaders.
 -> imguisoloud.h/cpp:		depends on STL. License:  ZLib/LibPNG (and others more liberal) Link: [http://sol.gfxile.net/soloud/index.html]
 -> imguitinyfiledialogs.h/cpp:	depends on Comdlg32.lib and Ole32.lib on Windows. Link: [http://tinyfiledialogs.sourceforge.net]
@@ -141,8 +141,15 @@ If you just want to add a single addon (a pair of addonName.h/.cpp files) to an 
 add the include folders: $IMGUI_HOME and $IMGUI_HOME/addons/addonName to your project (where $IMGUI_HOME is the path where imgui.h/.cpp are located) and compile the file $IMGUI_HOME/addons/addonName/addonName.cpp, where "addonName" is the name of the addon you want to use. 
 Be warned that some addons might depend on others: e.g. imguipanelmanager depends on imguitoolbar: so you may need to include both addons.
 
-However I'm not sure this approach works for all the addons, since some .cpp files need to be included after imgui.cpp to access its internals: recent imgui versions provide the file:
-imgui_internal.h, you may try including this at the top of the addonName.cpp file, but there's no guarantee it will work.
+However I'm not sure this approach works for all the addons, since some .cpp files need to be included after imgui.cpp to access its internals.
+As a workaround in case of failure, you can try adding at the top of the .cpp file/s:
+
+#include "imgui.h"
+#define IMGUI_DEFINE_PLACEMENT_NEW
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "imgui_internal.h"
+
+so that most imgui internals are accessible, but there's no guarantee it will work.
 
 
 -----------------------------------------------------------------------------------------------------------------------------------

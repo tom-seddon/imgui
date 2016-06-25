@@ -84,13 +84,13 @@
 #ifndef NO_IMGUINODEGRAPHEDITOR
 #include "./imguinodegrapheditor/imguinodegrapheditor.cpp"
 #endif //NO_IMGUINODEGRAPHEDITOR
+#ifndef NO_IMGUIDOCK
+#include "./imguidock/imguidock.cpp"
+#endif //NO_IMGUIDOCK
 
 #ifdef YES_IMGUIPDFVIEWER
 #include "./imguiyesaddons/imguipdfviewer.cpp"
 #endif //YES_IMGUIPDFVIEWER
-#ifdef YES_IMGUIDOCK
-#include "./imguiyesaddons/imguidock.cpp"
-#endif //YES_IMGUIDOCK
 #ifdef YES_IMGUISDF
 #include "./imguiyesaddons/imguisdf.cpp"
 #endif //YES_IMGUISDF

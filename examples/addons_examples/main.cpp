@@ -312,10 +312,10 @@ void DrawGL()	// Mandatory
         show_node_graph_editor_window ^= ImGui::Button("Another Window With NodeGraphEditor");
 #       endif //NO_IMGUINODEGRAPHEDITOR
         show_splitter_test_window ^= ImGui::Button("Show splitter test window");
-#       ifdef YES_IMGUIDOCK
+#       ifndef NO_IMGUIDOCK
         show_dock_window ^= ImGui::Button("Another Window With ImGuiDock");
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","LumixEngine Dock system test.\nHowever I guess it was intended to be used globally.\nSo the result looks ugly, the main menu hides the tabs\nand once started the only way to stop it is to click here again.\nI really suggest you test it globally in a brand new demo.");
-#       endif //YES_IMGUIDOCK
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","LumixEngine Dock system test.");
+#       endif //NO_IMGUIDOCK
 #       ifndef NO_IMGUITABWINDOW
         show_tab_windows ^= ImGui::Button("Show TabWindow Test");
 #       endif //NO_IMGUITABWINDOW
@@ -1125,8 +1125,7 @@ void DrawGL()	// Mandatory
 #   endif // NO_IMGUISTYLESERIALIZER
 #   ifndef NO_IMGUINODEGRAPHEDITOR
     if (show_node_graph_editor_window) {
-        ImGui::SetNextWindowSize(ImVec2(700,600), ImGuiSetCond_FirstUseEver);
-        if (ImGui::Begin("Example: Custom Node Graph", &show_node_graph_editor_window)){
+        if (ImGui::Begin("Example: Custom Node Graph", &show_node_graph_editor_window,ImVec2(700,600),0.95f,ImGuiWindowFlags_NoScrollbar)){
 #           ifndef IMGUINODEGRAPHEDITOR_NOTESTDEMO
             ImGui::TestNodeGraphEditor();   // see its code for further info
 #           endif //IMGUINODEGRAPHEDITOR_NOTESTDEMO
@@ -1189,27 +1188,36 @@ void DrawGL()	// Mandatory
 
         ImGui::End();
     }
-#   ifdef YES_IMGUIDOCK
+#   ifndef NO_IMGUIDOCK
     if (show_dock_window)   {
-        // I don't know how to use it, I'm a little dumb here... I probably have to create tabs somehow...
-        // or maybe it's supposed to be used on its own, without other ImGui "normal" windows...
-
-        ImGui::BeginDock("MyFirstDockedWindow",NULL,0);
-        ImGui::Text("LumixEngine Dock system test window 1.");
-        ImGui::EndDock();
-
-        ImGui::BeginDock("MySecondDockedWindow",NULL,0);
-        ImGui::Text("LumixEngine Dock system test window 2.");
-        ImGui::EndDock();
-
+        if (ImGui::Begin("imguidock window 1 (= lumix engine's dock system)",&show_dock_window,ImVec2(500, 500),0.95f,ImGuiWindowFlags_NoScrollbar)) {
+            ImGui::BeginDockspace();
+            static char tmp[128];
+            for (int i=0;i<10;i++)  {
+                sprintf(tmp,"Dock %d",i);
+                if(ImGui::BeginDock(tmp))  {
+                    ImGui::Text("Content of dock window %d goes here",i);
+                }
+                ImGui::EndDock();
+            }
+            ImGui::EndDockspace();
+        }
+        ImGui::End();
     }
-#   endif //YES_IMGUIDOCK
+#   endif //NO_IMGUIDOCK
 #   ifndef NO_IMGUITABWINDOW
     if (show_tab_windows)   {
+    // Some differences compared to imguidock:
+        /*
+          1) No floating mode for windows.
+          2) ImGui::BeginDockspace()/ImGui::EndDockspace() are replaced by instancing an ImGui::TabWindow + calling render()
+          3) ImGui::BeginDock()/ImGui::EndDock() are not present. We must add TabLabels manually to the TabWindow and render them (not shown here) through a global callback of by subclassing the TabLabel class and implementing render().
+      That's why using imguidock should be the main choice for everybody (I can't drop imguitabwindow, since it contains ImGui::TabLabels(..) too, and is more suitable for ImGui::PanelManager usage).
+        */
         static ImGui::TabWindow tabWindows[2];  // Note: there's more than this: there are methods to save/load all TabWindows together, but we don't use them here. Also we don't use "custom callbacks", "TabLabel modified states" and TabLabel context-menus here to keep things simple.
         static bool showTabWindow[2] = {true,true};
 
-        if (showTabWindow[0] && ImGui::Begin("TabWindow1", &showTabWindow[0], ImVec2(400,600),.85f,ImGuiWindowFlags_NoScrollbar))  {
+        if (showTabWindow[0] && ImGui::Begin("TabWindow1", &showTabWindow[0], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar))  {
             ImGui::TabWindow&  tabWindow = tabWindows[0];
             if (!tabWindow.isInited()) {
                 static const char* tabNames[] = {"Test","Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
@@ -1223,7 +1231,7 @@ void DrawGL()	// Mandatory
             ImGui::End();
         }
 
-        if (showTabWindow[1] && ImGui::Begin("TabWindow2", &showTabWindow[1], ImVec2(400,600),.85f,ImGuiWindowFlags_NoScrollbar))  {
+        if (showTabWindow[1] && ImGui::Begin("TabWindow2", &showTabWindow[1], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar))  {
             ImGui::TabWindow&  tabWindow2 = tabWindows[1];
             tabWindow2.render();
             ImGui::End();

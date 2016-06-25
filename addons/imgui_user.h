@@ -6,6 +6,11 @@
 #ifndef IMGUI_USER_ADDONS_H_
 #define IMGUI_USER_ADDONS_H_
 
+#ifndef IMGUI_INCLUDE_IMGUI_USER_INL
+//#warning IMGUI_INCLUDE_IMGUI_USER_INL should be defined
+#define IMGUI_INCLUDE_IMGUI_USER_INL
+#endif //IMGUI_INCLUDE_IMGUI_USER_INL
+
 #ifndef IMGUI_FORCE_INLINE
 #	ifdef _MSC_VER
 #		define IMGUI_FORCE_INLINE __forceinline
@@ -125,22 +130,18 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #ifndef NO_IMGUICODEEDITOR
 #include "./imguicodeeditor/imguicodeeditor.h"
 #endif //NO_IMGUICODEEDITOR
-#ifdef IMGUISCINTILLA_ACTIVATED
-#include "./imguiscintilla/imguiscintilla.h"
-#endif //IMGUISCINTILLA_ACTIVATED
 #ifndef NO_IMGUINODEGRAPHEDITOR
 #include "./imguinodegrapheditor/imguinodegrapheditor.h"
 #endif //NO_IMGUINODEGRAPHEDITOR
+#ifndef NO_IMGUIDOCK
+#include "./imguidock/imguidock.h"
+#endif //NO_IMGUIDOCK
 
 #ifdef YES_IMGUIADDONS_ALL
 #	ifndef NO_IMGUIPDFVIEWER
 #		undef YES_IMGUIPDFVIEWER
 #		define YES_IMGUIPDFVIEWER
 #	endif //NO_IMGUIPDFVIEWER
-#	ifndef NO_IMGUIDOCK
-#		undef YES_IMGUIDOCK
-#		define YES_IMGUIDOCK
-#	endif //NO_IMGUIDOCK
 #	ifdef IMGUI_USE_AUTO_BINDING_OPENGL
 #		ifndef NO_IMGUISDF
 #			undef YES_IMGUISDF
@@ -168,9 +169,6 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #ifdef YES_IMGUIPDFVIEWER
 #include "./imguiyesaddons/imguipdfviewer.h"
 #endif //YES_IMGUIPDFVIEWER
-#ifdef YES_IMGUIDOCK
-#include "./imguiyesaddons/imguidock.h"
-#endif //YES_IMGUIDOCK
 #ifdef YES_IMGUISDF_MSDF_MODE
 #undef YES_IMGUISDF
 #define YES_IMGUISDF
