@@ -857,13 +857,14 @@ void DrawGL()	// Mandatory
         static int tabItemOrdering[numTabs] = {0,1,2,3,4,5,6,7,8,9,10,11};
         static int selectedTab = 0;
         static int optionalHoveredTab = 0;
-        static bool allowTabLabelDragAndDrop=true;static bool tabLabelWrapMode = false;static bool allowClosingTabs = false;
+        static bool allowTabLabelDragAndDrop=true;static bool tabLabelWrapMode = true;static bool allowClosingTabs = false;
         int justClosedTabIndex=-1,justClosedTabIndexInsideTabItemOrdering = -1,oldSelectedTab = selectedTab;
 
         ImGui::Checkbox("Wrap Mode##TabLabelWrapMode",&tabLabelWrapMode);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","WrapMode is only available\nin horizontal TabLabels");
         ImGui::SameLine();ImGui::Checkbox("Drag And Drop##TabLabelDragAndDrop",&allowTabLabelDragAndDrop);
-        ImGui::SameLine();ImGui::Checkbox("Closable##TabLabelClosing",&allowClosingTabs);
-        ImGui::SameLine();if (ImGui::SmallButton("Reset Tabs")) {for (int i=0;i<numTabs;i++) tabItemOrdering[i] = i;}
+        ImGui::SameLine();ImGui::Checkbox("Closable##TabLabelClosing",&allowClosingTabs);ImGui::SameLine();
+        bool resetTabLabels = ImGui::SmallButton("Reset Tabs");if (resetTabLabels) {selectedTab=0;for (int i=0;i<numTabs;i++) tabItemOrdering[i] = i;}
 
         /*const bool tabSelectedChanged =*/ ImGui::TabLabels(numTabs,tabNames,selectedTab,tabTooltips,tabLabelWrapMode,&optionalHoveredTab,&tabItemOrdering[0],allowTabLabelDragAndDrop,allowClosingTabs,&justClosedTabIndex,&justClosedTabIndexInsideTabItemOrdering);
         // Optional stuff
@@ -874,10 +875,39 @@ void DrawGL()	// Mandatory
         //if (optionalHoveredTab>=0) ImGui::Text("Mouse is hovering Tab Label: \"%s\".\n\n",tabNames[optionalHoveredTab]);
 
         // Draw tab page
-        ImGui::BeginChild("MyTabLabelsChild",ImVec2(0,120),true);
-            ImGui::Text("Tab Page For Tab: \"%s\" here.",tabNames[selectedTab]);
-            if (selectedTab==0) ImGui::TabLabelStyle::Edit(ImGui::TabLabelStyle().Get());
+        ImGui::BeginChild("MyTabLabelsChild",ImVec2(0,150),true);
+        ImGui::Text("Tab Page For Tab: \"%s\" here.",selectedTab>=0?tabNames[selectedTab]:"None!");
+        if (selectedTab==0) ImGui::TabLabelStyle::Edit(ImGui::TabLabelStyle().Get());
         ImGui::EndChild();
+
+#	    ifdef IMGUIHELPER_HAS_VERTICAL_TEXT_SUPPORT	// read-only definition
+	// ImGui::TabLabelsVertical() are similiar to ImGui::TabLabels(), but they do not support WrapMode.
+
+    static bool verticalTabLabelsAtLeft = true;ImGui::Checkbox("Vertical Tab Labels at the left side##VerticalTabLabelPosition",&verticalTabLabelsAtLeft);
+	static const char* verticalTabNames[] = {"Layers","Scene","World"};
+	static const int numVerticalTabs = sizeof(verticalTabNames)/sizeof(verticalTabNames[0]);
+	static const char* verticalTabTooltips[numVerticalTabs] = {"Layers Tab Tooltip","Scene Tab Tooltip","World Tab Tooltip"};
+	static int verticalTabItemOrdering[numVerticalTabs] = {0,1,2};
+	static int selectedVerticalTab = 0;
+	static int optionalHoveredVerticalTab = 0;
+    if (resetTabLabels) {selectedVerticalTab=0;for (int i=0;i<numVerticalTabs;i++) verticalTabItemOrdering[i] = i;}
+
+	const float verticalTabsWidth = ImGui::CalcVerticalTabLabelsWidth();
+	if (verticalTabLabelsAtLeft)	{
+	    /*const bool verticalTabSelectedChanged =*/ ImGui::TabLabelsVertical(verticalTabLabelsAtLeft,numVerticalTabs,verticalTabNames,selectedVerticalTab,verticalTabTooltips,&optionalHoveredVerticalTab,&verticalTabItemOrdering[0],allowTabLabelDragAndDrop,allowClosingTabs,NULL,NULL);
+	    //if (optionalHoveredVerticalTab>=0) ImGui::Text("Mouse is hovering Tab Label: \"%s\".\n\n",verticalTabNames[optionalHoveredVerticalTab]);
+	    ImGui::SameLine(0,0);
+	}
+	// Draw tab page
+	ImGui::BeginChild("MyVerticalTabLabelsChild",ImVec2(ImGui::GetWindowWidth()-verticalTabsWidth-2.f*ImGui::GetStyle().WindowPadding.x-ImGui::GetStyle().ScrollbarSize,150),true);
+    ImGui::Text("Tab Page For Tab: \"%s\" here.",selectedVerticalTab>=0?verticalTabNames[selectedVerticalTab]:"None!");
+	ImGui::EndChild();
+	if (!verticalTabLabelsAtLeft)	{
+	    ImGui::SameLine(0,0);
+	    /*const bool verticalTabSelectedChanged =*/ ImGui::TabLabelsVertical(verticalTabLabelsAtLeft,numVerticalTabs,verticalTabNames,selectedVerticalTab,verticalTabTooltips,&optionalHoveredVerticalTab,&verticalTabItemOrdering[0],allowTabLabelDragAndDrop,allowClosingTabs,NULL,NULL);
+	    //if (optionalHoveredVerticalTab>=0) ImGui::Text("Mouse is hovering Tab Label: \"%s\".\n\n",verticalTabNames[optionalHoveredVerticalTab]);
+	}
+#	    endif //IMGUIHELPER_HAS_VERTICAL_TEXT_SUPPORT
 
 #       else //NO_IMGUITABWINDOW
         ImGui::Text("%s","Excluded from this build.\n");
@@ -1243,6 +1273,7 @@ void DrawGL()	// Mandatory
             show_tab_windows = false;
         }
     }
+
 #   endif //NO_IMGUITABWINDOW
     if (show_performance && ImGui::Begin("Performance Window",&show_performance,ImVec2(0,0),0.9f,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoResize))   {
         ImGui::Text("Frame rate %.1f FPS",ImGui::GetIO().Framerate);

@@ -534,6 +534,14 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
 //--------------------------------------------------------------------------------
 
 
+#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_DRAW_METHODS) && !defined(NO_IMGUIHELPER_VERTICAL_TEXT_METHODS))
+// Tip: IMGUIHELPER_HAS_VERTICAL_TEXT_SUPPORT is a read-only definition that summarizes the definitions above
+
+// ImGui::TabLabelsVertical() are similiar to ImGui::TabLabels(), but they do not support WrapMode.
+bool TabLabelsVertical(bool textIsRotatedCCW,int numTabs, const char** tabLabels, int& selectedIndex, const char** tabLabelTooltips=NULL, int* pOptionalHoveredIndex=NULL, int* pOptionalItemOrdering=NULL, bool allowTabReorder=false, bool allowTabClosing=false, int* pOptionalClosedTabIndex=NULL,int * pOptionalClosedTabIndexInsideItemOrdering=NULL);
+float CalcVerticalTabLabelsWidth();
+#endif // (!defined(NO_IMGUIHELPER) && ...)
+
 } // namespace ImGui
 
 
