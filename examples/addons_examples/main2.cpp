@@ -774,12 +774,13 @@ void DrawGL()	// Mandatory
 
         // Actually the following "if block" that displays the Central Window was placed at the very bottom (after mgr.render),
         // but I've discovered that if I set some "automatic toggle window" to be visible at startup, it would be covered by the central window otherwise.
+        // Update: no matter, we can use the ImGuiWindowFlags_NoBringToFrontOnFocus flag for that if we want.
         if (gpShowCentralWindow && *gpShowCentralWindow)   {
             const ImVec2& iqs = mgr.getCentralQuadSize();
             if (iqs.x>ImGui::GetStyle().WindowMinSize.x && iqs.y>ImGui::GetStyle().WindowMinSize.y) {
                 ImGui::SetNextWindowPos(mgr.getCentralQuadPosition());
                 ImGui::SetNextWindowSize(mgr.getCentralQuadSize());
-                if (ImGui::Begin("Central Window",NULL,ImVec2(0,0),mgr.getDockedWindowsAlpha(),ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove  | ImGuiWindowFlags_NoResize | mgr.getDockedWindowsExtraFlags()))    {
+                if (ImGui::Begin("Central Window",NULL,ImVec2(0,0),mgr.getDockedWindowsAlpha(),ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove  | ImGuiWindowFlags_NoResize | mgr.getDockedWindowsExtraFlags() /*| ImGuiWindowFlags_NoBringToFrontOnFocus*/))    {
 #                   ifndef NO_IMGUITABWINDOW
                     ImGui::TabWindow& tabWindow = tabWindows[0];
                     if (!tabWindow.isInited()) {
