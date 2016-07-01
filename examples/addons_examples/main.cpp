@@ -204,7 +204,8 @@ void InitGL()	// Mandatory
         printf("Warning: \"%s\" not present.\n",pStyleFileName);fflush(stdout);
     }
 #   endif //NO_IMGUISTYLESERIALIZER
-
+// We might just choose one predefined style:
+//ImGui::ResetStyle(ImGuiStyle_Gray,ImGui::GetStyle());
 }
 void ResizeGL(int /*w*/,int /*h*/)	// Mandatory
 {
@@ -387,11 +388,11 @@ void DrawGL()	// Mandatory
         ImGui::Combo("###StyleEnumCombo",&styleEnumNum,ImGui::GetDefaultStyleNames(),(int) ImGuiStyle_Count,(int) ImGuiStyle_Count);
         ImGui::PopItemWidth();
         if (ImGui::IsItemHovered()) {
-            if   (styleEnumNum==0)      ImGui::SetTooltip("%s","\"Default\"\nThis is the default\nImGui theme");
-            else if (styleEnumNum==1)   ImGui::SetTooltip("%s","\"Gray\"\nThis is the default\ntheme of this demo");
-            else if (styleEnumNum==2)   ImGui::SetTooltip("%s","\"OSX\"\nPosted by @itamago here:\nhttps://github.com/ocornut/imgui/pull/511\n(hope I can use it)");
-            else if (styleEnumNum==3)   ImGui::SetTooltip("%s","\"DarkOpaque\"\nA dark-grayscale style with\nno transparency (by default)");
-            else if (styleEnumNum==4)   ImGui::SetTooltip("%s","\"OSXOpaque\"\nPosted by @dougbinks here:\nhttps://gist.github.com/dougbinks/8089b4bbaccaaf6fa204236978d165a9\n(hope I can use it)");
+            if   (styleEnumNum==ImGuiStyle_Default)      ImGui::SetTooltip("%s","\"Default\"\nThis is the default\nImGui theme");
+            else if (styleEnumNum==ImGuiStyle_Gray)   ImGui::SetTooltip("%s","\"Gray\"\nThis is the default\ntheme of this demo");
+            else if (styleEnumNum==ImGuiStyle_OSX)   ImGui::SetTooltip("%s","\"OSX\"\nPosted by @itamago here:\nhttps://github.com/ocornut/imgui/pull/511\n(hope I can use it)");
+            else if (styleEnumNum==ImGuiStyle_DarkOpaque)   ImGui::SetTooltip("%s","\"DarkOpaque\"\nA dark-grayscale style with\nno transparency (by default)");
+            else if (styleEnumNum==ImGuiStyle_OSXOpaque)   ImGui::SetTooltip("%s","\"OSXOpaque\"\nPosted by @dougbinks here:\nhttps://gist.github.com/dougbinks/8089b4bbaccaaf6fa204236978d165a9\n(hope I can use it)");
         }
 
         ImGui::SameLine();

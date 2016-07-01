@@ -358,16 +358,16 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	//style.WindowFillAlphaDefault = .7f;
 
 	style.WindowPadding = ImVec2(8,8);
-	style.WindowRounding = 8;
+	style.WindowRounding = 6;
 	style.ChildWindowRounding = 0;
 	style.FramePadding = ImVec2(3,3);
-	style.FrameRounding = 4;
+	style.FrameRounding = 2;
 	style.ItemSpacing = ImVec2(8,4);
 	style.ItemInnerSpacing = ImVec2(5,5);
 	style.TouchExtraPadding = ImVec2(0,0);
 	style.IndentSpacing = 22;
 	style.ScrollbarSize = 16;
-	style.ScrollbarRounding = 8;
+	style.ScrollbarRounding = 4;
 	style.GrabMinSize = 8;
 	style.GrabRounding = 0;
 
@@ -414,6 +414,73 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.00f, 0.00f, 0.66f, 0.34f);
 	style.Colors[ImGuiCol_PopupBg]               = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
 	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);	
+    }
+    break;
+    case ImGuiStyle_Light:
+    {
+	style.AntiAliasedLines = true;
+	style.AntiAliasedShapes = true;
+	style.CurveTessellationTol = 1.25f;
+	style.Alpha = 1.f;
+	//style.WindowFillAlphaDefault = .7f;
+
+	style.WindowPadding = ImVec2(8,8);
+	style.WindowRounding = 6;
+	style.ChildWindowRounding = 0;
+	style.FramePadding = ImVec2(4,3);
+	style.FrameRounding = 0;
+	style.ItemSpacing = ImVec2(8,4);
+	style.ItemInnerSpacing = ImVec2(4,4);
+	style.TouchExtraPadding = ImVec2(0,0);
+	style.IndentSpacing = 21;
+	style.ScrollbarSize = 16;
+	style.ScrollbarRounding = 4;
+	style.GrabMinSize = 8;
+	style.GrabRounding = 0;
+
+	style.Colors[ImGuiCol_Text]                  = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+	style.Colors[ImGuiCol_TextDisabled]          = ImVec4(0.00f, 0.00f, 0.00f, 0.71f);
+	style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);
+	style.Colors[ImGuiCol_ChildWindowBg]         = ImVec4(0.99f, 1.00f, 0.71f, 0.10f);
+	style.Colors[ImGuiCol_PopupBg]               = ImVec4(0.51f, 0.63f, 0.63f, 0.92f);
+	style.Colors[ImGuiCol_Border]                = ImVec4(0.14f, 0.14f, 0.14f, 0.51f);
+	style.Colors[ImGuiCol_BorderShadow]          = ImVec4(0.86f, 0.86f, 0.86f, 0.51f);
+	style.Colors[ImGuiCol_FrameBg]               = ImVec4(0.54f, 0.67f, 0.67f, 1.00f);
+	style.Colors[ImGuiCol_FrameBgHovered]        = ImVec4(0.61f, 0.74f, 0.75f, 1.00f);
+	style.Colors[ImGuiCol_FrameBgActive]         = ImVec4(0.67f, 0.82f, 0.82f, 1.00f);
+	style.Colors[ImGuiCol_TitleBg]               = ImVec4(0.54f, 0.54f, 0.24f, 1.00f);
+	style.Colors[ImGuiCol_TitleBgCollapsed]      = ImVec4(0.54f, 0.54f, 0.24f, 0.39f);
+	style.Colors[ImGuiCol_TitleBgActive]         = ImVec4(0.68f, 0.69f, 0.30f, 1.00f);
+	style.Colors[ImGuiCol_MenuBarBg]             = ImVec4(0.50f, 0.57f, 0.73f, 0.92f);
+	style.Colors[ImGuiCol_ScrollbarBg]           = ImVec4(0.26f, 0.29f, 0.31f, 1.00f);
+	style.Colors[ImGuiCol_ScrollbarGrab]         = ImVec4(0.61f, 0.60f, 0.26f, 1.00f);
+	style.Colors[ImGuiCol_ScrollbarGrabHovered]  = ImVec4(0.73f, 0.72f, 0.31f, 1.00f);
+	style.Colors[ImGuiCol_ScrollbarGrabActive]   = ImVec4(0.82f, 0.82f, 0.35f, 1.00f);
+	style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.51f, 0.63f, 0.63f, 0.92f);
+	style.Colors[ImGuiCol_CheckMark]             = ImVec4(0.85f, 0.86f, 0.00f, 1.00f);
+	style.Colors[ImGuiCol_SliderGrab]            = ImVec4(0.81f, 0.82f, 0.00f, 1.00f);
+	style.Colors[ImGuiCol_SliderGrabActive]      = ImVec4(0.87f, 0.88f, 0.00f, 1.00f);
+	style.Colors[ImGuiCol_Button]                = ImVec4(0.41f, 0.59f, 0.31f, 1.00f);
+	style.Colors[ImGuiCol_ButtonHovered]         = ImVec4(0.45f, 0.65f, 0.34f, 1.00f);
+	style.Colors[ImGuiCol_ButtonActive]          = ImVec4(0.50f, 0.73f, 0.38f, 1.00f);
+	style.Colors[ImGuiCol_Header]                = ImVec4(0.42f, 0.47f, 0.88f, 1.00f);
+	style.Colors[ImGuiCol_HeaderHovered]         = ImVec4(0.44f, 0.51f, 0.93f, 1.00f);
+	style.Colors[ImGuiCol_HeaderActive]          = ImVec4(0.50f, 0.62f, 1.00f, 1.00f);
+	style.Colors[ImGuiCol_Column]                = ImVec4(0.13f, 0.14f, 0.11f, 1.00f);
+	style.Colors[ImGuiCol_ColumnHovered]         = ImVec4(0.73f, 0.75f, 0.61f, 1.00f);
+	style.Colors[ImGuiCol_ColumnActive]          = ImVec4(0.89f, 0.90f, 0.70f, 1.00f);
+	style.Colors[ImGuiCol_ResizeGrip]            = ImVec4(0.61f, 0.22f, 0.22f, 1.00f);
+	style.Colors[ImGuiCol_ResizeGripHovered]     = ImVec4(0.69f, 0.24f, 0.24f, 1.00f);
+	style.Colors[ImGuiCol_ResizeGripActive]      = ImVec4(0.80f, 0.28f, 0.28f, 1.00f);
+	style.Colors[ImGuiCol_CloseButton]           = ImVec4(0.67f, 0.00f, 0.00f, 0.50f);
+	style.Colors[ImGuiCol_CloseButtonHovered]    = ImVec4(0.78f, 0.00f, 0.00f, 0.60f);
+	style.Colors[ImGuiCol_CloseButtonActive]     = ImVec4(0.92f, 0.00f, 0.00f, 1.00f);
+	style.Colors[ImGuiCol_PlotLines]             = ImVec4(0.17f, 0.35f, 0.03f, 1.00f);
+	style.Colors[ImGuiCol_PlotLinesHovered]      = ImVec4(0.41f, 0.81f, 0.06f, 1.00f);
+	style.Colors[ImGuiCol_PlotHistogram]         = ImVec4(0.81f, 0.00f, 0.00f, 1.00f);
+	style.Colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.48f, 0.61f, 0.98f, 1.00f);
+	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.39f, 0.12f, 0.12f, 0.20f);
     }
     break;
     case ImGuiStyle_OSX:
@@ -602,7 +669,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 
     return true;
 }
-static const char* DefaultStyleNames[ImGuiStyle_Count]={"Default","Gray","OSX","OSXOpaque","DarkOpaque","DefaultInverse","OSXInverse","OSXOpaqueInverse","DarkOpaqueInverse"};
+static const char* DefaultStyleNames[ImGuiStyle_Count]={"Default","Gray","Light","OSX","OSXOpaque","DarkOpaque","DefaultInverse","OSXInverse","OSXOpaqueInverse","DarkOpaqueInverse"};
 const char** GetDefaultStyleNames() {return &DefaultStyleNames[0];}
 
 

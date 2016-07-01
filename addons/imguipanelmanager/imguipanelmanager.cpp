@@ -1616,6 +1616,7 @@ bool ImGui::PanelManager::Save(const PanelManager &mgr, ImGuiHelper::Serializer&
     const ImVec2& displaySize = ImGui::GetIO().DisplaySize;
     IM_ASSERT(displaySize.x>=0 && displaySize.y>=0);
 
+    int mwf = (int) mgr.getDockedWindowsExtraFlags();s.save(ImGui::FT_ENUM,&mwf,"managerExtraWindowFlags");
     int sz = mgr.panes.size();s.save(&sz,"numPanes");
     for (int ip=0,ipsz=mgr.panes.size();ip<ipsz;ip++)    {
         const ImGui::PanelManager::Pane& pane = mgr.panes[ip];
@@ -1686,6 +1687,13 @@ static bool ImGuiPanelManagerParser(ImGuiHelper::FieldType ft,int /*numArrayElem
             if (ps.curWindow) {
                 ps.curWindow->extraWindowFlags=*((int*)pValue);
             }
+            break;
+        }
+        else if (strcmp(name,"managerExtraWindowFlags")==0)	{
+            ImGuiWindowFlags flags = *((int*)pValue);
+            //mgr.dockedWindowsExtraFlags = flags;
+            mgr.setDockedWindowsBorder(flags&ImGuiWindowFlags_ShowBorders);
+            mgr.setDockedWindowsNoTitleBar(flags&ImGuiWindowFlags_NoTitleBar);
             break;
         }
     }

@@ -186,7 +186,7 @@ void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, cons
     if (!dl || (((fillColorTop >> 24) == 0) && ((fillColorBottom >> 24) == 0) && ((strokeColor >> 24) == 0)))  return;
     if (rounding==0.f || rounding_corners==0) {
         dl->AddRectFilledMultiColor(a,b,fillColorTop,fillColorTop,fillColorBottom,fillColorBottom); // Huge speedup!
-        if ((strokeColor>> 24)!= 0) {
+        if ((strokeColor>> 24)!= 0 && strokeThickness>0.f) {
             dl->PathRect(a, b, rounding, rounding_corners);
             dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, true, strokeThickness, antiAliased);
             dl->PathClear();
@@ -229,32 +229,35 @@ inline static ImU32 ColorDarken(ImU32 c,float value,float optionalAlphaToSet=-1.
     return ImGui::ColorConvertFloat4ToU32(f);
 }
 inline static ImU32 ColorLighten(ImU32 c,float value,float optionalAlphaToSet=-1.f) {return ColorDarken(c,-value,optionalAlphaToSet);}
+// Helper inline methods to save some code in TabLabelStyle::ctr() and ResetTabLabelStyle(...)
+inline static void TabLabelStyleSetSelectedTabColors(ImGui::TabLabelStyle& style,const ImColor& tabColor,const ImColor& textColor,const ImColor& borderColor)   {
+    style.colors[TabLabelStyle::Col_TabLabelSelectedActive] = style.colors[TabLabelStyle::Col_TabLabelSelectedHovered] = style.colors[TabLabelStyle::Col_TabLabelSelected] = tabColor;
+    style.colors[TabLabelStyle::Col_TabLabelSelectedText]               = textColor;
+    style.colors[TabLabelStyle::Col_TabLabelSelectedBorder]             = borderColor;
+}
+inline static void TabLabelStyleSetTabColors(ImGui::TabLabelStyle& style,const ImColor& tabColor,const ImColor& tabColorHovered,const ImColor& textColor,const ImColor& borderColor)   {
+    style.colors[TabLabelStyle::Col_TabLabel]           = tabColor;
+    style.colors[TabLabelStyle::Col_TabLabelHovered]    = style.colors[TabLabelStyle::Col_TabLabelActive] = tabColorHovered;
+    style.colors[TabLabelStyle::Col_TabLabelText]       = textColor;
+    style.colors[TabLabelStyle::Col_TabLabelBorder]     = borderColor;
+}
+inline static void TabLabelStyleSetCloseButtonColors(ImGui::TabLabelStyle& style,const ImColor& hoveredBtnColor=ImColor(166,0,11,255),const ImColor& actveBtnColor=ImColor(206,40,51,255),const ImColor* pHoveredBtnTextColor=NULL,const ImColor* pHoveredBtnBorderColor=NULL)   {
+    style.colors[TabLabelStyle::Col_TabLabelCloseButtonHovered]       = hoveredBtnColor;
+    style.colors[TabLabelStyle::Col_TabLabelCloseButtonActive]        = actveBtnColor;
+    style.colors[TabLabelStyle::Col_TabLabelCloseButtonTextHovered]   = (pHoveredBtnTextColor!=NULL) ? (ImU32)(*pHoveredBtnTextColor) : style.colors[TabLabelStyle::Col_TabLabelSelectedText];
+    style.colors[TabLabelStyle::Col_TabLabelCloseButtonBorder]        = (pHoveredBtnBorderColor!=NULL) ? (ImU32)(*pHoveredBtnBorderColor) : style.colors[TabLabelStyle::Col_TabLabelSelectedBorder];
+}
+// End Helper inline methods to save some code in TabLabelStyle::ctr() and ResetTabLabelStyle(...)
+
 TabLabelStyle::TabLabelStyle()    {
 
-    colors[Col_TabLabelSelected]                   = ImColor(49,54,58,255);
-    colors[Col_TabLabelSelectedActive] = colors[Col_TabLabelSelectedHovered] = colors[Col_TabLabelSelected];
-    colors[Col_TabLabelSelectedText]               = ImColor(210,214,217,255);
-    colors[Col_TabLabelSelectedBorder]             = ImColor(23,27,40,250);
+    fillColorGradientDeltaIn0_05 = 0.0f;rounding = 6.f;borderWidth = 0.f;
+    closeButtonRounding = 0.f;closeButtonBorderWidth = 1.f;closeButtonTextWidth = 2.5f;//3.f;
+    antialiasing = false;
 
-    const float alphaSelected = 1.0f;//0.725f;
-    colors[Col_TabLabel]           = ColorDarken(colors[Col_TabLabelSelected],.135f,alphaSelected);
-    colors[Col_TabLabelHovered]    = ColorLighten(colors[Col_TabLabel],.1f,alphaSelected);
-    colors[Col_TabLabelActive]     = colors[Col_TabLabelHovered];
-    colors[Col_TabLabelText]       = ImColor(140,144,147,200);
-    colors[Col_TabLabelBorder]     = ColorDarken(colors[Col_TabLabelSelectedBorder],.0225f,alphaSelected);
-
-    colors[Col_TabLabelCloseButtonHovered]       = ImColor(166,0,11,255);
-    colors[Col_TabLabelCloseButtonActive]        = ImColor(206,40,51,255);
-    colors[Col_TabLabelCloseButtonTextHovered]   = colors[Col_TabLabelSelectedText];
-    colors[Col_TabLabelCloseButtonBorder]        = colors[Col_TabLabelSelectedBorder];
-
-    fillColorGradientDeltaIn0_05 = 0.070f;//0.125f;//0.2f;//0.05f; // vertical gradient if > 0 (looks nice but it's very slow)
-    rounding = 0.f;//5.f;//6.f;//9.f
-    borderWidth = 1.f;
-
-    closeButtonRounding = 0.f;
-    closeButtonBorderWidth = 1.f;
-    closeButtonTextWidth = 2.5f;//3.f;
+    TabLabelStyleSetSelectedTabColors(*this,ImColor(0.267f,0.282f,0.396f,1.0f),ImColor(0.925f,0.945f,0.957,1.0f),ImColor(0.090f,0.106f,0.157f,0.000f));
+    TabLabelStyleSetTabColors(*this,ImColor(0.161f,0.188f,0.204f,1.f),ImColor(0.239f,0.259f,0.275f,1.f),ImColor(0.549f,0.565f,0.576f,0.784f),ColorDarken(colors[Col_TabLabelSelectedBorder],.0225f));
+    TabLabelStyleSetCloseButtonColors(*this);
 
     //for (int i=0;i<TAB_STATE_COUNT;i++) fontStyles[i] = FONT_STYLE_BOLD;    // looks better for me
     fontStyles[TAB_STATE_NORMAL]            = FONT_STYLE_NORMAL;
@@ -262,15 +265,10 @@ TabLabelStyle::TabLabelStyle()    {
     fontStyles[TAB_STATE_MODIFIED]          = FONT_STYLE_ITALIC;
     fontStyles[TAB_STATE_SELECTED_MODIFIED] = FONT_STYLE_BOLD_ITALIC;
 
-    antialiasing = false;
-
     tabWindowLabelBackgroundColor        = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     tabWindowLabelShowAreaSeparator      = false;
     tabWindowSplitterColor               = ImVec4(1,1,1,1);
     tabWindowSplitterSize                = 8.f;
-
-    TabLabelStyle::LightenBackground(*this,0.06f);
-
 }
 void ChangeTabLabelStyleColors(TabLabelStyle& style,float satThresholdForInvertingLuminance,float shiftHue)  {
     if (satThresholdForInvertingLuminance>=1.f && shiftHue==0.f) return;
@@ -440,70 +438,56 @@ bool ResetTabLabelStyle(int tabLabelStyleEnum,ImGui::TabLabelStyle& style) {
     if (tabLabelStyleEnum<0 || tabLabelStyleEnum>=ImGuiTabLabelStyle_Count) return false;
     style = TabLabelStyle();
     switch (tabLabelStyleEnum) {
+    case ImGuiTabLabelStyle_Dark:
+        style.fillColorGradientDeltaIn0_05 = 0.075f;style.rounding = 0.f;style.borderWidth = 1.f;
+        TabLabelStyleSetSelectedTabColors(style,ImColor(49,54,58,255),ImColor(210,214,217,255),ImColor(23,27,40,250));
+        TabLabelStyleSetTabColors(style,ColorDarken(style.colors[TabLabelStyle::Col_TabLabelSelected],.135f,1.f),ColorLighten(style.colors[TabLabelStyle::Col_TabLabel],.1f,1.f),ImColor(140,144,147,200),ColorDarken(style.colors[TabLabelStyle::Col_TabLabelSelectedBorder],.0225f,1.f));
+        TabLabelStyleSetCloseButtonColors(style);
+        break;
     case ImGuiTabLabelStyle_Red:
     case ImGuiTabLabelStyle_Green:
     case ImGuiTabLabelStyle_Blue:
     case ImGuiTabLabelStyle_Yellow:
     case ImGuiTabLabelStyle_Orange:
-    style.fillColorGradientDeltaIn0_05 = 0.08f;
-    style.rounding = 0.f;//5.9f;
-    //style.borderWidth = 2.f;
-
-    style.colors[TabLabelStyle::Col_TabLabelSelected] = ImGui::ColorConvertFloat4ToU32(ImVec4(0.549,0.108,0.071,1.000));
-    style.colors[TabLabelStyle::Col_TabLabelSelectedActive] = style.colors[TabLabelStyle::Col_TabLabelSelectedHovered] = style.colors[TabLabelStyle::Col_TabLabelSelected];
-    style.colors[TabLabelStyle::Col_TabLabelSelectedText]   = ImGui::ColorConvertFloat4ToU32(ImVec4(0.863,1.000,0.965,1.000));
-    style.colors[TabLabelStyle::Col_TabLabelSelectedBorder] = ImGui::ColorConvertFloat4ToU32(ImVec4(0.337,0.125,0.125,1.000));
-
-    style.colors[TabLabelStyle::Col_TabLabel]           = ImGui::ColorConvertFloat4ToU32(ImVec4(0.337,0.162,0.143,0.981));
-    style.colors[TabLabelStyle::Col_TabLabelHovered]    = ImGui::ColorConvertFloat4ToU32(ImVec4(0.525,0.206,0.163,0.981));
-    style.colors[TabLabelStyle::Col_TabLabelActive]     = style.colors[TabLabelStyle::Col_TabLabelHovered];
-    style.colors[TabLabelStyle::Col_TabLabelText]       = ImGui::ColorConvertFloat4ToU32(ImVec4(0.655,0.745,0.718,0.981));
-    style.colors[TabLabelStyle::Col_TabLabelBorder]     = ImGui::ColorConvertFloat4ToU32(ImVec4(0.537,0.200,0.200,0.881));
-
-    if (tabLabelStyleEnum == ImGuiTabLabelStyle_Green)          TabLabelStyle::ShiftHue(style,0.32f);
-    else if (tabLabelStyleEnum == ImGuiTabLabelStyle_Blue)      TabLabelStyle::ShiftHue(style,0.62f);
-    else if (tabLabelStyleEnum == ImGuiTabLabelStyle_Yellow)    TabLabelStyle::ShiftHue(style,0.14f);
-    else if (tabLabelStyleEnum == ImGuiTabLabelStyle_Orange)    TabLabelStyle::ShiftHue(style,0.08f);
-
-    // reset close button colors after shifting hue
-    style.colors[TabLabelStyle::Col_TabLabelCloseButtonHovered]       = ImColor(166,0,11,255);
-    style.colors[TabLabelStyle::Col_TabLabelCloseButtonActive]        = ImColor(206,40,51,255);
-    style.colors[TabLabelStyle::Col_TabLabelCloseButtonTextHovered]   = style.colors[TabLabelStyle::Col_TabLabelSelectedText];
-    style.colors[TabLabelStyle::Col_TabLabelCloseButtonBorder]        = style.colors[TabLabelStyle::Col_TabLabelSelectedBorder];//ImGui::ColorConvertFloat4ToU32(ImVec4(0.0,0.00,0.00,1.0));//style.colors[TabLabelStyle::Col_TabLabelSelectedBorder];
-
-    break;
+        style.fillColorGradientDeltaIn0_05 = 0.075f;style.rounding = 0.f;style.borderWidth = 1.f;
+        // Colors for ImGuiTabLabelStyle_Red here:
+        TabLabelStyleSetSelectedTabColors(style,ImColor(0.549f,0.108f,0.071f,1.000f),ImColor(0.863f,1.000f,0.965f,1.000f),ImColor(0.337f,0.125f,0.125f,1.000f));
+        TabLabelStyleSetTabColors(style,ImColor(0.337f,0.162f,0.143f,0.981f),ImColor(0.525f,0.206f,0.163f,0.981f),ImColor(0.655f,0.745f,0.718f,0.981f),ImColor(0.537f,0.200f,0.200f,0.881f));
+        // Hue shift if necessary here:
+        if (tabLabelStyleEnum == ImGuiTabLabelStyle_Green)          TabLabelStyle::ShiftHue(style,0.32f);
+        else if (tabLabelStyleEnum == ImGuiTabLabelStyle_Blue)      TabLabelStyle::ShiftHue(style,0.62f);
+        else if (tabLabelStyleEnum == ImGuiTabLabelStyle_Yellow)    TabLabelStyle::ShiftHue(style,0.14f);
+        else if (tabLabelStyleEnum == ImGuiTabLabelStyle_Orange)    TabLabelStyle::ShiftHue(style,0.08f);
+        // set close button colors after shifting hue
+        TabLabelStyleSetCloseButtonColors(style);
+        break;
     case ImGuiTabLabelStyle_Foxy:
     case ImGuiTabLabelStyle_FoxyInverse:
-    style.fillColorGradientDeltaIn0_05 = 0.f;//0.08f;
-    style.rounding = 6.f;
-    //style.borderWidth = 2.f;
-
-    style.colors[TabLabelStyle::Col_TabLabelSelected] = ImColor(213,212,211,255);
-    style.colors[TabLabelStyle::Col_TabLabelSelectedActive] = style.colors[TabLabelStyle::Col_TabLabelSelectedHovered] = style.colors[TabLabelStyle::Col_TabLabelSelected] = style.colors[TabLabelStyle::Col_TabLabelSelected];
-    style.colors[TabLabelStyle::Col_TabLabelSelectedText]   = ImColor(30,26,53,255);
-    style.colors[TabLabelStyle::Col_TabLabelSelectedBorder] = ImColor(136,137,135,255);
-
-    style.colors[TabLabelStyle::Col_TabLabel]           = ImColor(60,59,55,255);
-    style.colors[TabLabelStyle::Col_TabLabelHovered]    = ImColor(104,103,100,255);
-    style.colors[TabLabelStyle::Col_TabLabelActive]     = style.colors[TabLabelStyle::Col_TabLabelHovered];
-    style.colors[TabLabelStyle::Col_TabLabelText]       = ImColor(223,219,210,255);
-    style.colors[TabLabelStyle::Col_TabLabelBorder]     = ImColor(60,59,55,255);
-
-    style.colors[TabLabelStyle::Col_TabLabelCloseButtonBorder] = style.colors[TabLabelStyle::Col_TabLabelCloseButtonHovered];
-
-    if (tabLabelStyleEnum == ImGuiTabLabelStyle_FoxyInverse) {
-        TabLabelStyle::InvertSelectedLook(style);
-        style.colors[TabLabelStyle::Col_TabLabelActive] = style.colors[TabLabelStyle::Col_TabLabelHovered] = ImColor(154,153,150,255);
-        style.colors[TabLabelStyle::Col_TabLabelSelectedActive] = style.colors[TabLabelStyle::Col_TabLabelSelectedHovered] = style.colors[TabLabelStyle::Col_TabLabelSelected] = style.colors[TabLabelStyle::Col_TabLabelSelected];
+        style.fillColorGradientDeltaIn0_05 = 0.f;style.rounding = 6.f;style.borderWidth = 1.f;//0.f
+        TabLabelStyleSetSelectedTabColors(style,ImColor(213,212,211,255),ImColor(30,26,53,255),ImColor(136,137,135,255));
+        TabLabelStyleSetTabColors(style,ImColor(60,59,55,255),ImColor(104,103,100,255),ImColor(223,219,210,255),ImColor(60,59,55,255));
+        TabLabelStyleSetCloseButtonColors(style);style.colors[TabLabelStyle::Col_TabLabelCloseButtonBorder] = style.colors[TabLabelStyle::Col_TabLabelCloseButtonHovered];
+        if (tabLabelStyleEnum == ImGuiTabLabelStyle_FoxyInverse) {
+            TabLabelStyle::InvertSelectedLook(style);
+            style.colors[TabLabelStyle::Col_TabLabelActive] = style.colors[TabLabelStyle::Col_TabLabelHovered] = ImColor(154,153,150,255);
+            style.colors[TabLabelStyle::Col_TabLabelSelectedActive] = style.colors[TabLabelStyle::Col_TabLabelSelectedHovered] = style.colors[TabLabelStyle::Col_TabLabelSelected] = style.colors[TabLabelStyle::Col_TabLabelSelected];
+        }
+        break;
+    case ImGuiTabLabelStyle_Tidy:   {
+        style.fillColorGradientDeltaIn0_05 = 0.0f;style.rounding = 6.f;style.borderWidth = 1.5f;style.antialiasing = true;
+        TabLabelStyleSetSelectedTabColors(style,ImColor(0.682f,0.682f,0.682f,0.941f),ImColor(0.000f,0.000f,0.000f,1.000f),ImColor(0.992f,0.992f,0.992f,1.000f));
+        TabLabelStyleSetTabColors(style,ImColor(0.212f,0.212f,0.212f,1.000f),ImColor(0.392f,0.392f,0.392f,1.000f),ImColor(0.784f,0.784f,0.784f,1.000f),ImColor(0.541f,0.541f,0.541f,0.588f));
+        style.closeButtonBorderWidth = 3.f;style.closeButtonTextWidth = 2.5f;ImColor btc(0.949f,0.949f,0.949f,1.000f),bbc(0.749f,0.749f,0.749f,0.549f);
+        TabLabelStyleSetCloseButtonColors(style,ImColor(0.651f,0.000f,0.043f,0.608f),ImColor(0.808f,0.157f,0.200f,0.608f),&btc,&bbc);
     }
-    break;
+        break;
     default:
-    break;
+        break;
     }
 
     return true;
 }
-static const char* DefaultTabLabelStyleNames[ImGuiTabLabelStyle_Count]={"Default","Red","Green","Blue","Yellow","Orange","Foxy","FoxyInverse"};
+static const char* DefaultTabLabelStyleNames[ImGuiTabLabelStyle_Count]={"Default","Dark","Red","Green","Blue","Yellow","Orange","Tidy","Foxy","FoxyInverse"};
 const char** GetDefaultTabLabelStyleNames() {return &DefaultTabLabelStyleNames[0];}
 
 

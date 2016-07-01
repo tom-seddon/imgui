@@ -142,7 +142,7 @@ static void TabWindow::SetTabLabelSaveCallback(TabLabelFileCallback _tabLabelSav
 /*
 There are better alternatives to Imgui::TabWindow:
 -> https://github.com/thennequin/ImWindow   [for Window OS]
--> https://github.com/nem0/LumixEngine/blob/master/src/studio_lib/imgui/imgui_dock.inl [lumixengine's Dock]
+-> https://github.com/nem0/LumixEngine/blob/master/src/studio_lib/imgui/imgui_dock.inl [lumixengine's Dock] => NOW AVAILABLE as imguidock addon.
 Please see: https://github.com/ocornut/imgui/issues for further info
 */
 
@@ -150,11 +150,13 @@ namespace ImGui {
 
 enum ImGuiTabLabelStyleEnum {
     ImGuiTabLabelStyle_Default=0,
+    ImGuiTabLabelStyle_Dark,
     ImGuiTabLabelStyle_Red,
     ImGuiTabLabelStyle_Green,
     ImGuiTabLabelStyle_Blue,
     ImGuiTabLabelStyle_Yellow,
     ImGuiTabLabelStyle_Orange,
+    ImGuiTabLabelStyle_Tidy,
     ImGuiTabLabelStyle_Foxy,
     ImGuiTabLabelStyle_FoxyInverse,
 
@@ -217,16 +219,16 @@ float tabWindowSplitterSize;
 TabLabelStyle();
 
 void reset() {Reset(*this);}
-static bool Edit(TabLabelStyle& style);
-static bool EditFast(TabLabelStyle &s);
-static void Reset(TabLabelStyle& style) {style = TabLabelStyle();}
+static bool Edit(TabLabelStyle& style=TabLabelStyle::Get());
+static bool EditFast(TabLabelStyle &s=TabLabelStyle::Get());
+static void Reset(TabLabelStyle& style=TabLabelStyle::Get()) {style = TabLabelStyle();}
 
 // These modify the style: some operation are not loseless!
-static void InvertSelectedLook(TabLabelStyle& style);
+static void InvertSelectedLook(TabLabelStyle& style=TabLabelStyle::Get());
 static void ShiftHue(TabLabelStyle& style,float amountIn0_1);
-static void InvertColors(TabLabelStyle& style,float saturationThreshould=0.1f); // in [0.f,0.5f] AFAIR
-static void LightenBackground(TabLabelStyle& style,float amount=0.15f);
-static void DarkenBackground(TabLabelStyle& style,float amount=0.15f);
+static void InvertColors(TabLabelStyle& style=TabLabelStyle::Get(),float saturationThreshould=0.1f); // in [0.f,0.5f] AFAIR
+static void LightenBackground(TabLabelStyle& style=TabLabelStyle::Get(),float amount=0.15f);
+static void DarkenBackground(TabLabelStyle& style=TabLabelStyle::Get(),float amount=0.15f);
 
 
 #if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))

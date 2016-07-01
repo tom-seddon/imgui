@@ -308,7 +308,7 @@ static bool SavePanelManagerIfSupported() {
 #	ifndef NO_IMGUIEMSCRIPTEN
 	ImGui::EmscriptenFileSystemHelper::Sync();
 #	endif //NO_IMGUIEMSCRIPTEN
-	return true;
+    return true;
     }
 #   endif //!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !...
     return false;
