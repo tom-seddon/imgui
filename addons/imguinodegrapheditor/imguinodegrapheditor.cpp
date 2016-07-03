@@ -415,10 +415,28 @@ void NodeGraphEditor::render()
 	    draw_list->AddLine(ImVec2(0.0f,y)+win_pos, ImVec2(canvasSize.x,y)+win_pos, GRID_COLOR,grid_Line_width);
     }
 
+    const ImVec2 link_cp(style.link_control_point_distance * currentFontWindowScale,0); // Bezier control point of the links
+    const float link_line_width = style.link_line_width * currentFontWindowScale;
+
+    // Clipping Data (used to cull nodes and/or links)
+    const bool enableNodeCulling = true;const bool enableLinkCulling = true;    // Tweakables
+    int numberOfCulledNodes = 0, numberOfCulledLinks = 0;
+    ImRect windowClipRect,linkClipRect;
+    if (enableNodeCulling || enableLinkCulling) {
+        ImVec2 windowClipRect0(win_pos.x-offset.x,win_pos.y-offset.y);
+        ImVec2 windowClipRect1 = windowClipRect0 + canvasSize;
+        if (enableLinkCulling) linkClipRect = ImRect(windowClipRect0+offset-link_cp-ImVec2(0,link_line_width),windowClipRect1+offset+link_cp+ImVec2(0,link_line_width));   // used to clip links
+        if (enableNodeCulling)  {
+            const float windowClipHalfExtraWidth = NODE_SLOT_RADIUS + (show_connection_names ? maxConnectorNameWidth : 0.f);  // Otherwise node names are culled too early
+            windowClipRect0.x-=     windowClipHalfExtraWidth;
+            windowClipRect1.x+=     windowClipHalfExtraWidth;
+            windowClipRect = ImRect(windowClipRect0,windowClipRect1);   // used to clip nodes (= windows)
+        }
+    }
+    // End Clipping Data
+
     // Display links
     draw_list->ChannelsSetCurrent(0); // Background
-    const ImVec2 link_cp(style.link_control_point_distance * currentFontWindowScale,0);
-    const float link_line_width = style.link_line_width * currentFontWindowScale;
     if (!nodesHaveZeroSize) // Otherwise artifacts while scaling
     {
         for (int link_idx = 0; link_idx < links.Size; link_idx++)
@@ -428,7 +446,14 @@ void NodeGraphEditor::render()
             Node* node_out = link.OutputNode;
             ImVec2 p1 = offset + node_inp->GetOutputSlotPos(link.InputSlot,currentFontWindowScale);
             ImVec2 p2 = offset + node_out->GetInputSlotPos(link.OutputSlot,currentFontWindowScale);
-	    draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2,style.color_link, link_line_width, style.link_num_segments);
+            if (enableLinkCulling) {
+                ImRect cullLink;cullLink.Add(p1);cullLink.Add(p2);
+                if (!linkClipRect.Overlaps(cullLink)) {
+                    ++numberOfCulledLinks;
+                    continue;
+                }
+            }
+            draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2,style.color_link, link_line_width, style.link_num_segments);
         }
     }
     // Display dragging link
@@ -450,20 +475,10 @@ void NodeGraphEditor::render()
 
 
     // Display nodes
-    ImGui::PushStyleColor(ImGuiCol_Header,transparent);
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive,transparent);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered,transparent);
+    //ImGui::PushStyleColor(ImGuiCol_Header,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderActive,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderHovered,transparent);    // moved inside the loop to wrap the ImGui::TreeNode()
     bool isSomeNodeMoving = false;Node *node_to_fire_edit_callback = NULL,* node_to_paste_from_copy_source = NULL;bool mustDeleteANodeSoon = false;
     ImGui::ColorEditMode(colorEditMode);
 
-    // Clipping Data
-    const float windowClipHalfExtraWidth = NODE_SLOT_RADIUS + (show_connection_names ? maxConnectorNameWidth : 0.f);  // Otherwise node names are culled too early
-    const ImVec2 windowClipRect0(win_pos.x-offset.x-windowClipHalfExtraWidth,win_pos.y-offset.y);
-    ImVec2 windowClipRect1 = windowClipRect0 + canvasSize;windowClipRect1.x+=2.f*windowClipHalfExtraWidth;
-    const ImRect windowClipRect(windowClipRect0,windowClipRect1);
-    int numberOfCulledNodes = 0;
-    const bool enableNodeCulling = true;
-    // End Clipping data
 
     static const char* btnNames[3]={"v","^","x"};
     const float textSizeButtonPaste = ImGui::CalcTextSize(btnNames[0]).x;
@@ -472,16 +487,16 @@ void NodeGraphEditor::render()
     for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
     {
         Node* node = nodes[node_idx];
-	const ImVec2 nodePos = node->GetPos(currentFontWindowScale);
+        const ImVec2 nodePos = node->GetPos(currentFontWindowScale);
 
         // culling attempt
-	if (enableNodeCulling && !nodesHaveZeroSize) {
-	    const ImRect cullRect(nodePos,nodePos+node->Size);
-	    if (!windowClipRect.Overlaps(cullRect)) {
-		++numberOfCulledNodes;
-		continue;
-	    }
-	}
+        if (enableNodeCulling && !nodesHaveZeroSize) {
+            const ImRect cullRect(nodePos,nodePos+node->Size);
+            if (!windowClipRect.Overlaps(cullRect)) {
+                ++numberOfCulledNodes;
+                continue;
+            }
+        }
 
         if (node->baseWidthOverride>0) {
             currentNodeWidth = node->baseWidthOverride*currentFontWindowScale;
@@ -500,8 +515,10 @@ void NodeGraphEditor::render()
         bool nodeInEditMode = false;
         ImGui::BeginGroup(); // Lock horizontal position
         ImGui::SetNextTreeNodeOpen(node->isOpen,ImGuiSetCond_Always);
+        ImGui::PushStyleColor(ImGuiCol_Header,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderActive,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderHovered,transparent);    // Moved from outside loop
         if (ImGui::TreeNode(node,"%s","")) {ImGui::TreePop();node->isOpen = true;}
         else node->isOpen = false;
+        ImGui::PopStyleColor(3);   // Moved from outside loop
         ImGui::SameLine(0,0);
 
         ImGui::PushStyleColor(ImGuiCol_Text,style.color_node_title);
@@ -509,20 +526,21 @@ void NodeGraphEditor::render()
         if (ImGui::IsItemHovered()) {
             const char* tooltip = node->getTooltip();
             if (tooltip && tooltip[0]!='\0') ImGui::SetTooltip("%s",tooltip);
+            //if (ImGui::IsMouseClicked(0)) node->isOpen = !node->isOpen; // optional (but disturbs moving by mouse dragging)
         }
         ImGui::PopStyleColor();
         // BUTTONS ========================================================
-	const bool canPaste = sourceCopyNode && sourceCopyNode->typeID==node->typeID;
-	const bool canCopy = node->canBeCopied();
-	if (node->Size.x!=0)    {
-	    if (!node->isOpen) ImGui::SameLine();
-	    else ImGui::SameLine(-effectiveScrolling.x+nodePos.x+node->Size.x-textSizeButtonX-10
+        const bool canPaste = sourceCopyNode && sourceCopyNode->typeID==node->typeID;
+        const bool canCopy = node->canBeCopied();
+        if (node->Size.x!=0)    {
+            if (!node->isOpen) ImGui::SameLine();
+            else ImGui::SameLine(-effectiveScrolling.x+nodePos.x+node->Size.x-textSizeButtonX-10
                                  -(show_node_copy_paste_buttons ?
                                        (
-					   (canCopy?(textSizeButtonCopy+2):0) +
+                                           (canCopy?(textSizeButtonCopy+2):0) +
                                            (canPaste?(textSizeButtonPaste+2):0)
-                                        )
-                                  : 0)
+                                           )
+                                     : 0)
                                  ,0);
             static const ImVec4 transparentColor(1,1,1,0);
             ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);
@@ -541,14 +559,14 @@ void NodeGraphEditor::render()
                     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
                     ImGui::SameLine(0);
                 }
-		if (canCopy)	{
-		    if (ImGui::SmallButton(btnNames[1])) {
-			node_hovered_in_scene = selectedNode = node;
-			copyNode(node);
-		    }
-		    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
-		    ImGui::SameLine(0);
-		}
+                if (canCopy)	{
+                    if (ImGui::SmallButton(btnNames[1])) {
+                        node_hovered_in_scene = selectedNode = node;
+                        copyNode(node);
+                    }
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
+                    ImGui::SameLine(0);
+                }
             }
             if (ImGui::SmallButton(btnNames[2])) {
                 node_hovered_in_scene = selectedNode = node;
@@ -565,21 +583,21 @@ void NodeGraphEditor::render()
         if (node->isOpen)
         {
             // this code goes into a virtual method==============================
-	    nodeInEditMode|=node->render(currentNodeWidth);
+            nodeInEditMode|=node->render(currentNodeWidth);
             //===================================================================
             isLMBDraggingForMakingLinks&=!nodeInEditMode;   // Don't create links while dragging the mouse to edit node values
         }
         ImGui::EndGroup();
         if (nodeInEditMode) node->startEditingTime = -1.f;
         else if (node->startEditingTime!=0.f) {
-	    //if (nodeCallback)   {
-                if (node->startEditingTime<0) node->startEditingTime = ImGui::GetTime();
-                else if (ImGui::GetTime()-node->startEditingTime>nodeEditedTimeThreshold) {
-                    node->startEditingTime = 0.f;
-                    node_to_fire_edit_callback = node;
-                }
-	    //}
-	    //else node->startEditingTime = 0.f;
+            //if (nodeCallback)   {
+            if (node->startEditingTime<0) node->startEditingTime = ImGui::GetTime();
+            else if (ImGui::GetTime()-node->startEditingTime>nodeEditedTimeThreshold) {
+                node->startEditingTime = 0.f;
+                node_to_fire_edit_callback = node;
+            }
+            //}
+            //else node->startEditingTime = 0.f;
         }
 
         // Save the size of what we have emitted and whether any of the widgets are being used
@@ -593,16 +611,16 @@ void NodeGraphEditor::render()
         ImGui::InvisibleButton("node##nodeinvbtn", node->Size);
         if (ImGui::IsItemHovered()) {
             node_hovered_in_scene = node;
-	    open_context_menu |= ImGui::IsMouseClicked(1);
+            open_context_menu |= ImGui::IsMouseClicked(1);
         }
         bool node_moving_active = !isMouseDraggingForScrolling && !nodeInEditMode && ImGui::IsItemActive();
         if (node_widgets_active || node_moving_active)  selectedNode = node;
         if (node_moving_active && !isDragNodeValid && ImGui::IsMouseDragging(0, 8.0f)) {
-	    node->Pos = node->Pos + io.MouseDelta/currentFontWindowScale;isSomeNodeMoving=true;
+            node->Pos = node->Pos + io.MouseDelta/currentFontWindowScale;isSomeNodeMoving=true;
         }
 
         const ImU32& node_bg_color = (node_hovered_in_list == node || node_hovered_in_scene == node) ? style.color_node_hovered :
-                                     (selectedNode == node ? style.color_node_selected : style.color_node);
+                                                                                                       (selectedNode == node ? style.color_node_selected : style.color_node);
         draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, style.node_rounding);
         draw_list->AddRect(node_rect_min, node_rect_max, style.color_node_frame, style.node_rounding);
         // Display connectors
@@ -656,8 +674,8 @@ void NodeGraphEditor::render()
                         //printf("Start dragging.\n");fflush(stdout);
                     }
                     else if (isDragNodeValid && dragNode.node!=node
-                        && MOUSE_DELTA_SQUARED<MOUSE_DELTA_SQUARED_THRESHOLD   // optional... what I wanted is not to end a connection just when I hover another node...
-                    ) {
+                             && MOUSE_DELTA_SQUARED<MOUSE_DELTA_SQUARED_THRESHOLD   // optional... what I wanted is not to end a connection just when I hover another node...
+                             ) {
                         // verify compatibility
                         if (dragNode.inputSlotIdx!=-1)  {
                             // drag goes from the output (dragNode.inputSlotIdx) slot of dragNode.node to the input slot of 'node':
@@ -678,10 +696,10 @@ void NodeGraphEditor::render()
                                 // create link
                                 addLink(dragNode.node,dragNode.inputSlotIdx,node,slot_idx,true);
                             }
-                        // clear dragNode
-                        dragNode.node = NULL;
-                        dragNode.outputSlotIdx = dragNode.inputSlotIdx = -1;
-                        //printf("End dragging.\n");fflush(stdout);
+                            // clear dragNode
+                            dragNode.node = NULL;
+                            dragNode.outputSlotIdx = dragNode.inputSlotIdx = -1;
+                            //printf("End dragging.\n");fflush(stdout);
                         }
                     }
                 }
@@ -733,7 +751,7 @@ void NodeGraphEditor::render()
                     }
                     else if (isDragNodeValid && dragNode.node!=node
                              && MOUSE_DELTA_SQUARED<MOUSE_DELTA_SQUARED_THRESHOLD    // optional... what I wanted is not to end a connection just when I hover another node...
-                    ) {
+                             ) {
                         // verify compatibility
                         if (dragNode.outputSlotIdx!=-1)  {
                             // drag goes from the output slot_idx of node to the input slot (dragNode.outputSlotIdx) of dragNode.node:
@@ -754,10 +772,10 @@ void NodeGraphEditor::render()
                                 // create link
                                 addLink(node,slot_idx,dragNode.node,dragNode.outputSlotIdx,true);
                             }
-                        // clear dragNode
-                        dragNode.node = NULL;
-                        dragNode.outputSlotIdx = dragNode.inputSlotIdx = -1;
-                        //printf("End dragging.\n");fflush(stdout);
+                            // clear dragNode
+                            dragNode.node = NULL;
+                            dragNode.outputSlotIdx = dragNode.inputSlotIdx = -1;
+                            //printf("End dragging.\n");fflush(stdout);
                         }
                     }
                 }
@@ -771,20 +789,30 @@ void NodeGraphEditor::render()
 
         ImGui::SetCursorScreenPos(oldCursorScreenPos);
         ImGui::PopID();
-	if (node->baseWidthOverride>0) ImGui::PopItemWidth();
+        if (node->baseWidthOverride>0) ImGui::PopItemWidth();
     }
-    ImGui::PopStyleColor(3);
+    //ImGui::PopStyleColor(3);      // moved inside the loop to wrap the ImGui::TreeNode()
     draw_list->ChannelsMerge();
 
 //#   define DEBUG_NODE_CULLING
 #   ifdef DEBUG_NODE_CULLING
     static int lastNumberOfCulledNodes=0;
-    if (numberOfCulledNodes!=lastNumberOfCulledNodes) {
-	lastNumberOfCulledNodes = numberOfCulledNodes;
-	fprintf(stderr,"numberOfCulledNodes: %d\n",numberOfCulledNodes);
+    if (enableNodeCulling && numberOfCulledNodes!=lastNumberOfCulledNodes) {
+        lastNumberOfCulledNodes = numberOfCulledNodes;
+        fprintf(stderr,"numberOfCulledNodes: %d\n",numberOfCulledNodes);
     }
 #   undef DEBUG_NODE_CULLING
 #   endif //DEBUG_NODE_CULLING
+
+//#   define DEBUG_LINK_CULLING
+#   ifdef DEBUG_LINK_CULLING
+    static int lastNumberOfCulledLinks=0;
+    if (enableLinkCulling && numberOfCulledLinks!=lastNumberOfCulledLinks) {
+        lastNumberOfCulledLinks = numberOfCulledLinks;
+        fprintf(stderr,"numberOfCulledLinks: %d\n",numberOfCulledLinks);
+    }
+#   undef DEBUG_LINK_CULLING
+#   endif //DEBUG_LINK_CULLING
 
     // Open context menu
     if (!open_context_menu && selectedNode && (selectedNode==node_hovered_in_list || selectedNode==node_hovered_in_scene) && ((ImGui::IsKeyReleased(io.KeyMap[ImGuiKey_Delete]) && !ImGui::GetIO().WantTextInput) || mustDeleteANodeSoon)) {

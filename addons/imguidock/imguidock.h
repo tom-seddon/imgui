@@ -28,6 +28,26 @@ SOFTWARE.
 */
 // modified from https://bitbucket.org/duangle/liminal/src/tip/src/liminal/imgui_dock.h
 
+// USAGE:
+/*
+        // Outside any ImGuiWindow.
+        // You may want to use a fullscreen window with no titlebar.
+        if (ImGui::Begin("imguidock window (= lumix engine's dock system)",NULL,ImVec2(500, 500),0.95f,ImGuiWindowFlags_NoScrollbar)) {
+            ImGui::BeginDockspace();
+            static char tmp[128];
+            for (int i=0;i<10;i++)  {
+                sprintf(tmp,"Dock %d",i);
+                if (i==9) ImGui::SetNextDock(ImGuiDockSlot_Bottom);// optional
+                if(ImGui::BeginDock(tmp))  {
+                    ImGui::Text("Content of dock window %d goes here",i);
+                }
+                ImGui::EndDock();
+            }
+            ImGui::EndDockspace();
+        }
+        ImGui::End();
+*/
+
 #ifndef IMGUI_API
 #include <imgui.h>
 #endif //IMGUI_API

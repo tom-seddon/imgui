@@ -1221,15 +1221,16 @@ void DrawGL()	// Mandatory
     }
 #   ifndef NO_IMGUIDOCK
     if (show_dock_window)   {
-        if (ImGui::Begin("imguidock window 1 (= lumix engine's dock system)",&show_dock_window,ImVec2(500, 500),0.95f,ImGuiWindowFlags_NoScrollbar)) {
+        if (ImGui::Begin("imguidock window (= lumix engine's dock system)",&show_dock_window,ImVec2(500, 500),0.95f,ImGuiWindowFlags_NoScrollbar)) {
             ImGui::BeginDockspace();
             static char tmp[128];
             for (int i=0;i<10;i++)  {
                 sprintf(tmp,"Dock %d",i);
+                if (i==9) ImGui::SetNextDock(ImGuiDockSlot_Bottom);// optional
                 if(ImGui::BeginDock(tmp))  {
                     ImGui::Text("Content of dock window %d goes here",i);
                 }
-                ImGui::EndDock();
+                ImGui::EndDock();                
             }
             ImGui::EndDockspace();
         }
