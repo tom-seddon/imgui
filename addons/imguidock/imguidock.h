@@ -30,8 +30,9 @@ SOFTWARE.
 
 // USAGE:
 /*
-        // Outside any ImGuiWindow.
-        // You may want to use a fullscreen window with no titlebar.
+        // Outside any ImGuiWindow:
+
+        // Windowed:
         if (ImGui::Begin("imguidock window (= lumix engine's dock system)",NULL,ImVec2(500, 500),0.95f,ImGuiWindowFlags_NoScrollbar)) {
             ImGui::BeginDockspace();
             static char tmp[128];
@@ -46,6 +47,29 @@ SOFTWARE.
             ImGui::EndDockspace();
         }
         ImGui::End();
+
+
+        // Fullscreen (without visual artifacts):
+        // [The ImGuiWindowFlags_NoBringToFrontOnFocus is needed only if you want to mix code with "regular" ImGui Windows AFAIK]
+        ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+        const ImGuiWindowFlags flags =  (ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar);
+        const float oldWindowRounding = ImGui::GetStyle().WindowRounding;ImGui::GetStyle().WindowRounding = 0;
+        const bool visible = ImGui::Begin("imguidock window (= lumix engine's dock system)",NULL,ImVec2(0, 0),0.95f,flags);
+        ImGui::GetStyle().WindowRounding = oldWindowRounding;
+        if (visible) {
+            ImGui::BeginDockspace();
+            static char tmp[128];
+            for (int i=0;i<10;i++)  {
+                sprintf(tmp,"Dock %d",i);
+                if (i==9) ImGui::SetNextDock(ImGuiDockSlot_Bottom);// optional
+                if(ImGui::BeginDock(tmp))  {
+                    ImGui::Text("Content of dock window %d goes here",i);
+                }
+                ImGui::EndDock();
+            }
+            ImGui::EndDockspace();
+        }
+        ImGui::End(); // This could probably be moved after ImGui::EndDockspace();
 */
 
 #ifndef IMGUI_API
