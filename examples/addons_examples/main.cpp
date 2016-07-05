@@ -1230,8 +1230,42 @@ void DrawGL()	// Mandatory
                 if(ImGui::BeginDock(tmp))  {
                     ImGui::Text("Content of dock window %d goes here",i);
                 }
-                ImGui::EndDock();                
+                ImGui::EndDock();
             }
+
+//========== OPTIONAL STUFF =====================================================
+#           if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+            if (ImGui::BeginDock("Load/Save"))  {
+                static const char* saveName = "myDock.layout";
+                const char* saveNamePersistent = "/persistent_folder/myDock.layout";
+                const char* pSaveName = saveName;
+#               ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+                if (ImGui::Button("Save")) {
+#                   ifndef NO_IMGUIEMSCRIPTEN
+                    pSaveName = saveNamePersistent;
+#                   endif //NO_IMGUIEMSCRIPTEN
+                    if (ImGui::SaveDock(pSaveName))   {
+#                       ifndef NO_IMGUIEMSCRIPTEN
+                        ImGui::EmscriptenFileSystemHelper::Sync();
+#                       endif //NO_IMGUIEMSCRIPTEN
+                    }
+                }
+                ImGui::SameLine();
+#               endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#               ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+                if (ImGui::Button("Load")) {
+#                   ifndef NO_IMGUIEMSCRIPTEN
+                    if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
+#                   endif //NO_IMGUIEMSCRIPTEN
+                    ImGui::LoadDock(pSaveName);
+                }
+                ImGui::SameLine();
+#               endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+            }
+            ImGui::EndDock();   //Load/Save
+#           endif //NO_IMGUIHELPER_SERIALIZATION
+ //=========== END OPTIONAL STUFF =================================================
+
             ImGui::EndDockspace();
         }
         ImGui::End();

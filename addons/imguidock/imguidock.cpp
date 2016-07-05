@@ -65,7 +65,10 @@ struct DockContext
             , pos(0, 0)
             , size(-1, -1)
             , status(Status_Float)
+	    , last_frame(0)
+	    , invalid_frames(0)
             , opened(false)
+	    , first(false)
 
         {
             location[0] = 0;
@@ -236,7 +239,9 @@ struct DockContext
     }
 
 
-    ~DockContext() {}
+    ~DockContext() {
+	ShutdownDock();//New
+    }
 
     Dock& getDock(const char* label, bool opened)
     {
@@ -1154,140 +1159,109 @@ void DockDebugWindow()
 }
 
 
-// Consider converting load/save using imguihelper.h
-/*
-    void save(Lumix::FS::OsFile& file)
-    {
-        file << "docks = {\n";
-        for (int i = 0; i < m_docks.size(); ++i)
-        {
-            Dock& dock = *m_docks[i];
-            file << "dock" << (Lumix::uint64)&dock << " = {\n";
-            file << "index = " << i << ",\n";
-            file << "label = \"" << dock.label << "\",\n";
-            file << "x = " << (int)dock.pos.x << ",\n";
-            file << "y = " << (int)dock.pos.y << ",\n";
-            file << "size_x = " << (int)dock.size.x << ",\n";
-            file << "size_y = " << (int)dock.size.y << ",\n";
-            file << "status = " << (int)dock.status << ",\n";
-            file << "active = " << (int)dock.active << ",\n";
-            file << "opened = " << (int)dock.opened << ",\n";
-            file << "prev = " << (int)getDockIndex(dock.prev_tab) << ",\n";
-            file << "next = " << (int)getDockIndex(dock.next_tab) << ",\n";
-            file << "child0 = " << (int)getDockIndex(dock.children[0]) << ",\n";
-            file << "child1 = " << (int)getDockIndex(dock.children[1]) << ",\n";
-            file << "parent = " << (int)getDockIndex(dock.parent) << "\n";
-            if (i < m_docks.size() - 1)
-                file << "},\n";
-            else
-                file << "}\n";
-        }
-        file << "}\n";
+#if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#   ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+    bool SaveDock(ImGuiHelper::Serializer& s)	{
+	if (!s.isValid()) return false;
+	DockContext& myDock = g_dock;
+	ImVector<DockContext::Dock*>& m_docks = myDock.m_docks;
+
+	int sz = m_docks.size();s.save(&sz,"NumDocks");int id=0;
+	for (int i = 0; i < m_docks.size(); ++i)    {
+	    DockContext::Dock& dock = *m_docks[i];
+	    s.save(&i,"index");
+	    if (dock.label) s.save(dock.label,"label");
+	    s.save(&dock.pos.x,"pos",2);
+	    s.save(&dock.size.x,"size",2);
+	    id = (int) dock.status;s.save(ImGui::FT_ENUM,&id,"status");
+	    s.save(&dock.active,"active");
+	    s.save(&dock.opened,"opened");
+	    id = myDock.getDockIndex(dock.prev_tab);s.save(&id,"prev");
+	    id = myDock.getDockIndex(dock.next_tab);s.save(&id,"next");
+	    id = myDock.getDockIndex(dock.children[0]);s.save(&id,"child0");
+	    id = myDock.getDockIndex(dock.children[1]);s.save(&id,"child1");
+	    id = myDock.getDockIndex(dock.parent);s.save(&id,"parent");
+	}
+	return true;
     }
+    bool SaveDock(const char* filename)   {ImGuiHelper::Serializer s(filename);return SaveDock(s);}
+#   endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#   ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+    struct DockParser {
+	DockContext* myDock;int numDocks;int curIndex;
+	inline static DockContext::Dock* getDockByIndex(DockContext* myDock,int idx) { return (idx < 0) ? NULL : myDock->m_docks[idx];}
+	DockParser(DockContext* _myDock) : myDock(_myDock),numDocks(0),curIndex(-1) {IM_ASSERT(myDock);}
+	static bool Parse(ImGuiHelper::FieldType /*ft*/,int /*numArrayElements*/,void* pValue,const char* name,void* userPtr) {
+	    DockParser& P = *((DockParser*) userPtr);
+	    DockContext& myDock = *P.myDock;
+	    ImVector<DockContext::Dock*>& m_docks = myDock.m_docks;
+	    const int* pValueInt = (const int*) pValue;
+	    if (strcmp(name,"NumDocks")==0) {
+		IM_ASSERT(P.curIndex==-1);
+		P.numDocks = *pValueInt;
+		IM_ASSERT(m_docks.size()==0);
+		m_docks.reserve(P.numDocks);
+		for (int i=0;i<P.numDocks;i++)  {
+		    DockContext::Dock* new_dock = (DockContext::Dock*)ImGui::MemAlloc(sizeof(DockContext::Dock));
+		    m_docks.push_back(IM_PLACEMENT_NEW(new_dock) DockContext::Dock());
+		}
+		P.curIndex=0;
+	    }
+	    else if (P.curIndex<0 || P.curIndex>P.numDocks) {IM_ASSERT(true);return true;}
+	    else if (strcmp(name,"index")==0)  {
+		P.curIndex = *pValueInt;
+		IM_ASSERT(P.curIndex>=0 && P.curIndex<m_docks.size());
+		m_docks[P.curIndex]->last_frame = 0;
+		m_docks[P.curIndex]->invalid_frames = 0;
+	    }
+	    else if (strcmp(name,"label")==0) {
+		    m_docks[P.curIndex]->label = ImStrdup((const char*) pValue);
+		    m_docks[P.curIndex]->id = ImHash(m_docks[P.curIndex]->label, 0);
+	    }
+	    else if (strcmp(name,"pos")==0) m_docks[P.curIndex]->pos = *((ImVec2*) pValue);
+	    else if (strcmp(name,"size")==0) m_docks[P.curIndex]->size = *((ImVec2*) pValue);
+	    else if (strcmp(name,"status")==0) m_docks[P.curIndex]->status = (DockContext::Status_) (*pValueInt);
+	    else if (strcmp(name,"active")==0) m_docks[P.curIndex]->active = (*pValueInt) ? true : false;
+	    else if (strcmp(name,"opened")==0) m_docks[P.curIndex]->opened = (*pValueInt) ? true : false;
 
-    void load(lua_State* L)
-    {
-        for (int i = 0; i < m_docks.size(); ++i)
-        {
-            m_docks[i]->~Dock();
-            MemFree(m_docks[i]);
-        }
-        m_docks.clear();
+	    else if (strcmp(name,"prev")==0) m_docks[P.curIndex]->prev_tab = getDockByIndex(&myDock,*pValueInt);
+	    else if (strcmp(name,"next")==0) m_docks[P.curIndex]->next_tab = getDockByIndex(&myDock,*pValueInt);
+	    else if (strcmp(name,"child0")==0) m_docks[P.curIndex]->children[0] = getDockByIndex(&myDock,*pValueInt);
+	    else if (strcmp(name,"child1")==0) m_docks[P.curIndex]->children[1] = getDockByIndex(&myDock,*pValueInt);
+	    else if (strcmp(name,"parent")==0) {
+		m_docks[P.curIndex]->parent = getDockByIndex(&myDock,*pValueInt);
+		if (P.curIndex+1==P.numDocks) {
+		    fprintf(stderr,"End parsing at %d/%d\n",P.curIndex,P.numDocks);
+		    return true;
+		}
+	    }
 
-        if (lua_getglobal(L, "docks") == LUA_TTABLE)
-        {
-            lua_pushnil(L);
-            while (lua_next(L, -2) != 0)
-            {
-                Dock* new_dock = (Dock*)MemAlloc(sizeof(Dock));
-                m_docks.push_back(IM_PLACEMENT_NEW(new_dock) Dock());
-                lua_pop(L, 1);
-            }
-        }
-        lua_pop(L, 1);
+	    return false;
+	}
+    };
+    bool LoadDock(ImGuiHelper::Deserializer& d,const char ** pOptionalBufferStart)  {
+	if (!d.isValid()) return false;
+	const char* amount = pOptionalBufferStart ? (*pOptionalBufferStart) : 0;
+	DockContext& myDock = g_dock;
+	ImVector<DockContext::Dock*>& m_docks = myDock.m_docks;
+	// clear
+	for (int i = 0; i < m_docks.size(); ++i)    {
+	    m_docks[i]->~Dock();
+	    ImGui::MemFree(m_docks[i]);
+	}
+	m_docks.clear();
+	myDock.m_current = myDock.m_next_parent = NULL;
 
-        int i = 0;
-        if (lua_getglobal(L, "docks") == LUA_TTABLE)
-        {
-            lua_pushnil(L);
-            while (lua_next(L, -2) != 0)
-            {
-                if (lua_istable(L, -1))
-                {
-                    int idx = 0;
-                    if (lua_getfield(L, -1, "index") == LUA_TNUMBER)
-                        idx = (int)lua_tointeger(L, -1);
-                    Dock& dock = *m_docks[idx];
-                    dock.last_frame = 0;
-                    dock.invalid_frames = 0;
-                    lua_pop(L, 1);
+	// parse
+	DockParser parser(&myDock);
+	amount = d.parse(&DockParser::Parse,(void*)&parser,amount);
+	if (pOptionalBufferStart) *pOptionalBufferStart = amount;
+	return true;
+    }
+    bool LoadDock(const char* filename,const char ** pOptionalBufferStart)  {ImGuiHelper::Deserializer d(filename);return LoadDock(d,pOptionalBufferStart);}
+#   endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#endif //(defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 
-                    if (lua_getfield(L, -1, "label") == LUA_TSTRING)
-                    {
-                        dock.label = ImStrdup(lua_tostring(L, -1));
-                        dock.id = ImHash(dock.label, 0);
-                    }
-                    lua_pop(L, 1);
-
-                    if (lua_getfield(L, -1, "x") == LUA_TNUMBER)
-                        dock.pos.x = (float)lua_tonumber(L, -1);
-                    if (lua_getfield(L, -2, "y") == LUA_TNUMBER)
-                        dock.pos.y = (float)lua_tonumber(L, -1);
-                    if (lua_getfield(L, -3, "size_x") == LUA_TNUMBER)
-                        dock.size.x = (float)lua_tonumber(L, -1);
-                    if (lua_getfield(L, -4, "size_y") == LUA_TNUMBER)
-                        dock.size.y = (float)lua_tonumber(L, -1);
-                    if (lua_getfield(L, -5, "active") == LUA_TNUMBER)
-                        dock.active = lua_tointeger(L, -1) != 0;
-                    if (lua_getfield(L, -6, "opened") == LUA_TNUMBER)
-                        dock.opened = lua_tointeger(L, -1) != 0;
-                    if (lua_getfield(L, -7, "status") == LUA_TNUMBER)
-                    {
-                        dock.status = (Status_)lua_tointeger(L, -1);
-                    }
-                    lua_pop(L, 7);
-
-                    if (lua_getfield(L, -1, "prev") == LUA_TNUMBER)
-                    {
-                        dock.prev_tab = getDockByIndex(lua_tointeger(L, -1));
-                    }
-                    if (lua_getfield(L, -2, "next") == LUA_TNUMBER)
-                    {
-                        dock.next_tab = getDockByIndex(lua_tointeger(L, -1));
-                    }
-                    if (lua_getfield(L, -3, "child0") == LUA_TNUMBER)
-                    {
-                        dock.children[0] = getDockByIndex(lua_tointeger(L, -1));
-                    }
-                    if (lua_getfield(L, -4, "child1") == LUA_TNUMBER)
-                    {
-                        dock.children[1] = getDockByIndex(lua_tointeger(L, -1));
-                    }
-                    if (lua_getfield(L, -5, "parent") == LUA_TNUMBER)
-                    {
-                        dock.parent = getDockByIndex(lua_tointeger(L, -1));
-                    }
-                    lua_pop(L, 5);
-                }
-                lua_pop(L, 1);
-                ++i;
-            }
-        }
-        lua_pop(L, 1);
-    }*/
-
-/*
-void SaveDock(Lumix::FS::OsFile& file)
-{
-    g_dock.save(file);
-}
-
-
-void LoadDock(lua_State* L)
-{
-    g_dock.load(L);
-}
-*/
 
 } // namespace ImGui
 

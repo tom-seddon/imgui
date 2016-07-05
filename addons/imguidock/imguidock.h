@@ -98,9 +98,17 @@ IMGUI_API void EndDock();
 IMGUI_API void SetDockActive();
 IMGUI_API void DockDebugWindow();
 
-// TODO: consider porting LoadDock/SaveDock to imguihelper.h
-//IMGUI_API void SaveDock(Lumix::FS::OsFile& file);
-//IMGUI_API void LoadDock(lua_State* L);
+// Ported from the original "Lua binding" code
+#if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#   ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+    IMGUI_API bool SaveDock(ImGuiHelper::Serializer& s);
+    IMGUI_API bool SaveDock(const char* filename);
+#   endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
+#   ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+    IMGUI_API bool LoadDock(ImGuiHelper::Deserializer& d,const char ** pOptionalBufferStart=NULL);
+    IMGUI_API bool LoadDock(const char* filename,const char ** pOptionalBufferStart=NULL);
+#   endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#endif //(defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 
 } // namespace ImGui
 
