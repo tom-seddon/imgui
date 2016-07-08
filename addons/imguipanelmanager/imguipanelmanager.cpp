@@ -1764,4 +1764,3 @@ bool ImGui::PanelManager::Load(PanelManager &mgr,ImGuiHelper::Deserializer& d, c
 }
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #endif //NO_IMGUIHELPER_SERIALIZATION
-

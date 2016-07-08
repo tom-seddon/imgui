@@ -12,6 +12,15 @@ static ImVector<ImFont*> gImGuiFonts;
 #endif // NO_IMGUIHELPER_FONTMETHODS
 #include <imgui_internal.h>
 
+#ifndef NO_IMGUIHELPER_DRAW_METHODS
+#   if !defined(alloca) && !defined(__FreeBSD__) && !defined(__DragonFly__)
+#       ifdef _WIN32
+#           include <malloc.h>     // alloca
+#       else
+#           include <alloca.h>     // alloca
+#       endif
+#   endif
+#endif //NO_IMGUIHELPER_DRAW_METHODS
 
 namespace ImGui {
 

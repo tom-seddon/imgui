@@ -288,7 +288,9 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
         printf("GL Vendor: %s\n", glGetString( GL_VENDOR ));
         printf("GL Renderer : %s\n", glGetString( GL_RENDERER ));
         printf("GL Version (string) : %s\n",  glGetString( GL_VERSION ));
+#       ifndef IMIMPL_SHADER_NONE
         printf("GLSL Version : %s\n", glGetString( GL_SHADING_LANGUAGE_VERSION ));
+#       endif // IMIMPL_SHADER_NONE
         //printf("GL Extensions:\n%s\n",(char *) glGetString(GL_EXTENSIONS));
     }
 

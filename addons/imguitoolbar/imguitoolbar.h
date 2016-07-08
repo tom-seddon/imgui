@@ -330,9 +330,15 @@ public:
     protected:
     char name[1024];
     bool visible;
+
+#   ifdef _MSC_VER
+    public:
+#   endif //_MSC_VER
+
+    bool keepAButtonSelected;
+
     mutable int hoverButtonIndex;
     mutable int selectedButtonIndex;
-    bool keepAButtonSelected;
 
     bool vertical;
     ImVec2 hvAlignmentsIn01;
@@ -349,12 +355,11 @@ public:
 
     friend struct PanelManager;
 
-
 };
 typedef Toolbar::Button Toolbutton;
 
 } // namespace Imgui
 
 
-
 #endif //IMGUITOOLBAR_H_
+

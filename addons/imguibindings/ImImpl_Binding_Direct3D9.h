@@ -266,7 +266,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
     // create main window
     window = hWnd = CreateWindow(
         _T("ImGuiApp"),
-        (pOptionalInitParams && pOptionalInitParams->gWindowTitle[0]!='\0') ? (TCHAR*) &pOptionalInitParams->gWindowTitle[0] : _T("ImGui WinApi OpenGL Example"),
+        (pOptionalInitParams && pOptionalInitParams->gWindowTitle[0]!='\0') ? (TCHAR*) &pOptionalInitParams->gWindowTitle[0] : _T("ImGui Direct3D9 OpenGL Example"),
         WS_CAPTION | WS_VISIBLE | WS_OVERLAPPEDWINDOW,
         0, 0,
         width,

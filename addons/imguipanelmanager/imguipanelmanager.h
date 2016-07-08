@@ -140,6 +140,7 @@ struct PanelManager {
         const AssociatedWindow* getHoverWindow() const {return bar.hoverButtonIndex>=0 ? &windows[bar.hoverButtonIndex] : NULL;}        
     };
     protected:
+
     ImVector<Pane> panes;
     Pane *paneLeft,*paneRight,*paneTop,*paneBottom;
     bool visible;

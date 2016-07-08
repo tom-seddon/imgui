@@ -13,6 +13,10 @@
 //static inline ImVec2 operator-(const ImVec2& lhs, const ImVec2& rhs) { return ImVec2(lhs.x-rhs.x, lhs.y-rhs.y); }
 
 
+#if (defined(_MSC_VER) && !defined(snprintf))
+#   define snprintf _snprintf
+#endif //(defined(_MSC_VER) && !defined(snprintf))
+
 namespace ImGui	{
 
 NodeGraphEditor::Style NodeGraphEditor::style;  // static variable initialization

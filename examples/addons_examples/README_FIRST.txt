@@ -16,6 +16,24 @@ If you want to compile the examples to .html yourself, or you can't run the exam
 
 UPDATE: There's a third demo named main3.cpp, but it's currently used to develop imguicodeeditor (see below).
 
+-----------------------------
+NOTE FOR VISUAL STUDIO USERS:
+-----------------------------
+There's currently no Visual Studio project, and furthermore the code has been written/tested on a Linux machine (tested using 4 compilers: gcc, clang, mingw and emcc).
+Unluckily cl.exe (the Visual Studio compiler) is not currently supported/tested.
+
+If you want, you can try one of these command-lines at the Visual Studio Prompt
+and report the results here: https://github.com/Flix01/imgui/issues
+
+[The current directory must be: imgui/examples/addons_examples]
+# With GLUT + GLEW static:
+cl /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLUT_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe freeglut.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
+# With GLEW static only:
+cl /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_WINAPI_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
+# With DIRECT3D9:
+cl /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_DIRECT3D9_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe d3d9.lib d3dx9.lib gdi32.lib Shell32.lib advapi32.lib user32.lib kernel32.lib
+# TODO: Add other command-lines for SDL2 and glfw
+
 
 ====================================
 WHAT IS "IMGUI ADDONS" ?
@@ -112,6 +130,7 @@ IMIMPL_SHADER_NONE 				# no shaders at all, and no vertex buffer object as well 
 IMIMPL_SHADER_GL3  				# shader uses openGL 3.3 (glsl #version 330)
 IMIMPL_SHADER_GLES 				# shader uses gles (and if IMIMPL_SHADER_GL3 is defined glsl #version 300 es)
 IMGUI_USE_GLEW     				# inits the glew library (needs -lGLEW). This definition might be mandatory for IMGUI_USE_WINAPI_BINDING. Tip: the glew library provides a static library alternative that can be used by defining GLEW_STATIC at the project level (see the glew docs for further info).
+IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK		# use this if you are using IMGUI_USE_GLUT_BINDING and mouse wheel does not work.
 
 IMGUIBINDINGS_RESTORE_GL_STATE			# restores the glViewport (and most of other GL state settings) after the call to ImGui::Render().
 						# It uses expensive glPop/Push(...) or glGet(...) calls that can be slow and/or deprecated in modern openGL (it's faster to tell openGL what to do than to retrieve something from it, unless the driver is smart enough to cache info or your're using a sofware openGL implementation).

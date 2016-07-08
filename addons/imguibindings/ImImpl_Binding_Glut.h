@@ -3,6 +3,14 @@
 
 #include "imguibindings.h"
 
+/*
+#ifndef IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK
+#   ifdef _WIN32
+#       define IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK
+#   endif //_WIN32
+#endif //IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK
+*/
+
 static ImVec2 mousePosScale(1.0f, 1.0f);
 static const int specialCharMapAddend = 128;    // to prevent some special chars from clashing into ImGui normal chars
 
@@ -139,9 +147,9 @@ static void GlutMouse(int b,int s,int x,int y)  {
     if (b>=0 && b<5)    {
         const int d = (b==1 ? 2 : b==2 ? 1 : b);
         io.MouseDown[d] = (s==0);
-#       ifndef _WIN32
+#       ifndef IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK
         if (s==0)   io.MouseWheel = d==3 ? 1 : d==4 ? -1 : 0;
-#       endif //_WIN32
+#       endif //IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK
         // Manual double click handling:
         static double dblClickTimes[6]={-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX};  // seconds
         if (s == 0)   {
@@ -161,7 +169,7 @@ static void GlutMouse(int b,int s,int x,int y)  {
         }
     }
 }
-#ifdef _WIN32
+#ifdef IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK
 static void GlutMouseWheel(int b,int s,int x,int y)  {
     //fprintf(stderr,"GlutMouseWheel(%d,%d,%d,%d);\n",b,s,x,y);
     ImGuiIO& io = ImGui::GetIO();
@@ -173,7 +181,7 @@ static void GlutMouseWheel(int b,int s,int x,int y)  {
     // NEVER TESTED !!!!!!!!
     if (s==0)   io.MouseWheel = b==0 ? 1 : b==1 ? -1 : 0;
 }
-#endif //_WIN32
+#endif //IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK
 
 static void GlutMotion(int x,int y)  {
     ImGuiIO& io = ImGui::GetIO();
@@ -392,7 +400,9 @@ static bool InitBinding(const ImImpl_InitParams* pOptionalInitParams=NULL,int ar
         printf("GL Vendor: %s\n", glGetString( GL_VENDOR ));
         printf("GL Renderer : %s\n", glGetString( GL_RENDERER ));
         printf("GL Version (string) : %s\n",  glGetString( GL_VERSION ));
+#       ifndef IMIMPL_SHADER_NONE
         printf("GLSL Version : %s\n", glGetString( GL_SHADING_LANGUAGE_VERSION ));
+#       endif //IMIMPL_SHADER_NONE
         //printf("GL Extensions:\n%s\n",(char *) glGetString(GL_EXTENSIONS));
     }
 
@@ -435,9 +445,9 @@ static bool InitBinding(const ImImpl_InitParams* pOptionalInitParams=NULL,int ar
     //glutVisibilityFunc(GlutVisibilityFunc);       // never called
     //glutWindowStatusFunc(GlutWindowStatusFunc);   // called on resizing too
 
-#ifdef _WIN32
+#ifdef IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK
     glutMouseWheelFunc(GlutMouseWheel);
-#endif //_WIN32
+#endif //IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK
 
 	return true;
 }

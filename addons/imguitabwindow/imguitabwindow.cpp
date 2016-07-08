@@ -4,6 +4,13 @@
 
 // TODO: Clean this code, it's a mess!
 
+#if !defined(alloca) && !defined(__FreeBSD__) && !defined(__DragonFly__)
+#   ifdef _WIN32
+#       include <malloc.h>     // alloca
+#   else
+#       include <alloca.h>     // alloca
+#   endif //_WIN32
+#endif // !defined(alloca) && !defined(__FreeBSD__) && !defined(__DragonFly__)
 
 
 namespace ImGui {

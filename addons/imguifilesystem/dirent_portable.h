@@ -986,6 +986,12 @@ dirent_set_errno(
 
 // The code of this single method comes from the musl library
 // (MIT licensed, Copyright © 2005-2014 Rich Felker, et al.)
+#   ifndef SIZE_MAX
+#   ifndef __STDC_LIMIT_MACROS
+#       define __STDC_LIMIT_MACROS
+#   endif //__STDC_LIMIT_MACROS
+#   include <stdint.h> //SIZE_MAX
+#   endif //SIZE_MAX
 inline static int scandir(const char *path, struct dirent ***res,
     int (*sel)(const struct dirent *),
     int (*cmp)(const struct dirent **, const struct dirent **))

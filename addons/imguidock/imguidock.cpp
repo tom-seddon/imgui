@@ -1231,7 +1231,6 @@ void DockDebugWindow()
 	    else if (strcmp(name,"parent")==0) {
 		m_docks[P.curIndex]->parent = getDockByIndex(&myDock,*pValueInt);
 		if (P.curIndex+1==P.numDocks) {
-		    fprintf(stderr,"End parsing at %d/%d\n",P.curIndex,P.numDocks);
 		    return true;
 		}
 	    }

@@ -38,7 +38,16 @@
 #include <stdio.h>  // FILENAME_MAX
 
 
-
+#if (defined(_MSC_VER) && !defined(strcasecmp))
+#   define strcasecmp _stricmp
+/*
+    // Never tested (I've just been told that cl.exe does not have strcasecmp: please search the web for other possible alternative implementations)
+    inline static int strcasecmp( const char *s1, const char *s2 )  {
+        return _stricmp(s1,s2);
+        //return lstrcmpiA(s1,s2);  // Not sure this is better
+    }
+*/
+#   endif //(defined(_MSC_VER) && !defined(strcasecmp))
 
 namespace ImGuiFs {
 
@@ -391,13 +400,6 @@ protected:
     static struct stat stat1;
     static struct stat stat2;
     static SorterSignature sorter;
-#   ifdef MSC_VER
-    // Never tested (I've just been told that cl.exe does not have strcasecmp: please search the web for other possible alternative implementations)
-    inline static int strcasecmp( const char *s1, const char *s2 )  {
-        return _stricmp(s1,s2);
-        //return lstrcmpiA(s1,s2);  // Not sure this is better
-    }
-#   endif //MSC_VER
     // Possible problem: sorting is in ASCII with these methods
     static int Alphasort(const struct dirent **e1,const struct dirent **e2)    {
         return strcasecmp((*e1)->d_name,(*e2)->d_name);
@@ -2113,7 +2115,11 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
                         ImGui::PushStyleColor(ImGuiCol_ButtonActive,ColorSet[Internal::ImGuiCol_Dialog_ZipDirectory_Pressed]);
                     }
 #                   endif // IMGUI_USE_MINIZIP
-                    ImGui::PushID(&I.currentSplitPath[t]);
+#                   ifndef _MSC_VER
+                    ImGui::PushID(&I.currentSplitPath[t]);    // old cl.exe versions don't like this
+#                   else //_MSC_VER
+                    ImGui::PushID(t);                         // will this work ?
+#                   endif //_MSC_VER
                     if (wrapMode) {
                         sumX+=ImGui::CalcTextSize(I.currentSplitPath[t]).x;
                         sumX+= 2.*ImGui::GetStyle().FramePadding.x;    // needed ?
@@ -2600,6 +2606,5 @@ bool FileExists(const char* path) {
 
 
 } // namespace ImGuiFs
-
 
 

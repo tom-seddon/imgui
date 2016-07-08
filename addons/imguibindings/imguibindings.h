@@ -48,6 +48,11 @@
 #       endif //__APPLE
 #   endif //__FREEGLUT_STD_H__
 #endif //__EMSCRIPTEN__
+
+#ifdef _WIN32
+typedef char GLchar;    // Is this needed for all GL bindings ?
+#endif // _WIN32
+
 //-------------------------------------------------------------------------------
 #elif IMGUI_USE_SDL2_BINDING
 //-------------------------------------------------------------------------------
