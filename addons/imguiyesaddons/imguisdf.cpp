@@ -41,7 +41,9 @@ public:
     inline const ImVec4* getColorOfVert(int num) const {return verts.size()>num*6 ? &verts[num*6].color : NULL;}
     inline int size() const {return verts.size();}
     inline int numChars() const {return verts.size()/6;}
+#ifndef _MSC_VER    // Not sure, but old cl compilers can have problems here
 protected:
+#endif //_MSC_VER
     SdfVertexBuffer(int _type=SDF_BT_OUTLINE,bool _preferStreamDrawBufferUsage=false) : type(_type),preferStreamDrawBufferUsage(_preferStreamDrawBufferUsage) {maxVertsSize=0;vbo=0;}
     struct VertexDeclaration {
         ImVec4 posAndUV;
@@ -346,7 +348,9 @@ struct SdfTextChunk {
 	    //if (!kf) kf = (nkf>0 && animationParams.looping) ? &an.keyFrames[nkf-1] : &ZeroKF;
 	    //fprintf(stderr,"FRAME: %d\n",i);
 	    IM_ASSERT(kf && kf->timeInSeconds);
-        const SdfAnimationKeyFrame* kf_prev = (i>=1 ? &an.keyFrames[i-1] : (nkf>0 && tmpLocalTime>manualAnimationRef->looping) ? &an.keyFrames[nkf-1] : &ZeroKF);
+        const SdfAnimationKeyFrame* kf_prev = (i>=1 ? &an.keyFrames[i-1] : (nkf>0 &&
+            (tmpLocalTime>manualAnimationRef->totalTime && manualAnimationRef->looping) // Not sure what I meant here... now I'm just correcting what it was: "tmpLocalTime>manualAnimationRef->looping", but looping is a bool. What did I mean ?
+            ) ? &an.keyFrames[nkf-1] : &ZeroKF);
             const float deltaTime = (tmpLocalTime-sumTime)/kf->timeInSeconds;   // in [0,1]
             IM_ASSERT(deltaTime>=0.f && deltaTime<=1.f);
             Lerp(deltaTime,tmpKeyFrame,*kf_prev,*kf,buffer->numChars());

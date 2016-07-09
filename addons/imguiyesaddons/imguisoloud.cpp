@@ -6225,7 +6225,7 @@ namespace SoLoud
 			if (mChannelData[aChannel].mSamplesToSkip <= 0)
 			{
 				mChannelData[aChannel].mSamplesToSkip += (aSamplerate / mParam[SAMPLERATE]) - 1;
-				float q = (float)pow(2, mParam[BITDEPTH]);
+                float q = (float)pow(2.f, mParam[BITDEPTH]);
 				mChannelData[aChannel].mSample = (float)floor(q*aBuffer[i])/q;
 			}
 			else

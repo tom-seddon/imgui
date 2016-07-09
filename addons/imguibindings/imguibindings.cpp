@@ -649,8 +649,9 @@ GLuint ImImpl_CompileShadersFromMemory(const GLchar** vertexShaderSource, const 
 
     return program;
 }
-#   ifndef NO_IMGUIHELPER_SERIALIZATION
-#       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+#   ifndef NO_IMGUIHELPER
+#       ifndef NO_IMGUIHELPER_SERIALIZATION
+#           ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
 static inline const char* ImImpl_GetIncludeFileName(const char* pStart,const char * pEnd,ImVector<char>& includeNameOut)    {
     includeNameOut.clear();
     if (!pEnd) pEnd = pStart + strlen(pStart);
@@ -752,8 +753,9 @@ GLuint ImImpl_CompileShadersFromFile(const char* vertexShaderFilePath, const cha
 
     return ImImpl_CompileShadersFromMemory(&pStartVertexShaderBuffer,&pStartFragmentShaderBuffer,pOptionalOptions,&pStartPrefixVertexShaderBuffer,&pStartPrefixFragmentShaderBuffer);
 }
-#       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
-#   endif //NO_IMGUIHELPER_SERIALIZATION
+#           endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#       endif //NO_IMGUIHELPER_SERIALIZATION
+#   endif //NO_IMGUIHELPER
 #endif //IMIMPL_SHADER_NONE
 
 

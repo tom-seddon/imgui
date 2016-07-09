@@ -1513,6 +1513,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
 
 
 #ifdef YES_IMGUISQLITE3	// yes_addon
+
+#ifdef _MSC_VER
+#   ifndef va_copy
+#       define va_copy(dest, src) (dest = src)
+#   endif //va_copy
+#   ifndef vsnprintf
+#       define vsnprintf _vsnprintf
+#   endif //vsnprintf
+#endif //_MSC_VER
+
 inline static int AppendString(ImVector<char>& v,const char* fmt, ...) {
     va_list args,args2;
 

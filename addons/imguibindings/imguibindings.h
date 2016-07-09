@@ -48,11 +48,9 @@
 #       endif //__APPLE
 #   endif //__FREEGLUT_STD_H__
 #endif //__EMSCRIPTEN__
-
 #ifdef _WIN32
 typedef char GLchar;    // Is this needed for all GL bindings ?
 #endif // _WIN32
-
 //-------------------------------------------------------------------------------
 #elif IMGUI_USE_SDL2_BINDING
 //-------------------------------------------------------------------------------
@@ -64,6 +62,9 @@ typedef char GLchar;    // Is this needed for all GL bindings ?
 #       endif //IMIMPL_SHADER_GLES
 #   endif //IMGUI_USE_GLEW
 #   include <SDL2/SDL.h>
+#ifdef _WIN32
+typedef char GLchar;    // Is this needed for all GL bindings ?
+#endif // _WIN32
 //-------------------------------------------------------------------------------
 #elif IMGUI_USE_GLFW_BINDING
 //-------------------------------------------------------------------------------
@@ -77,6 +78,9 @@ typedef char GLchar;    // Is this needed for all GL bindings ?
 #       define GLFW_EXPOSE_NATIVE_WGL
 #       include <GLFW/glfw3native.h>    // glfwGetWin32Window(...) used by ImImpl_ImeSetInputScreenPosFn(...)
 #   endif //_WIN32
+#ifdef _WIN32
+typedef char GLchar;    // Is this needed for all GL bindings ?
+#endif // _WIN32
 //-------------------------------------------------------------------------------
 #elif (defined(IMGUI_USE_DIRECT3D9_BINDING))
 //-------------------------------------------------------------------------------
