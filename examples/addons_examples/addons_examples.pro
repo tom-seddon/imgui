@@ -49,6 +49,8 @@ IMGUI_BASE_PATH=../..
 #DEFINES+= YES_IMGUIFREETYPE
 #PKGCONFIG += freetype2
 #DEFINES += IMGUIFS_NO_EXTRA_METHODS
+#DEFINES += IMGUI_USE_MINIZIP
+#LIBS+= -lz
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 

@@ -48,19 +48,19 @@
 #   include <windef.h> // On Windows we have MAX_PATH too
 #   endif //_WIN32
 #   if (defined(MAX_PATH) && MAX_PATH>PATH_MAX)
-#       define MAX_PATH_TO_USE MAX_PATH
+#       define DIRENT_MAX_PATH MAX_PATH
 #   else // (defined(MAX_PATH) && MAX_PATH>PATH_MAX)
-#       define MAX_PATH_TO_USE PATH_MAX
+#       define DIRENT_MAX_PATH PATH_MAX
 #   endif // (defined(MAX_PATH) && MAX_PATH>PATH_MAX)
 
 namespace ImGuiFs {
 
 #   if (!defined(IMGUIFS_MEMORY_USES_CHARS_AS_BYTES) || defined(DIRENT_USES_UTF8_CHARS))
 const int MAX_FILENAME_BYTES = FILENAME_MAX*4;  // Worst case: 4 bytes per char, but huge waste of memory [we SHOULD have used imguistring.h!]
-const int MAX_PATH_BYTES = MAX_PATH_TO_USE*4;
+const int MAX_PATH_BYTES = DIRENT_MAX_PATH*4;
 #else //IMGUIFS_MEMORY_USES_CHARS_AS_BYTES
 const int MAX_FILENAME_BYTES = FILENAME_MAX+1;
-const int MAX_PATH_BYTES = MAX_PATH_TO_USE+1;
+const int MAX_PATH_BYTES = DIRENT_MAX_PATH+1;
 #endif //IMGUIFS_MEMORY_USES_CHARS_AS_BYTES
 // A bit dangerous typedefs:
 typedef char FilenameString[MAX_FILENAME_BYTES];
@@ -132,13 +132,13 @@ public:
         rv.resize(sz+1);
         strcpy(&rv[sz][0], s ? s : "\0");
     }
-#   if (FILENAME_MAX!=MAX_PATH_TO_USE)    // Will this work ? (I don't want to use templates)
+#   if (FILENAME_MAX!=DIRENT_MAX_PATH)    // Will this work ? (I don't want to use templates)
     inline static void PushBack(PathStringVector& rv,const char* s)    {
         const size_t sz = rv.size();
         rv.resize(sz+1);
         strcpy(&rv[sz][0], s ? s : "\0");
     }
-#   endif //#if (FILENAME_MAX!=MAX_PATH_TO_USE)
+#   endif //#if (FILENAME_MAX!=DIRENT_MAX_PATH)
     inline static void Substr(const char* text,char* rv,int start,int count=-1)    {
         if (!text) count=0;
         if (count<0) count = (int) strlen(text) - start;
@@ -246,7 +246,7 @@ public:
         //printf("GetAbsolutePath(\"%s\",\"%s\");\n",path,rv);fflush(stdout);
 #   else //_WIN32
         //fprintf(stderr,"GetAbsolutePath(\"%s\"); (len:%d)\n",path,(int) strlen(path)); // TO remove!
-        static const int bufferSize = MAX_PATH_TO_USE+1;   // 4097 is good (PATH_MAX should be in <limits.h>, or something like that)
+        static const int bufferSize = DIRENT_MAX_PATH+1;   // 4097 is good (PATH_MAX should be in <limits.h>, or something like that)
         static wchar_t buffer[bufferSize];
         static wchar_t wpath[bufferSize];
         String::utf8_to_wide((path && strlen(path)>0) ? path : "./",wpath);
@@ -623,7 +623,7 @@ public:
         const mode_t mode = S_IFDIR | S_IREAD | S_IWRITE | S_IRWXU | S_IRWXG | S_IRWXO;
         mkdir(directoryName,mode);
 #       else //_WIN32
-        static wchar_t name[MAX_PATH_TO_USE+1];
+        static wchar_t name[DIRENT_MAX_PATH+1];
         String::utf8_to_wide(directoryName,name);
         ::CreateDirectoryW(name,NULL);
 #       endif //_WIN32
@@ -1599,9 +1599,9 @@ struct Internal {
     }
 
     inline static void FreeMemory(PathStringVector& v) {PathStringVector o;v.swap(o);}
-#   if FILENAME_MAX!=MAX_PATH_TO_USE  // otherwise PathStringVector == FilenameStringVector
+#   if FILENAME_MAX!=DIRENT_MAX_PATH  // otherwise PathStringVector == FilenameStringVector
     inline static void FreeMemory(FilenameStringVector& v) {FilenameStringVector o;v.swap(o);}
-#   endif //FILENAME_MAX!=MAX_PATH_TO_USE
+#   endif //FILENAME_MAX!=DIRENT_MAX_PATH
     void freeMemory() {
         FreeMemory(dirs);FreeMemory(files);
         FreeMemory(dirNames);FreeMemory(fileNames);FreeMemory(currentSplitPath);
@@ -1874,7 +1874,16 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
 
         //fprintf(stderr,"Pos: %1.0f %1.0f Size: %1.0f %1.0f\n",I.wndPos.x,I.wndPos.y,I.wndSize.x,I.wndSize.y);
     }
-    if (!I.open) return rv;
+    if (!I.open) {
+        // This case (user clicks the close button) does not seem to be triggered here...
+        // No matter, I just copied it in the 3 caller methods, where it's triggered.
+        ImGui::CloseCurrentPopup();
+#       ifdef IMGUI_USE_MINIZIP
+        I.unz.close();
+#       endif // IMGUI_USE_MINIZIP
+        I.freeMemory();
+        return rv;
+    }
 
 
     if (I.forceRescan)    {
@@ -2571,23 +2580,35 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
                 }
             }
         }
-        else if (mustCancel && rv[0]==0) ImGui::CloseCurrentPopup();
+        else if (mustCancel && rv[0]==0) {
+            ImGui::CloseCurrentPopup();
+#           ifdef IMGUI_USE_MINIZIP
+            I.unz.close();
+#           endif // IMGUI_USE_MINIZIP
+            I.freeMemory();
+        }
         //ImGui::Separator();
         //ImGui::Spacing();
     }
     // End selection field----------------------------------------------------------------
 
-    if (rv[0]!=0) ImGui::CloseCurrentPopup();
+    if (rv[0]!=0 || !I.open) {
+        ImGui::CloseCurrentPopup();
+#       ifdef IMGUI_USE_MINIZIP
+        I.unz.close();
+#       endif // IMGUI_USE_MINIZIP
+        I.freeMemory();
+    }
     ImGui::EndPopup();
     return rv;
 }
 
 const char* Dialog::chooseFileDialog(bool dialogTriggerButton,const char* directory,const char* fileFilterExtensionString,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha) {
-    if (dialogTriggerButton)    {internal->rescan = internal->forceSetWindowPositionAndSize = true;internal->chosenPath[0]='\0';}
-    if (dialogTriggerButton || (!internal->rescan && strlen(getChosenPath())==0)) {
+    if (dialogTriggerButton)    {internal->open = internal->rescan = internal->forceSetWindowPositionAndSize = true;internal->chosenPath[0]='\0';}
+    if (dialogTriggerButton || (!internal->rescan && internal->open && strlen(getChosenPath())==0)) {
 	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,false,false,"",fileFilterExtensionString,windowTitle,windowSize,windowPos,windowAlpha);
-        if (cp[0]!='\0') {
+        if (!internal->open) {
 #           ifdef IMGUI_USE_MINIZIP
             internal->unz.close();
 #           endif // IMGUI_USE_MINIZIP
@@ -2598,11 +2619,11 @@ const char* Dialog::chooseFileDialog(bool dialogTriggerButton,const char* direct
     return "";
 }
 const char* Dialog::chooseFolderDialog(bool dialogTriggerButton,const char* directory,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha)  {
-    if (dialogTriggerButton) {internal->rescan = internal->forceSetWindowPositionAndSize = true;internal->chosenPath[0]='\0';}
-    if (dialogTriggerButton || (!internal->rescan && strlen(getChosenPath())==0)) {
+    if (dialogTriggerButton) {internal->open = internal->rescan = internal->forceSetWindowPositionAndSize = true;internal->chosenPath[0]='\0';}
+    if (dialogTriggerButton || (!internal->rescan && internal->open && strlen(getChosenPath())==0)) {
 	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,true,false,"","",windowTitle,windowSize,windowPos,windowAlpha);
-        if (cp[0]!='\0') {
+        if (!internal->open) {
 #           ifdef IMGUI_USE_MINIZIP
             internal->unz.close();
 #           endif // IMGUI_USE_MINIZIP
@@ -2613,11 +2634,11 @@ const char* Dialog::chooseFolderDialog(bool dialogTriggerButton,const char* dire
     return "";
 }
 const char* Dialog::saveFileDialog(bool dialogTriggerButton,const char* directory,const char* startingFileNameEntry,const char* fileFilterExtensionString,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha)    {
-    if (dialogTriggerButton) {internal->rescan = internal->forceSetWindowPositionAndSize = true;internal->chosenPath[0]='\0';}
-    if (dialogTriggerButton || (!internal->rescan && strlen(getChosenPath())==0)) {
+    if (dialogTriggerButton) {internal->open = internal->rescan = internal->forceSetWindowPositionAndSize = true;internal->chosenPath[0]='\0';}
+    if (dialogTriggerButton || (!internal->rescan && internal->open && strlen(getChosenPath())==0)) {
 	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,false,true,startingFileNameEntry,fileFilterExtensionString,windowTitle,windowSize,windowPos,windowAlpha);
-        if (cp[0]!='\0') {
+        if (!internal->open) {
 #           ifdef IMGUI_USE_MINIZIP
             internal->unz.close();
 #           endif // IMGUI_USE_MINIZIP
