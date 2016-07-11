@@ -83,6 +83,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
+#if (!defined(SIZE_MAX) && !defined(INT_MAX))
+#include <limits.h> // INT_MAX
+#endif //(!defined(SIZE_MAX) && !defined(INT_MAX))
+
 
 //#define DIRENT_USES_UTF8_CHARS // Test only
 
@@ -150,6 +154,7 @@
 /* Maximum length of file name */
 #ifdef DIRENT_USES_UTF8_CHARS
 // utf8 strings can have up to 4 bytes per char
+// (however I'm not sure that redifining FILENAME_MAX and NAME_MAX is safe...)
 #   undef PATH_MAX
 #   define PATH_MAX (MAX_PATH*4)
 #   undef FILENAME_MAX
@@ -987,13 +992,8 @@ dirent_set_errno(
 // The code of this single method comes from the musl library
 // (MIT licensed, Copyright © 2005-2014 Rich Felker, et al.)
 #   ifndef SIZE_MAX                 // Can't we just set it to INT_MAX or something like that ?
-#   ifndef __STDC_LIMIT_MACROS
-#       define __STDC_LIMIT_MACROS
-#   endif //__STDC_LIMIT_MACROS
-#   include <stdint.h> //SIZE_MAX
-#       ifndef SIZE_MAX
-#           define SIZE_MAX INT_MAX
-#       endif //SIZE_MAX
+#       define SIZE_MAX_WAS_NOT_DEFINED
+#       define SIZE_MAX INT_MAX     // should be in limits.h AFAIK
 #   endif //SIZE_MAX
 inline static int scandir(const char *path, struct dirent ***res,
     int (*sel)(const struct dirent *),
@@ -1033,7 +1033,10 @@ inline static int scandir(const char *path, struct dirent ***res,
     *res = names;
     return cnt;
 }
-
+#ifdef SIZE_MAX_WAS_NOT_DEFINED
+#   undef SIZE_MAX
+#   undef SIZE_MAX_WAS_NOT_DEFINED
+#endif //SIZE_MAX_WAS_NOT_DEFINED
 
 // alphasort: Function to compare two `struct dirent's alphabetically.
 inline static int alphasort (const struct dirent **e1,const struct dirent **e2)    {

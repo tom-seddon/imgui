@@ -48,6 +48,7 @@ IMGUI_BASE_PATH=../..
 #PKGCONFIG += alsa
 #DEFINES+= YES_IMGUIFREETYPE
 #PKGCONFIG += freetype2
+#DEFINES += IMGUIFS_NO_EXTRA_METHODS
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 

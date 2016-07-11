@@ -1,5 +1,10 @@
 /* 	Refactoring from https://github.com/ocornut/imgui/issues/306
     It's basically the same exact code with a few modifications (and tons of additions)
+
+    As many others, this addon depends on imguihelper for serialization,
+    but can be compiled without it using:
+    #define NO_IMGUIHELPER
+    at the project level, of at the top of this file when used as stand-alone (see README_FIRST.txt).
 */
 
 #ifndef IMGUINODEGRAPHEDITOR_H_
@@ -15,7 +20,7 @@
     ImGui::SetNextWindowSize(ImVec2(700,600), ImGuiSetCond_FirstUseEver);
     if (ImGui::Begin("Example: Custom Node Graph", NULL))
     {
-        ImGui::TestNodeGraphEditor();   // see its code for furthr info
+        ImGui::TestNodeGraphEditor();   // see its code for further info
         ImGui::End();
     }
 */
@@ -29,12 +34,34 @@
 -> DONE - Adjust zooming (CTRL + MW when ImGui::GetIO().FontAllowUserScaling = true;).
           NOW ZOOMING WORKS PROPERLY ONLY IF ImGui::GetIO().FontAllowUserScaling = false,
           (otherwise there's a BAD fallback).
+-> DONE - Nodes links are culled too (not sure if t's faster.
 
 -> Add/Adjust/Fix more FieldTypes. TODO! And test/fix FT_CUSTOM field type too.
 */
 
 
 namespace ImGui	{
+#   ifdef NO_IMGUIHELPER
+// To make it compatible without serialization, we must still
+// clone the FieldType enum from imguihelper.h...
+// (Mmmh, this might be a problem if another addons will do the same in the future...)
+
+// IMPORTANT: FT_INT,FT_UNSIGNED,FT_FLOAT,FT_DOUBLE,FT_BOOL support from 1 to 4 components.
+enum FieldType {
+    FT_INT=0,
+    FT_UNSIGNED,
+    FT_FLOAT,
+    FT_DOUBLE,
+    //--------------- End types that support 1 to 4 array components ----------
+    FT_STRING,      // an arbitrary-length string (or a char blob that can be used as custom type)
+    FT_ENUM,        // serialized/deserialized as FT_INT
+    FT_BOOL,
+    FT_COLOR,       // serialized/deserialized as FT_FLOAT (with 3 or 4 components)
+    FT_TEXTLINE,    // a (series of) text line(s) (separated by '\n') that are fed one at a time in the Deserializer callback
+    FT_CUSTOM,      // a custom type that is served like FT_TEXTLINE (=one line at a time).
+    FT_COUNT
+};
+#   endif //NO_IMGUIHELPER
 
     class FieldInfo {
     protected:

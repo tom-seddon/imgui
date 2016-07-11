@@ -30,31 +30,30 @@
 #   include <pwd.h>        // getenv ?
 #endif //#ifdef _WIN32
 
-#include "dirent_portable.h"
-#include <limits.h>             // on some systems PATH_MAX is here
-#include <sys/stat.h>
-#include <ctype.h>  // tolower,...
-#include <string.h> // strcmp
-#include <stdio.h>  // FILENAME_MAX
-
-
-#if (defined(_MSC_VER) && !defined(strcasecmp))
-#   define strcasecmp _stricmp
-/*
-    // Never tested (I've just been told that cl.exe does not have strcasecmp: please search the web for other possible alternative implementations)
-    inline static int strcasecmp( const char *s1, const char *s2 )  {
-        return _stricmp(s1,s2);
-        //return lstrcmpiA(s1,s2);  // Not sure this is better
-    }
-*/
-#   endif //(defined(_MSC_VER) && !defined(strcasecmp))
+#ifdef IMGUIFS_NO_EXTRA_METHODS
+// We copy the code for FILENAME_MAX and PATH_MAX
+#   include <stdint.h>             // this is included by imgui.cpp, and the following headers might redefine incorrectly some types otherwise.
+#   include <stdio.h>              // just for FILENAME_MAX
+#   include <limits.h>             // just for PATH_MAX
+#   if (defined(__linux__) && !defined(PATH_MAX))
+#       include <linux/limits.h>
+#   endif //(defined(__linux__) && !defined(PATH_MAX))
+#   ifndef PATH_MAX
+#       define PATH_MAX 1024    // Or 4096 ?
+#   endif //IMGUIFS_NO_EXTRA_METHODS
+#   ifndef FILENAME_MAX
+#       define FILENAME_MAX PATH_MAX
+#   endif //FILENAME_MAX
 
 namespace ImGuiFs {
 
-
-#ifdef IMGUIFS_NO_EXTRA_METHODS
+#ifndef IMGUIFS_MEMORY_USES_CHARS_AS_BYTES
+const int MAX_FILENAME_BYTES = FILENAME_MAX*4;  // Worst case: 4 bytes per char, but huge waste of memory [we SHOULD have used imguistring.h!]
+const int MAX_PATH_BYTES = PATH_MAX*4;
+#else //IMGUIFS_MEMORY_USES_CHARS_AS_BYTES
 const int MAX_FILENAME_BYTES = FILENAME_MAX+1;
 const int MAX_PATH_BYTES = PATH_MAX+1;
+#endif //IMGUIFS_MEMORY_USES_CHARS_AS_BYTES
 // A bit dangerous typedefs:
 typedef char FilenameString[MAX_FILENAME_BYTES];
 typedef char PathString[MAX_PATH_BYTES];
@@ -73,9 +72,28 @@ enum Sorting {
     SORT_ORDER_TYPE_INVERSE=7,
     SORT_ORDER_COUNT
 };
+
+} // namespace ImGuiFs
 #endif //IMGUIFS_NO_EXTRA_METHODS
 
+#include "dirent_portable.h"
+#include <sys/stat.h>
+#include <ctype.h>  // tolower,...
+#include <string.h> // strcmp
 
+
+#if (defined(_MSC_VER) && !defined(strcasecmp))
+#   define strcasecmp _stricmp
+/*
+    // Never tested (I've just been told that cl.exe does not have strcasecmp: please search the web for other possible alternative implementations)
+    inline static int strcasecmp( const char *s1, const char *s2 )  {
+        return _stricmp(s1,s2);
+        //return lstrcmpiA(s1,s2);  // Not sure this is better
+    }
+*/
+#   endif //(defined(_MSC_VER) && !defined(strcasecmp))
+
+namespace ImGuiFs {
 
 // Definitions of some helper classes (String,Path,SortingHelper,Directory). Better not expose them in the header file----------
 /*
@@ -219,10 +237,11 @@ public:
         }
         //printf("GetAbsolutePath(\"%s\",\"%s\");\n",path,rv);fflush(stdout);
 #   else //_WIN32
-        static const int bufferSize = PATH_MAX+1;   // 4097 is good (PATH_MAX should be in <limits.h>, or something like that)
+        //fprintf(stderr,"GetAbsolutePath(\"%s\"); (len:%d)\n",path,(int) strlen(path)); // TO remove!
+        static const int bufferSize = MAX_PATH+1;   // 4097 is good (PATH_MAX should be in <limits.h>, or something like that)
         static wchar_t buffer[bufferSize];
         static wchar_t wpath[bufferSize];
-        String::utf8_to_wide(path ? path : "",wpath);
+        String::utf8_to_wide((path && strlen(path)>0) ? path : "./",wpath);
         ::GetFullPathNameW(&wpath[0],bufferSize,&buffer[0],NULL);
         String::wide_to_utf8(&buffer[0],rv);
 
@@ -1564,10 +1583,21 @@ struct Internal {
     char editLocationInputText[MAX_PATH_BYTES];
     bool forceSetWindowPositionAndSize;
 
+
     ~Internal() {
 	dirs.clear();files.clear();
 	dirNames.clear();fileNames.clear();
 	currentSplitPath.clear();
+    }
+
+    inline static void FreeMemory(PathStringVector& v) {PathStringVector o;v.swap(o);}
+#   if FILENAME_MAX!=PATH_MAX  // otherwise PathStringVector == FilenameStringVector
+    inline static void FreeMemory(FilenameStringVector& v) {FilenameStringVector o;v.swap(o);}
+#   endif //FILENAME_MAX!=PATH_MAX
+    void freeMemory() {
+        FreeMemory(dirs);FreeMemory(files);
+        FreeMemory(dirNames);FreeMemory(fileNames);FreeMemory(currentSplitPath);
+        FreeMemory(FolderInfo::SplitPath);  // Not too sure about this...
     }
 
     void resetVariables() {
@@ -2549,9 +2579,12 @@ const char* Dialog::chooseFileDialog(bool dialogTriggerButton,const char* direct
     if (dialogTriggerButton || (!internal->rescan && strlen(getChosenPath())==0)) {
 	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,false,false,"",fileFilterExtensionString,windowTitle,windowSize,windowPos,windowAlpha);
-#       ifdef IMGUI_USE_MINIZIP
-        if (cp[0]!='\0') internal->unz.close();
-#       endif // IMGUI_USE_MINIZIP
+        if (cp[0]!='\0') {
+#           ifdef IMGUI_USE_MINIZIP
+            internal->unz.close();
+#           endif // IMGUI_USE_MINIZIP
+            internal->freeMemory();
+        }
         return cp;
     }
     return "";
@@ -2561,9 +2594,12 @@ const char* Dialog::chooseFolderDialog(bool dialogTriggerButton,const char* dire
     if (dialogTriggerButton || (!internal->rescan && strlen(getChosenPath())==0)) {
 	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,true,false,"","",windowTitle,windowSize,windowPos,windowAlpha);
-#       ifdef IMGUI_USE_MINIZIP
-        if (cp[0]!='\0') internal->unz.close();
-#       endif // IMGUI_USE_MINIZIP
+        if (cp[0]!='\0') {
+#           ifdef IMGUI_USE_MINIZIP
+            internal->unz.close();
+#           endif // IMGUI_USE_MINIZIP
+            internal->freeMemory();
+        }
         return cp;
     }
     return "";
@@ -2573,9 +2609,12 @@ const char* Dialog::saveFileDialog(bool dialogTriggerButton,const char* director
     if (dialogTriggerButton || (!internal->rescan && strlen(getChosenPath())==0)) {
 	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,false,true,startingFileNameEntry,fileFilterExtensionString,windowTitle,windowSize,windowPos,windowAlpha);
-#       ifdef IMGUI_USE_MINIZIP
-        if (cp[0]!='\0') internal->unz.close();
-#       endif // IMGUI_USE_MINIZIP
+        if (cp[0]!='\0') {
+#           ifdef IMGUI_USE_MINIZIP
+            internal->unz.close();
+#           endif // IMGUI_USE_MINIZIP
+            internal->freeMemory();
+        }
         return cp;
     }
     return "";

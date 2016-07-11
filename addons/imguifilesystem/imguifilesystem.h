@@ -64,18 +64,32 @@ x> Never tested on a real Windows OS and on MacOS.
 #include <imgui.h>
 #endif //IMGUI_API
 
-//#define IMGUIFS_NO_EXTRA_METHODS    // optional, but it makes this header heavier... TODO: see if I can extract PATH_MAX and FILENAME_MAX with minimal overhead
+//#define IMGUIFS_NO_EXTRA_METHODS    // optional, but it makes this header lighter...
 #ifndef IMGUIFS_NO_EXTRA_METHODS
-#include "dirent_portable.h"    // just for PATH_MAX
-#include <limits.h>             // on some systems PATH_MAX is here
-#include <stdio.h>              // just for FILENAME_MAX
-#endif //IMGUIFS_NO_EXTRA_METHODS
+#   include <stdint.h>             // this is included by imgui.cpp, and the following headers might redefine incorrectly some types otherwise.
+#   include <stdio.h>              // just for FILENAME_MAX
+#   include <limits.h>             // just for PATH_MAX
+#   if (defined(__linux__) && !defined(PATH_MAX))
+#       include <linux/limits.h>
+#   endif //(defined(__linux__) && !defined(PATH_MAX))
+#   ifndef PATH_MAX
+#       define PATH_MAX 1024    // Or 4096 ?
+#   endif //IMGUIFS_NO_EXTRA_METHODS
+#   ifndef FILENAME_MAX
+#       define FILENAME_MAX PATH_MAX
+#   endif //FILENAME_MAX
+#endif//IMGUIFS_NO_EXTRA_METHODS
 
 namespace ImGuiFs {
 
 #ifndef IMGUIFS_NO_EXTRA_METHODS
-const int MAX_FILENAME_BYTES = FILENAME_MAX+1;
-const int MAX_PATH_BYTES = PATH_MAX+1;
+#   ifndef IMGUIFS_MEMORY_USES_CHARS_AS_BYTES
+    const int MAX_FILENAME_BYTES = FILENAME_MAX*4;  // Worst case: 4 bytes per char, but huge waste of memory [we SHOULD have used imguistring.h!]
+    const int MAX_PATH_BYTES = PATH_MAX*4;
+#   else //IMGUIFS_MEMORY_USES_CHARS_AS_BYTES
+    const int MAX_FILENAME_BYTES = FILENAME_MAX+1;
+    const int MAX_PATH_BYTES = PATH_MAX+1;
+#   endif //IMGUIFS_MEMORY_USES_CHARS_AS_BYTES
 #else //IMGUIFS_NO_EXTRA_METHODS
 extern const int MAX_FILENAME_BYTES;
 extern const int MAX_PATH_BYTES;

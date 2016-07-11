@@ -103,7 +103,7 @@ static inline void GlutSpecialUpDown(int key,int x,int y,bool down)   {
         }
         //fprintf(stderr,"%d) D:%d P:%d R:%d\n",i,(int)gImGuiFunctionKeyDown[i],(int)gImGuiFunctionKeyPressed[i],(int)gImGuiFunctionKeyReleased[i]);
     }
-    else if (key>=0 && key<512) io.KeysDown[key+specialCharMapAddend] = down;
+    else if (key>=0 && key<512-specialCharMapAddend) io.KeysDown[key+specialCharMapAddend] = down;
 }
 static void GlutSpecial(int key,int x,int y)   {
     GlutSpecialUpDown(key,x,y,true);
@@ -121,14 +121,10 @@ static inline void GlutKeyboardUpDown(unsigned char key,int x,int y,bool down)  
     io.KeyAlt = (mods&GLUT_ACTIVE_ALT) != 0;
     io.MousePos.x = x;io.MousePos.y = y;
 
-    if (    key!=GLUT_KEY_LEFT && key!=GLUT_KEY_RIGHT &&
-            key!=GLUT_KEY_UP && key!=GLUT_KEY_DOWN &&
-            key!=GLUT_KEY_HOME && key!=GLUT_KEY_END
-        )   {
+    if ((int)key<512-specialCharMapAddend)   {
         io.KeysDown[key] = down;
+        if (down) io.AddInputCharacter(key);
     }
-
-    if (down) io.AddInputCharacter(key);
 }
 static void GlutKeyboard(unsigned char key,int x,int y)   {
     GlutKeyboardUpDown(key,x,y,true);
