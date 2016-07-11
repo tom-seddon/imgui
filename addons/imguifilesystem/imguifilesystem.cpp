@@ -44,15 +44,23 @@
 #   ifndef FILENAME_MAX
 #       define FILENAME_MAX PATH_MAX
 #   endif //FILENAME_MAX
+#   ifdef _WIN32
+#   include <windef.h> // On Windows we have MAX_PATH too
+#   endif //_WIN32
+#   if (defined(MAX_PATH) && MAX_PATH>PATH_MAX)
+#       define MAX_PATH_TO_USE MAX_PATH
+#   else // (defined(MAX_PATH) && MAX_PATH>PATH_MAX)
+#       define MAX_PATH_TO_USE PATH_MAX
+#   endif // (defined(MAX_PATH) && MAX_PATH>PATH_MAX)
 
 namespace ImGuiFs {
 
-#ifndef IMGUIFS_MEMORY_USES_CHARS_AS_BYTES
+#   if (!defined(IMGUIFS_MEMORY_USES_CHARS_AS_BYTES) || defined(DIRENT_USES_UTF8_CHARS))
 const int MAX_FILENAME_BYTES = FILENAME_MAX*4;  // Worst case: 4 bytes per char, but huge waste of memory [we SHOULD have used imguistring.h!]
-const int MAX_PATH_BYTES = PATH_MAX*4;
+const int MAX_PATH_BYTES = MAX_PATH_TO_USE*4;
 #else //IMGUIFS_MEMORY_USES_CHARS_AS_BYTES
 const int MAX_FILENAME_BYTES = FILENAME_MAX+1;
-const int MAX_PATH_BYTES = PATH_MAX+1;
+const int MAX_PATH_BYTES = MAX_PATH_TO_USE+1;
 #endif //IMGUIFS_MEMORY_USES_CHARS_AS_BYTES
 // A bit dangerous typedefs:
 typedef char FilenameString[MAX_FILENAME_BYTES];
@@ -124,13 +132,13 @@ public:
         rv.resize(sz+1);
         strcpy(&rv[sz][0], s ? s : "\0");
     }
-#   if (FILENAME_MAX!=PATH_MAX)    // Will this work ? (I don't want to use templates)
+#   if (FILENAME_MAX!=MAX_PATH_TO_USE)    // Will this work ? (I don't want to use templates)
     inline static void PushBack(PathStringVector& rv,const char* s)    {
         const size_t sz = rv.size();
         rv.resize(sz+1);
         strcpy(&rv[sz][0], s ? s : "\0");
     }
-#   endif //#if (FILENAME_MAX!=PATH_MAX)
+#   endif //#if (FILENAME_MAX!=MAX_PATH_TO_USE)
     inline static void Substr(const char* text,char* rv,int start,int count=-1)    {
         if (!text) count=0;
         if (count<0) count = (int) strlen(text) - start;
@@ -238,7 +246,7 @@ public:
         //printf("GetAbsolutePath(\"%s\",\"%s\");\n",path,rv);fflush(stdout);
 #   else //_WIN32
         //fprintf(stderr,"GetAbsolutePath(\"%s\"); (len:%d)\n",path,(int) strlen(path)); // TO remove!
-        static const int bufferSize = MAX_PATH+1;   // 4097 is good (PATH_MAX should be in <limits.h>, or something like that)
+        static const int bufferSize = MAX_PATH_TO_USE+1;   // 4097 is good (PATH_MAX should be in <limits.h>, or something like that)
         static wchar_t buffer[bufferSize];
         static wchar_t wpath[bufferSize];
         String::utf8_to_wide((path && strlen(path)>0) ? path : "./",wpath);
@@ -615,7 +623,7 @@ public:
         const mode_t mode = S_IFDIR | S_IREAD | S_IWRITE | S_IRWXU | S_IRWXG | S_IRWXO;
         mkdir(directoryName,mode);
 #       else //_WIN32
-        static wchar_t name[PATH_MAX+1];
+        static wchar_t name[MAX_PATH_TO_USE+1];
         String::utf8_to_wide(directoryName,name);
         ::CreateDirectoryW(name,NULL);
 #       endif //_WIN32
@@ -1591,9 +1599,9 @@ struct Internal {
     }
 
     inline static void FreeMemory(PathStringVector& v) {PathStringVector o;v.swap(o);}
-#   if FILENAME_MAX!=PATH_MAX  // otherwise PathStringVector == FilenameStringVector
+#   if FILENAME_MAX!=MAX_PATH_TO_USE  // otherwise PathStringVector == FilenameStringVector
     inline static void FreeMemory(FilenameStringVector& v) {FilenameStringVector o;v.swap(o);}
-#   endif //FILENAME_MAX!=PATH_MAX
+#   endif //FILENAME_MAX!=MAX_PATH_TO_USE
     void freeMemory() {
         FreeMemory(dirs);FreeMemory(files);
         FreeMemory(dirNames);FreeMemory(fileNames);FreeMemory(currentSplitPath);

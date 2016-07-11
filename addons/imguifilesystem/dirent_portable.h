@@ -74,7 +74,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <windef.h>
+#include <windef.h>     // MAX_PATH is defined here,
 #include <winbase.h>
 #include <wchar.h>
 #include <string.h>
@@ -88,7 +88,7 @@
 #endif //(!defined(SIZE_MAX) && !defined(INT_MAX))
 
 
-//#define DIRENT_USES_UTF8_CHARS // Test only
+//#define DIRENT_USES_UTF8_CHARS // Test only [Better setting it globally, not just here]
 
 /* Indicates that d_type field is available in dirent structure */
 #define _DIRENT_HAVE_D_TYPE
@@ -152,26 +152,16 @@
 #endif
 
 /* Maximum length of file name */
-#ifdef DIRENT_USES_UTF8_CHARS
-// utf8 strings can have up to 4 bytes per char
-// (however I'm not sure that redifining FILENAME_MAX and NAME_MAX is safe...)
-#   undef PATH_MAX
-#   define PATH_MAX (MAX_PATH*4)
-#   undef FILENAME_MAX
-#   define FILENAME_MAX MAX_PATH
-#   undef NAME_MAX
-#   define NAME_MAX FILENAME_MAX
-#else //DIRENT_USES_UTF8_CHARS
-#   if !defined(PATH_MAX)
-#       define PATH_MAX MAX_PATH
-#   endif
-#   if !defined(FILENAME_MAX)
-#       define FILENAME_MAX MAX_PATH
-#   endif
-#   if !defined(NAME_MAX)
-#       define NAME_MAX FILENAME_MAX
-#   endif
-#endif //DIRENT_USES_UTF8_CHARS
+#ifndef MAX_PATH_TO_USE
+#   ifndef MAX_PATH
+#       define MAX_PATH PATH_MAX    // it should be in <limits.h> AFAIK
+#   endif //MAX_PATH
+#   ifdef DIRENT_USES_UTF8_CHARS    // utf8 strings can have up to 4 bytes per char
+#       define MAX_PATH_TO_USE (MAX_PATH*4)
+#   else //DIRENT_USES_UTF8_CHARS
+#       define MAX_PATH_TO_USE (MAX_PATH)
+#   endif //DIRENT_USES_UTF8_CHARS
+#endif //MAX_PATH_TO_USE
 
 /* File type flags for d_type */
 #define DT_UNKNOWN  0
@@ -216,7 +206,7 @@
 #define _D_EXACT_NAMLEN(p) ((p)->d_namlen)
 
 /* Return number of bytes needed to store d_namlen */
-#define _D_ALLOC_NAMLEN(p) (PATH_MAX)
+#define _D_ALLOC_NAMLEN(p) (MAX_PATH_TO_USE)
 
 
 #ifdef __cplusplus
@@ -230,7 +220,7 @@ struct _wdirent {
     unsigned short d_reclen;                    /* Structure size */
     size_t d_namlen;                            /* Length of name without \0 */
     int d_type;                                 /* File type */
-    wchar_t d_name[PATH_MAX];                   /* File name */
+    wchar_t d_name[MAX_PATH_TO_USE];                   /* File name */
 };
 typedef struct _wdirent _wdirent;
 
@@ -264,7 +254,7 @@ struct dirent {
     unsigned short d_reclen;                    /* Structure size */
     size_t d_namlen;                            /* Length of name without \0 */
     int d_type;                                 /* File type */
-    char d_name[PATH_MAX];                      /* File name */
+    char d_name[MAX_PATH_TO_USE];               /* File name */
 };
 typedef struct dirent dirent;
 
@@ -423,10 +413,10 @@ _wreaddir(
         /*
          * Copy file name as wide-character string.  If the file name is too
          * long to fit in to the destination buffer, then truncate file name
-         * to PATH_MAX characters and zero-terminate the buffer.
+         * to MAX_PATH_TO_USE characters and zero-terminate the buffer.
          */
         n = 0;
-        while (n + 1 < PATH_MAX  &&  datap->cFileName[n] != 0) {
+        while (n + 1 < MAX_PATH_TO_USE  &&  datap->cFileName[n] != 0) {
             entp->d_name[n] = datap->cFileName[n];
             n++;
         }
@@ -595,11 +585,11 @@ opendir(
     /* Allocate memory for DIR structure */
     dirp = (DIR*) malloc (sizeof (struct DIR));
     if (dirp) {
-        wchar_t wname[PATH_MAX];
+        wchar_t wname[MAX_PATH_TO_USE];
         size_t n;
 
         /* Convert directory name to wide-character string */
-        error = dirent_mbstowcs_s (&n, wname, PATH_MAX, dirname, PATH_MAX);
+        error = dirent_mbstowcs_s (&n, wname, MAX_PATH_TO_USE, dirname, MAX_PATH_TO_USE);
         if (!error) {
 
             /* Open directory stream using wide-character name */
@@ -664,7 +654,7 @@ readdir(
 
         /* Attempt to convert file name to multi-byte string */
         error = dirent_wcstombs_s(
-            &n, dirp->ent.d_name, PATH_MAX, datap->cFileName, PATH_MAX);
+            &n, dirp->ent.d_name, MAX_PATH_TO_USE, datap->cFileName, MAX_PATH_TO_USE);
 
         /*
          * If the file name cannot be represented by a multi-byte string,
@@ -678,8 +668,8 @@ readdir(
          */
         if (error  &&  datap->cAlternateFileName[0] != '\0') {
             error = dirent_wcstombs_s(
-                &n, dirp->ent.d_name, PATH_MAX,
-                datap->cAlternateFileName, PATH_MAX);
+                &n, dirp->ent.d_name, MAX_PATH_TO_USE,
+                datap->cAlternateFileName, MAX_PATH_TO_USE);
         }
 
         if (!error) {

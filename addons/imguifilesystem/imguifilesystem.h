@@ -78,17 +78,25 @@ x> Never tested on a real Windows OS and on MacOS.
 #   ifndef FILENAME_MAX
 #       define FILENAME_MAX PATH_MAX
 #   endif //FILENAME_MAX
+#   ifdef _WIN32
+#   include <windef.h> // On Windows we have MAX_PATH too
+#   endif //_WIN32
+#   if (defined(MAX_PATH) && MAX_PATH>PATH_MAX)
+#       define MAX_PATH_TO_USE MAX_PATH
+#   else // (defined(MAX_PATH) && MAX_PATH>PATH_MAX)
+#       define MAX_PATH_TO_USE PATH_MAX
+#   endif // (defined(MAX_PATH) && MAX_PATH>PATH_MAX)
 #endif//IMGUIFS_NO_EXTRA_METHODS
 
 namespace ImGuiFs {
 
 #ifndef IMGUIFS_NO_EXTRA_METHODS
-#   ifndef IMGUIFS_MEMORY_USES_CHARS_AS_BYTES
+#   if (!defined(IMGUIFS_MEMORY_USES_CHARS_AS_BYTES) || defined(DIRENT_USES_UTF8_CHARS))
     const int MAX_FILENAME_BYTES = FILENAME_MAX*4;  // Worst case: 4 bytes per char, but huge waste of memory [we SHOULD have used imguistring.h!]
-    const int MAX_PATH_BYTES = PATH_MAX*4;
+    const int MAX_PATH_BYTES = MAX_PATH_TO_USE*4;
 #   else //IMGUIFS_MEMORY_USES_CHARS_AS_BYTES
     const int MAX_FILENAME_BYTES = FILENAME_MAX+1;
-    const int MAX_PATH_BYTES = PATH_MAX+1;
+    const int MAX_PATH_BYTES = MAX_PATH_TO_USE+1;
 #   endif //IMGUIFS_MEMORY_USES_CHARS_AS_BYTES
 #else //IMGUIFS_NO_EXTRA_METHODS
 extern const int MAX_FILENAME_BYTES;
