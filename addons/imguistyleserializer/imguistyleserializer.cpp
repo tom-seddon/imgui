@@ -207,8 +207,8 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
 
             //fprintf(stderr,"name: %s npf=%d\n",name,npf);  // dbg
             // parsing values here and filling pf[]
-            float x,y,z,w;
-            int xi,yi,zi,wi;
+	    float x=0.f,y=0.f,z=0.f,w=0.f;
+	    int xi=0,yi=0,zi=0,wi=0;
             switch (npf)	{
             case 1:
                 if (sscanf(line_start, "%f", &x) == npf)	{

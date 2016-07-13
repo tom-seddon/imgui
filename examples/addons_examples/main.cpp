@@ -485,6 +485,15 @@ void DrawGL()	// Mandatory
         }
         if (strlen(fsInstance3.getChosenPath())>0) ImGui::Text("Chosen save path: \"%s\"",fsInstance3.getChosenPath());
 
+        //-----------------------------------------------------------------------------------------------------------
+        // 4 - ChooseFileDialogButton setup using a read-only InputText sharing its internal buffer (derived from 1):
+        //-----------------------------------------------------------------------------------------------------------
+        static ImGuiFs::Dialog fsInstance4;
+        ImGui::Text("Another File:");ImGui::SameLine();
+        ImGui::InputText("###dummyStuffForID",(char*)fsInstance4.getChosenPath(),ImGuiFs::MAX_PATH_BYTES,ImGuiInputTextFlags_ReadOnly);ImGui::SameLine();
+        const bool browseButtonPressed4 = ImGui::Button("...##4");
+        fsInstance4.chooseFileDialog(browseButtonPressed4,fsInstance4.getLastDirectory());
+
 
 #       else //NO_IMGUIFILESYSTEM
         ImGui::Text("%s","Excluded from this build.\n");

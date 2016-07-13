@@ -1876,12 +1876,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
     }
     if (!I.open) {
         // This case (user clicks the close button) does not seem to be triggered here...
-        // No matter, I just copied it in the 3 caller methods, where it's triggered.
-        ImGui::CloseCurrentPopup();
-#       ifdef IMGUI_USE_MINIZIP
-        I.unz.close();
-#       endif // IMGUI_USE_MINIZIP
-        I.freeMemory();
+        // No matter, I just handle it in the 3 caller methods, where it's triggered.
         return rv;
     }
 
@@ -2608,7 +2603,7 @@ const char* Dialog::chooseFileDialog(bool dialogTriggerButton,const char* direct
     if (dialogTriggerButton || (!internal->rescan && internal->open && strlen(getChosenPath())==0)) {
 	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,false,false,"",fileFilterExtensionString,windowTitle,windowSize,windowPos,windowAlpha);
-        if (!internal->open) {
+        if (!internal->open) {  // AFAIK this should happen only when user clicks the close button (but not when he clicks cancel)
 #           ifdef IMGUI_USE_MINIZIP
             internal->unz.close();
 #           endif // IMGUI_USE_MINIZIP
