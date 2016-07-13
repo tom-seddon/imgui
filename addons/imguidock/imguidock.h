@@ -112,5 +112,8 @@ IMGUI_API void DockDebugWindow();
 
 } // namespace ImGui
 
+extern bool gImGuiDockReuseTabWindowTextureIfAvailable; // [false] (doesn't look too good...)
+
+
 #endif //IMGUIDOCK_H_
 

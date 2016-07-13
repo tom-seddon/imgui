@@ -32,6 +32,8 @@ SOFTWARE.
 #include "imgui_internal.h"*/
 #include "imguidock.h"
 
+bool gImGuiDockReuseTabWindowTextureIfAvailable = false;
+
 namespace ImGui	{
 
 struct DockContext
@@ -491,26 +493,74 @@ struct DockContext
     bool dockSlots(Dock& dock, Dock* dest_dock, const ImRect& rect, bool on_border)
     {
         ImDrawList* canvas = GetWindowDrawList();
-        ImU32 color = GetColorU32(ImGuiCol_Button);
-        ImU32 color_hovered = GetColorU32(ImGuiCol_ButtonHovered);
-        ImVec2 mouse_pos = GetIO().MousePos;
+	ImU32 color = GetColorU32(ImGuiCol_Button);		    // Color of all the available "spots"
+	ImU32 color_hovered = GetColorU32(ImGuiCol_ButtonHovered);  // Color of the hovered "spot"
+	ImU32 docked_rect_color = color;
+	ImVec2 mouse_pos = GetIO().MousePos;
+	ImTextureID texture = NULL;
+	if (gImGuiDockReuseTabWindowTextureIfAvailable)	{
+#	ifdef IMGUITABWINDOW_H_
+	texture = ImGui::TabWindow::DockPanelIconTextureID;	// Nope. It doesn't look OK.
+	if (texture) {
+	    color = 0x00FFFFFF | 0x70000000;
+	    color_hovered = (color_hovered & 0x00FFFFFF) | 0x90000000;
+	    docked_rect_color = (docked_rect_color &  0x00FFFFFF) | 0x80000000;
+
+	    canvas->ChannelsSplit(2);	// Solves overlay order. But won't it break something else ?
+	}
+#	endif ////IMGUITABWINDOW_H_
+	}
         for (int i = 0; i < (on_border ? 4 : 5); ++i)
         {
+	    const ImGuiDockSlot iSlot = (ImGuiDockSlot)i;
             ImRect r =
-                    on_border ? getSlotRectOnBorder(rect, (ImGuiDockSlot)i) : getSlotRect(rect, (ImGuiDockSlot)i);
+		    on_border ? getSlotRectOnBorder(rect, iSlot) : getSlotRect(rect, iSlot);
             bool hovered = r.Contains(mouse_pos);
-            canvas->AddRectFilled(r.Min, r.Max, hovered ? color_hovered : color);
+	    ImU32 color_to_use = hovered ? color_hovered : color;
+	    if (!texture) canvas->AddRectFilled(r.Min, r.Max, color_to_use);
+	    else {
+#		ifdef IMGUITABWINDOW_H_
+		canvas->ChannelsSetCurrent(0);	// Background
+		switch (iSlot)	{
+		case ImGuiDockSlot_Left:
+		    canvas->AddImage(texture,r.Min, r.Max,ImVec2(0.0f,0.22916f),ImVec2(0.22916f,0.45834f),color_to_use);
+		break;
+		case ImGuiDockSlot_Right:
+		    canvas->AddImage(texture,r.Min, r.Max,ImVec2(0.45834f,0.22916f),ImVec2(0.6875f,0.45834f),color_to_use);
+		break;
+		case ImGuiDockSlot_Top:
+		    canvas->AddImage(texture,r.Min, r.Max,ImVec2(0.22916f,0.f),ImVec2(0.45834f,0.22916f),color_to_use);
+		break;
+		case ImGuiDockSlot_Bottom:
+		    canvas->AddImage(texture,r.Min, r.Max,ImVec2(0.22916f,0.45834f),ImVec2(0.45834f,0.6875f),color_to_use);
+		break;
+		case ImGuiDockSlot_Tab:
+		    canvas->AddImage(texture,r.Min, r.Max,ImVec2(0.22916f,0.22916f),ImVec2(0.45834f,0.45834f),color_to_use);
+		break;
+		default:
+		    canvas->AddRectFilled(r.Min, r.Max, color_to_use);
+		break;
+		}
+		canvas->ChannelsSetCurrent(1);	// Foreground
+#		endif ////IMGUITABWINDOW_H_
+	    }
             if (!hovered) continue;
 
             if (!IsMouseDown(0))
             {
-                doDock(dock, dest_dock ? dest_dock : getRootDock(), (ImGuiDockSlot)i);
+#		ifdef IMGUITABWINDOW_H_
+		if (texture) canvas->ChannelsMerge();
+#		endif ////IMGUITABWINDOW_H_
+		doDock(dock, dest_dock ? dest_dock : getRootDock(), iSlot);
                 return true;
             }
-            ImRect docked_rect = getDockedRect(rect, (ImGuiDockSlot)i);
-            canvas->AddRectFilled(docked_rect.Min, docked_rect.Max, GetColorU32(ImGuiCol_Button));
+	    ImRect docked_rect = getDockedRect(rect, iSlot);
+	    canvas->AddRectFilled(docked_rect.Min, docked_rect.Max, docked_rect_color);
         }
-        return false;
+#	ifdef IMGUITABWINDOW_H_
+	if (texture) canvas->ChannelsMerge();
+#	endif ////IMGUITABWINDOW_H_
+	return false;
     }
 
 
@@ -530,7 +580,7 @@ struct DockContext
         canvas->PushClipRectFullScreen();
 
         ImU32 docked_color = GetColorU32(ImGuiCol_FrameBg);
-        docked_color = (docked_color & 0x00ffFFFF) | 0x80000000;
+	docked_color = (docked_color & 0x00ffFFFF) | 0x80000000;
         dock.pos = GetIO().MousePos - m_drag_offset;
         if (dest_dock)
         {

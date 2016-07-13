@@ -1273,8 +1273,13 @@ void DrawGL()	// Mandatory
             }
             ImGui::EndDock();   //Load/Save
 #           endif //NO_IMGUIHELPER_SERIALIZATION
- //=========== END OPTIONAL STUFF =================================================
-
+//=========== END OPTIONAL STUFF =================================================
+//=========== SECOND OPTIONAL STUFF ==============================================
+            if (ImGui::BeginDock("Dragging Look"))  {
+            ImGui::Checkbox("Textured##imguidockDraggingLook",&gImGuiDockReuseTabWindowTextureIfAvailable);
+            ImGui::EndDock();
+            }
+//================================================================================
             ImGui::EndDockspace();
         }
         ImGui::End();
