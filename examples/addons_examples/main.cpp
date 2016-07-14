@@ -1241,7 +1241,13 @@ void DrawGL()	// Mandatory
                 }
                 ImGui::EndDock();
             }
-
+//=========== OPTIONAL STUFF ===================================================
+            static bool draggingLookOpen = true;    // With this next dock has a close button (but its state is not serializable AFAIK)
+            if (ImGui::BeginDock("Dragging Look",&draggingLookOpen))  {
+            ImGui::Checkbox("Textured##imguidockDraggingLook",&gImGuiDockReuseTabWindowTextureIfAvailable);
+            ImGui::EndDock();
+            }
+//===========END OPTIONAL STUFF =================================================
 //========== OPTIONAL STUFF =====================================================
 #           if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
             if (ImGui::BeginDock("Load/Save"))  {
@@ -1273,13 +1279,7 @@ void DrawGL()	// Mandatory
             }
             ImGui::EndDock();   //Load/Save
 #           endif //NO_IMGUIHELPER_SERIALIZATION
-//=========== END OPTIONAL STUFF =================================================
-//=========== SECOND OPTIONAL STUFF ==============================================
-            if (ImGui::BeginDock("Dragging Look"))  {
-            ImGui::Checkbox("Textured##imguidockDraggingLook",&gImGuiDockReuseTabWindowTextureIfAvailable);
-            ImGui::EndDock();
-            }
-//================================================================================
+//=========== END OPTIONAL STUFF ================================================
             ImGui::EndDockspace();
         }
         ImGui::End();

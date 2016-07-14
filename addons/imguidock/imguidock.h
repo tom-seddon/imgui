@@ -77,7 +77,7 @@ SOFTWARE.
 #endif //IMGUI_API
  
 typedef enum ImGuiDockSlot {
-    ImGuiDockSlot_Left,
+    ImGuiDockSlot_Left=0,
     ImGuiDockSlot_Right,
     ImGuiDockSlot_Top,
     ImGuiDockSlot_Bottom,
@@ -112,7 +112,7 @@ IMGUI_API void DockDebugWindow();
 
 } // namespace ImGui
 
-extern bool gImGuiDockReuseTabWindowTextureIfAvailable; // [false] (doesn't look too good...)
+extern bool gImGuiDockReuseTabWindowTextureIfAvailable; // [true] (used only when available)
 
 
 #endif //IMGUIDOCK_H_

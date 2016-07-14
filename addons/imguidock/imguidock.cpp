@@ -32,7 +32,7 @@ SOFTWARE.
 #include "imgui_internal.h"*/
 #include "imguidock.h"
 
-bool gImGuiDockReuseTabWindowTextureIfAvailable = false;
+bool gImGuiDockReuseTabWindowTextureIfAvailable = true;
 
 namespace ImGui	{
 
@@ -502,7 +502,7 @@ struct DockContext
 #	ifdef IMGUITABWINDOW_H_
 	texture = ImGui::TabWindow::DockPanelIconTextureID;	// Nope. It doesn't look OK.
 	if (texture) {
-	    color = 0x00FFFFFF | 0x70000000;
+	    color = 0x00FFFFFF | 0x90000000;
 	    color_hovered = (color_hovered & 0x00FFFFFF) | 0x90000000;
 	    docked_rect_color = (docked_rect_color &  0x00FFFFFF) | 0x80000000;
 
@@ -523,16 +523,14 @@ struct DockContext
 		canvas->ChannelsSetCurrent(0);	// Background
 		switch (iSlot)	{
 		case ImGuiDockSlot_Left:
-		    canvas->AddImage(texture,r.Min, r.Max,ImVec2(0.0f,0.22916f),ImVec2(0.22916f,0.45834f),color_to_use);
-		break;
 		case ImGuiDockSlot_Right:
-		    canvas->AddImage(texture,r.Min, r.Max,ImVec2(0.45834f,0.22916f),ImVec2(0.6875f,0.45834f),color_to_use);
-		break;
 		case ImGuiDockSlot_Top:
-		    canvas->AddImage(texture,r.Min, r.Max,ImVec2(0.22916f,0.f),ImVec2(0.45834f,0.22916f),color_to_use);
-		break;
 		case ImGuiDockSlot_Bottom:
-		    canvas->AddImage(texture,r.Min, r.Max,ImVec2(0.22916f,0.45834f),ImVec2(0.45834f,0.6875f),color_to_use);
+		{
+		    const int uvIndex = (i==0)?3:(i==2)?0:(i==3)?2:i;
+		    ImVec2 uv0(0.75f,(float)uvIndex*0.25f),uv1(uv0.x+0.25f,uv0.y+0.25f);
+		    canvas->AddImage(texture,r.Min, r.Max,uv0,uv1,color_to_use);
+		}
 		break;
 		case ImGuiDockSlot_Tab:
 		    canvas->AddImage(texture,r.Min, r.Max,ImVec2(0.22916f,0.22916f),ImVec2(0.45834f,0.45834f),color_to_use);
