@@ -1771,25 +1771,28 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
     static ImVec4 ColorSet[Internal::ImGuiCol_Dialog_Size];
     // Fill ColorSet above and fix dummyButtonColor here
     {
-        static const ImVec4 df(0.9,0.9,0.3,1);          // directory color factor
-        static const ImVec4 ff(0.7,0.7,0.7,1);          // file color factor
-        static const ImVec4 zdf(1.5,0.8,0.8,1);          // zip directory color factor
+        static const ImVec4 df(0.9,0.9,0.3,0.65);          // directory color factor
+        static const ImVec4 ff(0.7,0.7,0.7,0.65);          // file color factor
+        static const ImVec4 zdf(1.5,0.8,0.8,0.65);          // zip directory color factor
 
         for (int i=0,sz=(int)Internal::ImGuiCol_Dialog_Directory_Text;i<=sz;i++)    {
             ImVec4& c = ColorSet[i];
             const ImVec4& r = style.Colors[i<sz ? ((int)ImGuiCol_Button + i) : ImGuiCol_Text];
             Internal::ColorCombine(c,r,df);
+            if (i<sz) c.w *= df.w;
         }
         for (int i=(int)Internal::ImGuiCol_Dialog_File_Background,sz=(int)Internal::ImGuiCol_Dialog_File_Text;i<=sz;i++)    {
             ImVec4& c = ColorSet[i];
             const ImVec4& r = style.Colors[i<sz ? ((int)ImGuiCol_Button-(int)Internal::ImGuiCol_Dialog_File_Background + i) : ImGuiCol_Text];
             Internal::ColorCombine(c,r,ff);
+            if (i<sz) c.w *= ff.w;
         }
         for (int i=(int)Internal::ImGuiCol_Dialog_ZipDirectory_Background,sz=(int)Internal::ImGuiCol_Dialog_ZipDirectory_Text;i<=sz;i++)    {
             ImVec4& c = ColorSet[i];
             const ImVec4& r = style.Colors[i<sz ? ((int)ImGuiCol_Button + i) : ImGuiCol_Text];
             Internal::ColorCombine(c,r,zdf);
             if (c.x>1.f) c.x=1.f;if (c.y>1.f) c.y=1.f;if (c.z>1.f) c.z=1.f;if (c.w>1.f) c.w=1.f;
+            if (i<sz) c.w *= zdf.w;
         }
         if (dummyButtonColor.w>0)   {
             const ImVec4& bbc = style.Colors[ImGuiCol_Button];

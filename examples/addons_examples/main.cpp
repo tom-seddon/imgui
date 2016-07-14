@@ -1243,10 +1243,10 @@ void DrawGL()	// Mandatory
             }
 //=========== OPTIONAL STUFF ===================================================
             static bool draggingLookOpen = true;    // With this next dock has a close button (but its state is not serializable AFAIK)
-            if (ImGui::BeginDock("Dragging Look",&draggingLookOpen))  {
-            ImGui::Checkbox("Textured##imguidockDraggingLook",&gImGuiDockReuseTabWindowTextureIfAvailable);
-            ImGui::EndDock();
+            if (ImGui::BeginDock("Dragging Look",&draggingLookOpen))    {
+                ImGui::Checkbox("Textured##imguidockDraggingLook",&gImGuiDockReuseTabWindowTextureIfAvailable);
             }
+            ImGui::EndDock();
 //===========END OPTIONAL STUFF =================================================
 //========== OPTIONAL STUFF =====================================================
 #           if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
