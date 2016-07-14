@@ -96,7 +96,7 @@ enum FieldType {
         typedef bool (*CopyFieldDelegate)(FieldInfo& fdst,const FieldInfo& fsrc);
         CopyFieldDelegate copyFieldDelegate;
 
-//------WIP----------------------------------------------------------------------
+//-------------------------------------------------------------------------------
 #       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
         typedef bool (*SerializeFieldDelegate)(ImGuiHelper::Serializer& s,const FieldInfo& src);
@@ -140,7 +140,7 @@ enum FieldType {
         }
         //bool copyFrom(const FieldInfo& f);
         bool copyPDataValueFrom(const FieldInfo& f);
-//------WIP----------------------------------------------------------------------
+//-------------------------------------------------------------------------------
 #       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
         bool serialize(ImGuiHelper::Serializer& s) const;

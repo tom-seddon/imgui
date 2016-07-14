@@ -1305,7 +1305,7 @@ void DockDebugWindow()
 	if (pOptionalBufferStart) *pOptionalBufferStart = amount;
 	return true;
     }
-    bool LoadDock(const char* filename,const char ** pOptionalBufferStart)  {ImGuiHelper::Deserializer d(filename);return LoadDock(d,pOptionalBufferStart);}
+    bool LoadDock(const char* filename)  {ImGuiHelper::Deserializer d(filename);return LoadDock(d);}
 #   endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #endif //(defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 

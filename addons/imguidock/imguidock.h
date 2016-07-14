@@ -50,11 +50,10 @@ SOFTWARE.
 
 
         // Fullscreen (without visual artifacts):
-        // [The ImGuiWindowFlags_NoBringToFrontOnFocus is needed only if you want to mix code with "regular" ImGui Windows AFAIK]
         ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
         const ImGuiWindowFlags flags =  (ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar);
         const float oldWindowRounding = ImGui::GetStyle().WindowRounding;ImGui::GetStyle().WindowRounding = 0;
-        const bool visible = ImGui::Begin("imguidock window (= lumix engine's dock system)",NULL,ImVec2(0, 0),0.95f,flags);
+        const bool visible = ImGui::Begin("imguidock window (= lumix engine's dock system)",NULL,ImVec2(0, 0),1.0f,flags);
         ImGui::GetStyle().WindowRounding = oldWindowRounding;
         if (visible) {
             ImGui::BeginDockspace();
@@ -106,7 +105,7 @@ IMGUI_API void DockDebugWindow();
 #   endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #   ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
     IMGUI_API bool LoadDock(ImGuiHelper::Deserializer& d,const char ** pOptionalBufferStart=NULL);
-    IMGUI_API bool LoadDock(const char* filename,const char ** pOptionalBufferStart=NULL);
+    IMGUI_API bool LoadDock(const char* filename);
 #   endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #endif //(defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 
