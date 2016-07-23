@@ -51,6 +51,7 @@ IMGUI_BASE_PATH=../..
 #DEFINES += IMGUIFS_NO_EXTRA_METHODS
 #DEFINES += IMGUI_USE_MINIZIP
 #LIBS+= -lz
+#DEFINES+= YES_IMGUIMINIGAMES
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 
@@ -93,8 +94,8 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguitinyfiledialogs.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisqlite3.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguifreetype.h"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisoloud.h"
-
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisoloud.h"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguiminigames.h"
 
 SOURCES+=  $$IMGUI_BASE_PATH"/imgui.cpp" \
 	   $$IMGUI_BASE_PATH"/imgui_draw.cpp" \
@@ -159,8 +160,9 @@ OTHER_FILES+= $$IMGUI_BASE_PATH"/addons/imgui_user.inl"				    \
 	   $$IMGUI_BASE_PATH"/addons/imguidock/imguidock.h"			    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguipdfviewer.cpp"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguidock.cpp"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.cpp"		    \				
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.cpp"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisoloud.cpp"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguiminigames.cpp"		    \
 	   README_FIRST.txt
 
 

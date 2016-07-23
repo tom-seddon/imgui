@@ -10,8 +10,9 @@ enum ImGuiStyleEnum {
     ImGuiStyle_Gray,        // This is the default theme of my main.cpp demo.
     ImGuiStyle_Light,
     ImGuiStyle_OSX,         // Posted by @itamago here: https://github.com/ocornut/imgui/pull/511 (hope I can use it)
-    ImGuiStyle_OSXOpaque,
+    ImGuiStyle_OSXOpaque,   // Posted by @dougbinks here: https://gist.github.com/dougbinks/8089b4bbaccaaf6fa204236978d165a9 (hope I can use it)
     ImGuiStyle_DarkOpaque,
+    ImGuiStyle_Soft,        // Posted by @olekristensen here: https://github.com/ocornut/imgui/issues/539 (hope I can use it)
 
     ImGuiStyle_DefaultInverse,
     ImGuiStyle_OSXInverse,

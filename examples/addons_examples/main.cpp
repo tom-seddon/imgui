@@ -285,6 +285,7 @@ void DrawGL()	// Mandatory
     static bool show_dock_window = false;
     static bool show_tab_windows = false;
     static bool show_performance = false;
+    static bool show_mine_game = false;
 
     // 1. Show a simple window
     {
@@ -321,6 +322,9 @@ void DrawGL()	// Mandatory
         show_tab_windows ^= ImGui::Button("Show TabWindow Test");
 #       endif //NO_IMGUITABWINDOW
         show_performance ^= ImGui::Button("Show performance");
+#       if (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
+        show_mine_game ^= ImGui::Button("Show Mine Game");
+#       endif //(defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
 
         // Calculate and show framerate
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("Frame rate options");
@@ -393,6 +397,7 @@ void DrawGL()	// Mandatory
             else if (styleEnumNum==ImGuiStyle_OSX)   ImGui::SetTooltip("%s","\"OSX\"\nPosted by @itamago here:\nhttps://github.com/ocornut/imgui/pull/511\n(hope I can use it)");
             else if (styleEnumNum==ImGuiStyle_DarkOpaque)   ImGui::SetTooltip("%s","\"DarkOpaque\"\nA dark-grayscale style with\nno transparency (by default)");
             else if (styleEnumNum==ImGuiStyle_OSXOpaque)   ImGui::SetTooltip("%s","\"OSXOpaque\"\nPosted by @dougbinks here:\nhttps://gist.github.com/dougbinks/8089b4bbaccaaf6fa204236978d165a9\n(hope I can use it)");
+            else if (styleEnumNum==ImGuiStyle_Soft) ImGui::SetTooltip("%s","\"Soft\"\nPosted by @olekristensen here:\nhttps://github.com/ocornut/imgui/issues/539\n(hope I can use it)");
         }
 
         ImGui::SameLine();
@@ -1168,9 +1173,9 @@ void DrawGL()	// Mandatory
         if (ImGui::Begin("Example: Custom Node Graph", &show_node_graph_editor_window,ImVec2(700,600),0.95f,ImGuiWindowFlags_NoScrollbar)){
 #           ifndef IMGUINODEGRAPHEDITOR_NOTESTDEMO
             ImGui::TestNodeGraphEditor();   // see its code for further info
-#           endif //IMGUINODEGRAPHEDITOR_NOTESTDEMO
-            ImGui::End();
+#           endif //IMGUINODEGRAPHEDITOR_NOTESTDEMO            
         }
+        ImGui::End();
     }
 #   endif //NO_IMGUINODEGRAPHEDITOR
     if (show_splitter_test_window)  {
@@ -1297,23 +1302,27 @@ void DrawGL()	// Mandatory
         static ImGui::TabWindow tabWindows[2];  // Note: there's more than this: there are methods to save/load all TabWindows together, but we don't use them here. Also we don't use "custom callbacks", "TabLabel modified states" and TabLabel context-menus here to keep things simple.
         static bool showTabWindow[2] = {true,true};
 
-        if (showTabWindow[0] && ImGui::Begin("TabWindow1", &showTabWindow[0], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar))  {
-            ImGui::TabWindow&  tabWindow = tabWindows[0];
-            if (!tabWindow.isInited()) {
-                static const char* tabNames[] = {"Test","Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
-                static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
-                static const char* tabTooltips[numTabs] = {"Test Tab Tooltip","Render Tab Tooltip","Layers Tab Tooltip","Scene Tab Tooltip","This tab cannot be dragged around","Object Tab Tooltip","","","","This tab cannot be dragged around","Tired to add tooltips...",""};
-                for (int i=0;i<numTabs;i++) {
-                    tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
+        if (showTabWindow[0])   {
+            if (ImGui::Begin("TabWindow1", &showTabWindow[0], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar))  {
+                ImGui::TabWindow&  tabWindow = tabWindows[0];
+                if (!tabWindow.isInited()) {
+                    static const char* tabNames[] = {"Test","Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
+                    static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
+                    static const char* tabTooltips[numTabs] = {"Test Tab Tooltip","Render Tab Tooltip","Layers Tab Tooltip","Scene Tab Tooltip","This tab cannot be dragged around","Object Tab Tooltip","","","","This tab cannot be dragged around","Tired to add tooltips...",""};
+                    for (int i=0;i<numTabs;i++) {
+                        tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
+                    }
                 }
+                tabWindow.render(); // Must be inside a window
             }
-            tabWindow.render(); // Must be inside a window
             ImGui::End();
         }
 
-        if (showTabWindow[1] && ImGui::Begin("TabWindow2", &showTabWindow[1], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar))  {
-            ImGui::TabWindow&  tabWindow2 = tabWindows[1];
-            tabWindow2.render();
+        if (showTabWindow[1])   {
+            if (ImGui::Begin("TabWindow2", &showTabWindow[1], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar))  {
+                ImGui::TabWindow&  tabWindow2 = tabWindows[1];
+                tabWindow2.render();
+            }
             ImGui::End();
         }
 
@@ -1325,12 +1334,24 @@ void DrawGL()	// Mandatory
     }
 
 #   endif //NO_IMGUITABWINDOW
-    if (show_performance && ImGui::Begin("Performance Window",&show_performance,ImVec2(0,0),0.9f,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoResize))   {
-        ImGui::Text("Frame rate %.1f FPS",ImGui::GetIO().Framerate);
-        ImGui::Text("Num texture bindings per frame: %d",gImGuiNumTextureBindingsPerFrame);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Consider that we're using\njust a single extra texture\nwith all the icons (numbers).");
+    if (show_performance)   {
+        if (ImGui::Begin("Performance Window",&show_performance,ImVec2(0,0),0.9f,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoResize))   {
+            ImGui::Text("Frame rate %.1f FPS",ImGui::GetIO().Framerate);
+            ImGui::Text("Num texture bindings per frame: %d",gImGuiNumTextureBindingsPerFrame);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Consider that we're using\njust a single extra texture\nwith all the icons (numbers).");
+        }
         ImGui::End();
     }
+#   if (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
+    if (show_mine_game) {
+        if (ImGui::Begin("Mine Game",&show_mine_game,ImVec2(600,400),.95f,ImGuiWindowFlags_NoScrollbar))  {
+            static ImGuiMiniGames::Mine mineGame;
+            mineGame.render();
+        }
+        ImGui::End();
+    }
+#   endif //(defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
+
 
     // imguitoolbar test 2: two global toolbars one at the top and one at the left
 #   ifndef NO_IMGUITOOLBAR

@@ -156,14 +156,18 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #		undef YES_IMGUISQLITE3
 #		define YES_IMGUISQLITE3
 #	endif //NO_IMGUISQLITE3
-#	ifndef YES_IMGUISOLOUD
+#	ifndef NO_IMGUISOLOUD
 #		undef YES_IMGUISOLOUD
 #		define YES_IMGUISOLOUD
-#	endif //YES_IMGUISOLOUD
-//#	ifndef YES_IMGUIFREETYPE	// We leave YES_IMGUIFREETYPE out
+#	endif //NO_IMGUISOLOUD
+#	ifndef NO_IMGUIMINIGAMES
+#		undef YES_IMGUIMINIGAMES
+#		define YES_IMGUIMINIGAMES
+#	endif //NO_IMGUIMINIGAMES
+//#	ifndef NO_IMGUIFREETYPE	// We leave YES_IMGUIFREETYPE out
 //#		undef YES_IMGUIFREETYPE
 //#		define YES_IMGUIFREETYPE
-//#	endif //YES_IMGUIFREETYPE
+//#	endif //NO_IMGUIFREETYPE
 #endif //YES_IMGUIADDONS_ALL
 
 #ifdef YES_IMGUIPDFVIEWER
@@ -190,8 +194,12 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #include "./imguiyesaddons/imguifreetype.h"
 #endif //YES_IMGUIFREETYPE
 #ifdef YES_IMGUISOLOUD
-#include "./imguiyesaddons/imguisoloud.h" // Better leave it at the end
+#include "./imguiyesaddons/imguisoloud.h" // Better leave it at the end...
 #endif //YES_IMGUISOLOUD
+#ifdef YES_IMGUIMINIGAMES
+#include "./imguiyesaddons/imguiminigames.h" // ...but mini games could be enhanced by having sound...
+#endif //YES_IMGUIMINIGAMES
+
 
 #endif //IMGUI_USER_ADDONS_H_
 

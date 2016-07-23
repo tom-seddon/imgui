@@ -163,6 +163,12 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
             ImGui::EndChild();
         }*/
+#       if (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
+        else if (tab->matchLabel("ImGuiMineGame"))  {
+            static ImGuiMiniGames::Mine mineGame;
+            mineGame.render();
+        }
+#       endif // (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
         else ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
         ImGui::PopID();
     }
@@ -338,10 +344,15 @@ if (!myImageTextureId2) myImageTextureId2 = ImImpl_LoadTexture("./myNumbersTextu
 #endif //NO_IMGUITABWINDOW
 
 #ifdef TEST_ICONS_INSIDE_TTF
-#ifndef NO_IMGUIFILESYSTEM  // Optional stuff to enhance file system dialogs with icons
-ImGuiFs::Dialog::DrawFileIconCallback = &MyFSDrawFileIconCb;
-ImGuiFs::Dialog::DrawFolderIconCallback = &MyFSDrawFolderIconCb;
-#endif //NO_IMGUIFILESYSTEM
+#   ifndef NO_IMGUIFILESYSTEM  // Optional stuff to enhance file system dialogs with icons
+    ImGuiFs::Dialog::DrawFileIconCallback = &MyFSDrawFileIconCb;
+    ImGuiFs::Dialog::DrawFolderIconCallback = &MyFSDrawFolderIconCb;
+#   endif //NO_IMGUIFILESYSTEM
+#   if (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
+    ImGuiMiniGames::Mine::Style& mineStyle = ImGuiMiniGames::Mine::Style::Get();
+    strcpy(mineStyle.characters[ImGuiMiniGames::Mine::Style::Character_Flag],ICON_FA_FLAG); // ICON_FA_FLAG_0 ICON_FA_FLAG_CHECKERED
+    strcpy(mineStyle.characters[ImGuiMiniGames::Mine::Style::Character_Mine],ICON_FA_BOMB);
+#   endif //if (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
 #endif //TEST_ICONS_INSIDE_TTF
 
 // Here we setup mgr (our ImGui::PanelManager)
@@ -760,8 +771,8 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
 
                 //ImGui::Checkbox("wd.open",&wd.open);  // This can be used to close the window too
             }
-            ImGui::End();
         }
+        ImGui::End();
     }
 }
 
@@ -793,6 +804,9 @@ void DrawGL()	// Mandatory
                             for (int i=0;i<numTabs;i++) {
                                 tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
                             }
+#                           if (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
+                            tabWindow.addTabLabel("ImGuiMineGame","a mini-game",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar);
+#                           endif // (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
                         }
                     }
                     tabWindow.render(); // Must be called inside "its" window (and sets isInited() to false). [ ChildWindows can't be used here (but can be used inside Tab Pages). Basically all the "Central Window" must be given to 'tabWindow'. ]                    

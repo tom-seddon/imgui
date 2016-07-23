@@ -103,6 +103,9 @@
 #ifdef YES_IMGUIFREETYPE
 #include "./imguiyesaddons/imguifreetype.cpp"
 #endif //YES_IMGUIFREETYPE
+#ifdef YES_IMGUIMINIGAMES
+#include "./imguiyesaddons/imguiminigames.cpp"
+#endif //YES_IMGUIMINIGAMES
 #ifdef YES_IMGUISOLOUD
 #include "./imguiyesaddons/imguisoloud.cpp" // This is huge. Better adding it as the last addon.
 #endif //YES_IMGUISOLOUD

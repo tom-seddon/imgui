@@ -100,6 +100,8 @@ Currently "yes addons" are:
 -> imguitinyfiledialogs.h/cpp:	depends on Comdlg32.lib and Ole32.lib on Windows. Link: [http://tinyfiledialogs.sourceforge.net]
 -> imguisqlite3.h/cpp:		depends on -lsqlite3. It's CppSQLite from [http://www.codeproject.com/KB/database/CppSQLite.aspx]
 -> imguifreetype.h/cpp:		depends on freetype2 (-lfreetype). License: MIT. It allows better font hinting, and Bold and Oblique variations of the .ttf font. Link: [https://github.com/Vuhdo/imgui_freetype]
+-> imguiminigames.h/cpp:	no dependencies. For a list of minigames and their own license, please read addons/yes_addons/imguiminigames.h.
+
 
 ===========================================
 HOW TO USE IMGUI ADDONS IN YOUR PROJECTS:

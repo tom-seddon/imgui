@@ -13,13 +13,15 @@ static ImVector<ImFont*> gImGuiFonts;
 #include <imgui_internal.h>
 
 #ifndef NO_IMGUIHELPER_DRAW_METHODS
-#   if !defined(alloca) && !defined(__FreeBSD__) && !defined(__DragonFly__)
-#       ifdef _WIN32
-#           include <malloc.h>     // alloca
-#       else
+#  if (!defined(alloca))
+#      ifdef _WIN32
+#          include <malloc.h>     // alloca
+#      elif (defined(__FreeBSD__) || defined(FreeBSD_kernel) || defined(__DragonFly__)) && !defined(__GLIBC__)
+#          include <stdlib.h>     // alloca. FreeBSD uses stdlib.h unless GLIBC
+#      else //_WIN32
 #           include <alloca.h>     // alloca
-#       endif
-#   endif
+#       endif //_WIN32
+#  endif // alloca
 #endif //NO_IMGUIHELPER_DRAW_METHODS
 
 namespace ImGui {
