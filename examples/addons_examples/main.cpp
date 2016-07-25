@@ -218,6 +218,7 @@ void DestroyGL()    // Mandatory
 }
 void DrawGL()	// Mandatory
 {
+
     const ImVec4 defaultClearColor(0.5f, 0.5f, 0.5f, 1.0f);
     static ImVec4 clearColor = defaultClearColor;
     ImImpl_ClearColorBuffer(clearColor);    // Warning: it does not clear depth buffer
@@ -899,10 +900,10 @@ void DrawGL()	// Mandatory
 	// ImGui::TabLabelsVertical() are similiar to ImGui::TabLabels(), but they do not support WrapMode.
 
     static bool verticalTabLabelsAtLeft = true;ImGui::Checkbox("Vertical Tab Labels at the left side##VerticalTabLabelPosition",&verticalTabLabelsAtLeft);
-	static const char* verticalTabNames[] = {"Layers","Scene","World"};
+    static const char* verticalTabNames[] = {"Layers","Scene","World"};
 	static const int numVerticalTabs = sizeof(verticalTabNames)/sizeof(verticalTabNames[0]);
-	static const char* verticalTabTooltips[numVerticalTabs] = {"Layers Tab Tooltip","Scene Tab Tooltip","World Tab Tooltip"};
-	static int verticalTabItemOrdering[numVerticalTabs] = {0,1,2};
+    static const char* verticalTabTooltips[numVerticalTabs] = {"Layers Tab Tooltip","Scene Tab Tooltip","World Tab Tooltip"};
+    static int verticalTabItemOrdering[numVerticalTabs] = {0,1,2};
 	static int selectedVerticalTab = 0;
 	static int optionalHoveredVerticalTab = 0;
     if (resetTabLabels) {selectedVerticalTab=0;for (int i=0;i<numVerticalTabs;i++) verticalTabItemOrdering[i] = i;}

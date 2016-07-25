@@ -514,7 +514,6 @@ void RenderTextVertical(const ImFont* font,ImDrawList* draw_list, float size, Im
     pos.x = (float)(int)pos.x;// + (rotateCCW ? (font->FontSize-font->DisplayOffset.y) : 0);  // Not sure it's correct
     pos.y = (float)(int)pos.y + font->DisplayOffset.x;
 
-    if (rotateCCW) pos.y-=line_height*0.5f;    // SUPER HACK!!! TO BE FIXED!!! <<===========
 
     float x = pos.x;
     float y = pos.y;
@@ -605,6 +604,7 @@ void RenderTextVertical(const ImFont* font,ImDrawList* draw_list, float size, Im
         if (const ImFont::Glyph* glyph = font->FindGlyph((unsigned short)c))
         {
             char_width = glyph->XAdvance * scale;
+            //fprintf(stderr,"%c [%1.4f]\n",(unsigned char) glyph->Codepoint,char_width);
 
             // Arbitrarily assume that both space and tabs are empty glyphs as an optimization
             if (c != ' ' && c != '\t')
@@ -619,8 +619,8 @@ void RenderTextVertical(const ImFont* font,ImDrawList* draw_list, float size, Im
                 else {
                     x1 = x + glyph->Y0 * scale;
                     x2 = x + glyph->Y1 * scale;
-                    y1 = y + glyph->X0 * scale;
-                    y2 = y + glyph->X1 * scale;
+                    y1 = y - glyph->X1 * scale;
+                    y2 = y - glyph->X0 * scale;
                 }
                 if (y1 <= clip_rect.w && y2 >= clip_rect.y)
                 {
