@@ -419,41 +419,51 @@ namespace ImGuiMiniGames {
             }
             //------------------------------------------------------------------------------------------------------------
 
-            // Detect the clicked cell.
-            int clickedCellColumn = -1, clickedCellRow = -1;unsigned char clickedCellState = 0;bool isClickedCellValid = false;
-            if (LMBclick || RMBclick) {
+            // Detect the cell under the mouse.
+            int mouseCellColumn = -1, mouseCellRow = -1;
+            unsigned char mouseCellState = 0;
+            bool isMouseCellValid = false;
+            if (isFocused && isHovered && !mustReInit) {
                 ImVec2 mp = ImGui::GetMousePos() - win_pos - gridOffset;
                 if (mp.x>0 && mp.y>0
                         && (fitToScreen || (mp.x+gridOffset.x<window->Size.x-window->ScrollbarSizes.x+window->Scroll.x && mp.y+gridOffset.y<window->Size.y-window->ScrollbarSizes.y+window->Scroll.y))
                         )   {
-                    clickedCellColumn = mp.x/GRID_SZ;
-                    clickedCellRow = mp.y/GRID_SZ;
-                    if (clickedCellRow>=gridSize.y || clickedCellColumn>=gridSize.x || ((*GetCellData(cells[clickedCellColumn][clickedCellRow],&clickedCellState))&CS_DUMMY)) {clickedCellColumn=clickedCellRow=-1;clickedCellState=0;}
-                    else isClickedCellValid = true;
+                    mouseCellColumn = mp.x/GRID_SZ;
+                    mouseCellRow = mp.y/GRID_SZ;
+                    if (mouseCellRow>=gridSize.y || mouseCellColumn>=gridSize.x || ((*GetCellData(cells[mouseCellColumn][mouseCellRow],&mouseCellState))&CS_DUMMY)) {mouseCellColumn=mouseCellRow=-1;mouseCellState=0;}
+                    else isMouseCellValid = true;
                 }
-                //if (isClickedCellValid) fprintf(stderr,"Clicked cell[c:%d][r:%d].\n",clickedCellColumn,clickedCellRow);
+                if (isMouseCellValid) {
+                    if (gamePhase == GP_Playing && !LMBclick && !RMBclick && !(mouseCellState&CS_OPEN) && !(mouseCellState&CS_FLAG))  {
+                        // Let's draw the hovered cell:
+                        ImVec2 start(win_pos+gridOffset+ImVec2(grid_Line_width,grid_Line_width)+ImVec2(mouseCellColumn*GRID_SZ,mouseCellRow*GRID_SZ));
+                        draw_list->AddRectFilled(start,start+ImVec2(textLineHeight,textLineHeight),style.colors[Mine::Style::Color_HoveredCellBackground]);
+                    }
+                    //fprintf(stderr,"Clicked cell[c:%d][r:%d].\n",mouseCellColumn,mouseCellRow);
+                }
+
             }
 
             if (gamePhase!=GP_Playing)  {
                 if (gamePhase == GP_Titles) {
-                    if (LMBclick && isClickedCellValid)   {
+                    if (LMBclick && isMouseCellValid)   {
                         ++numClicks;
-                        restartGame(clickedCellColumn,clickedCellRow);  // First click in the game (the clicked cell must be empty)
-                        const bool mineAvoided = openCell(clickedCellColumn,clickedCellRow,&numOpenCells);
+                        restartGame(mouseCellColumn,mouseCellRow);  // First click in the game (the clicked cell must be empty)
+                        const bool mineAvoided = openCell(mouseCellColumn,mouseCellRow,&numOpenCells);
                         IM_ASSERT(mineAvoided);
                         gamePhase = GP_Playing;
                     }
                 }
                 LMBclick = RMBclick = false;   // prevents double processing
             }
-            else if (gamePhase==GP_Playing && isClickedCellValid) {
+            else if (gamePhase==GP_Playing && isMouseCellValid) {
                 bool mustCheckForGameWon = false;
                 if (RMBclick) {
-                    if (!(clickedCellState&CS_OPEN)) {
+                    if (!(mouseCellState&CS_OPEN)) {
                         ++numClicks;    // Should we skip flag clicks from counting ?
-                        clickedCellState^=CS_FLAG;
-                        SetCellData(cells[clickedCellColumn][clickedCellRow],&clickedCellState);
-                        if (clickedCellState&CS_FLAG) numFlags++;
+                        mouseCellState^=CS_FLAG;
+                        SetCellData(cells[mouseCellColumn][mouseCellRow],&mouseCellState);
+                        if (mouseCellState&CS_FLAG) numFlags++;
                         else if (numFlags>0) numFlags--;
                         mustCheckForGameWon = true;
                     }
@@ -461,24 +471,24 @@ namespace ImGuiMiniGames {
                 else if (LMBclick)  {                    
                     if (io.KeyCtrl) {
                         // Help mode:
-                        if (!(clickedCellState&CS_OPEN)) {
+                        if (!(mouseCellState&CS_OPEN)) {
                             ++numClicks;
-                            if (clickedCellState&CS_MINE) {
-                                if (!(clickedCellState&CS_FLAG))    {
-                                    clickedCellState|=CS_FLAG;
-                                    SetCellData(cells[clickedCellColumn][clickedCellRow],&clickedCellState);
+                            if (mouseCellState&CS_MINE) {
+                                if (!(mouseCellState&CS_FLAG))    {
+                                    mouseCellState|=CS_FLAG;
+                                    SetCellData(cells[mouseCellColumn][mouseCellRow],&mouseCellState);
                                     numFlags++;
                                     mustCheckForGameWon = true;
                                 }
                             }
                             else {
-                                if (clickedCellState&CS_FLAG)    {
-                                    clickedCellState&=~CS_FLAG;
-                                    SetCellData(cells[clickedCellColumn][clickedCellRow],&clickedCellState);
+                                if (mouseCellState&CS_FLAG)    {
+                                    mouseCellState&=~CS_FLAG;
+                                    SetCellData(cells[mouseCellColumn][mouseCellRow],&mouseCellState);
                                     numFlags--;
                                     mustCheckForGameWon = true;
                                 }
-                                if (!openCell(clickedCellColumn,clickedCellRow,&numOpenCells)) gamePhase = GP_GameOver;
+                                if (!openCell(mouseCellColumn,mouseCellRow,&numOpenCells)) gamePhase = GP_GameOver;
                                 else mustCheckForGameWon = true;
                             }
                             // Add penalty time
@@ -489,7 +499,7 @@ namespace ImGuiMiniGames {
                     else {
                         // Normal mode
                         ++numClicks;
-                        if (!openCell(clickedCellColumn,clickedCellRow,&numOpenCells)) gamePhase = GP_GameOver;
+                        if (!openCell(mouseCellColumn,mouseCellRow,&numOpenCells)) gamePhase = GP_GameOver;
                         else mustCheckForGameWon = true;
                     }
                 }
@@ -543,7 +553,7 @@ namespace ImGuiMiniGames {
                                 const ImU32& glyphColor = style.colors[(Mine::Style::Color_1+adj-1)];
                                 draw_list->AddText(start+ImVec2((textLineHeight-glyphWidth)*0.5f,0.f),glyphColor,charNum);
                             }
-                        }
+                        }                        
                     }
                 }
             }
@@ -633,6 +643,11 @@ namespace ImGuiMiniGames {
         colors[Style::Color_Flag] = 0xFF0000FF;
 
         colors[Style::Color_Grid] = 0xFFF0F1F2;//colors[Style::Color_Background];
+
+        const ImVec4 tmp1 = ImGui::ColorConvertU32ToFloat4(colors[Style::Color_ClosedCellBackground]);
+        const ImVec4 tmp2 = ImGui::ColorConvertU32ToFloat4(colors[Style::Color_OpenCellBackground]);
+        const ImVec4 tmp((tmp1.x+tmp2.x)*0.5f,(tmp1.y+tmp2.y)*0.5f,(tmp1.z+tmp2.z)*0.5f,(tmp1.w+tmp2.w)*0.5f);
+        colors[Color_HoveredCellBackground] = ImGui::ColorConvertFloat4ToU32(tmp);
 
         // Warning: we can't comment them out, we must initialize the memory somehow [Consider setting them to "" if we'll support manual drawing].
         strcpy(characters[Character_Mine],"M");

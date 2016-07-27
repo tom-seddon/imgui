@@ -85,6 +85,7 @@ namespace ImGuiMiniGames {
                 Color_Grid,
                 Color_ClosedCellBackground,
                 Color_OpenCellBackground,
+                Color_HoveredCellBackground,
                 Color_Flag,
                 Color_Mine,
                 Color_1,

@@ -212,8 +212,9 @@ public:
         glyphBitmap.pitch = ( uint32_t )freeTypeBitmap->bitmap.pitch;
 
         IM_ASSERT( glyphBitmap.pitch <= GlyphBitmap::MaxWidth );
-        if( glyphBitmap.width > 0 )
-            memcpy( glyphBitmap.grayscale, freeTypeBitmap->bitmap.buffer, glyphBitmap.pitch * glyphBitmap.height );
+	if( glyphBitmap.width > 0 ) {
+	    memcpy( glyphBitmap.grayscale, freeTypeBitmap->bitmap.buffer, glyphBitmap.pitch * glyphBitmap.height );
+	}
 
         // cleanup
         FT_Done_Glyph( glyphDesc );
