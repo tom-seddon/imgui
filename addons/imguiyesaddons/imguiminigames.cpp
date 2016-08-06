@@ -314,7 +314,8 @@ namespace ImGuiMiniGames {
         ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, ImGui::ColorConvertU32ToFloat4(style.colors[Mine::Style::Color_Background]));
         ImGui::BeginChild("Mine Game Scrolling Region", ImVec2(0,0), false,fitToScreen ? ImGuiWindowFlags_NoScrollbar : (ImGuiWindowFlags_HorizontalScrollbar/*|ImGuiWindowFlags_AlwaysHorizontalScrollbar|ImGuiWindowFlags_AlwaysVerticalScrollbar*/));
 
-        const bool isFocused = ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused();
+        // Following line is important if we want to avoid clicking on the window just to get the focus back (AFAICS, but there's probably some better way...)
+        const bool isFocused = ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused() || (ImGui::GetParentWindow() && ImGui::GetParentWindow()->Active);
         const bool isHovered = ImGui::IsWindowHovered();
         ImGuiWindow* window = ImGui::GetCurrentWindow();
 
@@ -434,7 +435,7 @@ namespace ImGuiMiniGames {
                     else isMouseCellValid = true;
                 }
                 if (isMouseCellValid) {
-                    if (gamePhase == GP_Playing && !LMBclick && !RMBclick && !(mouseCellState&CS_OPEN) && !(mouseCellState&CS_FLAG))  {
+                    if (gamePhase != GP_GameOver && !LMBclick && !RMBclick && !(mouseCellState&CS_OPEN) && !(mouseCellState&CS_FLAG))  {
                         // Let's draw the hovered cell:
                         ImVec2 start(win_pos+gridOffset+ImVec2(grid_Line_width,grid_Line_width)+ImVec2(mouseCellColumn*GRID_SZ,mouseCellRow*GRID_SZ));
                         draw_list->AddRectFilled(start,start+ImVec2(textLineHeight,textLineHeight),style.colors[Mine::Style::Color_HoveredCellBackground]);

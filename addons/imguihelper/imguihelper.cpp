@@ -24,6 +24,7 @@ static ImVector<ImFont*> gImGuiFonts;
 #  endif // alloca
 #endif //NO_IMGUIHELPER_DRAW_METHODS
 
+
 namespace ImGui {
 
 bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS)	{
@@ -349,6 +350,256 @@ void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, cons
     ImU32 fillColorTop,fillColorBottom;GetVerticalGradientTopAndBottomColors(fillColor,fillColorGradientDeltaIn0_05,fillColorTop,fillColorBottom);
     ImDrawListAddRectWithVerticalGradient(dl,a,b,fillColorTop,fillColorBottom,strokeColor,rounding,rounding_corners,strokeThickness,antiAliased);
 }
+void ImDrawListAddPolyLine(ImDrawList *dl, const ImVector<ImVec2>& poly, ImU32 strokeColor,float strokeThickness,bool strokeClosed, const ImVec2 &offset, const ImVec2 &scale,bool antiAliased) {
+    if (poly.size()>0 && (strokeColor >> 24) != 0) {
+	static ImVector<ImVec2> points;
+	points.resize(poly.size());
+	for (int i=0,isz=points.size();i<isz;i++)   points[i] = offset + poly[i]*scale;
+	dl->AddPolyline(&points[0],points.size(),strokeColor,strokeClosed,strokeThickness,antiAliased);
+    }
+}
+
+
+
+#ifndef NO_IMGUIHELPER_DRAW_METHODS_CONCAVEPOLY
+// Written by Mark Bayazit (darkzerox)------------------------------------------------------------------------------------------------------------------
+// March 23, 2009---------------------------------------------------------------------------------------------------------------------------------------
+inline static bool eq(const float &a, float const &b) {return fabs(a - b) <= 1e-8;}
+inline static float min(const float &a, const float &b) {return a < b ? a : b;}
+inline static int wrap(const int &a, const int &b) {return a < 0 ? a % b + b : a % b;}
+inline static float srand(const float &min, const float &max) {return rand() / (float) RAND_MAX * (max - min) + min;}
+inline static const ImVec2& at(const ImVector<ImVec2>& v, int i) {return v[wrap(i, v.size())];};
+inline static float area(const ImVec2 &a, const ImVec2 &b, const ImVec2 &c) {return (((b.x - a.x)*(c.y - a.y))-((c.x - a.x)*(b.y - a.y)));}
+inline static bool left(const ImVec2 &a, const ImVec2 &b, const ImVec2 &c) {return area(a, b, c) > 0;}
+inline static bool leftOn(const ImVec2 &a, const ImVec2 &b, const ImVec2 &c) {return area(a, b, c) >= 0;}
+inline static bool right(const ImVec2 &a, const ImVec2 &b, const ImVec2 &c) {return area(a, b, c) < 0;}
+inline static bool rightOn(const ImVec2 &a, const ImVec2 &b, const ImVec2 &c) {return area(a, b, c) <= 0;}
+inline static bool collinear(const ImVec2 &a, const ImVec2 &b, const ImVec2 &c) {return area(a, b, c) == 0;}
+inline static float sqdist(const ImVec2 &a, const ImVec2 &b) {
+    float dx = b.x - a.x;
+    float dy = b.y - a.y;
+    return dx * dx + dy * dy;
+}
+inline static void reverse(ImVector<ImVec2> &poly) {
+    ImVec2 tmp;
+    const int polySize = poly.size();if (polySize<2) return;
+    for (int i=0,isz=polySize/2;i<=isz;i++)   {
+        ImVec2& swap = poly[polySize-i-1];
+        tmp = poly[i];poly[i] = swap;swap = tmp;
+    }
+}
+inline static void makeCCW(ImVector<ImVec2> &poly) {
+    int br = 0;
+
+    // find bottom right point
+    for (int i = 1; i < poly.size(); ++i) {
+        if (poly[i].y < poly[br].y || (poly[i].y == poly[br].y && poly[i].x > poly[br].x)) {
+            br = i;
+        }
+    }
+
+    // reverse poly if clockwise
+    if (!left(at(poly, br - 1), at(poly, br), at(poly, br + 1))) {
+        reverse(poly);
+        //reverse(poly.begin(), poly.end());
+    }
+}
+inline static bool isReflex(const ImVector<ImVec2> &poly, const int &i) {return right(at(poly, i - 1), at(poly, i), at(poly, i + 1));}
+inline static ImVec2 intersection(const ImVec2 &p1, const ImVec2 &p2, const ImVec2 &q1, const ImVec2 &q2) {
+    ImVec2 i;
+    float a1, b1, c1, a2, b2, c2, det;
+    a1 = p2.y - p1.y;
+    b1 = p1.x - p2.x;
+    c1 = a1 * p1.x + b1 * p1.y;
+    a2 = q2.y - q1.y;
+    b2 = q1.x - q2.x;
+    c2 = a2 * q1.x + b2 * q1.y;
+    det = a1 * b2 - a2*b1;
+    if (!eq(det, 0)) { // lines are not parallel
+        i.x = (b2 * c1 - b1 * c2) / det;
+        i.y = (a1 * c2 - a2 * c1) / det;
+    }
+    return i;
+}
+inline static void swap(int &a, int &b) {int c;c = a;a = b;b = c;}
+inline static void append(ImVector<ImVec2>& src,const ImVector<ImVec2>& dst,int dstStartIndex,int dstEndIndex)    {
+    //e.g. lowerPoly.insert(lowerPoly.end(), poly.begin(), poly.begin() + upperIndex + 1);
+    src.reserve(src.size()+dstEndIndex-dstStartIndex+1);
+    for (int i=dstStartIndex;i<dstEndIndex;i++) src.push_back(dst[i]);
+}
+void DecomposeConcavePoly(const ImVector<ImVec2>& poly, ImVector<ImVec2>& convexPolysOut, ImVector<int>& numConvexPolyPointsOut, bool mustResetOutVectorsBeforeUsage) {
+    if (mustResetOutVectorsBeforeUsage) {numConvexPolyPointsOut.resize(0);convexPolysOut.resize(0);}
+    ImVec2 upperInt, lowerInt, p, closestVert;
+    float upperDist, lowerDist, d, closestDist;
+    int upperIndex, lowerIndex, closestIndex;
+    ImVector<ImVec2> lowerPoly, upperPoly;
+
+    for (int i = 0; i < poly.size(); ++i) {
+        if (isReflex(poly, i)) {
+            //reflexVertices.push_back(poly[i]);
+            upperDist = lowerDist = FLT_MAX;
+            for (int j = 0; j < poly.size(); ++j) {
+                if (left(at(poly, i - 1), at(poly, i), at(poly, j))
+                        && rightOn(at(poly, i - 1), at(poly, i), at(poly, j - 1))) { // if line intersects with an edge
+                    p = intersection(at(poly, i - 1), at(poly, i), at(poly, j), at(poly, j - 1)); // find the point of intersection
+                    if (right(at(poly, i + 1), at(poly, i), p)) { // make sure it's inside the poly
+                        d = sqdist(poly[i], p);
+                        if (d < lowerDist) { // keep only the closest intersection
+                            lowerDist = d;
+                            lowerInt = p;
+                            lowerIndex = j;
+                        }
+                    }
+                }
+                if (left(at(poly, i + 1), at(poly, i), at(poly, j + 1))
+                        && rightOn(at(poly, i + 1), at(poly, i), at(poly, j))) {
+                    p = intersection(at(poly, i + 1), at(poly, i), at(poly, j), at(poly, j + 1));
+                    if (left(at(poly, i - 1), at(poly, i), p)) {
+                        d = sqdist(poly[i], p);
+                        if (d < upperDist) {
+                            upperDist = d;
+                            upperInt = p;
+                            upperIndex = j;
+                        }
+                    }
+                }
+            }
+
+            // if there are no vertices to connect to, choose a point in the middle
+            if (lowerIndex == (upperIndex + 1) % poly.size()) {
+                //printf("Case 1: Vertex(%d), lowerIndex(%d), upperIndex(%d), poly.size(%d)\n", i, lowerIndex, upperIndex, (int) poly.size());
+                p.x = (lowerInt.x + upperInt.x) / 2;
+                p.y = (lowerInt.y + upperInt.y) / 2;
+                //steinerPoints.push_back(p);
+
+                if (i < upperIndex) {
+                    //lowerPoly.insert(lowerPoly.end(), poly.begin() + i, poly.begin() + upperIndex + 1);   // converted to:
+                    append(lowerPoly,poly,i,upperIndex + 1);
+                    lowerPoly.push_back(p);
+                    upperPoly.push_back(p);
+                    if (lowerIndex != 0) {
+                        //upperPoly.insert(upperPoly.end(), poly.begin() + lowerIndex, poly.end());   // converted to:
+                        append(upperPoly,poly,lowerIndex,poly.size());
+                    }
+                    //upperPoly.insert(upperPoly.end(), poly.begin(), poly.begin() + i + 1);   // converted to:
+                    append(upperPoly,poly,0,i + 1);
+                } else {
+                    if (i != 0) {
+                        //lowerPoly.insert(lowerPoly.end(), poly.begin() + i, poly.end());   // converted to:
+                        append(lowerPoly,poly,i,poly.size());
+                    }
+                    //lowerPoly.insert(lowerPoly.end(), poly.begin(), poly.begin() + upperIndex + 1);   // converted to:
+                    append(lowerPoly,poly,0,upperIndex + 1);
+                    lowerPoly.push_back(p);
+                    upperPoly.push_back(p);
+                    //upperPoly.insert(upperPoly.end(), poly.begin() + lowerIndex, poly.begin() + i + 1);   // converted to:
+                    append(upperPoly,poly,lowerIndex,i + 1);
+                }
+            } else {
+                // connect to the closest point within the triangle
+                //printf("Case 2: Vertex(%d), closestIndex(%d), poly.size(%d)\n", i, closestIndex, (int) poly.size());
+
+                if (lowerIndex > upperIndex) {
+                    upperIndex += poly.size();
+                }
+                closestDist = FLT_MAX;
+                for (int j = lowerIndex; j <= upperIndex; ++j) {
+                    if (leftOn(at(poly, i - 1), at(poly, i), at(poly, j))
+                            && rightOn(at(poly, i + 1), at(poly, i), at(poly, j))) {
+                        d = sqdist(at(poly, i), at(poly, j));
+                        if (d < closestDist) {
+                            closestDist = d;
+                            closestVert = at(poly, j);
+                            closestIndex = j % poly.size();
+                        }
+                    }
+                }
+
+                if (i < closestIndex) {
+                    //lowerPoly.insert(lowerPoly.end(), poly.begin() + i, poly.begin() + closestIndex + 1);
+                    append(lowerPoly,poly,i,closestIndex + 1);
+                    if (closestIndex != 0) {
+                        //upperPoly.insert(upperPoly.end(), poly.begin() + closestIndex, poly.end());
+                        append(upperPoly,poly,closestIndex,poly.size());
+                    }
+                    //upperPoly.insert(upperPoly.end(), poly.begin(), poly.begin() + i + 1);
+                    append(upperPoly,poly,0,i + 1);
+                } else {
+                    if (i != 0) {
+                        //lowerPoly.insert(lowerPoly.end(), poly.begin() + i, poly.end());
+                        append(lowerPoly,poly,i,poly.size());
+                    }
+                    //lowerPoly.insert(lowerPoly.end(), poly.begin(), poly.begin() + closestIndex + 1);
+                    append(lowerPoly,poly,0,closestIndex + 1);
+                    //upperPoly.insert(upperPoly.end(), poly.begin() + closestIndex, poly.begin() + i + 1);
+                    append(upperPoly,poly,closestIndex,i + 1);
+                }
+            }
+
+            // solve smallest poly first
+            if (lowerPoly.size() < upperPoly.size()) {
+                DecomposeConcavePoly(lowerPoly,convexPolysOut,numConvexPolyPointsOut,false);
+                DecomposeConcavePoly(upperPoly,convexPolysOut,numConvexPolyPointsOut,false);
+            } else {
+                DecomposeConcavePoly(upperPoly,convexPolysOut,numConvexPolyPointsOut,false);
+                DecomposeConcavePoly(lowerPoly,convexPolysOut,numConvexPolyPointsOut,false);
+            }
+            return;
+        }
+    }
+    numConvexPolyPointsOut.push_back(poly.size());
+    append(convexPolysOut,poly,0,poly.size());
+}
+// End code Written by Mark Bayazit (darkzerox)---------------------------------------------------------------------------------------------------------
+// March 23, 2009---------------------------------------------------------------------------------------------------------------------------------------
+
+void ImDrawListAddPolyFill(ImDrawList *dl, const ImVector<ImVec2>& convexPolys, const ImVector<int>& numConvexPolyPoints, ImU32 fillColor, const ImVec2 &offset, const ImVec2 &scale,bool antiAliased) {
+    if (convexPolys.size()>0 && (fillColor >> 24) != 0) {
+	static ImVector<ImVec2> points;
+        int cpStartIndex = 0,cpEndIndex=0,numPoints=0;
+        for (int cp=0,cpSz=numConvexPolyPoints.size();cp<cpSz;cp++) {
+            numPoints = numConvexPolyPoints[cp];
+            cpEndIndex = cpStartIndex+numPoints;
+            points.resize(numPoints);
+            for (int i=cpStartIndex;i<cpEndIndex;i++)    points[i-cpStartIndex] = offset + convexPolys[i]*scale;
+            dl->AddConvexPolyFilled(points.Data, points.Size, fillColor, antiAliased);
+            cpStartIndex = cpEndIndex;
+        }
+    }
+}
+
+ImVec2 ImDrawListAddStar(ImDrawList *dl, const ImVec2 &offset, const ImVec2 &scale, ImU32 fillColor, ImU32 strokeColor, float strokeThickness, bool antiAliased) {
+static ImVector<ImVec2> points,convexPoints;
+static ImVector<int> numConvexPoints;
+static ImVec2 aabb;
+if (points.size()==0) {
+    points.resize(11);		// {0,0} is the top left
+    points[0]=ImVec2(0, 75);
+    points[1]=ImVec2(75, 65);
+    points[2]=ImVec2(100, 0);
+    points[3]=ImVec2(125, 65);
+    points[4]=ImVec2(200, 75);
+    points[5]=ImVec2(150, 115);
+    points[6]=ImVec2(160, 180);
+    points[7]=ImVec2(100, 140);
+    points[8]=ImVec2(40, 180);
+    points[9]=ImVec2(50, 115);
+    points[10]=ImVec2(0, 75);
+    aabb = ImVec2(200,180);	// this is the bottom right point too
+    DecomposeConcavePoly(points,convexPoints,numConvexPoints);
+    //fprintf(stderr,"convexPoints.size()=%d numConvexPoints.size()=%d\n",convexPoints.size(),numConvexPoints.size());
+}
+const float fontHeight = ImGui::GetTextLineHeight();
+const float fontHeightFactor = fontHeight/aabb.y;
+const ImVec2 trueScaling(scale.x*fontHeightFactor,scale.y*fontHeightFactor);
+ImDrawListAddPolyFill(dl,convexPoints,numConvexPoints,fillColor,offset,trueScaling,antiAliased);
+ImDrawListAddPolyLine(dl,points,strokeColor,strokeThickness,true,offset,trueScaling,antiAliased);
+
+return trueScaling*aabb;
+}
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------
+#endif //NO_IMGUIHELPER_DRAW_METHODS_CONCAVEPOLY
 
 // Should I put these methods inside  NO_IMGUIHELPER_VERTICAL_TEXT_METHODS ?
 void ImDrawListAddConvexPolyFilledWithHorizontalGradient(ImDrawList *dl, const ImVec2 *points, const int points_count, ImU32 colLeft, ImU32 colRight, bool anti_aliased, float minx, float maxx)

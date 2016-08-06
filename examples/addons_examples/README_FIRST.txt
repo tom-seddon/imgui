@@ -22,19 +22,21 @@ NOTE FOR VISUAL STUDIO USERS:
 There's currently no Visual Studio project, and furthermore the code has been written/tested on a Linux machine (tested using 4 compilers: gcc, clang, mingw and emcc).
 Unluckily cl.exe (the Visual Studio compiler) is not currently supported/tested.
 
-If you want, you can try one of these command-lines at the Visual Studio Prompt
+If you want, you can try one of these command-lines at the Visual Studio Prompt (you can run vcvars32.bat or vcvarsall.bat to setup it)
 and report the results here: https://github.com/Flix01/imgui/issues
 
 [The current directory must be: imgui/examples/addons_examples]
 # With GLUT + GLEW static: [GLEW is necessary for all Windows bindings except Direct3D9: here we use the static version to save one .dll]
-cl /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLUT_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe glut32.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
+cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLUT_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe glut32.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # With GLEW static only:
-cl /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_WINAPI_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
+cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_WINAPI_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # With DIRECT3D9:
-cl /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_DIRECT3D9_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe d3d9.lib d3dx9.lib gdi32.lib Shell32.lib advapi32.lib user32.lib kernel32.lib
+cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_DIRECT3D9_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe d3d9.lib d3dx9.lib gdi32.lib Shell32.lib advapi32.lib user32.lib kernel32.lib
 # With GLFW3 + GLEW static:
-cl /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLEW_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe glew3.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
+cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLEW_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe glfw3.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # TODO: Add the last command-line for SDL2
+
+P.S. currently GLEW is required to compile all the Windows bindings except Direct3D9. I'm not sure if it's possible to avoid this dependency...
 
 
 ====================================
@@ -111,6 +113,8 @@ Basically to use and compile projects that use the imgui addon framework you can
 1 -> No ADDITIONAL .cpp file must be added to your project (i.e. DO NOT add any .cpp file inside the "addons" folder). 
 	 Instead define at the project level: IMGUI_INCLUDE_IMGUI_USER_H and IMGUI_INCLUDE_IMGUI_USER_INL. 
 	 This way the two files "imgui_user.h" and "imgui_user.inl" should include all the addons automatically.
+	 Note: currently "imgui_user.h" defines IMGUI_INCLUDE_IMGUI_USER_INL if it is not already defined: so only
+     IMGUI_INCLUDE_IMGUI_USER_H should be mandatory (TODO: test it).
 
 
 2 -> OPTIONALLY define ONE (and only one) of the following at the project level (typically when you're using ImGui in a new demo project):
@@ -156,6 +160,12 @@ NO_ADDONNAMEHERE				# Addon exclusion definitions (e.g. NO_IMGUIFILESYSTEM). I'v
 
 
 As you can see the only mandatory step is the first one.
+
+If you don't want to add all the required definitions at the project level (expecially when you deploy a project), 
+you can try adding them to the file imconfig.h and see if it works.
+
+Please DO NOT ADD these definitions in your .cpp files: it won't work! 
+("At the project level" means in the "Project Options").
 
 ----------------------------------------------------------------------------------------------------------------------------------
 SPARE SINGLE ADDON USAGE
@@ -219,18 +229,18 @@ EXTRA: COMPILING TO HTML USING EMSCRIPTEN:
 ===========================================
 Follow these steps:
 1) Using a terminal (=command line), make sure you have a working emcc setup (try: emcc -v).
-2) Navigate (cd) to this folder.
+2) Navigate (cd) to this folder (the folder where README_FIRST.txt is located).
 3) To compile the first example try:
 em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  ../../imgui_demo.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_SDL2_BINDING" -s USE_SDL=2 -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL
 4) To compile the second example try:
 em++ -O2 -o main2.html main2.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp --preload-file myNumbersTexture.png  --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_SDL2_BINDING" -s USE_SDL=2 -s LEGACY_GL_EMULATION=0 -lm -lGL
 
 Some notes:
-->	As you can see we have used uses the SDL2 binding (-D"IMGUI_USE_SDL2_BINDING"). 
+->	As you can see we have used the SDL2 binding (-D"IMGUI_USE_SDL2_BINDING"). 
 	The GLFW3 and GLUT bindings are compatible with emscripten too [see (*) below]. 
 
-->	When you pass files (or folders) to em++ using --preload-file, you can actually load the file and save it to it at runtime, but any modification is lost when you exit the program.
-	I'm pretty new to emscripten and I don't know if there's some easy workaround to persist file changes when you close the browser.
+->	When you pass files (or folders) to em++ using --preload-file, you can actually load the file and save it at runtime, but any modification is lost when you exit the program.
+	I'm pretty new to emscripten and I don't know if there's some easy workaround to persist file changes when you close the browser (but read next point please).
 	Note: Files passed with --preload-file are copied and grouped together in a blob with the .data extension next to the .html file.
 
 -> There is an imgui addon named imguiemscripten: it's in charge of adding "/persistent_folder" to the emscripten file system.
@@ -253,7 +263,7 @@ em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp .
 	and you should compile with -D"IMGUI_GLFW_NO_NATIVE_CURSORS" again.
 
 In short I suggest you use the SDL2 binding when building with the emscripten compiler, because you can use native cursors (that are missing from GLFW < 3.1), and unicode support (that is missing from GLUT).
-GLFW can be a possible alternative only for version 3.1 or above.
+GLFW can be a possible alternative only for version 3.1 or above (but of course the GLFW version is the one that em++ downloads on the fly, not yours).
 
 ================================================
 FAQ: HOW TO RUN THE (LOCAL) HTML DEMOS
@@ -269,8 +279,9 @@ If the html demos (in the html subfolder) don't run in your browser:
     "Unfortunately Chrome and Internet Explorer do not support file:// XHR requests, and can’t directly load the local
     file in which preloaded data is stored. For these browsers you’ll need to serve the files using a webserver.
     The easiest way to do this is to use the python SimpleHTTPServer"
-    (in the html subfolder do python -m SimpleHTTPServer 8080 and then open http://localhost:8080/main.html from your browser).
+    (in a console/terminal opened in the html subfolder type: python -m SimpleHTTPServer 8080 
+	and then open http://localhost:8080/main.html from your browser).
 
-->  otherwise it must be something in your system or in the configuration of your browser.
+->  otherwise it must be something related to your system or the configuration of your browser.
 
 

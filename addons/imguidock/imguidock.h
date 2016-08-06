@@ -68,7 +68,7 @@ SOFTWARE.
             }
             ImGui::EndDockspace();
         }
-        ImGui::End(); // This could probably be moved after ImGui::EndDockspace();
+        ImGui::End();
 */
 
 #ifndef IMGUI_API
