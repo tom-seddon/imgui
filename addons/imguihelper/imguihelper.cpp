@@ -602,35 +602,33 @@ static ImVector<ImVec2> points,convexPoints;
 static ImVector<int> numConvexPoints;
 static ImVec2 aabb;
 if (points.size()==0) {
-    // TODO: if we cut at 50 (instead of 100) we can probably save one convex shard... but this is just a test
-    points.resize(13);		// {0,0} is the top left
+    points.resize(10);		// {0,0} is the top left
 /*
-   11	   0=7=12     8
-    ---------|---------
-    |        |	      |
-    |   -----------   |
-    |   |2  1=6  5|   |
+   0=4	              1
+    -------------------
+    |\        	      |
+    |  \-----------   |
+    |   |5=9     8|   |
     |	|         |   |
     |   |         |   |
-    |   |3	 4|   |
+    |   |6       7|   |
     |   -----------   |
     |                 |
     -------------------
-   10		      9
+    3		          2
 */
-    points[0]=ImVec2(100, 0);	// 100, 0   (start first cut)
-    points[1]=ImVec2(100, 50);	// 100,50   (end first cut)
-    points[2]=ImVec2(50, 50);
-    points[3]=ImVec2(50, 150);
-    points[4]=ImVec2(150, 150);
-    points[5]=ImVec2(150, 50);
-    points[6]=ImVec2(100, 50);  // 100,50   (start second cut)
-    points[7]=ImVec2(100, 0);   // 100,0   (start second cut)
-    points[8]=ImVec2(200, 0);
-    points[9]=ImVec2(200, 200);
-    points[10]=ImVec2(0, 200);
-    points[11]=ImVec2(0, 0);
-    points[12]=ImVec2(100, 0);	// start first cut
+    // Outer loop (clockwise)
+    points[0]=ImVec2(0, 0);
+    points[1]=ImVec2(200, 0);
+    points[2]=ImVec2(200, 200);
+    points[3]=ImVec2(0, 200);
+    points[4]=ImVec2(0, 0);
+    // Inner loop (clockwise)
+    points[5]=ImVec2(50, 50);
+    points[6]=ImVec2(50, 150);
+    points[7]=ImVec2(150,150);
+    points[8]=ImVec2(150, 50);
+    points[9]=ImVec2(50, 50);
     aabb = ImVec2(200,200);	// this is the bottom right point too
     DecomposeConcavePoly(points,convexPoints,numConvexPoints);
     //fprintf(stderr,"convexPoints.size()=%d numConvexPoints.size()=%d\n",convexPoints.size(),numConvexPoints.size());
@@ -640,8 +638,8 @@ const float fontHeightFactor = fontHeight/aabb.y;
 const ImVec2 trueScaling(scale.x*fontHeightFactor,scale.y*fontHeightFactor);
 ImDrawListAddPolyFill(dl,convexPoints,numConvexPoints,fillColor,offset,trueScaling,antiAliased);
 //ImDrawListAddPolyLine(dl,&points[0],points.size(),strokeColor,strokeThickness,true,offset,trueScaling,antiAliased);	// This draws the inner and outer outlines, but the edge cut too
-ImDrawListAddPolyLine(dl,&points[1],5,strokeColor,strokeThickness,true,offset,trueScaling,antiAliased);	// This draws the inner outline
-ImDrawListAddPolyLine(dl,&points[7],5,strokeColor,strokeThickness,true,offset,trueScaling,antiAliased);	// This draws the outer outline
+ImDrawListAddPolyLine(dl,&points[0],4,strokeColor,strokeThickness,true,offset,trueScaling,antiAliased);	// This draws the inner outline
+ImDrawListAddPolyLine(dl,&points[5],4,strokeColor,strokeThickness,true,offset,trueScaling,antiAliased);	// This draws the outer outline
 
 return trueScaling*aabb;
 }
