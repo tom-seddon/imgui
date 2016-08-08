@@ -350,11 +350,11 @@ void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, cons
     ImU32 fillColorTop,fillColorBottom;GetVerticalGradientTopAndBottomColors(fillColor,fillColorGradientDeltaIn0_05,fillColorTop,fillColorBottom);
     ImDrawListAddRectWithVerticalGradient(dl,a,b,fillColorTop,fillColorBottom,strokeColor,rounding,rounding_corners,strokeThickness,antiAliased);
 }
-void ImDrawListAddPolyLine(ImDrawList *dl, const ImVector<ImVec2>& poly, ImU32 strokeColor,float strokeThickness,bool strokeClosed, const ImVec2 &offset, const ImVec2 &scale,bool antiAliased) {
-    if (poly.size()>0 && (strokeColor >> 24) != 0) {
+void ImDrawListAddPolyLine(ImDrawList *dl, const ImVec2* polyPoints,int numPolyPoints, ImU32 strokeColor,float strokeThickness,bool strokeClosed, const ImVec2 &offset, const ImVec2 &scale,bool antiAliased) {
+    if (polyPoints && numPolyPoints>0 && (strokeColor >> 24) != 0) {
 	static ImVector<ImVec2> points;
-	points.resize(poly.size());
-	for (int i=0,isz=points.size();i<isz;i++)   points[i] = offset + poly[i]*scale;
+	points.resize(numPolyPoints);
+	for (int i=0;i<numPolyPoints;i++)   points[i] = offset + polyPoints[i]*scale;
 	dl->AddPolyline(&points[0],points.size(),strokeColor,strokeClosed,strokeThickness,antiAliased);
     }
 }
@@ -593,10 +593,59 @@ const float fontHeight = ImGui::GetTextLineHeight();
 const float fontHeightFactor = fontHeight/aabb.y;
 const ImVec2 trueScaling(scale.x*fontHeightFactor,scale.y*fontHeightFactor);
 ImDrawListAddPolyFill(dl,convexPoints,numConvexPoints,fillColor,offset,trueScaling,antiAliased);
-ImDrawListAddPolyLine(dl,points,strokeColor,strokeThickness,true,offset,trueScaling,antiAliased);
+ImDrawListAddPolyLine(dl,&points[0],points.size(),strokeColor,strokeThickness,true,offset,trueScaling,antiAliased);
 
 return trueScaling*aabb;
 }
+ImVec2 ImDrawListAddHollowQuad(ImDrawList *dl, const ImVec2 &offset, const ImVec2 &scale, ImU32 fillColor, ImU32 strokeColor, float strokeThickness, bool antiAliased) {
+static ImVector<ImVec2> points,convexPoints;
+static ImVector<int> numConvexPoints;
+static ImVec2 aabb;
+if (points.size()==0) {
+    // TODO: if we cut at 50 (instead of 100) we can probably save one convex shard... but this is just a test
+    points.resize(13);		// {0,0} is the top left
+/*
+   11	   0=7=12     8
+    ---------|---------
+    |        |	      |
+    |   -----------   |
+    |   |2  1=6  5|   |
+    |	|         |   |
+    |   |         |   |
+    |   |3	 4|   |
+    |   -----------   |
+    |                 |
+    -------------------
+   10		      9
+*/
+    points[0]=ImVec2(100, 0);	// 100, 0   (start first cut)
+    points[1]=ImVec2(100, 50);	// 100,50   (end first cut)
+    points[2]=ImVec2(50, 50);
+    points[3]=ImVec2(50, 150);
+    points[4]=ImVec2(150, 150);
+    points[5]=ImVec2(150, 50);
+    points[6]=ImVec2(100, 50);  // 100,50   (start second cut)
+    points[7]=ImVec2(100, 0);   // 100,0   (start second cut)
+    points[8]=ImVec2(200, 0);
+    points[9]=ImVec2(200, 200);
+    points[10]=ImVec2(0, 200);
+    points[11]=ImVec2(0, 0);
+    points[12]=ImVec2(100, 0);	// start first cut
+    aabb = ImVec2(200,200);	// this is the bottom right point too
+    DecomposeConcavePoly(points,convexPoints,numConvexPoints);
+    //fprintf(stderr,"convexPoints.size()=%d numConvexPoints.size()=%d\n",convexPoints.size(),numConvexPoints.size());
+}
+const float fontHeight = ImGui::GetTextLineHeight();
+const float fontHeightFactor = fontHeight/aabb.y;
+const ImVec2 trueScaling(scale.x*fontHeightFactor,scale.y*fontHeightFactor);
+ImDrawListAddPolyFill(dl,convexPoints,numConvexPoints,fillColor,offset,trueScaling,antiAliased);
+//ImDrawListAddPolyLine(dl,&points[0],points.size(),strokeColor,strokeThickness,true,offset,trueScaling,antiAliased);	// This draws the inner and outer outlines, but the edge cut too
+ImDrawListAddPolyLine(dl,&points[1],5,strokeColor,strokeThickness,true,offset,trueScaling,antiAliased);	// This draws the inner outline
+ImDrawListAddPolyLine(dl,&points[7],5,strokeColor,strokeThickness,true,offset,trueScaling,antiAliased);	// This draws the outer outline
+
+return trueScaling*aabb;
+}
+
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------
 #endif //NO_IMGUIHELPER_DRAW_METHODS_CONCAVEPOLY

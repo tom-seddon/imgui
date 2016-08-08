@@ -43,7 +43,7 @@ void ImDrawListAddEllipseWithVerticalGradient(ImDrawList* dl,const ImVec2& centr
 void ImDrawListAddCircle(ImDrawList* dl,const ImVec2& centre, float radius,const ImU32& fillColor,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
 void ImDrawListAddCircleWithVerticalGradient(ImDrawList* dl,const ImVec2& centre, float radius,const ImU32& fillColorTop,const ImU32& fillColorBottom,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
 // Overload of ImDrawList::addPolyLine(...) that takes offset and scale:
-void ImDrawListAddPolyLine(ImDrawList *dl, const ImVector<ImVec2>& poly, ImU32 strokeColor=0xFFFFFFFF,float strokeThickness=1.f,bool strokeClosed=false, const ImVec2 &offset=ImVec2(0,0), const ImVec2& scale=ImVec2(1,1),bool antiAliased=false);
+void ImDrawListAddPolyLine(ImDrawList *dl,const ImVec2* polyPoints,int numPolyPoints,ImU32 strokeColor=0xFFFFFFFF,float strokeThickness=1.f,bool strokeClosed=false, const ImVec2 &offset=ImVec2(0,0), const ImVec2& scale=ImVec2(1,1),bool antiAliased=false);
 
 
 #ifndef NO_IMGUIHELPER_DRAW_METHODS_CONCAVEPOLY
@@ -55,6 +55,7 @@ void ImDrawListAddPolyFill(ImDrawList *dl, const ImVector<ImVec2>& convexPolys, 
 
 // Test for the 2 methods above. Returns the (scaled) size of the star (its .y should be consistent with the current font size when scale==ImVec(1,1)):
 ImVec2 ImDrawListAddStar(ImDrawList *dl,const ImVec2& offset=ImVec2(0,0),const ImVec2& scale=ImVec2(1,1),ImU32 fillColor=0xFF00FFFF,ImU32 strokeColor=0xFFFFAACC,float strokeThickness=1.f,bool antiAliased=false);
+ImVec2 ImDrawListAddHollowQuad(ImDrawList *dl,const ImVec2& offset=ImVec2(0,0),const ImVec2& scale=ImVec2(1,1),ImU32 fillColor=0xFF008800,ImU32 strokeColor=0xFFAAAAFF,float strokeThickness=1.f,bool antiAliased=false);
 #endif //NO_IMGUIHELPER_DRAW_METHODS_CONCAVEPOLY
 
 void ImDrawListAddConvexPolyFilledWithHorizontalGradient(ImDrawList *dl, const ImVec2 *points, const int points_count, ImU32 colLeft, ImU32 colRight, bool anti_aliased,float minx=-1.f,float maxx=-1.f);
