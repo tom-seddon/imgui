@@ -68,6 +68,14 @@ void CloseAllPopupMenus()   {
     while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();
 }
 
+// Posted by Omar in one post. It might turn useful...
+bool IsItemActivePreviousFrame()    {
+    ImGuiContext& g = *GImGui;
+    if (g.ActiveIdPreviousFrame)
+        return g.ActiveIdPreviousFrame== GImGui->CurrentWindow->DC.LastItemId;
+    return false;
+}
+
 #ifndef NO_IMGUIHELPER_FONT_METHODS
 void InitPushFontOverload() {
     ImGuiIO& io = ImGui::GetIO();
@@ -364,10 +372,10 @@ void ImDrawListAddPolyLine(ImDrawList *dl, const ImVec2* polyPoints,int numPolyP
 #ifndef NO_IMGUIHELPER_DRAW_METHODS_CONCAVEPOLY
 // Written by Mark Bayazit (darkzerox)------------------------------------------------------------------------------------------------------------------
 // March 23, 2009---------------------------------------------------------------------------------------------------------------------------------------
+namespace bayazit {
 inline static bool eq(const float &a, float const &b) {return fabs(a - b) <= 1e-8;}
 inline static float min(const float &a, const float &b) {return a < b ? a : b;}
 inline static int wrap(const int &a, const int &b) {return a < 0 ? a % b + b : a % b;}
-inline static float srand(const float &min, const float &max) {return rand() / (float) RAND_MAX * (max - min) + min;}
 inline static const ImVec2& at(const ImVector<ImVec2>& v, int i) {return v[wrap(i, v.size())];};
 inline static float area(const ImVec2 &a, const ImVec2 &b, const ImVec2 &c) {return (((b.x - a.x)*(c.y - a.y))-((c.x - a.x)*(b.y - a.y)));}
 inline static bool left(const ImVec2 &a, const ImVec2 &b, const ImVec2 &c) {return area(a, b, c) > 0;}
@@ -379,30 +387,6 @@ inline static float sqdist(const ImVec2 &a, const ImVec2 &b) {
     float dx = b.x - a.x;
     float dy = b.y - a.y;
     return dx * dx + dy * dy;
-}
-inline static void reverse(ImVector<ImVec2> &poly) {
-    ImVec2 tmp;
-    const int polySize = poly.size();if (polySize<2) return;
-    for (int i=0,isz=polySize/2;i<=isz;i++)   {
-        ImVec2& swap = poly[polySize-i-1];
-        tmp = poly[i];poly[i] = swap;swap = tmp;
-    }
-}
-inline static void makeCCW(ImVector<ImVec2> &poly) {
-    int br = 0;
-
-    // find bottom right point
-    for (int i = 1; i < poly.size(); ++i) {
-        if (poly[i].y < poly[br].y || (poly[i].y == poly[br].y && poly[i].x > poly[br].x)) {
-            br = i;
-        }
-    }
-
-    // reverse poly if clockwise
-    if (!left(at(poly, br - 1), at(poly, br), at(poly, br + 1))) {
-        reverse(poly);
-        //reverse(poly.begin(), poly.end());
-    }
 }
 inline static bool isReflex(const ImVector<ImVec2> &poly, const int &i) {return right(at(poly, i - 1), at(poly, i), at(poly, i + 1));}
 inline static ImVec2 intersection(const ImVec2 &p1, const ImVec2 &p2, const ImVec2 &q1, const ImVec2 &q2) {
@@ -427,7 +411,9 @@ inline static void append(ImVector<ImVec2>& src,const ImVector<ImVec2>& dst,int 
     src.reserve(src.size()+dstEndIndex-dstStartIndex+1);
     for (int i=dstStartIndex;i<dstEndIndex;i++) src.push_back(dst[i]);
 }
+} // namespace bayazit
 void DecomposeConcavePoly(const ImVector<ImVec2>& poly, ImVector<ImVec2>& convexPolysOut, ImVector<int>& numConvexPolyPointsOut, bool mustResetOutVectorsBeforeUsage) {
+    using namespace bayazit;
     if (mustResetOutVectorsBeforeUsage) {numConvexPolyPointsOut.resize(0);convexPolysOut.resize(0);}
     ImVec2 upperInt, lowerInt, p, closestVert;
     float upperDist, lowerDist, d, closestDist;

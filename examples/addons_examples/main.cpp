@@ -723,6 +723,39 @@ void DrawGL()	// Mandatory
         ImGui::ImageZoomAndPan(reinterpret_cast<ImTextureID>(myImageTextureId2),ImVec2(0,150),1.f,zoom,pan);    // aspect ratio can be aero for stretch mode
 
         ImGui::Spacing();
+        ImGui::Text("Collapsable Header with buttons [ImGui::AppendTreeNodeHeaderButtons(...)]");
+        // Nobody will use this, it's too complicated to set up. However:
+        { // start scope
+            static bool closed = false;static bool paste = false;static bool copy = false;  // button sensors
+            if (!closed)    {
+                static bool myTreeNodeIsOpen = false;   // 'static' here, just to reuse its address as id...
+                const void* ptr_id = &myTreeNodeIsOpen;
+                const float curPosX = ImGui::GetCursorPosX();   // used for clipping
+                ImGui::BeginGroup();    // Not sure grouping is strictly necessary here
+                myTreeNodeIsOpen = ImGui::TreeNodeEx(ptr_id,ImGuiTreeNodeFlags_CollapsingHeader|ImGuiTreeNodeFlags_AllowOverlapMode,"Collapsable %d",1);
+                //if (ImGui::IsItemHovered()) // optional condition if we want buttons to appear only when the collapsable header is hovered (to save FPS I guess)
+                {
+                    ImGui::AppendTreeNodeHeaderButtons(ptr_id,curPosX,
+                        3,                          // Num Buttons
+                        &closed,"delete",NULL,      // Button 1 (far-right) triplet:        &pressed | tooltip | glyph as const char* (if NULL it's a close button)
+                        &paste,"paste","v",         // Button 2 (second far-right) triplet: &pressed | tooltip | glyph as const char* (if NULL it's a close button)
+                        &copy,"copy","^"            // Button 2 (third far-right) triplet:  &pressed | tooltip | glyph as const char* (if NULL it's a close button)
+                    );
+                }
+                if (myTreeNodeIsOpen) {
+                    // (optional) Fill the header with data within tree node indent
+                }
+                if (myTreeNodeIsOpen) ImGui::TreePop();   // Mandatory! When we want to close the indent (before or after filling the header with data)
+                if (myTreeNodeIsOpen) {
+                    // (optional) Fill the header with data without tree node indent
+                    static ImVec4 color(1,1,1,1);ImGui::ColorEdit4("MyColor##AppendTreeNodeHeaderButtonsMyColor",&color.x);
+                }
+                ImGui::EndGroup();    // Not sure grouping is strictly necessary here
+            }
+            else if (ImGui::Button("Reset collapsable header##AppendTreeNodeHeaderButtonsReset")) closed = false;
+        } // end scope
+
+        ImGui::Spacing();
         ImGui::Text("Generic TreeView Implementation:");
         {
             // Actually we can use less than 5 lines of code to setup and run a very basic TreeView...

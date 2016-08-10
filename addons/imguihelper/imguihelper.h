@@ -11,7 +11,9 @@ namespace ImGui {
 // Experimental: tested on Ubuntu only. Should work with urls, folders and files.
 bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS=false);
 
-void CloseAllPopupMenus();  // Neve Tested
+void CloseAllPopupMenus();  // Never Tested
+
+bool IsItemActivePreviousFrame();
 
 #ifndef NO_IMGUIHELPER_FONT_METHODS
 void InitPushFontOverload();            // Internally fills a static ImFont* vector, consolidating the Font order, so that the following Font Methods are available:
