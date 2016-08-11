@@ -726,21 +726,30 @@ void DrawGL()	// Mandatory
         ImGui::Text("Collapsable Header with buttons [ImGui::AppendTreeNodeHeaderButtons(...)]");
         // Nobody will use this, it's too complicated to set up. However:
         { // start scope
-            static bool closed = false;static bool paste = false;static bool copy = false;  // button sensors
+            static bool displayButtonsOnlyOnItemHovering = false;     // tweakable
+            static bool closed = false;                               // button sensor (this can be static even if it's not a toggle-button just because we don't display the header at all as soon as 'close' becomes true...)
+            bool paste = false, copy = false;                         // button sensors (we'll only use the last one now)
             if (!closed)    {
                 static bool myTreeNodeIsOpen = false;   // 'static' here, just to reuse its address as id...
                 const void* ptr_id = &myTreeNodeIsOpen;
                 const float curPosX = ImGui::GetCursorPosX();   // used for clipping
                 ImGui::BeginGroup();    // Not sure grouping is strictly necessary here
                 myTreeNodeIsOpen = ImGui::TreeNodeEx(ptr_id,ImGuiTreeNodeFlags_CollapsingHeader|ImGuiTreeNodeFlags_AllowOverlapMode,"Collapsable %d",1);
-                //if (ImGui::IsItemHovered()) // optional condition if we want buttons to appear only when the collapsable header is hovered (to save FPS I guess)
+                const bool isCollapsableHeaderHovered = ImGui::IsItemHovered();
+                if (!displayButtonsOnlyOnItemHovering || isCollapsableHeaderHovered)
                 {
-                    ImGui::AppendTreeNodeHeaderButtons(ptr_id,curPosX,
-                        3,                          // Num Buttons
-                        &closed,"delete",NULL,      // Button 1 (far-right) triplet:        &pressed | tooltip | glyph as const char* (if NULL it's a close button)
-                        &paste,"paste","v",         // Button 2 (second far-right) triplet: &pressed | tooltip | glyph as const char* (if NULL it's a close button)
-                        &copy,"copy","^"            // Button 2 (third far-right) triplet:  &pressed | tooltip | glyph as const char* (if NULL it's a close button)
+                    static const char* tmpTooltips[2] = {"show these\nbuttons always","display these buttons only when\nthe collapsable header is hovered"};
+
+                    const bool isOneButtonHovered = ImGui::AppendTreeNodeHeaderButtons(ptr_id,curPosX,
+                        6,                            // Num Buttons + Num Separators
+                        &closed,"delete",NULL,0,      // Button 0 (far-right) quartet:         &pressed | tooltip | single glyph as const char* (if NULL it's a close button) | isToggleButton?1:0
+                        NULL,NULL,NULL,0,             // Button 1 (separator)
+                        &paste,"paste","v",0,         // Button 2 (second far-right) quartet:  &pressed | tooltip | single glyph as const char* (if NULL it's a close button) | isToggleButton?1:0
+                        &copy,"copy","^",0,           // Button 3 (third far-right) quartet:   &pressed | tooltip | single glyph as const char* (if NULL it's a close button) | isToggleButton?1:0
+                        NULL,NULL,NULL,0,             // Button 4 (separator)
+                        &displayButtonsOnlyOnItemHovering,tmpTooltips[displayButtonsOnlyOnItemHovering?0:1],"h",1   // Button 5 well, same as above... except that it's togglable, and we use a static boolean
                     );
+                    if ((displayButtonsOnlyOnItemHovering || isCollapsableHeaderHovered) && !isOneButtonHovered) ImGui::SetTooltip("%s","Optional collapsing\nheader tooltip");
                 }
                 if (myTreeNodeIsOpen) {
                     // (optional) Fill the header with data within tree node indent

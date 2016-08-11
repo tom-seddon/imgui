@@ -296,7 +296,8 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
 /*
 // Nobody will use this, it's too complicated to set up. However:
 
-            static bool closed = false;static bool paste = false;static bool copy = false;
+            static bool closed = false;
+            bool paste = false,copy = false;
             if (!closed)    {
                 static bool myTreeNodeIsOpen = false;   // 'static' here, just to reuse its address as id...
                 const void* ptr_id = &myTreeNodeIsOpen;
@@ -306,11 +307,11 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
                 //if (ImGui::IsItemHovered()) // optional condition if we want buttons to appear only when the collapsable header is hovered
                 {
                     ImGui::AppendTreeNodeHeaderButtons(ptr_id,curPosX,
-                        3,                          // Num Buttons
-                        &closed,"delete",NULL,      // Button 1 (far-right) triplet:        &pressed | tooltip | glyph as const char* (if NULL it's a close button)
-                        &paste,"paste","v",         // Button 2 (second far-right) triplet: &pressed | tooltip | glyph as const char* (if NULL it's a close button)
-                        &copy,"copy","^"            // Button 3 (third far-right) triplet:  &pressed | tooltip | glyph as const char* (if NULL it's a close button)
-                    );
+                        3,                                // Num Buttons
+                        &closed,"delete",NULL,0,      // Button 0 (far-right) quartet:        &pressed | tooltip | single glyph as const char* (if NULL it's a close button) | isToggleButton?1:0
+                        &paste,"paste","v",0,         // Button 1 (second far-right) quartet: &pressed | tooltip | single glyph as const char* (if NULL it's a close button) | isToggleButton?1:0
+                        &copy,"copy","^",0            // Button 2 (third far-right) quartet:  &pressed | tooltip | single glyph as const char* (if NULL it's a close button) | isToggleButton?1:0
+                    );  // returns true if one button is hovered, so that you can prevent the 'tree node header' tooltip to show up if you use it.
                 }
                 if (myTreeNodeIsOpen) {
                     // (optional) Fill the header with data within tree node indent
@@ -324,7 +325,8 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
             }
             else if (ImGui::Button("Reset collapsable header##AppendTreeNodeHeaderButtonsReset")) closed = false;
 */
-void AppendTreeNodeHeaderButtons(const void* ptr_id, float startWindowCursorXForClipping, int numButtons, ...);
+// Returns true if one button is hovered (NOT pressed)
+bool AppendTreeNodeHeaderButtons(const void* ptr_id, float startWindowCursorXForClipping, int numButtons, ...);
 
 
 // Basic tree view implementation
