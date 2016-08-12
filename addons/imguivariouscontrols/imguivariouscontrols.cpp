@@ -1442,40 +1442,22 @@ inline static bool GlyphButton(ImGuiID id, const ImVec2& pos,const ImVec2& halfS
     return (pressed);
 }
 
-static bool AppendTreeNodeHeaderButtonsV(const void* ptr_id,float startWindowCursorXForClipping,int numButtons,va_list args)   {
+static int AppendTreeNodeHeaderButtonsV(const void* ptr_id,float startWindowCursorXForClipping,int numButtons,va_list args)   {
+    if (!ImGui::IsItemVisible()) return -1; // We don't reset non-togglable buttons to false for performance reasons
+
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     ImGuiID id = window->GetID(ptr_id);
-
-    //const bool headerIsNotVisible = ImGui::IsClippedEx(window->DC.LastItemRect,id,false);
-    const bool headerIsNotVisible = !ImGui::IsItemVisible();
-
-    /*static bool tmp = false;
-    if (tmp!=headerIsNotVisible) {
-        tmp=headerIsNotVisible;
-        fprintf(stderr,"headerIsNotVisible=%s\n",headerIsNotVisible?"true":"false");
-    }*/
-
-    bool* pPressed = NULL;
-    const char* tooltip = NULL;
-    const char* glyph = NULL;
-    int isToggleButton = 0;
-
-    if (headerIsNotVisible) {
-        // Fast code path here:
-        for (int i=0;i<numButtons;i++)  {
-            pPressed = va_arg(args, bool*);tooltip = va_arg(args, const char*);
-            glyph = va_arg(args, const char*);isToggleButton = va_arg(args, int);
-            if (!isToggleButton && pPressed) *pPressed = false; // Unluckily we have to reset these booleans, in case they're static. Otherwise we could have exited earlier...
-        }
-        return false;
-    }
 
     ImGuiContext& g = *GImGui;
     const float buttonSz = g.FontSize;
     const ImVec2 glyphHalfSize(buttonSz*0.5f,buttonSz*0.5f);
     ImVec2 pos(ImMin(window->DC.LastItemRect.Max.x, window->ClipRect.Max.x) - g.Style.FramePadding.x -buttonSz*0.5f, window->DC.LastItemRect.Min.y + g.Style.FramePadding.y+buttonSz*0.5f);
-    bool pressed = false,hovered = false,atLeastOneButtonHovered = false;
+    bool pressed = false,hovered = false;
 
+    bool* pPressed = NULL;
+    const char* tooltip = NULL;
+    const char* glyph = NULL;
+    int isToggleButton = 0, rv = -1;
 
     for (int i=0;i<numButtons;i++)  {
         pPressed = va_arg(args, bool*);tooltip = va_arg(args, const char*);
@@ -1485,11 +1467,11 @@ static bool AppendTreeNodeHeaderButtonsV(const void* ptr_id,float startWindowCur
             //fprintf(stderr,"btn:%d pos.x=%1.0f startWindowCursorXForClipping=%1.0f\n",i,pos.x,startWindowCursorXForClipping);
             if (pos.x>startWindowCursorXForClipping+(4.0f*buttonSz))   {
                 id = window->GetID((void*)(intptr_t)(id+1));
-                pressed = ImGui::GlyphButton(id, pos, glyphHalfSize,glyph,isToggleButton ? pPressed : NULL,&hovered);
+                if ((pressed = ImGui::GlyphButton(id, pos, glyphHalfSize,glyph,isToggleButton ? pPressed : NULL,&hovered))) rv = i;
                 if (!isToggleButton) *pPressed = pressed;
                 pos.x-=buttonSz-2;
                 if (tooltip && hovered && strlen(tooltip)>0) ImGui::SetTooltip("%s",tooltip);
-                atLeastOneButtonHovered|=hovered;
+                if (hovered && rv==-1) rv = numButtons+i;
             }
             else {
                 pressed = false;
@@ -1499,15 +1481,15 @@ static bool AppendTreeNodeHeaderButtonsV(const void* ptr_id,float startWindowCur
         }
         else pos.x-=buttonSz-2; // separator mode
     }
-    return atLeastOneButtonHovered;
+    return rv;
 }
 
-bool AppendTreeNodeHeaderButtons(const void* ptr_id, float startWindowCursorXForClipping, int numButtons, ...) {
+int AppendTreeNodeHeaderButtons(const void* ptr_id, float startWindowCursorXForClipping, int numButtons, ...) {
     va_list args;
     va_start(args, numButtons);
-    const bool hovered = AppendTreeNodeHeaderButtonsV(ptr_id, startWindowCursorXForClipping, numButtons, args);
+    const int rv = AppendTreeNodeHeaderButtonsV(ptr_id, startWindowCursorXForClipping, numButtons, args);
     va_end(args);
-    return hovered;
+    return rv;
 }
 
 

@@ -296,7 +296,7 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
 /*
 // Nobody will use this, it's too complicated to set up. However:
 
-            static bool closed = false;
+            static bool closed = false;                 // Notable exception to this rule: "use static booleans only when the button is togglable".
             bool paste = false,copy = false;
             if (!closed)    {
                 static bool myTreeNodeIsOpen = false;   // 'static' here, just to reuse its address as id...
@@ -325,8 +325,8 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
             }
             else if (ImGui::Button("Reset collapsable header##AppendTreeNodeHeaderButtonsReset")) closed = false;
 */
-// Returns true if one button is hovered (NOT pressed)
-bool AppendTreeNodeHeaderButtons(const void* ptr_id, float startWindowCursorXForClipping, int numButtons, ...);
+// Return value rv can be: -1 => No button is hovered or clicked | [0,numButtons-1] => buttons[rv] has been clicked | [numButtons,2*numButtons-1] => buttons[rv-numButtons] is hovered
+int AppendTreeNodeHeaderButtons(const void* ptr_id, float startWindowCursorXForClipping, int numButtons, ...);
 
 
 // Basic tree view implementation
