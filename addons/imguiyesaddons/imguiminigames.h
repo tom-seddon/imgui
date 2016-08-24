@@ -33,6 +33,32 @@
  mineGame.render();
 */
 
+// SUDOKU GAME LICENSE:
+/*
+    The Sudoku puzzles are generated with: https://qqwing.com/generate.html
+    Sudoku Solve Algo (removed from the code by default) adapted
+    from http://codereview.stackexchange.com/questions/13677/solving-sudoku-using-backtracking
+
+    All the source code, however, is in the public domain.
+
+    IN NO EVENT SHALL THE AUTHOR BE LIABLE TO ANY PARTY FOR DIRECT,
+    INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST
+    PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION,
+    EVEN IF THE AUTHOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+    THE AUTHOR SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+    PARTICULAR PURPOSE. THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF
+    ANY, PROVIDED HEREUNDER IS PROVIDED "AS IS". THE AUTHOR HAS NO OBLIGATION
+    TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+*/
+// USAGE:
+/*
+ // inside a ImGui window
+ static ImGuiMiniGames::Sudoku sudokuGame;
+ sudokuGame.render();
+*/
+
 #ifndef IMGUI_API
 #	include <imgui.h>
 #endif //IMGUI_API
@@ -121,6 +147,63 @@ namespace ImGuiMiniGames {
         struct MineHS* imp;
     };
 #   endif //NO_IMGUIMINIGAMES_MINE
+
+#   ifndef NO_IMGUIMINIGAMES_SUDOKU
+// SUDOKU GAME LICENSE:
+/*
+    The Sudoku puzzles are generated with: https://qqwing.com/generate.html
+    Sudoku Solve Algo (removed from the code by default) adapted
+    from http://codereview.stackexchange.com/questions/13677/solving-sudoku-using-backtracking
+
+    All the source code, however, is in the public domain.
+
+    IN NO EVENT SHALL THE AUTHOR BE LIABLE TO ANY PARTY FOR DIRECT,
+    INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST
+    PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION,
+    EVEN IF THE AUTHOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+    THE AUTHOR SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+    PARTICULAR PURPOSE. THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF
+    ANY, PROVIDED HEREUNDER IS PROVIDED "AS IS". THE AUTHOR HAS NO OBLIGATION
+    TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+*/
+
+    class Sudoku {
+        public:
+        void render();
+
+        struct Style {
+            enum Color {
+                Color_Text,                     // "PAUSED" "GAME OVER" and "GAME COMPLETED" text color
+                Color_Background,               // of the child window - we can leave it transparent: 0x00000000 (default)
+                Color_Grid,
+                Color_GridShadow,
+                Color_GridZone,
+                Color_CellBackground,
+                Color_HoveredCellBackground,
+                Color_InitialNumbers,
+                Color_Annotations,
+                Color_Numbers,
+                Color_Count
+            };
+            ImU32 colors[Color_Count];
+            int keyPause;                       // This depends on your key-mapping in ImGui. (default == 'p')
+            static Style style;
+            inline static Style& Get() {return style;}
+            Style();
+            void reset() {*this=Style();}
+#           ifndef NO_IMGUIMINIGAMES_MINE
+            void setFromMineGameStyle(const Mine::Style& ms);
+#           endif //NO_IMGUIMINIGAMES_MINE
+        };
+        Sudoku();
+        ~Sudoku();
+        protected:
+        struct SudokuHS* imp;
+    };
+#   endif //NO_IMGUIMINIGAMES_SUDOKU
+
 
 } // namespace ImGuiMiniGames
 

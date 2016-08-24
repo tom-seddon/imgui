@@ -287,6 +287,7 @@ void DrawGL()	// Mandatory
     static bool show_tab_windows = false;
     static bool show_performance = false;
     static bool show_mine_game = false;
+    static bool show_sudoku_game = false;
 
     // 1. Show a simple window
     {
@@ -323,9 +324,14 @@ void DrawGL()	// Mandatory
         show_tab_windows ^= ImGui::Button("Show TabWindow Test");
 #       endif //NO_IMGUITABWINDOW
         show_performance ^= ImGui::Button("Show performance");
-#       if (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
-        show_mine_game ^= ImGui::Button("Show Mine Game");
-#       endif //(defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
+#       ifdef YES_IMGUIMINIGAMES
+#           ifndef NO_IMGUIMINIGAMES_MINE
+            show_mine_game ^= ImGui::Button("Show Mine Game");
+#           endif //NO_IMGUIMINIGAMES_MINE
+#           ifndef NO_IMGUIMINIGAMES_SUDOKU
+            show_sudoku_game ^= ImGui::Button("Show Sudoku Game");
+#           endif //NO_IMGUIMINIGAMES_SUDOKU
+#       endif //YES_IMGUIMINIGAMES
 
         // Calculate and show framerate
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("Frame rate options");
@@ -1386,7 +1392,8 @@ void DrawGL()	// Mandatory
         }
         ImGui::End();
     }
-#   if (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
+#   ifdef YES_IMGUIMINIGAMES
+#   ifndef NO_IMGUIMINIGAMES_MINE
     if (show_mine_game) {
         if (ImGui::Begin("Mine Game",&show_mine_game,ImVec2(600,400),.95f,ImGuiWindowFlags_NoScrollbar))  {
             static ImGuiMiniGames::Mine mineGame;
@@ -1394,8 +1401,17 @@ void DrawGL()	// Mandatory
         }
         ImGui::End();
     }
-#   endif //(defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
-
+#   endif //NO_IMGUIMINIGAMES_MINE
+#   ifndef NO_IMGUIMINIGAMES_SUDOKU
+    if (show_sudoku_game) {
+        if (ImGui::Begin("Sdoku Game",&show_sudoku_game,ImVec2(600,400),.95f,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))  {
+            static ImGuiMiniGames::Sudoku sudokuGame;
+            sudokuGame.render();
+        }
+        ImGui::End();
+    }
+#   endif //NO_IMGUIMINIGAMES_SUDOKU
+#   endif //YES_IMGUIMINIGAMES
 
     // imguitoolbar test 2: two global toolbars one at the top and one at the left
 #   ifndef NO_IMGUITOOLBAR

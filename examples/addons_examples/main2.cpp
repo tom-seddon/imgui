@@ -163,12 +163,20 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
             ImGui::EndChild();
         }*/
-#       if (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
+#       ifdef YES_IMGUIMINIGAMES
+#       ifndef NO_IMGUIMINIGAMES_MINE
         else if (tab->matchLabel("ImGuiMineGame"))  {
             static ImGuiMiniGames::Mine mineGame;
             mineGame.render();
         }
-#       endif // (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
+#       endif // NO_IMGUIMINIGAMES_MINE
+#       ifndef NO_IMGUIMINIGAMES_SUDOKU
+        else if (tab->matchLabel("ImGuiSudokuGame"))  {
+            static ImGuiMiniGames::Sudoku sudokuGame;
+            sudokuGame.render();
+        }
+#       endif // NO_IMGUIMINIGAMES_SUDOKU
+#       endif // YES_IMGUIMINIGAMES
         else ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
         ImGui::PopID();
     }
@@ -804,10 +812,16 @@ void DrawGL()	// Mandatory
                             for (int i=0;i<numTabs;i++) {
                                 tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
                             }
-#                           if (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
+#                           ifdef YES_IMGUIMINIGAMES
+#                           ifndef NO_IMGUIMINIGAMES_MINE
                             tabWindow.addTabLabel("ImGuiMineGame","a mini-game",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar);
-#                           endif // (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
+#                           endif // NO_IMGUIMINIGAMES_MINE
+#                           ifndef NO_IMGUIMINIGAMES_SUDOKU
+                            tabWindow.addTabLabel("ImGuiSudokuGame","a mini-game",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+#                           endif // NO_IMGUIMINIGAMES_SUDOKU
+#                           endif // YES_IMGUIMINIGAMES
                         }
+
                     }
                     tabWindow.render(); // Must be called inside "its" window (and sets isInited() to false). [ ChildWindows can't be used here (but can be used inside Tab Pages). Basically all the "Central Window" must be given to 'tabWindow'. ]                    
 #                    else // NO_IMGUITABWINDOW

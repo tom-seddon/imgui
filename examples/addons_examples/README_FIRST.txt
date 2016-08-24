@@ -168,11 +168,28 @@ Please DO NOT ADD these definitions in your .cpp files: it won't work!
 ("At the project level" means in the "Project Options").
 
 ----------------------------------------------------------------------------------------------------------------------------------
+DEPLOYING TIPS:
+---------------------------
+If you need to release source code packages containing "ImGui Addons" you should:
+-> COPY the imgui folder, stripping it from all the unused stuff (all the subfolders except "addons").
+-> Remove imgui_demo.cpp (if not used).
+-> Move all your imgui definitions from your Project Settings to "imconfig.h".
+-> Delete from the "addons" subfolder everything you don't use.
+       For example, if you define NO_IMGUIFILESYSTEM, you can probably delete the whole "addons/imguifilesystem" subfolder (TODO: test this approach for all the extra widgets).
+       If you don't use any yes_addon, you can probably delete the whole "addons/yes_addons" subfolder; otherwise you can probably
+       just delete the files you don't use inside the "addons/yes_addons" subfolder (TODO: test this as well).
+       You can probably delete the headers of the bindings you don't use too (TODO: test it), e.g "addons/bindings/ImImpl_Binding_Direct3D9.h",...
+Following these steps "ImGui Addons" becomes lighter, more flexible and easier to use in bigger projects: you just include what you actually use, and you're free from all the imgui definitions!
+-> Just remember NOT to add any of the .c/.cpp files inside the "imgui/addons" folder (and its subfolders) to the list of your project source files directly: THIS IS IMPORTANT!
+
+----------------------------------------------------------------------------------------------------------------------------------
 SPARE SINGLE ADDON USAGE
 ---------------------------
 If you just want to add a single addon (a pair of addonName.h/.cpp files) to an existing project WITHOUT following the steps above, you can probably just include its header file,
-add the include folders: $IMGUI_HOME and $IMGUI_HOME/addons/addonName to your project (where $IMGUI_HOME is the path where imgui.h/.cpp are located) and compile the file $IMGUI_HOME/addons/addonName/addonName.cpp, where "addonName" is the name of the addon you want to use. 
+add the include folders: $IMGUI_HOME and $IMGUI_HOME/addons/addonName to your project (where $IMGUI_HOME is the path where imgui.h/.cpp are located)
+and compile the file $IMGUI_HOME/addons/addonName/addonName.cpp, where "addonName" is the name of the addon you want to use.
 Be warned that some addons might depend on others: e.g. imguipanelmanager depends on imguitoolbar: so you may need to include both addons.
+Other addons may need some special definitions at the top of their .h file to be used as stand-alone (usually #define NO_IMGUIHELPER).
 
 However I'm not sure this approach works for all the addons, since some .cpp files need to be included after imgui.cpp to access its internals.
 As a workaround in case of failure, you can try adding at the top of the .cpp file/s:
@@ -182,8 +199,9 @@ As a workaround in case of failure, you can try adding at the top of the .cpp fi
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_internal.h"
 
-so that most imgui internals are accessible, but there's no guarantee it will work.
+so that most imgui internals are accessible.
 
+There's no guarantee this approach will work for all the addons, but it should in most cases.
 
 -----------------------------------------------------------------------------------------------------------------------------------
 A MINIMAL EXAMPLE: mainBasic.cpp
