@@ -80,7 +80,7 @@
  - read the FAQ below this section!
  - your code creates the UI, if your code doesn't run the UI is gone! == very dynamic UI, no construction/destructions steps, less data retention on your side, no state duplication, less sync, less bugs.
  - call and read ImGui::ShowTestWindow() for demo code demonstrating most features.
- - see examples/ folder for standalone sample applications. Prefer reading examples/opengl_example/ first as it is the simplest.
+ - see examples/ folder for standalone sample applications. Prefer reading examples/opengl2_example/ first as it is the simplest.
    you may be able to grab and copy a ready made imgui_impl_*** file from the examples/.
  - customization: PushStyleColor()/PushStyleVar() or the style editor to tweak the look of the interface (e.g. if you want a more compact UI or a different color scheme).
 
@@ -483,8 +483,9 @@
 !- main: make it so that a frame with no window registered won't refocus every window on subsequent frames (~bump LastFrameActive of all windows).
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
- - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now.
+ - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now and super fragile.
  - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
+ - input text: expose CursorPos in char filter event (#816)
  - input text: flag to disable live update of the user buffer (also applies to float/int text input) 
  - input text: resize behavior - field could stretch when being edited? hover tooltip shows more text?
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
@@ -2541,9 +2542,9 @@ static void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDr
     }
 
     // Draw list sanity check. Detect mismatch between PrimReserve() calls and incrementing _VtxCurrentIdx, _VtxWritePtr etc.
-    IM_ASSERT(draw_list->_VtxWritePtr == draw_list->VtxBuffer.Data + draw_list->VtxBuffer.Size);
-    IM_ASSERT(draw_list->_IdxWritePtr == draw_list->IdxBuffer.Data + draw_list->IdxBuffer.Size);
-    IM_ASSERT((int)draw_list->_VtxCurrentIdx == draw_list->VtxBuffer.Size);                   
+    IM_ASSERT(draw_list->VtxBuffer.Size == 0 || draw_list->_VtxWritePtr == draw_list->VtxBuffer.Data + draw_list->VtxBuffer.Size);
+    IM_ASSERT(draw_list->IdxBuffer.Size == 0 || draw_list->_IdxWritePtr == draw_list->IdxBuffer.Data + draw_list->IdxBuffer.Size);
+    IM_ASSERT((int)draw_list->_VtxCurrentIdx == draw_list->VtxBuffer.Size);
 
     // Check that draw_list doesn't use more vertices than indexable (default ImDrawIdx = 2 bytes = 64K vertices)
     // If this assert triggers because you are drawing lots of stuff manually, A) workaround by calling BeginChild()/EndChild() to put your draw commands in multiple draw lists, B) #define ImDrawIdx to a 'unsigned int' in imconfig.h and render accordingly.
