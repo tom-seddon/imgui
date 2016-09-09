@@ -2214,7 +2214,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
     if (I.allowKnownDirectoriesSection && pUserKnownDirectories->size()>0)  {
         ImGui::Separator();
 
-        if (ImGui::CollapsingHeader("Known Directories##UserKnownDirectories"))  {
+        if (ImGui::CollapsingHeader("Known Directories##imguifs_UserKnownDirectories"))  {
             static int id;
             ImGui::PushID(&id);
 
@@ -2253,7 +2253,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
         ImGui::Separator();
         bool mustCreate = false;
 
-        if (ImGui::CollapsingHeader("New Directory##allowDirectoryCreation"))  {
+        if (ImGui::CollapsingHeader("New Directory##imguifs_allowDirectoryCreation"))  {
             static int id;
             ImGui::PushID(&id);
 
@@ -2284,7 +2284,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
     // Filtering entries -----------------------------------------------------------------
     if (I.allowFiltering)  {
         ImGui::Separator();
-        if (ImGui::CollapsingHeader("Filtering##fileNameFiltering"))  {
+        if (ImGui::CollapsingHeader("Filtering##imguifs_fileNameFiltering"))  {
             static int id;
             ImGui::PushID(&id);
             I.filter.Draw();

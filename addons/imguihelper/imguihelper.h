@@ -13,7 +13,8 @@ bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS=fal
 
 void CloseAllPopupMenus();  // Never Tested
 
-bool IsItemActivePreviousFrame();
+bool IsItemActiveLastFrame();
+bool IsItemJustReleased();
 
 #ifndef NO_IMGUIHELPER_FONT_METHODS
 void InitPushFontOverload();            // Internally fills a static ImFont* vector, consolidating the Font order, so that the following Font Methods are available:

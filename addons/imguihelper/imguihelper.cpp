@@ -69,11 +69,14 @@ void CloseAllPopupMenus()   {
 }
 
 // Posted by Omar in one post. It might turn useful...
-bool IsItemActivePreviousFrame()    {
+bool IsItemActiveLastFrame()    {
     ImGuiContext& g = *GImGui;
     if (g.ActiveIdPreviousFrame)
         return g.ActiveIdPreviousFrame== GImGui->CurrentWindow->DC.LastItemId;
     return false;
+}
+bool IsItemJustReleased()   {
+    return IsItemActiveLastFrame() && !ImGui::IsItemActive();
 }
 
 #ifndef NO_IMGUIHELPER_FONT_METHODS
@@ -1092,6 +1095,8 @@ void PutInForeground(const char* optionalRootWindowName)  {
         }
     }
 }
+
+
 
 } // namespace Imgui
 

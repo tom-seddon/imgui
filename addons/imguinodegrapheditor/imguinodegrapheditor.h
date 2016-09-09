@@ -287,8 +287,11 @@ class Node
     int typeID;
     float baseWidthOverride;
     bool mustOverrideName,mustOverrideInputSlots,mustOverrideOutputSlots;
+    ImU32 overrideTitleTextColor,overrideTitleBgColor;  // 0 -> don't override
+    float overrideTitleBgColorGradient;                 //-1 -> don't override
+    bool isInEditingMode;
 
-    Node() : Pos(0,0),Size(0,0),baseWidthOverride(-1),mustOverrideName(false),mustOverrideInputSlots(false),mustOverrideOutputSlots(false) {}
+    Node() : Pos(0,0),Size(0,0),baseWidthOverride(-1),mustOverrideName(false),mustOverrideInputSlots(false),mustOverrideOutputSlots(false),overrideTitleTextColor(0),overrideTitleBgColor(0),overrideTitleBgColorGradient(-1.f),isInEditingMode(false) {}
     void init(const char* name, const ImVec2& pos,const char* inputSlotNamesSeparatedBySemicolons=NULL,const char* outputSlotNamesSeparatedBySemicolons=NULL,int _nodeTypeID=0/*,float currentWindowFontScale=-1.f*/);
 
     inline ImVec2 GetInputSlotPos(int slot_no,float currentFontWindowScale=1.f) const   { return ImVec2(Pos.x*currentFontWindowScale, Pos.y*currentFontWindowScale + Size.y * ((float)slot_no+1) / ((float)InputsCount+1)); }
@@ -358,7 +361,9 @@ struct NodeGraphEditor	{
         ImU32 color_node;
         ImU32 color_node_frame;
         ImU32 color_node_selected;
+        ImU32 color_node_frame_selected;
         ImU32 color_node_hovered;
+        ImU32 color_node_frame_hovered;
         float node_rounding;
         ImVec2 node_window_padding;
         ImU32 color_node_input_slots;
@@ -369,31 +374,37 @@ struct NodeGraphEditor	{
         float link_control_point_distance;
         int link_num_segments;  // in AddBezierCurve(...)
         ImVec4 color_node_title;
+        ImU32 color_node_title_background;
+        float color_node_title_background_gradient;
         ImVec4 color_node_input_slots_names;
         ImVec4 color_node_output_slots_names;
         Style() {
-            color_background =      ImColor(60,60,70,200);
-            color_grid =            ImColor(200,200,200,40);
-            grid_line_width =       1.f;
-            grid_size =             64.f;
+            color_background =          ImColor(60,60,70,200);
+            color_grid =                ImColor(200,200,200,40);
+            grid_line_width =           1.f;
+            grid_size =                 64.f;
 
-            color_node =            ImColor(60,60,60);
-            color_node_frame =      ImColor(100,100,100);
-            color_node_selected =   ImColor(75,75,85);
-            color_node_hovered =    ImColor(85,85,85);
-            node_rounding =         4.f;
-            node_window_padding =   ImVec2(8.f,8.f);
+            color_node =                ImColor(60,60,60);
+            color_node_frame =          ImColor(100,100,100);
+            color_node_selected =       ImColor(75,75,85);
+            color_node_frame_selected = ImColor(115,115,115);
+            color_node_hovered =        ImColor(85,85,85);
+            color_node_frame_hovered =  ImColor(125,125,125);
+            node_rounding =             4.f;
+            node_window_padding =       ImVec2(8.f,8.f);
 
-            color_node_input_slots = ImColor(150,150,150,150);
-            color_node_output_slots = ImColor(150,150,150,150);
-            node_slots_radius =     5.f;
+            color_node_input_slots =    ImColor(150,150,150,150);
+            color_node_output_slots =   ImColor(150,150,150,150);
+            node_slots_radius =         5.f;
 
-            color_link =            ImColor(200,200,100);
-            link_line_width =       3.f;
+            color_link =                ImColor(200,200,100);
+            link_line_width =           3.f;
             link_control_point_distance = 50.f;
-            link_num_segments =     0;
+            link_num_segments =         0;
 
             color_node_title = ImGui::GetStyle().Colors[ImGuiCol_Text];
+            color_node_title_background = 0;//ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive]);
+            color_node_title_background_gradient = 0.f;   // in [0,0.5f] used only if available (performance is better when 0)
             color_node_input_slots_names = ImGui::GetStyle().Colors[ImGuiCol_Text];color_node_input_slots_names.w=0.75f;
             color_node_output_slots_names = ImGui::GetStyle().Colors[ImGuiCol_Text];color_node_output_slots_names.w=0.75f;
         }
@@ -580,9 +591,12 @@ struct NodeGraphEditor	{
 
     // I suggest we don not use these 3; however we can:
     bool overrideNodeName(Node* node,const char* newName);
+    void overrideNodeTitleBarColors(Node* node,const ImU32* pTextColor,const ImU32* pBgColor,const float* pBgColorGradient);    // default values can be reset using 0 for colors and -1 for gradient
     bool overrideNodeInputSlots(Node* node,const char* slotNamesSeparatedBySemicolons);
     bool overrideNodeOutputSlots(Node* node,const char* slotNamesSeparatedBySemicolons);
 
+    // This are the chars used as buttons in the nodes' titlebars. Users might want to change them.
+    static char CloseCopyPasteChars[3][5];  // By default = {"x","^","v"};
 
     protected:
 
