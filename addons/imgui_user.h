@@ -31,6 +31,48 @@
 #	endif
 #endif//IMGUI_NO_INLINE
 
+#ifdef NO_IMGUI_ADDONS  // This definition turns all "normal" addons into "yes_addons"
+#   if (!defined(YES_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER))
+#       define NO_IMGUISTYLESERIALIZER
+#   endif //YES_IMGUISTYLESERIALIZER
+#   if (!defined(YES_IMGUIFILESYSTEM) && !defined(NO_IMGUIFILESYSTEM))
+#       define NO_IMGUIFILESYSTEM
+#   endif //YES_IMGUIFILESYSTEM
+#   if (!defined(YES_IMGUIDATECHOOSER) && !defined(NO_IMGUIDATECHOOSER))
+#       define NO_IMGUIDATECHOOSER
+#   endif //YES_IMGUIDATECHOOSER
+#   if (!defined(YES_IMGUILISTVIEW) && !defined(NO_IMGUILISTVIEW))
+#       define NO_IMGUILISTVIEW
+#   endif //YES_IMGUILISTVIEW
+#   if (!defined(YES_IMGUITOOLBAR) && !defined(NO_IMGUITOOLBAR))
+#       define NO_IMGUITOOLBAR
+#   endif //YES_IMGUITOOLBAR
+#   if (!defined(YES_IMGUIPANELMANAGER) && !defined(NO_IMGUIPANELMANAGER))
+#       define NO_IMGUIPANELMANAGER
+#   endif //YES_IMGUIPANELMANAGER
+#   if (!defined(YES_IMGUITABWINDOW) && !defined(NO_IMGUITABWINDOW))
+#       define NO_IMGUITABWINDOW
+#   endif //YES_IMGUITABWINDOW
+#   if (!defined(YES_IMGUIDOCK) && !defined(NO_IMGUIDOCK))
+#       define NO_IMGUIDOCK
+#   endif //YES_IMGUIDOCK
+#   if (!defined(YES_IMGUINODEGRAPHEDITOR) && !defined(NO_IMGUINODEGRAPHEDITOR))
+#       define NO_IMGUINODEGRAPHEDITOR
+#   endif //YES_IMGUINODEGRAPHEDITOR
+#   if (!defined(YES_IMGUICODEEDITOR) && !defined(NO_IMGUICODEEDITOR))
+#       define NO_IMGUICODEEDITOR
+#   endif //YES_IMGUICODEEDITOR
+#   if (!defined(YES_IMGUISTRING) && !defined(NO_IMGUISTRING))
+#       define NO_IMGUISTRING
+#   endif //YES_IMGUISTRING
+#   if (!defined(YES_IMGUIHELPER) && !defined(NO_IMGUIHELPER))
+#       define NO_IMGUIHELPER
+#   endif //YES_IMGUIHELPER
+#   if (!defined(YES_IMGUIEMSCRIPTEN) && !defined(NO_IMGUIEMSCRIPTEN))
+#       define NO_IMGUIEMSCRIPTEN
+#   endif //YES_IMGUIEMSCRIPTEN
+#endif // NO_IMGUI_ADDONS
+
 // Defining a custom placement new() with a dummy parameter allows us to bypass including <new> which on some platforms complains when user has disabled exceptions.
 #ifndef IMIMPL_HAS_PLACEMENT_NEW
 #define IMIMPL_HAS_PLACEMENT_NEW

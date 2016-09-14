@@ -86,6 +86,23 @@ And in addition:
 							-> some Gz decompression helper methods, available if IMGUI_USE_ZLIB is defined at the project level (this definition requires linking to the zlib library).
 
 Tip: every single imgui "widget" addon listed above (and in some cases even some part of it) CAN BE EXCLUDED from the compilation by defining at the project level something like: NO_IMGUIFILESYSTEM, etc (and the first demo, main.cpp, should always compile).
+The definitions needed to exclude all the addons are:
+NO_IMGUISTYLESERIALIZER
+NO_IMGUIFILESYSTEM
+NO_IMGUIDATECHOOSER
+NO_IMGUILISTVIEW
+NO_IMGUITOOLBAR
+NO_IMGUIPANELMANAGER
+NO_IMGUITABWINDOW
+NO_IMGUIDOCK
+NO_IMGUIVARIOUSCONTROLS
+NO_IMGUINODEGRAPHEDITOR
+NO_IMGUICODEEDITOR
+NO_IMGUISTRING
+NO_IMGUIHELPER
+NO_IMGUIEMSCRIPTEN
+Disabling unused addons greatly improves compilation times (any in many cases including <imgui.h> as a "precompiled header" can give a further speed-up).
+Tip: you can use the definition NO_IMGUI_ADDONS to disable all the addons with a single definition! (More on this later)
 
 
 And now there's a new kind of imgui addons, called "yes addons".
@@ -104,6 +121,8 @@ Currently "yes addons" are:
 -> imguifreetype.h/cpp:		depends on freetype2 (-lfreetype). License: MIT. It allows better font hinting, and Bold and Oblique variations of the .ttf font. Link: [https://github.com/Vuhdo/imgui_freetype]
 -> imguiminigames.h/cpp:	no dependencies. For a list of minigames and their own license, please read addons/yes_addons/imguiminigames.h.
 
+Tip: If you used the NO_IMGUI_ADDONS definition to disable all the "normal" addons, then all your addons behave like yes_addons!
+     That means that you can define, for example, YES_IMGUISTYLESERIALIZER to re-enable the "normal" imguistyleserializer addon.
 
 ===========================================
 HOW TO USE IMGUI ADDONS IN YOUR PROJECTS:
@@ -175,9 +194,9 @@ If you need to release source code packages containing "ImGui Addons" you should
 -> Remove imgui_demo.cpp (if not used).
 -> Move all your imgui definitions from your Project Settings to "imconfig.h".
 -> Delete from the "addons" subfolder everything you don't use.
-       For example, if you define NO_IMGUIFILESYSTEM, you can probably delete the whole "addons/imguifilesystem" subfolder (TODO: test this approach for all the extra widgets).
+       For example, if you define NO_IMGUIFILESYSTEM, you can probably delete the whole "addons/imguifilesystem" subfolder.
        If you don't use any yes_addon, you can probably delete the whole "addons/yes_addons" subfolder; otherwise you can probably
-       just delete the files you don't use inside the "addons/yes_addons" subfolder (TODO: test this as well).
+       just delete the files you don't use inside the "addons/yes_addons" subfolder.
        You can probably delete the headers of the bindings you don't use too (TODO: test it), e.g "addons/bindings/ImImpl_Binding_Direct3D9.h",...
 Following these steps "ImGui Addons" becomes lighter, more flexible and easier to use in bigger projects: you just include what you actually use, and you're free from all the imgui definitions!
 -> Just remember NOT to add any of the .c/.cpp files inside the "imgui/addons" folder (and its subfolders) to the list of your project source files directly: THIS IS IMPORTANT!

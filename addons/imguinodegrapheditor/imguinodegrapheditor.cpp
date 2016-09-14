@@ -1815,8 +1815,8 @@ bool NodeGraphEditor::save(ImGuiHelper::Serializer& s)    {
 	s.save(&n.Pos.x,"Pos",2);
 	s.save(&n.isOpen,"isOpen");
     if (n.mustOverrideName) s.save(n.Name,"OvrName");
-    if (n.overrideTitleTextColor) s.save(&n.overrideTitleTextColor,"OvrTitleTextColor");
-    if (n.overrideTitleBgColor) s.save(&n.overrideTitleBgColor,"OvrTitleBgColor");
+    if (n.overrideTitleTextColor!=0) s.save(&n.overrideTitleTextColor,"OvrTitleTextColor");
+    if (n.overrideTitleBgColor!=0) s.save(&n.overrideTitleBgColor,"OvrTitleBgColor");
     if (n.overrideTitleBgColorGradient>=0.f) s.save(&n.overrideTitleBgColorGradient,"OvrTitleBgColorGradient");
     if (n.mustOverrideInputSlots)   {
         ovrBuffer[0]='\0';
@@ -1943,11 +1943,11 @@ bool NodeGraphEditor::load(ImGuiHelper::Deserializer& d, const char ** pOptional
         n->userID = cbn.userID;
         n->isOpen = cbn.isOpen;
         if (cbn.mustOvrName)    overrideNodeName(n,cbn.ovrName);
-        if (cbn.mustOvrInput)   overrideNodeInputSlots(n,cbn.ovrInput);
-        if (cbn.mustOvrOutput)  overrideNodeInputSlots(n,cbn.ovrOutput);
         overrideNodeTitleBarColors(n,cbn.overrideTitleTextColor>0 ? &cbn.overrideTitleTextColor : NULL,
                                    cbn.overrideTitleBgColor>0 ? &cbn.overrideTitleBgColor : NULL,
                                    cbn.overrideTitleBgColorGradient>=0 ? &cbn.overrideTitleBgColorGradient : NULL);
+        if (cbn.mustOvrInput)   overrideNodeInputSlots(n,cbn.ovrInput);
+        if (cbn.mustOvrOutput)  overrideNodeInputSlots(n,cbn.ovrOutput);
         IM_ASSERT(n->fields.size()==cbn.numFields); // optional check (to remove)
         amount = n->fields.deserialize(d,amount);        
         addNode(n);
