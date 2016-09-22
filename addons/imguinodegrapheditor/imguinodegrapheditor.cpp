@@ -36,30 +36,37 @@ bool NodeGraphEditor::Style::Edit(NodeGraphEditor::Style& s) {
     changed|=EditColorImU32(    "color_grid",s.color_grid);
     changed|=ImGui::DragFloat(  "grid_line_width",&s.grid_line_width,dragSpeed,1.f,32.f,prec);
     changed|=ImGui::DragFloat(  "grid_size",&s.grid_size,dragSpeed,8.f,512.f,prec);
-
+    ImGui::Spacing();
     changed|=EditColorImU32(    "color_node",s.color_node);
-    changed|=EditColorImU32(    "color_node_frame",s.color_node_frame);
     changed|=EditColorImU32(    "color_node_selected",s.color_node_selected);
-    changed|=EditColorImU32(    "color_node_frame_selected",s.color_node_frame_selected);
+    changed|=EditColorImU32(    "color_node_active",s.color_node_active);
     changed|=EditColorImU32(    "color_node_hovered",s.color_node_hovered);
+    ImGui::Spacing();
+    changed|=EditColorImU32(    "color_node_frame",s.color_node_frame);
+    changed|=EditColorImU32(    "color_node_frame_selected",s.color_node_frame_selected);
+    changed|=EditColorImU32(    "color_node_frame_active",s.color_node_frame_active);
     changed|=EditColorImU32(    "color_node_frame_hovered",s.color_node_frame_hovered);
+    ImGui::Spacing();
     changed|=ImGui::DragFloat(  "node_rounding",&s.node_rounding,dragSpeed,0.f,16.f,prec);
     changed|=ImGui::DragFloat2(  "node_window_padding",&s.node_window_padding.x,dragSpeed,0.f,8.f,prec);
-
+    ImGui::Spacing();
     changed|=EditColorImU32(    "color_node_input_slots",s.color_node_input_slots);
     changed|=EditColorImU32(    "color_node_output_slots",s.color_node_output_slots);
     changed|=ImGui::DragFloat(  "node_slots_radius",&s.node_slots_radius,dragSpeed,1.f,10.f,prec);
-
+    ImGui::Spacing();
+    changed|=EditColorImU32(    "color_mouse_rectangular_selection",s.color_mouse_rectangular_selection);
+    changed|=EditColorImU32(    "color_mouse_rectangular_selection_frame",s.color_mouse_rectangular_selection_frame);
+    ImGui::Spacing();
     changed|=EditColorImU32(    "color_link",s.color_link);
     changed|=ImGui::DragFloat(  "link_line_width",&s.link_line_width,dragSpeed,1.f,6.f,prec);
     changed|=ImGui::DragFloat(  "link_control_point_distance",&s.link_control_point_distance,dragSpeed,10.f,200.f,prec);
     changed|=ImGui::DragInt(  "link_num_segments",&s.link_num_segments,dragSpeed,0,16.f);
-
+    ImGui::Spacing();
     changed|=ImGui::ColorEdit4( "color_node_title",&s.color_node_title.x);
     changed|=ImGui::EditColorImU32( "color_node_title_background",s.color_node_title_background);
     changed|=ImGui::DragFloat("color_node_title_background_gradient",&s.color_node_title_background_gradient,0.01f,0.f,.5f,"%1.3f");
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Zero gradient renders much faster\nwhen \"node_rounding\" is positive.\nUsed only if available.");
-
+    ImGui::Spacing();
     changed|=ImGui::ColorEdit4( "color_node_input_slots_names",&s.color_node_input_slots_names.x);
     changed|=ImGui::ColorEdit4( "color_node_output_slots_names",&s.color_node_output_slots_names.x);
 
@@ -81,7 +88,9 @@ bool NodeGraphEditor::Style::Save(const NodeGraphEditor::Style &style,ImGuiHelpe
     tmpColor = ImColor(style.color_node);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node",4);
     tmpColor = ImColor(style.color_node_frame);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_frame",4);
     tmpColor = ImColor(style.color_node_selected);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_selected",4);
+    tmpColor = ImColor(style.color_node_active);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_active",4);
     tmpColor = ImColor(style.color_node_frame_selected);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_frame_selected",4);
+    tmpColor = ImColor(style.color_node_frame_active);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_frame_active",4);
     tmpColor = ImColor(style.color_node_hovered);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_hovered",4);
     tmpColor = ImColor(style.color_node_frame_hovered);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_frame_hovered",4);
     s.save(ImGui::FT_FLOAT,&style.node_rounding,"node_rounding");
@@ -90,6 +99,9 @@ bool NodeGraphEditor::Style::Save(const NodeGraphEditor::Style &style,ImGuiHelpe
     tmpColor = ImColor(style.color_node_input_slots);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_input_slots",4);
     tmpColor = ImColor(style.color_node_output_slots);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_output_slots",4);
     s.save(ImGui::FT_FLOAT,&style.node_slots_radius,"node_slots_radius");
+
+    tmpColor = ImColor(style.color_mouse_rectangular_selection);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_mouse_rectangular_selection",4);
+    tmpColor = ImColor(style.color_mouse_rectangular_selection_frame);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_mouse_rectangular_selection_frame",4);
 
     tmpColor = ImColor(style.color_link);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_link",4);
     s.save(ImGui::FT_FLOAT,&style.link_line_width,"link_line_width");
@@ -102,6 +114,7 @@ bool NodeGraphEditor::Style::Save(const NodeGraphEditor::Style &style,ImGuiHelpe
 
     s.save(ImGui::FT_COLOR,&style.color_node_input_slots_names.x,"color_node_input_slots_names",4);
     s.save(ImGui::FT_COLOR,&style.color_node_output_slots_names.x,"color_node_output_slots_names",4);
+
 
     return true;
 }
@@ -131,11 +144,15 @@ static bool StyleParser(ImGuiHelper::FieldType ft,int /*numArrayElements*/,void*
         else if (strcmp(name,"color_node")==0)                              s.color_node = ImColor(tmp);
         else if (strcmp(name,"color_node_frame")==0)                        s.color_node_frame = ImColor(tmp);
         else if (strcmp(name,"color_node_selected")==0)                     s.color_node_selected = ImColor(tmp);
+        else if (strcmp(name,"color_node_active")==0)                       s.color_node_active = ImColor(tmp);
         else if (strcmp(name,"color_node_frame_selected")==0)               s.color_node_frame_selected = ImColor(tmp);
+        else if (strcmp(name,"color_node_frame_active")==0)                 s.color_node_frame_active = ImColor(tmp);
         else if (strcmp(name,"color_node_hovered")==0)                      s.color_node_hovered = ImColor(tmp);
         else if (strcmp(name,"color_node_frame_hovered")==0)                s.color_node_frame_hovered = ImColor(tmp);
         else if (strcmp(name,"color_node_input_slots")==0)                  s.color_node_input_slots = ImColor(tmp);
         else if (strcmp(name,"color_node_output_slots")==0)                 s.color_node_output_slots = ImColor(tmp);
+        else if (strcmp(name,"color_mouse_rectangular_selection")==0)       s.color_mouse_rectangular_selection = ImColor(tmp);
+        else if (strcmp(name,"color_mouse_rectangular_selection_frame")==0) s.color_mouse_rectangular_selection_frame = ImColor(tmp);
         else if (strcmp(name,"color_link")==0)                              s.color_link = ImColor(tmp);
         else if (strcmp(name,"color_node_title")==0)                        s.color_node_title = ImColor(tmp);
 	else if (strcmp(name,"color_node_title_background")==0)		    s.color_node_title_background = ImColor(tmp);
@@ -157,6 +174,56 @@ bool NodeGraphEditor::Style::Load(NodeGraphEditor::Style &style,  ImGuiHelper::D
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #endif //NO_IMGUIHELPER_SERIALIZATION
 
+inline static float ImVec2Dot(const ImVec2& S1,const ImVec2& S2) {return (S1.x*S2.x+S1.y*S2.y);}
+
+// Based on: http://stackoverflow.com/questions/849211/shortest-distance-between-a-point-and-a-line-segment
+inline static float GetSquaredDistancePointSegment(const ImVec2& P,const ImVec2& S1,const ImVec2& S2) {
+  const float l2 = (S1.x-S2.x)*(S1.x-S2.x)+(S1.y-S2.y)*(S1.y-S2.y);
+  if (l2 < 0.0000001f) return (P.x-S2.x)*(P.x-S2.x)+(P.y-S2.y)*(P.y-S2.y);   // S1 == S2 case
+  ImVec2 T(S2 - S1);
+  const float tf = ImVec2Dot(P - S1, T)/l2;
+  const float minTf = 1.f < tf ? 1.f : tf;
+  const float t = 0.f > minTf ? 0.f : minTf;
+  T = S1 + T*t;  // T = Projection on the segment
+  return (P.x-T.x)*(P.x-T.x)+(P.y-T.y)*(P.y-T.y);
+}
+
+inline static float GetSquaredDistanceToBezierCurve(const ImVec2& point,const ImVec2& p1,const ImVec2& p2,const ImVec2& p3,const ImVec2& p4)   {
+    static const int num_segments = 2;   // Num Sampling Points In between p1 and p4
+    static bool firstRun = true;
+    static ImVec4 weights[num_segments];
+
+    if (firstRun)    {
+        // static init here
+        IM_ASSERT(num_segments>0);    // This are needed for computing distances: cannot be zero
+        firstRun = false;
+        for (int i = 1; i <= num_segments; i++) {
+            float t = (float)i/(float)(num_segments+1);
+            float u = 1.0f - t;
+            weights[i-1].x=u*u*u;
+            weights[i-1].y=3*u*u*t;
+            weights[i-1].z=3*u*t*t;
+            weights[i-1].w=t*t*t;
+        }
+    }
+
+    float minSquaredDistance=FLT_MAX,tmp;   // FLT_MAX is probably in <limits.h>
+    ImVec2 L = p1,tp;
+    for (int i = 0; i < num_segments; i++)  {
+        const ImVec4& W=weights[i];
+        tp.x = W.x*p1.x + W.y*p2.x + W.z*p3.x + W.w*p4.x;
+        tp.y = W.x*p1.y + W.y*p2.y + W.z*p3.y + W.w*p4.y;
+
+	tmp = GetSquaredDistancePointSegment(point,L,tp);
+	if (minSquaredDistance>tmp) minSquaredDistance=tmp;
+	L=tp;
+    }
+    tp = p4;
+    tmp = GetSquaredDistancePointSegment(point,L,tp);
+    if (minSquaredDistance>tmp) minSquaredDistance=tmp;
+
+    return minSquaredDistance;
+}
 
 void NodeGraphEditor::render()
 {
@@ -168,7 +235,7 @@ void NodeGraphEditor::render()
     // Draw a list of nodes on the left side
     bool open_context_menu = false,open_delete_only_context_menu = false;
     Node* node_hovered_in_list = NULL;
-    Node* node_hovered_in_scene = NULL;
+    Node* node_hovered_in_scene = NULL;    
 
     if (show_left_pane) {
         // Helper stuff for setting up the left splitter
@@ -184,26 +251,36 @@ void NodeGraphEditor::render()
 
         ImGui::Spacing();
         ImGui::Separator();
-        if (ImGui::CollapsingHeader("Node List##node_list_1",NULL,false))   {
-            ImGui::Separator();
-            for (int node_idx = 0; node_idx < nodes.Size; node_idx++)   {
-                Node* node = nodes[node_idx];
-                ImGui::PushID((const void*) node);
-                if (ImGui::Selectable(node->Name, node == selectedNode)) selectedNode = node;
-                if (ImGui::IsItemHovered()) {
-                    node_hovered_in_list = node;
-                    open_context_menu |= ImGui::IsMouseClicked(1);
-                }
-                ImGui::PopID();
+    if (ImGui::CollapsingHeader("Node List##node_list_1",NULL,false))   {
+        ImGui::Separator();
+        for (int node_idx = 0; node_idx < nodes.Size; node_idx++)   {
+        Node* node = nodes[node_idx];
+        ImGui::PushID((const void*) node);
+        if (ImGui::Selectable(node->Name, node->isSelected)) {
+            if (!node->isSelected || !io.KeyCtrl)  {
+            if (!io.KeyCtrl) unselectAllNodes();
+            selectNode(node);activeNode = node;
+            }
+            else unselectNode(node);
+        }
+        //if (ImGui::Selectable(node->Name, node == activeNode)) activeNode = node;
+        if (ImGui::IsItemHovered()) {
+            node_hovered_in_list = node;
+            if (ImGui::IsMouseClicked(1))   {
+            menuNode=node;
+            open_context_menu=true;
             }
         }
+        ImGui::PopID();
+        }
+    }
         ImGui::Separator();
-        if (selectedNode)   {
-            const char* nodeInfo = selectedNode->getInfo();
+	if (activeNode)   {
+	    const char* nodeInfo = activeNode->getInfo();
             if (nodeInfo && nodeInfo[0]!='\0')  {
             ImGui::Spacing();
             ImGui::Separator();
-            if (ImGui::CollapsingHeader("Selected Node##selectedNode",NULL,false))   {
+	    if (ImGui::CollapsingHeader("Active Node##activeNode",NULL,false))   {
                 ImGui::Separator();
                 ImGui::TextWrapped("%s",nodeInfo);
             }
@@ -328,12 +405,10 @@ void NodeGraphEditor::render()
 
         ImGui::Checkbox("Show connection names.", &show_connection_names);
     //if (io.FontAllowUserScaling)
-    {ImGui::SameLine(0,15);ImGui::Text("Use CTRL+MW to zoom.");}
+    {ImGui::SameLine(0,15);ImGui::Text("Use CTRL+MW to zoom. Scroll with MMB.");}
         ImGui::SameLine(ImGui::GetWindowWidth()-120);
         ImGui::Checkbox("Show grid", &show_grid);
-	static const char* txts[2] = {"Hold MMB to scroll. Double-click LMB on slots to remove their links.",
-				      "Hold MMB to scroll. Double-click LMB on slots to remove their links. Use CTRL+MW to zoom."};
-	ImGui::TextWrapped("%s",io.FontAllowUserScaling ? txts[1] : txts[0]);
+    ImGui::Text("%s","Double-click LMB on slots to remove their links (or SHIFT+LMB on links).");
         ImGui::SameLine(ImGui::GetWindowWidth()-120);
         // Color Mode
         static const char* btnlbls[2]={"HSV##myColorBtnType","RGB##myColorBtnType"};
@@ -437,6 +512,10 @@ void NodeGraphEditor::render()
     const ImVec2 link_cp(style.link_control_point_distance * currentFontWindowScale,0); // Bezier control point of the links
     const float link_line_width = style.link_line_width * currentFontWindowScale;
 
+    static ImRect mouseRectangularSelectionForNodes;
+    static bool mouseRectangularSelectionForNodesStarted = false;
+
+
     // Clipping Data (used to cull nodes and/or links)
     const bool enableNodeCulling = true;const bool enableLinkCulling = true;    // Tweakables
     int numberOfCulledNodes = 0, numberOfCulledLinks = 0;
@@ -454,42 +533,69 @@ void NodeGraphEditor::render()
     }
     // End Clipping Data
 
+    const bool isMouseHoveringWindow = ImGui::IsMouseHoveringWindow();
+
+    const bool isLMBClicked = ImGui::IsMouseClicked(0);
+    const bool isLMBDoubleClicked = ImGui::IsMouseDoubleClicked(0);
+    const bool isMouseDraggingForMovingNodes = ImGui::IsMouseDragging(0, 8.0f);	// This is not enough for a node to be actually moved
+
     // Display links
     draw_list->ChannelsSetCurrent(0); // Background
-    if (!nodesHaveZeroSize) // Otherwise artifacts while scaling
-    {
-	for (int link_idx = 0; link_idx < links.Size; link_idx++)
-	{
-	    NodeLink& link = links[link_idx];
-	    Node* node_inp = link.InputNode;
-	    Node* node_out = link.OutputNode;
-	    ImVec2 p1 = offset + node_inp->GetOutputSlotPos(link.InputSlot,currentFontWindowScale);
-	    ImVec2 p2 = offset + node_out->GetInputSlotPos(link.OutputSlot,currentFontWindowScale);
-	    if (enableLinkCulling) {
-		ImRect cullLink;cullLink.Add(p1);cullLink.Add(p2);
-		if (!linkClipRect.Overlaps(cullLink)) {
-		    ++numberOfCulledLinks;
-		    continue;
-		}
-	    }
-	    draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2,style.color_link, link_line_width, style.link_num_segments);
-	}
-    }
-    // Display dragging link
-    const bool cantDragAnything = isMouseDraggingForScrolling;
+    const bool cantDragAnything = isMouseDraggingForScrolling || mouseRectangularSelectionForNodesStarted;
     bool isLMBDraggingForMakingLinks = !cantDragAnything && ImGui::IsMouseDragging(0, 0.0f);
     bool isDragNodeValid = dragNode.isValid();
+    const bool mustCheckForNearestLink = isMouseHoveringWindow && !isLMBDraggingForMakingLinks && io.KeyShift;
+
+    if (!nodesHaveZeroSize) // Otherwise artifacts while scaling
+    {
+        ImRect cullLink;ImVec2 p1,p2,cp1,cp2;
+        int nearestLinkId=-1;
+        const float hoveredLinkDistSqrThres = 100.0f * currentFontWindowScale;
+        for (int link_idx = 0; link_idx < links.Size; link_idx++)
+        {
+            NodeLink& link = links[link_idx];
+            Node* node_inp = link.InputNode;
+            Node* node_out = link.OutputNode;
+            p1 = offset + node_inp->GetOutputSlotPos(link.InputSlot,currentFontWindowScale);
+            p2 = offset + node_out->GetInputSlotPos(link.OutputSlot,currentFontWindowScale);
+            if (enableLinkCulling) {
+                cullLink.Min=cullLink.Max=p1;cullLink.Add(p2);
+                if (!linkClipRect.Overlaps(cullLink)) {
+                    ++numberOfCulledLinks;
+                    continue;
+                }
+            }
+            cp1 = p1+link_cp;
+            cp2 = p2-link_cp;
+
+            // highlight nearest link
+            if (mustCheckForNearestLink && nearestLinkId==-1 && (enableLinkCulling ? cullLink.Contains(io.MousePos) : true)) {
+                const float distanceSquared = GetSquaredDistanceToBezierCurve(io.MousePos,p1,cp1, cp2,p2);
+                if (distanceSquared<hoveredLinkDistSqrThres) nearestLinkId=link_idx;
+                // dbg line:
+                if (io.MouseDelta.x!=0.f || io.MouseDelta.y!=0.f)   fprintf(stderr,"%d) MP{%1.0f,%1.0f} p1{%1.0f,%1.0f} p2{%1.0f,%1.0f} distanceSquared=%1.4f hoveredLinkDistSqrThres=%1.4f\n",link_idx,io.MousePos.x,io.MousePos.y,p1.x,p1.y,p2.x,p2.y,distanceSquared,hoveredLinkDistSqrThres);
+            }
+
+            draw_list->AddBezierCurve(p1,cp1,cp2,p2,style.color_link,(nearestLinkId!=link_idx) ? link_line_width : (link_line_width*2.0f), style.link_num_segments);
+        }
+        if (nearestLinkId!=-1 && io.MouseReleased[0]) {
+            //fprintf(stderr,"Removing link at: %d\n",nearestLinkId);
+            removeLinkAt(nearestLinkId);
+            nearestLinkId=-1;
+        }
+    }
+    // Display dragging link
     if (isLMBDraggingForMakingLinks && isDragNodeValid)   {
-	if (dragNode.inputSlotIdx!=-1)  {   // Dragging from the output slot of dragNode
-	    ImVec2 p1 = offset + dragNode.node->GetOutputSlotPos(dragNode.inputSlotIdx,currentFontWindowScale);
-	    const ImVec2& p2 = io.MousePos;//offset + node_out->GetInputSlotPos(link.OutputSlot);
-	    draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
-	}
-	else if (dragNode.outputSlotIdx!=-1)  {  // Dragging from the input slot of dragNode
-	    const ImVec2& p1 = io.MousePos;//
-	    ImVec2 p2 = offset + dragNode.node->GetInputSlotPos(dragNode.outputSlotIdx,currentFontWindowScale);
-	    draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
-	}
+        if (dragNode.inputSlotIdx!=-1)  {   // Dragging from the output slot of dragNode
+            ImVec2 p1 = offset + dragNode.node->GetOutputSlotPos(dragNode.inputSlotIdx,currentFontWindowScale);
+            const ImVec2& p2 = io.MousePos;//offset + node_out->GetInputSlotPos(link.OutputSlot);
+            draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
+        }
+        else if (dragNode.outputSlotIdx!=-1)  {  // Dragging from the input slot of dragNode
+            const ImVec2& p1 = io.MousePos;//
+            ImVec2 p2 = offset + dragNode.node->GetInputSlotPos(dragNode.outputSlotIdx,currentFontWindowScale);
+            draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
+        }
     }
 
 
@@ -499,15 +605,16 @@ void NodeGraphEditor::render()
     ImGui::ColorEditMode(colorEditMode);
 
     const float nodeTitleBarBgHeight = ImGui::GetTextLineHeightWithSpacing() + NODE_WINDOW_PADDING.y;
-    const bool isLMBDoubleClicked = ImGui::IsMouseDoubleClicked(0);
     Node* nodeThatIsBeingEditing = NULL;
     const float textSizeButtonPaste = ImGui::CalcTextSize(NodeGraphEditor::CloseCopyPasteChars[0]).x;
     const float textSizeButtonCopy = ImGui::CalcTextSize(NodeGraphEditor::CloseCopyPasteChars[1]).x;
     const float textSizeButtonX = ImGui::CalcTextSize(NodeGraphEditor::CloseCopyPasteChars[2]).x;
+    int activeNodeIndex = -1;
     for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
     {
         Node* node = nodes[node_idx];
         const ImVec2 nodePos = node->GetPos(currentFontWindowScale);
+        if (activeNode==node) activeNodeIndex = node_idx;
 
         // culling attempt
         if (enableNodeCulling && !nodesHaveZeroSize) {
@@ -571,50 +678,53 @@ void NodeGraphEditor::render()
         }
         ImGui::PopStyleColor();
 
-	// Nore: if node->isOpen, we'll draw the buttons later, because we need node->Size that is not known
-	// BUTTONS ========================================================
-	const bool canPaste = sourceCopyNode && sourceCopyNode->typeID==node->typeID;
-	const bool canCopy = node->canBeCopied();
-	static const ImVec4 transparentColor(1,1,1,0);
-	const ImVec2 nodeTitleBarButtonsStartCursor = node->isOpen ? ImGui::GetCursorPos() : ImVec2(0,0);
-	if (!node->isOpen && node->Size.x!=0 && !node->isInEditingMode)    {
-	    ImGui::SameLine();
-	    //== Actual code to draw buttons (same code is copied below) =====================
-	    ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);
-	    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(0.75,0.75,0.75,0.5));
-	    ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.75,0.75,0.75,0.77));
+    // Nore: if node->isOpen, we'll draw the buttons later, because we need node->Size that is not known
+    // BUTTONS ========================================================
+    const bool canPaste = sourceCopyNode && sourceCopyNode->typeID==node->typeID;
+    const bool canCopy = node->canBeCopied();
+    static const ImVec4 transparentColor(1,1,1,0);
+    const ImVec2 nodeTitleBarButtonsStartCursor = node->isOpen ? ImGui::GetCursorPos() : ImVec2(0,0);
+    if (!node->isOpen && node->Size.x!=0 && !node->isInEditingMode)    {
+        ImGui::SameLine();
+        //== Actual code to draw buttons (same code is copied below) =====================
+        ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(0.75,0.75,0.75,0.5));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.75,0.75,0.75,0.77));
         ImGui::PushStyleColor(ImGuiCol_Text,titleTextColor);
-	    ImGui::PushID("NodeButtons");
-	    if (show_node_copy_paste_buttons)   {
-		static const ImVec2 vec2zero(0,0);
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,vec2zero);
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing,vec2zero);
-		if (canPaste) {
+        ImGui::PushID("NodeButtons");
+        if (show_node_copy_paste_buttons)   {
+        static const ImVec2 vec2zero(0,0);
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,vec2zero);
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing,vec2zero);
+        if (canPaste) {
             if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[2])) {
-			node_to_paste_from_copy_source = node_hovered_in_scene = selectedNode = node;
-		    }
-		    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
-		    ImGui::SameLine(0);
-		}
-		if (canCopy)	{
+            node_to_paste_from_copy_source = node_hovered_in_scene = node;
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
+            ImGui::SameLine(0);
+        }
+        if (canCopy)	{
             if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[1])) {
-			node_hovered_in_scene = selectedNode = node;
-			copyNode(node);
-		    }
-		    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
-		    ImGui::SameLine(0);
-		}
-	    }
+            node_hovered_in_scene = node;
+            copyNode(node);
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
+            ImGui::SameLine(0);
+        }
+        }
         if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[0])) {
-		node_hovered_in_scene = selectedNode = node;
-		if (!hasLinks(node))  mustDeleteANodeSoon=true;
-		else open_delete_only_context_menu = true;  // will ask to delete node later
-	    }
-	    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Delete");
-	    if (show_node_copy_paste_buttons) ImGui::PopStyleVar(2);
-	    ImGui::PopID();
-	    ImGui::PopStyleColor(4);
-	    //== End actual code to draw buttons (same code is copied below) ====================
+        node_hovered_in_scene = node;
+        if (!hasLinks(node))  {menuNode = node;mustDeleteANodeSoon=true;}
+        else {
+            menuNode = node;
+            open_delete_only_context_menu = true;  // will ask to delete node later
+        }
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Delete");
+        if (show_node_copy_paste_buttons) ImGui::PopStyleVar(2);
+        ImGui::PopID();
+        ImGui::PopStyleColor(4);
+        //== End actual code to draw buttons (same code is copied below) ====================
 	}
 	//=================================================================
 
@@ -647,59 +757,63 @@ void NodeGraphEditor::render()
         ImVec2 node_rect_max = node_rect_min + node->Size;
 
 	// Go backwards and display title bar buttons if node->isOpen
-	// BUTTONS ========================================================
-	if (node->Size.x!=0 && !node->isInEditingMode)    {
-	    const ImVec2 cursorPosToRestore = ImGui::GetCursorPos();
-	    ImGui::SetCursorPos(nodeTitleBarButtonsStartCursor);
-	    //--------------------------------------------
-	    ImGui::SameLine(-effectiveScrolling.x+nodePos.x+node->Size.x-textSizeButtonX-10
-				 -(show_node_copy_paste_buttons ?
-				       (
-					   (canCopy?(textSizeButtonCopy+2):0) +
-					   (canPaste?(textSizeButtonPaste+2):0)
-					   )
-				     : 0)
-				 ,0);
-	    //== Actual code to draw buttons =====================
-	    ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);
-	    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(0.75,0.75,0.75,0.5));
-	    ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.75,0.75,0.75,0.77));
+    // BUTTONS ========================================================
+    if (node->Size.x!=0 && !node->isInEditingMode)    {
+        const ImVec2 cursorPosToRestore = ImGui::GetCursorPos();
+        ImGui::SetCursorPos(nodeTitleBarButtonsStartCursor);
+        //--------------------------------------------
+        ImGui::SameLine(-effectiveScrolling.x+nodePos.x+node->Size.x-textSizeButtonX-10
+                -(show_node_copy_paste_buttons ?
+                  (
+                      (canCopy?(textSizeButtonCopy+2):0) +
+                      (canPaste?(textSizeButtonPaste+2):0)
+                      )
+                : 0)
+                ,0);
+        //== Actual code to draw buttons (same code is copied below) =====================
+        ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(0.75,0.75,0.75,0.5));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.75,0.75,0.75,0.77));
         ImGui::PushStyleColor(ImGuiCol_Text,titleTextColor);
-	    ImGui::PushID("NodeButtons");
-	    if (show_node_copy_paste_buttons)   {
-		static const ImVec2 vec2zero(0,0);
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,vec2zero);
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing,vec2zero);
-		if (canPaste) {
+        ImGui::PushID("NodeButtons");
+        if (show_node_copy_paste_buttons)   {
+        static const ImVec2 vec2zero(0,0);
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,vec2zero);
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing,vec2zero);
+        if (canPaste) {
             if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[2])) {
-			node_to_paste_from_copy_source = node_hovered_in_scene = selectedNode = node;
-		    }
-		    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
-		    ImGui::SameLine(0);
-		}
-		if (canCopy)	{
+            node_to_paste_from_copy_source = node_hovered_in_scene = node;
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
+            ImGui::SameLine(0);
+        }
+        if (canCopy)	{
             if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[1])) {
-			node_hovered_in_scene = selectedNode = node;
-			copyNode(node);
-		    }
-		    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
-		    ImGui::SameLine(0);
-		}
-	    }
+            node_hovered_in_scene = node;
+            copyNode(node);
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
+            ImGui::SameLine(0);
+        }
+        }
         if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[0])) {
-		node_hovered_in_scene = selectedNode = node;
-		if (!hasLinks(node))  mustDeleteANodeSoon=true;
-		else open_delete_only_context_menu = true;  // will ask to delete node later
-	    }
-	    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Delete");
-	    if (show_node_copy_paste_buttons) ImGui::PopStyleVar(2);
-	    ImGui::PopID();
-	    ImGui::PopStyleColor(4);
-	    //== End actual code to draw buttons ===================
+        node_hovered_in_scene = node;
+        if (!hasLinks(node))  {menuNode = node;mustDeleteANodeSoon=true;}
+        else {
+            menuNode = node;
+            open_delete_only_context_menu = true;  // will ask to delete node later
+        }
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Delete");
+        if (show_node_copy_paste_buttons) ImGui::PopStyleVar(2);
+        ImGui::PopID();
+        ImGui::PopStyleColor(4);
+        //== End actual code to draw buttons (same code is copied below) ====================
 	    //-----------------------------------------------------------
 	    ImGui::SetCursorPos(cursorPosToRestore);
 	}
 	//=================================================================
+
 
         // Display node box
         draw_list->ChannelsSetCurrent(0); // Background
@@ -707,29 +821,57 @@ void NodeGraphEditor::render()
         ImGui::InvisibleButton("node##nodeinvbtn", node->Size);
         if (ImGui::IsItemHovered()) {
             node_hovered_in_scene = node;
-            open_context_menu |= ImGui::IsMouseClicked(1);
+            if (ImGui::IsMouseClicked(1))   {
+        menuNode = node;
+        open_context_menu=true;
+            }
+        }        
+        bool node_moving_active = !isMouseDraggingForScrolling && !nodeInEditMode && ImGui::IsItemActive() && !mouseRectangularSelectionForNodesStarted;
+
+        // Handle selected and active states
+        if (isLMBClicked && (node_widgets_active || node_moving_active))  {
+            if (!node->isSelected) {
+                if (!io.KeyCtrl) unselectAllNodes();
+                node->isSelected = true;activeNode = node;activeNodeIndex=node_idx;
+            }
+            else if (io.KeyCtrl) {
+                //unselectNode(node); // We must unwrap it, so we can store th new 'activeNodeIndex' for later use
+                node->isSelected=false;
+                if (node==activeNode) {activeNode = NULL;activeNodeIndex=findANewActiveNode();}
+            }
+            else if (io.KeyShift /*|| io.MouseDelta.x*io.MouseDelta.x+io.MouseDelta.y*io.MouseDelta.y < 0.000000001f*/)    // Good idea to enable the correct behavior without pressing SHIFT, but the latter condition is almost always fullfilled...
+            {
+                unselectAllNodes();
+                node->isSelected = true;activeNode = node;activeNodeIndex=node_idx;
+            }
+            else {
+                activeNode = node;activeNodeIndex=node_idx;
+            }
         }
-        bool node_moving_active = !isMouseDraggingForScrolling && !nodeInEditMode && ImGui::IsItemActive();
-        if (node_widgets_active || node_moving_active)  selectedNode = node;
-        if (node_moving_active && !isDragNodeValid && ImGui::IsMouseDragging(0, 8.0f)) {
-            node->Pos = node->Pos + io.MouseDelta/currentFontWindowScale;isSomeNodeMoving=true;
+
+        // Perform selected nodes move
+        if (node_moving_active && node->isSelected && !isDragNodeValid && isMouseDraggingForMovingNodes) {
+            const ImVec2 mouseDeltaPos = io.MouseDelta/currentFontWindowScale;
+            for (int j=0,jsz=nodes.size();j<jsz;j++) {
+                Node* jn = nodes[j];
+                if (jn->isSelected) jn->Pos = jn->Pos + mouseDeltaPos;
+            }
+            isSomeNodeMoving=true;
         }
 
         const ImU32& node_bg_color = (node_hovered_in_list == node || node_hovered_in_scene == node) ? style.color_node_hovered :
-                                                                                                       (selectedNode == node ? style.color_node_selected : style.color_node);
-        //const ImU32& node_frame_color = (node_hovered_in_list == node || node_hovered_in_scene == node) ? style.color_node_frame_hovered :
-        //                                                                                               (selectedNode == node ? style.color_node_frame_selected : style.color_node_frame);
-        const ImU32& node_frame_color = selectedNode == node ? style.color_node_frame_selected : ((node_hovered_in_list == node || node_hovered_in_scene == node) ? style.color_node_frame_hovered :
-                                                                                                                                                                    style.color_node_frame);
-        const float lineThickness = ((selectedNode == node) ? 3.f : 1.f)*currentFontWindowScale;
+												       (activeNode == node ? style.color_node_active :
+												       (node->isSelected ? style.color_node_selected :
+												       style.color_node));
 
         draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, style.node_rounding); // Bg
 
         // Node Title Bg Color
         const ImU32 nodeTitleBgColor = node->overrideTitleBgColor ? node->overrideTitleBgColor : style.color_node_title_background;//0xFF880000;
         if (nodeTitleBgColor>>24!=0) {
-            const float fillGradientFactor = node->overrideTitleBgColorGradient>=0.f ? node->overrideTitleBgColorGradient : style.color_node_title_background_gradient;//0.15f;
 #           if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
+            float fillGradientFactor = node->overrideTitleBgColorGradient>=0.f ? node->overrideTitleBgColorGradient : style.color_node_title_background_gradient;//0.15f;
+            if (node->isSelected) fillGradientFactor = -fillGradientFactor; // or if (node==activeNode)
             if (fillGradientFactor!=0.f)    {
                 if (node->isOpen) ImGui::ImDrawListAddRectWithVerticalGradient(draw_list,node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor,fillGradientFactor,0x00000000,style.node_rounding,1|2);
                 else ImGui::ImDrawListAddRectWithVerticalGradient(draw_list,node_rect_min, node_rect_max, nodeTitleBgColor,fillGradientFactor,0x00000000, style.node_rounding);
@@ -743,13 +885,23 @@ void NodeGraphEditor::render()
             else draw_list->AddRectFilled(node_rect_min, node_rect_max, nodeTitleBgColor, style.node_rounding);
 #           endif //(defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
         }
+
+
+        // Display Frame (this can be moved to the and of the foreground draw channel if we like)---------------------------
+    const ImU32& node_frame_color = (activeNode == node) ? style.color_node_frame_active :
+    (node->isSelected ? style.color_node_frame_selected :
+    ((node_hovered_in_list == node || node_hovered_in_scene == node) ? style.color_node_frame_hovered :
+    style.color_node_frame));
+        const float lineThickness = ((activeNode == node) ? 3.0f : (node->isSelected ? 2.0f : 1.f))*currentFontWindowScale;
+        draw_list->AddRect(node_rect_min, node_rect_max, node_frame_color, style.node_rounding,0x0F,lineThickness);    // Frame
+
+        // Line below node name
         if (node->isOpen) {
             ImVec2 tmp1(node_rect_min.x,node_rect_min.y+nodeTitleBarBgHeight+1);
             ImVec2 tmp2(node_rect_max.x,tmp1.y);
             draw_list->AddLine(tmp1,tmp2,node_frame_color,lineThickness);
         }
-
-        draw_list->AddRect(node_rect_min, node_rect_max, node_frame_color, style.node_rounding,0x0F,lineThickness);    // Frame
+        //-----------------------------------------------------------------------------------------------------------------
 
 
         // Display connectors
@@ -915,8 +1067,10 @@ void NodeGraphEditor::render()
             dragNode.node = NULL; // clear dragNode
             //printf("Quit dragging.\n");fflush(stdout);
         }
-
         ImGui::SetCursorScreenPos(oldCursorScreenPos);
+
+
+
         ImGui::PopID();
         if (node->baseWidthOverride>0) ImGui::PopItemWidth();
     }
@@ -943,38 +1097,95 @@ void NodeGraphEditor::render()
 #   undef DEBUG_LINK_CULLING
 #   endif //DEBUG_LINK_CULLING
 
+    // Opt: move activeNode at the end of the nods list [This should improve node overlapping VERY VERY slightly]
+    if (activeNode && nodes.size()>0 && activeNodeIndex!=nodes.size()-1) {
+        IM_ASSERT(activeNodeIndex>=0 && activeNodeIndex<nodes.size());
+        IM_ASSERT(nodes[activeNodeIndex]==activeNode);
+        Node* n=nodes[nodes.size()-1];
+        nodes[nodes.size()-1]=activeNode;
+        nodes[activeNodeIndex]=n;
+        activeNodeIndex=nodes.size()-1;
+    }
+
+
     // Open context menu
-    if (!open_context_menu && selectedNode && (selectedNode==node_hovered_in_list || selectedNode==node_hovered_in_scene) && ((ImGui::IsKeyReleased(io.KeyMap[ImGuiKey_Delete]) && !ImGui::GetIO().WantTextInput) || mustDeleteANodeSoon)) {
+    if (!open_context_menu && (node_hovered_in_scene || node_hovered_in_list) && ((ImGui::IsKeyReleased(io.KeyMap[ImGuiKey_Delete]) && !ImGui::GetIO().WantTextInput) || mustDeleteANodeSoon)) {
         // Delete selected node directly:
-        if (selectedNode==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
-        if (selectedNode==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
-        if (selectedNode==nodeThatIsBeingEditing) nodeThatIsBeingEditing = NULL;
-        deleteNode(selectedNode);
-        selectedNode = node_hovered_in_list = node_hovered_in_scene = NULL;
+    menuNode = node_hovered_in_scene ? node_hovered_in_scene : node_hovered_in_list ? node_hovered_in_list : NULL;
+    if (menuNode==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
+    if (menuNode==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
+    if (menuNode==nodeThatIsBeingEditing) nodeThatIsBeingEditing = NULL;
+    deleteNode(menuNode);menuNode = NULL;
+    menuNode = node_hovered_in_list = node_hovered_in_scene = NULL;
         open_delete_only_context_menu = false;	// just in case...
     }
     else if (/*!isAContextMenuOpen &&*/ !ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() && getNumAvailableNodeTypes()>0 && nodeFactoryFunctionPtr)   {
         if (ImGui::IsMouseClicked(1))   {   // Open context menu for adding nodes
-            selectedNode = node_hovered_in_list = node_hovered_in_scene = NULL;
+        menuNode = node_hovered_in_scene ? node_hovered_in_scene : node_hovered_in_list ? node_hovered_in_list : NULL;
+        //fprintf(stderr,"menuNode.name=%s\n",menuNode?menuNode->getName():"NULL");
+        node_hovered_in_list = node_hovered_in_scene = NULL;
             open_context_menu = true;
         }
     }
 
     // Open context menu
     if (open_context_menu || open_delete_only_context_menu)  {
-        if (node_hovered_in_list) selectedNode = node_hovered_in_list;
-        if (node_hovered_in_scene) selectedNode = node_hovered_in_scene;
+        //if (node_hovered_in_list) activeNode = node_hovered_in_list;
+        //if (node_hovered_in_scene) activeNode = node_hovered_in_scene;
         ImGuiContext& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
-        ImGui::PushID(selectedNode);
+    ImGui::PushID(menuNode);
         if (open_delete_only_context_menu) ImGui::OpenPopup("delete_only_context_menu");
         else if (open_context_menu) ImGui::OpenPopup("context_menu");
         ImGui::PopID();
     }
+    else if (mouseRectangularSelectionForNodesStarted || (!node_hovered_in_scene && !node_hovered_in_list && !isMouseDraggingForScrolling && !dragNode.isValid() && !isSomeNodeMoving && !io.KeyShift && !ImGui::IsAnyItemActive() && !ImGui::IsAnyItemHovered())) {
+        // Test mouse rect selection for nodes
+        static ImRect absSelection;
+        if (isMouseDraggingForMovingNodes) {
+            if (!mouseRectangularSelectionForNodesStarted) {
+                mouseRectangularSelectionForNodesStarted=true;
+                mouseRectangularSelectionForNodes.Min=mouseRectangularSelectionForNodes.Max=io.MousePos;
+            }
+            mouseRectangularSelectionForNodes.Max=io.MousePos;
+
+            absSelection = ImRect(mouseRectangularSelectionForNodes.Min,mouseRectangularSelectionForNodes.Max);
+            if (absSelection.Min.x>absSelection.Max.x)  {float tmp = absSelection.Min.x;absSelection.Min.x=absSelection.Max.x;absSelection.Max.x=tmp;}
+            if (absSelection.Min.y>absSelection.Max.y)  {float tmp = absSelection.Min.y;absSelection.Min.y=absSelection.Max.y;absSelection.Max.y=tmp;}
+
+            draw_list->AddRectFilled(absSelection.Min, absSelection.Max, style.color_mouse_rectangular_selection, 0.f);
+            draw_list->AddRect(absSelection.Min, absSelection.Max, style.color_mouse_rectangular_selection_frame, 0.f,0x0F,4.0f*currentFontWindowScale);    // Frame
+        }
+        else if (mouseRectangularSelectionForNodesStarted) {
+            // Note: merging this if branch into the main node loop would save a second loop for selecting nodes [Possible opt]
+            mouseRectangularSelectionForNodesStarted=false;
+            if (!io.KeyCtrl) unselectAllNodes();
+            //select all nodes inside selection-------------------
+            absSelection.Min-=offset;
+            absSelection.Max-=offset;
+            const float windowClipHalfExtraWidth = NODE_SLOT_RADIUS + (show_connection_names ? maxConnectorNameWidth : 0.f);  // Otherwise node names are culled too early
+            absSelection.Min.x-=     windowClipHalfExtraWidth;
+            absSelection.Max.x+=     windowClipHalfExtraWidth;
+            ImVec2 nodePos;ImRect cullRect;
+            for (int i=0,isz=nodes.size();i<isz;i++)    {
+                Node* node = nodes[i];
+                nodePos = node->GetPos(currentFontWindowScale);
+                cullRect=ImRect(nodePos,nodePos+node->Size);
+                if (absSelection.Overlaps(cullRect)) {
+                    node->isSelected=true;
+                    if (!activeNode) activeNode = node;  //Optional faster alternative to: findANewActiveNode(); below
+                }
+            }
+            //--------------------------------------------------------
+            //if (!activeNode) findANewActiveNode();
+        }
+
+    }
+
     // Draw context menu
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8,8));
-    ImGui::PushID(selectedNode);
+    ImGui::PushID(menuNode);
     if (ImGui::BeginPopup("delete_only_context_menu"))  {
-        Node* node = selectedNode;
+    Node* node = menuNode;
         if (node)   {
             ImGui::Text("Node '%s'", node->Name);
             ImGui::Separator();
@@ -983,31 +1194,31 @@ void NodeGraphEditor::render()
                 if (node==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
                 if (node==nodeThatIsBeingEditing) nodeThatIsBeingEditing = NULL;
                 //printf("Current nodes.size()=%d; Deleting node %s.\n",nodes.size(),node->Name);fflush(stdout);
-                deleteNode(node);
+        deleteNode(node);menuNode = NULL;
             }
         }
         ImGui::EndPopup();
         //isAContextMenuOpen = true;
     }
     else if (ImGui::BeginPopup("context_menu"))  {
-        Node* node = selectedNode;
+    Node* node = menuNode;
         ImVec2 scene_pos = (ImGui::GetMousePosOnOpeningCurrentPopup() - offset)/currentFontWindowScale;
         if (node)   {
             ImGui::Text("Node '%s'", node->Name);
             ImGui::Separator();
             //if (ImGui::MenuItem("Rename..", NULL, false, false)) {}
-	    if (node->canBeCopied() && ImGui::MenuItem("Copy", NULL, false, true)) copyNode(node);
+            if (node->canBeCopied() && ImGui::MenuItem("Copy", NULL, false, true)) copyNode(node);
             if (sourceCopyNode && sourceCopyNode->typeID==node->typeID) {
                 if (ImGui::MenuItem("Paste", NULL, false, true)) {
                     node_to_paste_from_copy_source = node;
                 }
             }
             if (ImGui::MenuItem("Delete", NULL, false, true)) {
-                if (node==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
+        if (node==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
                 if (node==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
                 if (node==nodeThatIsBeingEditing) nodeThatIsBeingEditing = NULL;
                 //printf("Current nodes.size()=%d; Deleting node %s.\n",nodes.size(),node->Name);fflush(stdout);
-                deleteNode(node);
+        deleteNode(node);menuNode=NULL;
             }
             //if (ImGui::MenuItem("Copy", NULL, false, false)) {}
         }
@@ -1018,11 +1229,11 @@ void NodeGraphEditor::render()
             ImGui::Text("%s","Add Node Menu");
             ImGui::Separator();
             if (nodeFactoryFunctionPtr) {
-		if (sourceCopyNode && sourceCopyNode->canBeCopied()) {
+                if (sourceCopyNode && sourceCopyNode->canBeCopied()) {
                     if (ImGui::MenuItem("Paste##cloneCopySource")) {
                         Node* clonedNode = addNode(nodeFactoryFunctionPtr(sourceCopyNode->typeID,scene_pos));
                         clonedNode->fields.copyPDataValuesFrom(sourceCopyNode->fields);
-			clonedNode->onCopied();
+                        clonedNode->onCopied();
                     }
                     ImGui::Separator();
                 }
@@ -1070,6 +1281,7 @@ void NodeGraphEditor::render()
 
 
 }
+
 
 void NodeGraphEditor::registerNodeTypes(const char *nodeTypeNames[], int numNodeTypeNames, NodeFactoryDelegate _nodeFactoryFunctionPtr, const int *pOptionalNodeTypesToUse, int numNodeTypesToUse)
 {
@@ -1238,6 +1450,37 @@ bool NodeGraphEditor::isNodeReachableFrom(const Node *node1, bool goBackward,con
     return false;
 }
 
+int NodeGraphEditor::getSelectedNodes(ImVector<Node *> &rv) {
+    rv.resize(0);
+    for (int i=0,isz=nodes.size();i<isz;i++)	{
+	Node* n = nodes[i];
+	if (n->isSelected) rv.push_back(n);
+    }
+    return rv.size();
+}
+
+int NodeGraphEditor::getSelectedNodes(ImVector<const Node *> &rv) const {
+    rv.resize(0);
+    for (int i=0,isz=nodes.size();i<isz;i++)	{
+        const Node* n = nodes[i];
+        if (n->isSelected) rv.push_back(n);
+    }
+    return rv.size();
+}
+
+void NodeGraphEditor::selectNode(const Node *node, const bool flag) {
+    if (!node) return;
+    node->isSelected=flag;
+    if (flag) {if (!activeNode) activeNode=const_cast<Node*>(node);return;}
+    if (node==activeNode) {activeNode = NULL;findANewActiveNode();}
+}
+
+void NodeGraphEditor::selectAllNodes(bool flag) {
+    const int isz = nodes.size();
+    for (int i=0;i<isz;i++) nodes[i]->isSelected=flag;
+    if (flag) {if (!activeNode && isz>0)   activeNode=nodes[isz-1];}
+    else activeNode = NULL;
+}
 
 bool NodeGraphEditor::overrideNodeName(Node* n,const char *newName)    {
     if (!n || !newName) return false;
@@ -1805,7 +2048,7 @@ bool NodeGraphEditor::save(ImGuiHelper::Serializer& s)    {
     //--------------------------------------------
     s.save(&scrolling.x,"scrolling",2);
     s.save(&numNodes,"num_nodes");
-    itmp = selectedNode ? getNodeIndex(selectedNode) : -1;s.save(&itmp,"selected_node_index");
+    itmp = activeNode ? getNodeIndex(activeNode) : -1;s.save(&itmp,"selected_node_index");
     s.save(&numLinks,"num_links");
     for (int i=0;i<numNodes;i++)    {
 	const Node& n = (*nodes[i]);
@@ -1814,6 +2057,7 @@ bool NodeGraphEditor::save(ImGuiHelper::Serializer& s)    {
 	s.save(&n.userID,"userID");
 	s.save(&n.Pos.x,"Pos",2);
 	s.save(&n.isOpen,"isOpen");
+    s.save(&n.isSelected,"isSelected");
     if (n.mustOverrideName) s.save(n.Name,"OvrName");
     if (n.overrideTitleTextColor!=0) s.save(&n.overrideTitleTextColor,"OvrTitleTextColor");
     if (n.overrideTitleBgColor!=0) s.save(&n.overrideTitleBgColor,"OvrTitleBgColor");
@@ -1866,7 +2110,7 @@ static bool NodeGraphEditorParseCallback1(ImGuiHelper::FieldType /*ft*/,int /*nu
     return false;
 }
 struct NodeGraphEditorParseCallback2Struct {
-    int curNodeIndex,typeID,numFields,userID;bool isOpen;
+    int curNodeIndex,typeID,numFields,userID;bool isOpen;bool isSelected;
     ImVec2 Pos;
     bool mustOvrName,mustOvrInput,mustOvrOutput;
     char ovrName[IMGUINODE_MAX_NAME_LENGTH];
@@ -1874,7 +2118,7 @@ struct NodeGraphEditorParseCallback2Struct {
     float overrideTitleBgColorGradient;
     char ovrInput[(IMGUINODE_MAX_INPUT_SLOTS+1)*IMGUINODE_MAX_SLOT_NAME_LENGTH*200];
     char ovrOutput[(IMGUINODE_MAX_OUTPUT_SLOTS+1)*IMGUINODE_MAX_SLOT_NAME_LENGTH*200];
-    NodeGraphEditorParseCallback2Struct() : curNodeIndex(-1),typeID(-1),numFields(0),userID(-1),isOpen(false),Pos(0,0),
+    NodeGraphEditorParseCallback2Struct() : curNodeIndex(-1),typeID(-1),numFields(0),userID(-1),isOpen(false),isSelected(false),Pos(0,0),
     mustOvrName(false),mustOvrInput(false),mustOvrOutput(false),
     overrideTitleTextColor(0),overrideTitleBgColor(0),overrideTitleBgColorGradient(-1.f)
     {ovrName[0]='\0';ovrInput[0]='\0';ovrOutput[0]='\0';}
@@ -1886,6 +2130,7 @@ static bool NodeGraphEditorParseCallback2(ImGuiHelper::FieldType /*ft*/,int numA
     else if (strcmp(name,"userID")==0)  cbs->userID = *((int*)pValue);
     else if (strcmp(name,"Pos")==0)     cbs->Pos = *((ImVec2*)pValue);
     else if (strcmp(name,"isOpen")==0)  cbs->isOpen = *((bool*)pValue);
+    else if (strcmp(name,"isSelected")==0)  cbs->isSelected = *((bool*)pValue);
     else if (strcmp(name,"OvrName")==0) {
         cbs->mustOvrName = true;
         int maxLen = numArrayElements > IMGUINODE_MAX_NAME_LENGTH ? IMGUINODE_MAX_NAME_LENGTH : numArrayElements;
@@ -1942,6 +2187,7 @@ bool NodeGraphEditor::load(ImGuiHelper::Deserializer& d, const char ** pOptional
         Node* n = nodeFactoryFunctionPtr(cbn.typeID,cbn.Pos);
         n->userID = cbn.userID;
         n->isOpen = cbn.isOpen;
+        n->isSelected = cbn.isSelected;
         if (cbn.mustOvrName)    overrideNodeName(n,cbn.ovrName);
         overrideNodeTitleBarColors(n,cbn.overrideTitleTextColor>0 ? &cbn.overrideTitleTextColor : NULL,
                                    cbn.overrideTitleBgColor>0 ? &cbn.overrideTitleBgColor : NULL,
@@ -1952,7 +2198,7 @@ bool NodeGraphEditor::load(ImGuiHelper::Deserializer& d, const char ** pOptional
         amount = n->fields.deserialize(d,amount);        
         addNode(n);
     }
-    if (cbs.selectedNodeIndex>=0 && cbs.selectedNodeIndex<nodes.size()) selectedNode = nodes[cbs.selectedNodeIndex];
+    if (cbs.selectedNodeIndex>=0 && cbs.selectedNodeIndex<nodes.size()) activeNode = nodes[cbs.selectedNodeIndex];
     for (int i=0;i<cbs.numLinks;i++)    {
         NodeGraphEditorParseCallback3Struct cbl;
         amount = d.parse(NodeGraphEditorParseCallback3,(void*)&cbl,amount);

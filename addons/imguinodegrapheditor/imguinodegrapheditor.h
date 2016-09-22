@@ -241,7 +241,7 @@ class Node
     inline int getType() const {return typeID;}
     inline int getNumInputSlots() const {return InputsCount;}
     inline int getNumOutputSlots() const {return OutputsCount;}
-    inline void setOpen(bool flag) {isOpen=flag;}
+    inline void setOpen(bool flag) {isOpen=flag;}    
 
     protected:
     FieldInfoVector fields; // I guess you can just skip these at all and implement virtual methods... but it was supposed to be useful...
@@ -284,6 +284,7 @@ class Node
     char    OutputNames[IMGUINODE_MAX_OUTPUT_SLOTS][IMGUINODE_MAX_SLOT_NAME_LENGTH];
     mutable float startEditingTime; // used for Node Editing Callbacks
     mutable bool isOpen;
+    mutable bool isSelected;
     int typeID;
     float baseWidthOverride;
     bool mustOverrideName,mustOverrideInputSlots,mustOverrideOutputSlots;
@@ -291,7 +292,7 @@ class Node
     float overrideTitleBgColorGradient;                 //-1 -> don't override
     bool isInEditingMode;
 
-    Node() : Pos(0,0),Size(0,0),baseWidthOverride(-1),mustOverrideName(false),mustOverrideInputSlots(false),mustOverrideOutputSlots(false),overrideTitleTextColor(0),overrideTitleBgColor(0),overrideTitleBgColorGradient(-1.f),isInEditingMode(false) {}
+    Node() : Pos(0,0),Size(0,0),isSelected(false),baseWidthOverride(-1),mustOverrideName(false),mustOverrideInputSlots(false),mustOverrideOutputSlots(false),overrideTitleTextColor(0),overrideTitleBgColor(0),overrideTitleBgColorGradient(-1.f),isInEditingMode(false) {}
     void init(const char* name, const ImVec2& pos,const char* inputSlotNamesSeparatedBySemicolons=NULL,const char* outputSlotNamesSeparatedBySemicolons=NULL,int _nodeTypeID=0/*,float currentWindowFontScale=-1.f*/);
 
     inline ImVec2 GetInputSlotPos(int slot_no,float currentFontWindowScale=1.f) const   { return ImVec2(Pos.x*currentFontWindowScale, Pos.y*currentFontWindowScale + Size.y * ((float)slot_no+1) / ((float)InputsCount+1)); }
@@ -330,8 +331,9 @@ struct NodeGraphEditor	{
     ImVector<Node*> nodes;          // used as a garbage collector too
     ImVector<NodeLink> links;
     ImVec2 scrolling;
-    Node *selectedNode;
+    Node *activeNode;               // It's one of the selected nodes
     Node *sourceCopyNode;           // this is owned by the NodeGraphEditor
+    Node *menuNode;                 // It's one of the 2 hovered nodes (hovered _in_list or hovered_in_scene), so that the context-menu can retrieve it.
     bool inited;
     bool allowOnlyOneLinkPerInputSlot;  // multiple links can still be connected to single output slots
     bool avoidCircularLinkLoopsInOut;   // however multiple paths from a node to another are still allowed (only in-out circuits are prevented)
@@ -361,7 +363,9 @@ struct NodeGraphEditor	{
         ImU32 color_node;
         ImU32 color_node_frame;
         ImU32 color_node_selected;
+        ImU32 color_node_active;
         ImU32 color_node_frame_selected;
+        ImU32 color_node_frame_active;
         ImU32 color_node_hovered;
         ImU32 color_node_frame_hovered;
         float node_rounding;
@@ -377,7 +381,9 @@ struct NodeGraphEditor	{
         ImU32 color_node_title_background;
         float color_node_title_background_gradient;
         ImVec4 color_node_input_slots_names;
-        ImVec4 color_node_output_slots_names;
+        ImVec4 color_node_output_slots_names;        
+        ImU32 color_mouse_rectangular_selection;
+        ImU32 color_mouse_rectangular_selection_frame;
         Style() {
             color_background =          ImColor(60,60,70,200);
             color_grid =                ImColor(200,200,200,40);
@@ -387,7 +393,9 @@ struct NodeGraphEditor	{
             color_node =                ImColor(60,60,60);
             color_node_frame =          ImColor(100,100,100);
             color_node_selected =       ImColor(75,75,85);
+            color_node_active =         ImColor(85,85,65);
             color_node_frame_selected = ImColor(115,115,115);
+            color_node_frame_active =   ImColor(125,125,105);
             color_node_hovered =        ImColor(85,85,85);
             color_node_frame_hovered =  ImColor(125,125,125);
             node_rounding =             4.f;
@@ -407,6 +415,9 @@ struct NodeGraphEditor	{
             color_node_title_background_gradient = 0.f;   // in [0,0.5f] used only if available (performance is better when 0)
             color_node_input_slots_names = ImGui::GetStyle().Colors[ImGuiCol_Text];color_node_input_slots_names.w=0.75f;
             color_node_output_slots_names = ImGui::GetStyle().Colors[ImGuiCol_Text];color_node_output_slots_names.w=0.75f;
+
+            color_mouse_rectangular_selection =         ImColor(255,0,0,45);
+            color_mouse_rectangular_selection_frame =   ImColor(45,0,0,175);
         }
 
         static bool Edit(Style& style);
@@ -447,7 +458,7 @@ struct NodeGraphEditor	{
         scrolling = ImVec2(0.0f, 0.0f);
         show_grid = show_grid_;
         show_connection_names = show_connection_names_;
-        selectedNode = dragNode.node = sourceCopyNode = NULL;
+        activeNode = dragNode.node = sourceCopyNode = NULL;
         allowOnlyOneLinkPerInputSlot = _allowOnlyOneLinkPerInputSlot;
         avoidCircularLinkLoopsInOut = _avoidCircularLinkLoopsInOut;
         nodeCallback = NULL;linkCallback=NULL;nodeEditedTimeThreshold=1.5f;
@@ -494,7 +505,7 @@ struct NodeGraphEditor	{
                 ImGui::MemFree(sourceCopyNode);       // items MUST be allocated by the user using ImGui::MemAlloc(...)
                 sourceCopyNode = NULL;
         }
-        selectedNode = dragNode.node = NULL;    
+        activeNode = dragNode.node = NULL;
         oldFontWindowScale = 0.f;
     }
 
@@ -513,8 +524,9 @@ struct NodeGraphEditor	{
         return addNode(nodeFactoryFunctionPtr(nodeType,Pos));
     }
     bool deleteNode(Node* node) {
-        if (node == selectedNode)  selectedNode = NULL;
+        if (node == activeNode)  activeNode = NULL;
         if (node == dragNode.node) dragNode.node = NULL;
+        if (node == menuNode)  menuNode = NULL;
         for (int i=0;i<nodes.size();i++)    {
             Node*& n = nodes[i];
             if (n==node)  {
@@ -524,9 +536,11 @@ struct NodeGraphEditor	{
                 ImGui::MemFree(n);       // items MUST be allocated by the user using ImGui::MemAlloc(...)
                 if (i+1 < nodes.size()) n = nodes[nodes.size()-1];    // swap with the last node
                 nodes.resize(nodes.size()-1);
+                if (!activeNode) findANewActiveNode();
                 return true;
             }
         }
+        if (!activeNode) findANewActiveNode();
         return false;
     }
     bool addLink(Node* inputNode, int input_slot, Node* outputNode, int output_slot,bool checkIfAlreadyPresent = false)	{
@@ -551,9 +565,17 @@ struct NodeGraphEditor	{
     void render();
 
     // Optional helper methods:
-    Node* getSelectedNode() {return selectedNode;}
-    const Node* getSelectedNode() const {return selectedNode;}
-    const char* getSelectedNodeInfo() const {return selectedNode->getInfo();}
+    int getSelectedNodes(ImVector<Node*>& rv);  // returns rv.size(). The active node should be contained inside rv AFAIK.
+    int getSelectedNodes(ImVector<const Node*>& rv) const;
+    Node* getActiveNode() {return activeNode;}  // The 'active' node is the last selected node
+    const Node* getActiveNode() const {return activeNode;}
+    const char* getActiveNodeInfo() const {return activeNode->getInfo();}
+    void setActiveNode(const Node* node) {if (node) {node->isSelected=true;activeNode=const_cast<Node*>(node);}}
+    void selectNode(const Node* node, const bool flag=true);
+    void unselectNode(const Node* node)   {selectNode(node,false);}
+    void selectAllNodes(bool flag=true);
+    void unselectAllNodes() {selectAllNodes(false);}
+    bool isNodeSelected(const Node* node) const {return (node && node->isSelected);}
 
     void getOutputNodesForNodeAndSlot(const Node* node,int output_slot,ImVector<Node*>& returnValueOut,ImVector<int>* pOptionalReturnValueInputSlotOut=NULL) const;
     void getInputNodesForNodeAndSlot(const Node* node,int input_slot,ImVector<Node*>& returnValueOut,ImVector<int>* pOptionalReturnValueOutputSlotOut=NULL) const;
@@ -623,6 +645,14 @@ struct NodeGraphEditor	{
         for (int i=0;i<nodes.size();i++)    {
             const Node* n = nodes[i];
             if (n==node) return i;
+        }
+        return -1;
+    }
+    inline int findANewActiveNode() {
+        activeNode=NULL;
+        for (int i=nodes.size()-1;i>=0;--i)    {
+            Node* n = nodes[i];
+            if (n->isSelected) {activeNode=n;return i;}
         }
         return -1;
     }

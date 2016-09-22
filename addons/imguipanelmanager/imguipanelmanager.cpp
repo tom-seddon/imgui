@@ -1536,7 +1536,7 @@ void ImGui::PanelManager::closeHoverWindow() {
         Toolbar& bar = pane.bar;
         for (int w=0,wsz=bar.buttons.size();w<wsz;w++)  {
             Pane::AssociatedWindow& window = pane.windows[w];
-            if (w == bar.hoverButtonIndex>=0)    {
+            if (w == bar.hoverButtonIndex)    {
                 // The next two lines were outside the loop
                 window.dirty = true;
                 window.updateSizeInHoverMode(*this,pane,w);

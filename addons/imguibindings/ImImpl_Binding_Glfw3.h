@@ -372,6 +372,7 @@ Window x11Window;
 #endif //IMGUI_USE_CURSORS
 #endif //IMGUI_GLFW_NO_NATIVE_CURSORS
 #endif //GLFW_HAS_MOUSE_CURSOR_SUPPORT
+ImImplMainLoopFrameStruct() : done(false) {}
 };
 
 
