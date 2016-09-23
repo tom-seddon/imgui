@@ -236,6 +236,7 @@ void NodeGraphEditor::render()
     bool open_context_menu = false,open_delete_only_context_menu = false;
     Node* node_hovered_in_list = NULL;
     Node* node_hovered_in_scene = NULL;    
+    Node* node_to_center_view_around = NULL;
 
     if (show_left_pane) {
         // Helper stuff for setting up the left splitter
@@ -258,8 +259,8 @@ void NodeGraphEditor::render()
         ImGui::PushID((const void*) node);
         if (ImGui::Selectable(node->Name, node->isSelected)) {
             if (!node->isSelected || !io.KeyCtrl)  {
-            if (!io.KeyCtrl) unselectAllNodes();
-            selectNode(node);activeNode = node;
+                if (!io.KeyCtrl) unselectAllNodes();
+                selectNode(node);activeNode = node;
             }
             else unselectNode(node);
         }
@@ -267,9 +268,10 @@ void NodeGraphEditor::render()
         if (ImGui::IsItemHovered()) {
             node_hovered_in_list = node;
             if (ImGui::IsMouseClicked(1))   {
-            menuNode=node;
-            open_context_menu=true;
+                menuNode=node;
+                open_context_menu=true;
             }
+            else if (io.MouseReleased[2] || ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Home])) node_to_center_view_around = node;
         }
         ImGui::PopID();
         }
@@ -491,10 +493,12 @@ void NodeGraphEditor::render()
     draw_list->ChannelsSplit(2);
 
     ImVec2 canvasSize = ImGui::GetWindowSize();
+    ImVec2 win_pos = ImGui::GetCursorScreenPos();
+    if (node_to_center_view_around && !nodesHaveZeroSize) {scrolling = node_to_center_view_around->GetPos(currentFontWindowScale)+node_to_center_view_around->Size*0.5f;node_to_center_view_around = NULL;}
     ImVec2 effectiveScrolling = scrolling - canvasSize*.5f;
     ImVec2 offset = ImGui::GetCursorScreenPos() - effectiveScrolling;
     ImVec2 offset2 = ImGui::GetCursorPos() - scrolling;
-    ImVec2 win_pos = ImGui::GetCursorScreenPos();
+
 
 
     // Display grid
@@ -623,7 +627,7 @@ void NodeGraphEditor::render()
                 ++numberOfCulledNodes;
                 continue;
             }
-        }
+        }        
 
         if (node->baseWidthOverride>0) {
             currentNodeWidth = node->baseWidthOverride*currentFontWindowScale;
@@ -1160,11 +1164,7 @@ void NodeGraphEditor::render()
             mouseRectangularSelectionForNodesStarted=false;
             if (!io.KeyCtrl) unselectAllNodes();
             //select all nodes inside selection-------------------
-            absSelection.Min-=offset;
-            absSelection.Max-=offset;
-            const float windowClipHalfExtraWidth = NODE_SLOT_RADIUS + (show_connection_names ? maxConnectorNameWidth : 0.f);  // Otherwise node names are culled too early
-            absSelection.Min.x-=     windowClipHalfExtraWidth;
-            absSelection.Max.x+=     windowClipHalfExtraWidth;
+            absSelection.Min-=offset;absSelection.Max-=offset;
             ImVec2 nodePos;ImRect cullRect;
             for (int i=0,isz=nodes.size();i<isz;i++)    {
                 Node* node = nodes[i];
@@ -1172,7 +1172,7 @@ void NodeGraphEditor::render()
                 cullRect=ImRect(nodePos,nodePos+node->Size);
                 if (absSelection.Overlaps(cullRect)) {
                     node->isSelected=true;
-                    if (!activeNode) activeNode = node;  //Optional faster alternative to: findANewActiveNode(); below
+                    if (!activeNode) activeNode = node;  //Optional faster alternative to: findANewActiveNode(); commented out below
                 }
             }
             //--------------------------------------------------------
