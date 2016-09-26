@@ -690,6 +690,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             if (!(flags & ImGuiWindowFlags_NoCollapse))
                 RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f, true);
 
+            /*
             ImVec2 text_min = window->Pos + style.FramePadding;
             //ImVec2 text_max = window->Pos + ImVec2(window->Size.x - style.FramePadding.x, style.FramePadding.y*2 + text_size.y);
             //ImVec2 clip_max = ImVec2(window->Pos.x + window->Size.x - (p_opened ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x), text_max.y); // Match the size of CloseWindowButton()
@@ -702,6 +703,21 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             if (pad_left) text_min.x += g.FontSize + style.ItemInnerSpacing.x;
             if (pad_right) text_max.x -= g.FontSize + style.ItemInnerSpacing.x;
             RenderTextClipped(text_min, text_max, name, NULL, &text_size, style.WindowTitleAlign, NULL, &clip_max);
+            */
+
+            ImVec2 text_min = window->Pos;
+            ImVec2 text_max = window->Pos + ImVec2(window->Size.x, style.FramePadding.y*2 + text_size.y);
+            ImRect clip_rect;
+            clip_rect.Max = ImVec2(window->Pos.x + window->Size.x - (p_opened ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x) - (p_undocked ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x), text_max.y); // Match the size of CloseWindowButton()
+
+            float pad_left = (flags & ImGuiWindowFlags_NoCollapse) == 0 ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : 0.0f;
+            float pad_right = (p_opened != NULL) ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : 0.0f;
+            if (style.WindowTitleAlign.x > 0.0f) pad_right = ImLerp(pad_right, pad_left, style.WindowTitleAlign.x);
+            text_min.x += pad_left;
+            text_max.x -= pad_right;
+            clip_rect.Min = ImVec2(text_min.x, window->Pos.y);
+            RenderTextClipped(text_min, text_max, name, NULL, &text_size, style.WindowTitleAlign, &clip_rect);
+
         }
 
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()

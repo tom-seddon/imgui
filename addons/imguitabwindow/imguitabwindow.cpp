@@ -687,7 +687,7 @@ static bool TabButton(const char *label, bool selected, bool *pCloseButtonPresse
 
     // Text
     ImGui::PushStyleColor(ImGuiCol_Text,ImGui::ColorConvertU32ToFloat4(colText));
-    if (!pOptionalJustDrawTabButtonGraphicsUnderMouseWithThisOffset)  RenderTextClipped(bb.Min,ImVec2(bb.Max.x-extraWidthForBtn,bb.Max.y), label, NULL, &label_size, ImGuiAlign_Center | ImGuiAlign_VCenter);
+    if (!pOptionalJustDrawTabButtonGraphicsUnderMouseWithThisOffset)  RenderTextClipped(bb.Min,ImVec2(bb.Max.x-extraWidthForBtn,bb.Max.y), label, NULL, &label_size, ImVec2(0.5f,0.5f));
     else    {
         ImVec2 textPos(bb.Min.x+(bb.Max.x-bb.Min.x-label_size.x-extraWidthForBtn)*0.5f,bb.Min.y+(bb.Max.y-bb.Min.y-label_size.y)*0.5f);
         drawListOverride->AddText(textPos,colText,label);
@@ -2802,12 +2802,12 @@ static bool TabButtonVertical(bool rotateCCW,const char *label, bool selected, b
             RenderTextVerticalClipped(
                         bb.Min,
                         ImVec2(bb.Max.x,bb.Max.y-extraWidthForBtn),//ImVec2(bb.Max.x-extraHeightForBtn,bb.Max.y),
-                        label, NULL, &label_size, ImGuiAlign_Center | ImGuiAlign_VCenter,NULL,NULL,rotateCCW);
+                        label, NULL, &label_size, ImVec2(0.5f,0.5f),NULL,NULL,rotateCCW);
         else
             RenderTextVerticalClipped(
                         ImVec2(bb.Min.x,bb.Min.y+extraWidthForBtn),
                         bb.Max,
-                        label, NULL, &label_size, ImGuiAlign_Center | ImGuiAlign_VCenter,NULL,NULL,rotateCCW);
+                        label, NULL, &label_size, ImVec2(0.5f,0.5f),NULL,NULL,rotateCCW);
     }
     else    {
         //ImVec2 textPos(bb.Min.x+(bb.Max.x-bb.Min.x-label_size.x-extraHeightForBtn)*0.5f,bb.Min.y+(bb.Max.y-bb.Min.y-label_size.y)*0.5f);

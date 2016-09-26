@@ -577,7 +577,7 @@ void NodeGraphEditor::render()
                 const float distanceSquared = GetSquaredDistanceToBezierCurve(io.MousePos,p1,cp1, cp2,p2);
                 if (distanceSquared<hoveredLinkDistSqrThres) nearestLinkId=link_idx;
                 // dbg line:
-                if (io.MouseDelta.x!=0.f || io.MouseDelta.y!=0.f)   fprintf(stderr,"%d) MP{%1.0f,%1.0f} p1{%1.0f,%1.0f} p2{%1.0f,%1.0f} distanceSquared=%1.4f hoveredLinkDistSqrThres=%1.4f\n",link_idx,io.MousePos.x,io.MousePos.y,p1.x,p1.y,p2.x,p2.y,distanceSquared,hoveredLinkDistSqrThres);
+		//if (io.MouseDelta.x!=0.f || io.MouseDelta.y!=0.f)   fprintf(stderr,"%d) MP{%1.0f,%1.0f} p1{%1.0f,%1.0f} p2{%1.0f,%1.0f} distanceSquared=%1.4f hoveredLinkDistSqrThres=%1.4f\n",link_idx,io.MousePos.x,io.MousePos.y,p1.x,p1.y,p2.x,p2.y,distanceSquared,hoveredLinkDistSqrThres);
             }
 
             draw_list->AddBezierCurve(p1,cp1,cp2,p2,style.color_link,(nearestLinkId!=link_idx) ? link_line_width : (link_line_width*2.0f), style.link_num_segments);

@@ -168,12 +168,20 @@ static inline void ImDrawListRenderTextLine(ImDrawList* draw_list,const ImFont* 
     const float scale = size / font->FontSize;
     const float line_height = font->FontSize * scale;
 
+    const char* s = text_begin;
+    if (y + line_height < clip_rect.y) while (s < text_end && *s != '\n')  s++;// Fast-forward to next line
+
+    // Reserve vertices for remaining worse case (over-reserving is useful and easily amortized)
+    const int vtx_count_max = (int)(text_end - s) * 4;
+    const int idx_count_max = (int)(text_end - s) * 6;
+    const int idx_expected_size = draw_list->IdxBuffer.Size + idx_count_max;
+    draw_list->PrimReserve(idx_count_max, vtx_count_max);
+
+
     ImDrawVert* vtx_write = draw_list->_VtxWritePtr;
     ImDrawIdx* idx_write = draw_list->_IdxWritePtr;
     unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
 
-    const char* s = text_begin;
-    if (y + line_height < clip_rect.y) while (s < text_end && *s != '\n')  s++;// Fast-forward to next line
 
     while (s < text_end)
     {
@@ -257,9 +265,19 @@ static inline void ImDrawListRenderTextLine(ImDrawList* draw_list,const ImFont* 
         x += char_width;
     }
 
-    draw_list->_VtxWritePtr = vtx_write;
+    /*draw_list->_VtxWritePtr = vtx_write;
     draw_list->_VtxCurrentIdx = vtx_current_idx;
+    draw_list->_IdxWritePtr = idx_write;*/
+
+    // Give back unused vertices
+    draw_list->VtxBuffer.resize((int)(vtx_write - draw_list->VtxBuffer.Data));
+    draw_list->IdxBuffer.resize((int)(idx_write - draw_list->IdxBuffer.Data));
+    draw_list->CmdBuffer[draw_list->CmdBuffer.Size-1].ElemCount -= (idx_expected_size - draw_list->IdxBuffer.Size);
+    draw_list->_VtxWritePtr = vtx_write;
     draw_list->_IdxWritePtr = idx_write;
+    draw_list->_VtxCurrentIdx = (unsigned int)draw_list->VtxBuffer.Size;
+
+
 
     // restore pos
     pos.x -= font->DisplayOffset.x;
@@ -277,13 +295,13 @@ static inline void ImDrawListAddTextLine(ImDrawList* draw_list,const ImFont* fon
 
     IM_ASSERT(font->ContainerAtlas->TexID == draw_list->_TextureIdStack.back());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
-    // reserve vertices for worse case (over-reserving is useful and easily amortized)
+    /*// reserve vertices for worse case (over-reserving is useful and easily amortized)
     const int char_count = (int)(text_end - text_begin);
     const int vtx_count_max = char_count * 4;
     const int idx_count_max = char_count * 6;
     const int vtx_begin = draw_list->VtxBuffer.Size;
     const int idx_begin = draw_list->IdxBuffer.Size;
-    draw_list->PrimReserve(idx_count_max, vtx_count_max);
+    draw_list->PrimReserve(idx_count_max, vtx_count_max);*/
 
     ImVec4 clip_rect = draw_list->_ClipRectStack.back();
     if (cpu_fine_clip_rect) {
@@ -296,14 +314,14 @@ static inline void ImDrawListAddTextLine(ImDrawList* draw_list,const ImFont* fon
 
     // give back unused vertices
     // FIXME-OPT: clean this up
-    draw_list->VtxBuffer.resize((int)(draw_list->_VtxWritePtr - draw_list->VtxBuffer.Data));
+    /*draw_list->VtxBuffer.resize((int)(draw_list->_VtxWritePtr - draw_list->VtxBuffer.Data));
     draw_list->IdxBuffer.resize((int)(draw_list->_IdxWritePtr - draw_list->IdxBuffer.Data));
     int vtx_unused = vtx_count_max - (draw_list->VtxBuffer.Size - vtx_begin);
     int idx_unused = idx_count_max - (draw_list->IdxBuffer.Size - idx_begin);
     draw_list->CmdBuffer.back().ElemCount -= idx_unused;
     draw_list->_VtxWritePtr -= vtx_unused;
     draw_list->_IdxWritePtr -= idx_unused;
-    draw_list->_VtxCurrentIdx = (ImDrawIdx)draw_list->VtxBuffer.Size;
+    draw_list->_VtxCurrentIdx = (ImDrawIdx)draw_list->VtxBuffer.Size;*/
 }
 static inline void ImDrawListAddTextLine(ImDrawList* draw_list,ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end=NULL)   {
     ImDrawListAddTextLine(draw_list,GImGui->Font, GImGui->FontSize, pos, col, text_begin, text_end);

@@ -75,7 +75,8 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
     //fprintf(f, "[WindowFillAlphaDefault]\n%1.3f\n", style.WindowFillAlphaDefault);
     fprintf(f, "[WindowRounding]\n%1.3f\n", style.WindowRounding);
     fprintf(f, "[ScrollbarRounding]\n%1.3f\n", style.ScrollbarRounding);
-    fprintf(f, "[WindowTitleAlign]\n%d\n", style.WindowTitleAlign);
+    fprintf(f, "[WindowTitleAlign]\n%1.3f %1.3f\n", style.WindowTitleAlign.x,style.WindowTitleAlign.y);
+    fprintf(f, "[ButtonTextAlign]\n%1.3f %1.3f\n", style.ButtonTextAlign.x,style.ButtonTextAlign.y);
     fprintf(f, "[IndentSpacing]\n%1.3f\n", style.IndentSpacing);
     fprintf(f, "[ColumnsMinSpacing]\n%1.3f\n", style.ColumnsMinSpacing);
     fprintf(f, "[ScrollbarSize]\n%1.3f\n", style.ScrollbarSize);
@@ -171,8 +172,9 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
 		else if (strcmp(name, "WindowFillAlphaDefault")==0)    {npf=1;pf[0]=&WindowFillAlphaDefault;}
                 else if (strcmp(name, "WindowRounding")==0)            {npf=1;pf[0]=&style.WindowRounding;}
                 else if (strcmp(name, "ScrollbarRounding")==0)         {npf=1;pf[0]=&style.ScrollbarRounding;}
-                else if (strcmp(name, "WindowTitleAlign")==0)          {npi=1;pi[0]=&style.WindowTitleAlign;}
-                else if (strcmp(name, "IndentSpacing")==0)             {npf=1;pf[0]=&style.IndentSpacing;}
+		else if (strcmp(name, "WindowTitleAlign")==0)          {npf=2;pf[0]=&style.WindowTitleAlign.x;pf[1]=&style.WindowTitleAlign.y;}
+		else if (strcmp(name, "ButtonTextAlign")==0)          {npf=2;pf[0]=&style.ButtonTextAlign.x;pf[1]=&style.ButtonTextAlign.y;}
+		else if (strcmp(name, "IndentSpacing")==0)             {npf=1;pf[0]=&style.IndentSpacing;}
                 else if (strcmp(name, "ColumnsMinSpacing")==0)         {npf=1;pf[0]=&style.ColumnsMinSpacing;}
                 else if (strcmp(name, "ScrollbarSize")==0)            {npf=1;pf[0]=&style.ScrollbarSize;}
                 else if (strcmp(name, "GrabMinSize")==0)               {npf=1;pf[0]=&style.GrabMinSize;}
@@ -183,6 +185,7 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
                 else if (strcmp(name, "AntiAliasedLines")==0)          {npb=1;pb[0]=&style.AntiAliasedLines;}
                 else if (strcmp(name, "AntiAliasedShapes")==0)          {npb=1;pb[0]=&style.AntiAliasedShapes;}
                 else if (strcmp(name, "CurveTessellationTol")==0)               {npf=1;pf[0]=&style.CurveTessellationTol;}
+
 
                 // all the colors here
                 else {
@@ -305,7 +308,11 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
             else if (sscanf(line_start, "Collapsed=%d", &i) == 1)
                 settings->Collapsed = (i != 0);
             */
-            //---------------------------------------------------------------------------------    
+	    //---------------------------------------------------------------------------------
+	    // Fix backward compatibility a bit
+	    if (style.WindowTitleAlign.x<0 || style.WindowTitleAlign.x>1) style.WindowTitleAlign.x = 0.f;
+	    if (style.WindowTitleAlign.y<0 || style.WindowTitleAlign.y>1) style.WindowTitleAlign.y = 0.5f;
+	    //---------------------------------------------------------------------------------
             name[0]='\0'; // mandatory
         }
 
