@@ -336,7 +336,7 @@ struct NodeGraphEditor	{
     ImVector<Node*> nodes;          // used as a garbage collector too
     ImVector<NodeLink> links;
     ImVec2 scrolling;
-    Node *activeNode;               // It's one of the selected nodes (ATM always the last, but the concept of 'active node' is never used by this code: i.e. we could have not included any 'active node' selection at all)
+    Node *activeNode;               // It's one of the selected nodes (ATM always the first, but the concept of 'active node' is never used by this code: i.e. we could have not included any 'active node' selection at all)
     Node *sourceCopyNode;           // this is owned by the NodeGraphEditor
     Node *menuNode;                 // It's one of the 2 hovered nodes (hovered _in_list or hovered_in_scene), so that the context-menu can retrieve it.
     bool inited;
@@ -570,11 +570,11 @@ struct NodeGraphEditor	{
     void render();
 
     // Optional helper methods:
-    Node* getHoveredNode() {return menuNode;}  // This is actually not strictly the hovered node, but the node called 'menuNode' (=the hovered node 90% of the time: TODO: refactor the code so that it's 100%)
+    Node* getHoveredNode() {return menuNode;}  // This is actually not strictly the hovered node, but the node called 'menuNode'
     const Node* getHoveredNode() const {return menuNode;}
-    int getSelectedNodes(ImVector<Node*>& rv);  // returns rv.size(). The active node should be contained inside rv AFAIK.
+    int getSelectedNodes(ImVector<Node*>& rv);  // returns rv.size(). The active node should be contained inside rv (the first AFAIK).
     int getSelectedNodes(ImVector<const Node*>& rv) const;
-    Node* getActiveNode() {return activeNode;}  // The 'active' node is the last selected node
+    Node* getActiveNode() {return activeNode;}  // The 'active' node is the first of the selected nodes
     const Node* getActiveNode() const {return activeNode;}
     const char* getActiveNodeInfo() const {return activeNode->getInfo();}
     void setActiveNode(const Node* node) {if (node) {node->isSelected=true;activeNode=const_cast<Node*>(node);}}
@@ -648,6 +648,7 @@ struct NodeGraphEditor	{
     }
     void copyNode(Node* n);
     bool removeLinkAt(int link_idx);
+    // Warning: node index changes when a node becomes active!
     inline int getNodeIndex(const Node* node) {
         for (int i=0;i<nodes.size();i++)    {
             const Node* n = nodes[i];
@@ -657,7 +658,7 @@ struct NodeGraphEditor	{
     }
     inline int findANewActiveNode() {
         activeNode=NULL;
-        for (int i=nodes.size()-1;i>=0;--i)    {
+        for (int i=0,isz=nodes.size();i<isz;i++)    {
             Node* n = nodes[i];
             if (n->isSelected) {activeNode=n;return i;}
         }

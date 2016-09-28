@@ -267,7 +267,7 @@ void NodeGraphEditor::render()
         }
         //if (ImGui::Selectable(node->Name, node == activeNode)) activeNode = node;
         if (ImGui::IsItemHovered()) {
-            node_hovered_in_list = node;
+            node_hovered_in_list = node;//menuNode=node;
             if (ImGui::IsMouseClicked(1))   {
                 menuNode=node;
                 open_context_menu=true;
@@ -491,7 +491,7 @@ void NodeGraphEditor::render()
     ImGui::PushItemWidth(currentNodeWidth);
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    draw_list->ChannelsSplit(2);
+    draw_list->ChannelsSplit(4);
 
     ImVec2 canvasSize = ImGui::GetWindowSize();
     ImVec2 win_pos = ImGui::GetCursorScreenPos();
@@ -640,7 +640,7 @@ void NodeGraphEditor::render()
         ImVec2 node_rect_min = offset + nodePos;
 
         // Display node contents first
-        draw_list->ChannelsSetCurrent(1); // Foreground
+        draw_list->ChannelsSetCurrent(activeNodeIndex==node_idx ? 3 : 1); // Foreground
         bool old_any_active = ImGui::IsAnyItemActive();
         ImGui::SetCursorScreenPos(node_rect_min + NODE_WINDOW_PADDING);
 
@@ -821,13 +821,16 @@ void NodeGraphEditor::render()
 
 
         // Display node box
-        draw_list->ChannelsSetCurrent(0); // Background
+        draw_list->ChannelsSetCurrent(activeNodeIndex == node_idx ? 2 : 0); // Background
         ImGui::SetCursorScreenPos(node_rect_min);
         ImGui::InvisibleButton("node##nodeinvbtn", node->Size);
         if (ImGui::IsItemHovered()) {
-            node_hovered_in_scene = node;
+            if (!node_hovered_in_scene) {
+                node_hovered_in_scene = node;
+                menuNode = node;
+            }
             if (ImGui::IsMouseClicked(1))   {
-        menuNode = node;
+        //menuNode = node;
         open_context_menu=true;
             }
         }        
@@ -1102,14 +1105,14 @@ void NodeGraphEditor::render()
 #   undef DEBUG_LINK_CULLING
 #   endif //DEBUG_LINK_CULLING
 
-    // Opt: move activeNode at the end of the nods list [This should improve node overlapping VERY VERY slightly]
-    if (activeNode && nodes.size()>0 && activeNodeIndex!=nodes.size()-1) {
+    // Move activeNode at the start of the nodes list [This should improve active node overlapping other nodes]
+    if (activeNode && nodes.size()>0 && activeNodeIndex!=0) {
         IM_ASSERT(activeNodeIndex>=0 && activeNodeIndex<nodes.size());
         IM_ASSERT(nodes[activeNodeIndex]==activeNode);
-        Node* n=nodes[nodes.size()-1];
-        nodes[nodes.size()-1]=activeNode;
+        Node* n=nodes[0];
+        nodes[0]=activeNode;
         nodes[activeNodeIndex]=n;
-        activeNodeIndex=nodes.size()-1;
+        activeNodeIndex=0;
     }
 
 
@@ -1135,8 +1138,10 @@ void NodeGraphEditor::render()
 
     // Open context menu
     if (open_context_menu || open_delete_only_context_menu)  {
-        //if (node_hovered_in_list) activeNode = node_hovered_in_list;
-        //if (node_hovered_in_scene) activeNode = node_hovered_in_scene;
+        /*if (!menuNode)  {
+            if (node_hovered_in_list) menuNode = node_hovered_in_list;
+            if (node_hovered_in_scene) menuNode = node_hovered_in_scene;
+        }*/
         ImGuiContext& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
     ImGui::PushID(menuNode);
         if (open_delete_only_context_menu) ImGui::OpenPopup("delete_only_context_menu");
