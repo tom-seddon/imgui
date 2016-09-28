@@ -21,8 +21,9 @@
     if (ImGui::Begin("Example: Custom Node Graph", NULL))
     {
         ImGui::TestNodeGraphEditor();   // see its code for further info
-        ImGui::End();
+
     }
+    ImGui::End();
 */
 
 // TODO:
@@ -34,7 +35,11 @@
 -> DONE - Adjust zooming (CTRL + MW when ImGui::GetIO().FontAllowUserScaling = true;).
           NOW ZOOMING WORKS PROPERLY ONLY IF ImGui::GetIO().FontAllowUserScaling = false,
           (otherwise there's a BAD fallback).
--> DONE - Nodes links are culled too (not sure if t's faster.
+-> DONE - Nodes links are culled too (not sure if t's faster... it should).
+
+-> DONE - Added multiple node selection plus the concept of 'active node' (that is actually not used by the current code).
+-> DONE - Added link hovering (holding SHIFT down) and direct link deletion (SHIFT down + LMB).
+-> DONE - Added node name renaming with double LMB click.
 
 -> Add/Adjust/Fix more FieldTypes. TODO! And test/fix FT_CUSTOM field type too.
 */
@@ -331,7 +336,7 @@ struct NodeGraphEditor	{
     ImVector<Node*> nodes;          // used as a garbage collector too
     ImVector<NodeLink> links;
     ImVec2 scrolling;
-    Node *activeNode;               // It's one of the selected nodes
+    Node *activeNode;               // It's one of the selected nodes (ATM always the last, but the concept of 'active node' is never used by this code: i.e. we could have not included any 'active node' selection at all)
     Node *sourceCopyNode;           // this is owned by the NodeGraphEditor
     Node *menuNode;                 // It's one of the 2 hovered nodes (hovered _in_list or hovered_in_scene), so that the context-menu can retrieve it.
     bool inited;
@@ -565,16 +570,18 @@ struct NodeGraphEditor	{
     void render();
 
     // Optional helper methods:
+    Node* getHoveredNode() {return menuNode;}  // This is actually not strictly the hovered node, but the node called 'menuNode' (=the hovered node 90% of the time: TODO: refactor the code so that it's 100%)
+    const Node* getHoveredNode() const {return menuNode;}
     int getSelectedNodes(ImVector<Node*>& rv);  // returns rv.size(). The active node should be contained inside rv AFAIK.
     int getSelectedNodes(ImVector<const Node*>& rv) const;
     Node* getActiveNode() {return activeNode;}  // The 'active' node is the last selected node
     const Node* getActiveNode() const {return activeNode;}
     const char* getActiveNodeInfo() const {return activeNode->getInfo();}
     void setActiveNode(const Node* node) {if (node) {node->isSelected=true;activeNode=const_cast<Node*>(node);}}
-    void selectNode(const Node* node, const bool flag=true);
-    void unselectNode(const Node* node)   {selectNode(node,false);}
-    void selectAllNodes(bool flag=true);
-    void unselectAllNodes() {selectAllNodes(false);}
+    void selectNode(const Node* node,bool findANewActiveNodeWhenNeeded=true)   {selectNodePrivate(node,true,findANewActiveNodeWhenNeeded);}
+    void unselectNode(const Node* node,bool findANewActiveNodeWhenNeeded=true)   {selectNodePrivate(node,false,findANewActiveNodeWhenNeeded);}
+    void selectAllNodes(bool findANewActiveNodeWhenNeeded=true) {selectAllNodesPrivate(true,findANewActiveNodeWhenNeeded);}
+    void unselectAllNodes() {selectAllNodesPrivate(false);}
     bool isNodeSelected(const Node* node) const {return (node && node->isSelected);}
 
     void getOutputNodesForNodeAndSlot(const Node* node,int output_slot,ImVector<Node*>& returnValueOut,ImVector<int>* pOptionalReturnValueInputSlotOut=NULL) const;
@@ -657,6 +664,12 @@ struct NodeGraphEditor	{
         return -1;
     }
     static Style style;
+
+    private:
+    // Refactored for cleaner exposure (without the misleading 'flag' argument)
+    void selectNodePrivate(const Node* node, bool flag=true,bool findANewActiveNodeWhenNeeded=true);
+    void selectAllNodesPrivate(bool flag=true,bool findANewActiveNodeWhenNeeded=true);
+
 };
 
 

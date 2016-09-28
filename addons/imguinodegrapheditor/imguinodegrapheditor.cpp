@@ -260,9 +260,10 @@ void NodeGraphEditor::render()
         if (ImGui::Selectable(node->Name, node->isSelected)) {
             if (!node->isSelected || !io.KeyCtrl)  {
                 if (!io.KeyCtrl) unselectAllNodes();
-                selectNode(node);activeNode = node;
+                selectNodePrivate(node,true,false);
+                //activeNode = node;    // Better not. Changing the active node [currently] makes it go at the bottom of the list: this is bad while we are clicking on it
             }
-            else unselectNode(node);
+            else unselectNode(node,false);
         }
         //if (ImGui::Selectable(node->Name, node == activeNode)) activeNode = node;
         if (ImGui::IsItemHovered()) {
@@ -271,7 +272,7 @@ void NodeGraphEditor::render()
                 menuNode=node;
                 open_context_menu=true;
             }
-            else if (io.MouseReleased[2] || ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Home])) node_to_center_view_around = node;
+            else if (io.MouseReleased[2] || ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Home]) || io.MouseDoubleClicked[0]) node_to_center_view_around = node;
         }
         ImGui::PopID();
         }
@@ -682,7 +683,7 @@ void NodeGraphEditor::render()
         }
         ImGui::PopStyleColor();
 
-    // Nore: if node->isOpen, we'll draw the buttons later, because we need node->Size that is not known
+    // Note: if node->isOpen, we'll draw the buttons later, because we need node->Size that is not known
     // BUTTONS ========================================================
     const bool canPaste = sourceCopyNode && sourceCopyNode->typeID==node->typeID;
     const bool canCopy = node->canBeCopied();
@@ -843,7 +844,7 @@ void NodeGraphEditor::render()
                 node->isSelected=false;
                 if (node==activeNode) {activeNode = NULL;activeNodeIndex=findANewActiveNode();}
             }
-            else if (io.KeyShift /*|| io.MouseDelta.x*io.MouseDelta.x+io.MouseDelta.y*io.MouseDelta.y < 0.000000001f*/)    // Good idea to enable the correct behavior without pressing SHIFT, but the latter condition is almost always fullfilled...
+            else if (io.KeyShift || (isLMBDoubleClicked && !node->isInEditingMode)/*|| io.MouseDelta.x*io.MouseDelta.x+io.MouseDelta.y*io.MouseDelta.y < 0.000000001f*/)    // Good idea to enable the correct behavior without pressing SHIFT, but the latter condition is almost always fullfilled...
             {
                 unselectAllNodes();
                 node->isSelected = true;activeNode = node;activeNodeIndex=node_idx;
@@ -1468,17 +1469,17 @@ int NodeGraphEditor::getSelectedNodes(ImVector<const Node *> &rv) const {
     return rv.size();
 }
 
-void NodeGraphEditor::selectNode(const Node *node, const bool flag) {
+void NodeGraphEditor::selectNodePrivate(const Node *node, const bool flag, bool findANewActiveNodeWhenNeeded) {
     if (!node) return;
     node->isSelected=flag;
-    if (flag) {if (!activeNode) activeNode=const_cast<Node*>(node);return;}
-    if (node==activeNode) {activeNode = NULL;findANewActiveNode();}
+    if (flag) {if (!activeNode && findANewActiveNodeWhenNeeded) activeNode=const_cast<Node*>(node);return;}
+    if (node==activeNode) {activeNode = NULL;if (findANewActiveNodeWhenNeeded) findANewActiveNode();}
 }
 
-void NodeGraphEditor::selectAllNodes(bool flag) {
+void NodeGraphEditor::selectAllNodesPrivate(bool flag, bool findANewActiveNodeWhenNeeded) {
     const int isz = nodes.size();
     for (int i=0;i<isz;i++) nodes[i]->isSelected=flag;
-    if (flag) {if (!activeNode && isz>0)   activeNode=nodes[isz-1];}
+    if (flag) {if (!activeNode && isz>0 && findANewActiveNodeWhenNeeded)   activeNode=nodes[isz-1];}
     else activeNode = NULL;
 }
 
