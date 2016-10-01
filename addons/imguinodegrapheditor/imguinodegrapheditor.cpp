@@ -1,9 +1,3 @@
-// Creating a node graph editor for ImGui
-// Quick demo, not production code! This is more of a demo of how to use ImGui to create custom stuff.
-// Better version by @daniel_collin here https://gist.github.com/emoon/b8ff4b4ce4f1b43e79f2
-// See https://github.com/ocornut/imgui/issues/306
-// v0.02
-// Animated gif: https://cloud.githubusercontent.com/assets/8225057/9472357/c0263c04-4b4c-11e5-9fdf-2cd4f33f6582.gif
 
 #include "imguinodegrapheditor.h"
 
@@ -18,6 +12,199 @@
 #endif //(defined(_MSC_VER) && !defined(snprintf))
 
 namespace ImGui	{
+
+namespace NGE_Draw {
+// This methods are a subset of the ones already present in imguihelper.h, copied here to enable stand alone usage. Scoped for better isolation (in case of multi .cpp chaining and/or usage in amalgamation engines).
+static void ImDrawListPathFillAndStroke(ImDrawList *dl, const ImU32 &fillColor, const ImU32 &strokeColor, bool strokeClosed, float strokeThickness, bool antiAliased)    {
+    if (!dl) return;
+    if ((fillColor >> 24) != 0) dl->AddConvexPolyFilled(dl->_Path.Data, dl->_Path.Size, fillColor, antiAliased);
+    if ((strokeColor>> 24)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
+    dl->PathClear();
+}
+static void ImDrawListPathArcTo(ImDrawList *dl, const ImVec2 &centre, const ImVec2 &radii, float amin, float amax, int num_segments)  {
+    if (!dl) return;
+    if (radii.x == 0.0f || radii.y==0) dl->_Path.push_back(centre);
+    dl->_Path.reserve(dl->_Path.Size + (num_segments + 1));
+    for (int i = 0; i <= num_segments; i++)
+    {
+        const float a = amin + ((float)i / (float)num_segments) * (amax - amin);
+        dl->_Path.push_back(ImVec2(centre.x + cosf(a) * radii.x, centre.y + sinf(a) * radii.y));
+    }
+}
+static void ImDrawListAddCircle(ImDrawList *dl, const ImVec2 &centre, float radius, const ImU32 &fillColor, const ImU32 &strokeColor, int num_segments, float strokeThickness, bool antiAliased)   {
+    if (!dl) return;
+    const ImVec2 radii(radius,radius);
+    const float a_max = IM_PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
+    ImDrawListPathArcTo(dl,centre, radii, 0.0f, a_max, num_segments);
+    ImDrawListPathFillAndStroke(dl,fillColor,strokeColor,true,strokeThickness,antiAliased);
+}
+
+inline static void GetVerticalGradientTopAndBottomColors(ImU32 c,float fillColorGradientDeltaIn0_05,ImU32& tc,ImU32& bc)  {
+    if (fillColorGradientDeltaIn0_05==0) {tc=bc=c;return;}
+
+    static ImU32 cacheColorIn=0;static float cacheGradientIn=0.f;static ImU32 cacheTopColorOut=0;static ImU32 cacheBottomColorOut=0;
+    if (cacheColorIn==c && cacheGradientIn==fillColorGradientDeltaIn0_05)   {tc=cacheTopColorOut;bc=cacheBottomColorOut;return;}
+    cacheColorIn=c;cacheGradientIn=fillColorGradientDeltaIn0_05;
+
+    const bool negative = (fillColorGradientDeltaIn0_05<0);
+    if (negative) fillColorGradientDeltaIn0_05=-fillColorGradientDeltaIn0_05;
+    if (fillColorGradientDeltaIn0_05>0.5f) fillColorGradientDeltaIn0_05=0.5f;
+    // Can we do it without the double conversion ImU32 -> ImVec4 -> ImU32 ?
+    const ImVec4 cf = ColorConvertU32ToFloat4(c);
+    ImVec4 tmp(cf.x+fillColorGradientDeltaIn0_05,cf.y+fillColorGradientDeltaIn0_05,cf.z+fillColorGradientDeltaIn0_05,cf.w+fillColorGradientDeltaIn0_05);
+    if (tmp.x>1.f) tmp.x=1.f;if (tmp.y>1.f) tmp.y=1.f;if (tmp.z>1.f) tmp.z=1.f;if (tmp.w>1.f) tmp.w=1.f;
+    if (negative) bc = ColorConvertFloat4ToU32(tmp); else tc = ColorConvertFloat4ToU32(tmp);
+    tmp=ImVec4(cf.x-fillColorGradientDeltaIn0_05,cf.y-fillColorGradientDeltaIn0_05,cf.z-fillColorGradientDeltaIn0_05,cf.w-fillColorGradientDeltaIn0_05);
+    if (tmp.x<0.f) tmp.x=0.f;if (tmp.y<0.f) tmp.y=0.f;if (tmp.z<0.f) tmp.z=0.f;if (tmp.w<0.f) tmp.w=0.f;
+    if (negative) tc = ColorConvertFloat4ToU32(tmp); else bc = ColorConvertFloat4ToU32(tmp);
+
+    cacheTopColorOut=tc;cacheBottomColorOut=bc;
+}
+inline static ImU32 GetVerticalGradient(const ImVec4& ct,const ImVec4& cb,float DH,float H)    {
+    IM_ASSERT(H!=0);
+    const float fa = DH/H;
+    const float fc = (1.f-fa);
+    return ColorConvertFloat4ToU32(ImVec4(
+        ct.x * fc + cb.x * fa,
+        ct.y * fc + cb.y * fa,
+        ct.z * fc + cb.z * fa,
+        ct.w * fc + cb.w * fa)
+    );
+}
+static void ImDrawListAddConvexPolyFilledWithVerticalGradient(ImDrawList *dl, const ImVec2 *points, const int points_count, ImU32 colTop, ImU32 colBot, bool anti_aliased,float miny,float maxy)
+{
+    if (!dl) return;
+    if (colTop==colBot)  {
+        dl->AddConvexPolyFilled(points,points_count,colTop,anti_aliased);
+        return;
+    }
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+    anti_aliased &= GImGui->Style.AntiAliasedShapes;
+    //if (ImGui::GetIO().KeyCtrl) anti_aliased = false; // Debug
+
+    int height=0;
+    if (miny<=0 || maxy<=0) {
+        const float max_float = 999999999999999999.f;
+        miny=max_float;maxy=-max_float;
+        for (int i = 0; i < points_count; i++) {
+            const float h = points[i].y;
+            if (h < miny) miny = h;
+            else if (h > maxy) maxy = h;
+        }
+    }
+    height = maxy-miny;
+    const ImVec4 colTopf = ColorConvertU32ToFloat4(colTop);
+    const ImVec4 colBotf = ColorConvertU32ToFloat4(colBot);
+
+
+    if (anti_aliased)
+    {
+        // Anti-aliased Fill
+        const float AA_SIZE = 1.0f;
+        //const ImU32 col_trans = col & 0x00ffffff;
+        const ImVec4 colTransTopf(colTopf.x,colTopf.y,colTopf.z,0.f);
+        const ImVec4 colTransBotf(colBotf.x,colBotf.y,colBotf.z,0.f);
+        const int idx_count = (points_count-2)*3 + points_count*6;
+        const int vtx_count = (points_count*2);
+        dl->PrimReserve(idx_count, vtx_count);
+
+        // Add indexes for fill
+        unsigned int vtx_inner_idx = dl->_VtxCurrentIdx;
+        unsigned int vtx_outer_idx = dl->_VtxCurrentIdx+1;
+        for (int i = 2; i < points_count; i++)
+        {
+            dl->_IdxWritePtr[0] = (ImDrawIdx)(vtx_inner_idx); dl->_IdxWritePtr[1] = (ImDrawIdx)(vtx_inner_idx+((i-1)<<1)); dl->_IdxWritePtr[2] = (ImDrawIdx)(vtx_inner_idx+(i<<1));
+            dl->_IdxWritePtr += 3;
+        }
+
+        // Compute normals
+        ImVec2* temp_normals = (ImVec2*)alloca(points_count * sizeof(ImVec2));
+        for (int i0 = points_count-1, i1 = 0; i1 < points_count; i0 = i1++)
+        {
+            const ImVec2& p0 = points[i0];
+            const ImVec2& p1 = points[i1];
+            ImVec2 diff = p1 - p0;
+            diff *= ImInvLength(diff, 1.0f);
+            temp_normals[i0].x = diff.y;
+            temp_normals[i0].y = -diff.x;
+        }
+
+        for (int i0 = points_count-1, i1 = 0; i1 < points_count; i0 = i1++)
+        {
+            // Average normals
+            const ImVec2& n0 = temp_normals[i0];
+            const ImVec2& n1 = temp_normals[i1];
+            ImVec2 dm = (n0 + n1) * 0.5f;
+            float dmr2 = dm.x*dm.x + dm.y*dm.y;
+            if (dmr2 > 0.000001f)
+            {
+                float scale = 1.0f / dmr2;
+                if (scale > 100.0f) scale = 100.0f;
+                dm *= scale;
+            }
+            dm *= AA_SIZE * 0.5f;
+
+            // Add vertices
+            //_VtxWritePtr[0].pos = (points[i1] - dm); _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;        // Inner
+            //_VtxWritePtr[1].pos = (points[i1] + dm); _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col_trans;  // Outer
+            dl->_VtxWritePtr[0].pos = (points[i1] - dm); dl->_VtxWritePtr[0].uv = uv; dl->_VtxWritePtr[0].col = GetVerticalGradient(colTopf,colBotf,points[i1].y-miny,height);        // Inner
+            dl->_VtxWritePtr[1].pos = (points[i1] + dm); dl->_VtxWritePtr[1].uv = uv; dl->_VtxWritePtr[1].col = GetVerticalGradient(colTransTopf,colTransBotf,points[i1].y-miny,height);  // Outer
+            dl->_VtxWritePtr += 2;
+
+            // Add indexes for fringes
+            dl->_IdxWritePtr[0] = (ImDrawIdx)(vtx_inner_idx+(i1<<1)); dl->_IdxWritePtr[1] = (ImDrawIdx)(vtx_inner_idx+(i0<<1)); dl->_IdxWritePtr[2] = (ImDrawIdx)(vtx_outer_idx+(i0<<1));
+            dl->_IdxWritePtr[3] = (ImDrawIdx)(vtx_outer_idx+(i0<<1)); dl->_IdxWritePtr[4] = (ImDrawIdx)(vtx_outer_idx+(i1<<1)); dl->_IdxWritePtr[5] = (ImDrawIdx)(vtx_inner_idx+(i1<<1));
+            dl->_IdxWritePtr += 6;
+        }
+        dl->_VtxCurrentIdx += (ImDrawIdx)vtx_count;
+    }
+    else
+    {
+        // Non Anti-aliased Fill
+        const int idx_count = (points_count-2)*3;
+        const int vtx_count = points_count;
+        dl->PrimReserve(idx_count, vtx_count);
+        for (int i = 0; i < vtx_count; i++)
+        {
+            //_VtxWritePtr[0].pos = points[i]; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;
+            dl->_VtxWritePtr[0].pos = points[i]; dl->_VtxWritePtr[0].uv = uv; dl->_VtxWritePtr[0].col = GetVerticalGradient(colTopf,colBotf,points[i].y-miny,height);
+            dl->_VtxWritePtr++;
+        }
+        for (int i = 2; i < points_count; i++)
+        {
+            dl->_IdxWritePtr[0] = (ImDrawIdx)(dl->_VtxCurrentIdx); dl->_IdxWritePtr[1] = (ImDrawIdx)(dl->_VtxCurrentIdx+i-1); dl->_IdxWritePtr[2] = (ImDrawIdx)(dl->_VtxCurrentIdx+i);
+            dl->_IdxWritePtr += 3;
+        }
+        dl->_VtxCurrentIdx += (ImDrawIdx)vtx_count;
+    }
+}
+static void ImDrawListPathFillWithVerticalGradientAndStroke(ImDrawList *dl, const ImU32 &fillColorTop, const ImU32 &fillColorBottom, const ImU32 &strokeColor, bool strokeClosed = false, float strokeThickness = 1.0f, bool antiAliased = true, float miny=-1.f, float maxy=-1.f)    {
+    if (!dl) return;
+    if (fillColorTop==fillColorBottom) dl->AddConvexPolyFilled(dl->_Path.Data,dl->_Path.Size, fillColorTop, antiAliased);
+    else if ((fillColorTop >> 24) != 0 || (fillColorBottom >> 24) != 0) ImDrawListAddConvexPolyFilledWithVerticalGradient(dl, dl->_Path.Data, dl->_Path.Size, fillColorTop, fillColorBottom, antiAliased,miny,maxy);
+    if ((strokeColor>> 24)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
+    dl->PathClear();
+}
+static void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColorTop, const ImU32 &fillColorBottom, const ImU32 &strokeColor, float rounding = 0.0f, int rounding_corners = 0x0F,float strokeThickness = 1.0f,bool antiAliased = true) {
+    if (!dl || (((fillColorTop >> 24) == 0) && ((fillColorBottom >> 24) == 0) && ((strokeColor >> 24) == 0)))  return;
+    if (rounding==0.f || rounding_corners==0) {
+        dl->AddRectFilledMultiColor(a,b,fillColorTop,fillColorTop,fillColorBottom,fillColorBottom); // Huge speedup!
+        if ((strokeColor>> 24)!= 0 && strokeThickness>0.f) {
+            dl->PathRect(a, b, rounding, rounding_corners);
+            dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, true, strokeThickness, antiAliased);
+            dl->PathClear();
+        }
+    }
+    else    {
+        dl->PathRect(a, b, rounding, rounding_corners);
+        ImDrawListPathFillWithVerticalGradientAndStroke(dl,fillColorTop,fillColorBottom,strokeColor,true,strokeThickness,antiAliased,a.y,b.y);
+    }
+}
+static void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColor, float fillColorGradientDeltaIn0_05, const ImU32 &strokeColor, float rounding = 0.0f, int rounding_corners = 0x0F,float strokeThickness = 1.0f,bool antiAliased = true)   {
+    ImU32 fillColorTop,fillColorBottom;GetVerticalGradientTopAndBottomColors(fillColor,fillColorGradientDeltaIn0_05,fillColorTop,fillColorBottom);
+    ImDrawListAddRectWithVerticalGradient(dl,a,b,fillColorTop,fillColorBottom,strokeColor,rounding,rounding_corners,strokeThickness,antiAliased);
+}
+} // namespace
 
 NodeGraphEditor::Style NodeGraphEditor::style;  // static variable initialization
 inline static bool EditColorImU32(const char* label,ImU32& color) {
@@ -51,8 +238,11 @@ bool NodeGraphEditor::Style::Edit(NodeGraphEditor::Style& s) {
     changed|=ImGui::DragFloat2(  "node_window_padding",&s.node_window_padding.x,dragSpeed,0.f,8.f,prec);
     ImGui::Spacing();
     changed|=EditColorImU32(    "color_node_input_slots",s.color_node_input_slots);
+    changed|=EditColorImU32(    "color_node_input_slots_border",s.color_node_input_slots_border);
     changed|=EditColorImU32(    "color_node_output_slots",s.color_node_output_slots);
+    changed|=EditColorImU32(    "color_node_output_slots_border",s.color_node_output_slots_border);
     changed|=ImGui::DragFloat(  "node_slots_radius",&s.node_slots_radius,dragSpeed,1.f,10.f,prec);
+    changed|=ImGui::DragInt("node_slots_num_segments",&s.node_slots_num_segments,1.0f,2,24);
     ImGui::Spacing();
     changed|=EditColorImU32(    "color_mouse_rectangular_selection",s.color_mouse_rectangular_selection);
     changed|=EditColorImU32(    "color_mouse_rectangular_selection_frame",s.color_mouse_rectangular_selection_frame);
@@ -97,8 +287,11 @@ bool NodeGraphEditor::Style::Save(const NodeGraphEditor::Style &style,ImGuiHelpe
     s.save(ImGui::FT_FLOAT,&style.node_window_padding.x,"node_window_padding",2);
 
     tmpColor = ImColor(style.color_node_input_slots);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_input_slots",4);
+    tmpColor = ImColor(style.color_node_input_slots_border);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_input_slots_border",4);
     tmpColor = ImColor(style.color_node_output_slots);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_output_slots",4);
+    tmpColor = ImColor(style.color_node_output_slots_border);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_node_output_slots_border",4);
     s.save(ImGui::FT_FLOAT,&style.node_slots_radius,"node_slots_radius");
+    s.save(&style.node_slots_num_segments,"node_slots_num_segments");
 
     tmpColor = ImColor(style.color_mouse_rectangular_selection);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_mouse_rectangular_selection",4);
     tmpColor = ImColor(style.color_mouse_rectangular_selection_frame);s.save(ImGui::FT_COLOR,&tmpColor.x,"color_mouse_rectangular_selection_frame",4);
@@ -133,10 +326,11 @@ static bool StyleParser(ImGuiHelper::FieldType ft,int /*numArrayElements*/,void*
         else if (strcmp(name,"node_slots_radius")==0)                       s.node_slots_radius = tmp.x;
         else if (strcmp(name,"link_line_width")==0)                         s.link_line_width = tmp.x;
         else if (strcmp(name,"link_control_point_distance")==0)             s.link_control_point_distance = tmp.x;
-	else if (strcmp(name,"color_node_title_background_gradient")==0)    s.color_node_title_background_gradient = tmp.x;
+        else if (strcmp(name,"color_node_title_background_gradient")==0)    s.color_node_title_background_gradient = tmp.x;
     break;
     case FT_INT:
         if (strcmp(name,"link_num_segments")==0)                            s.link_num_segments = *((int*)pValue);
+        else if (strcmp(name,"node_slots_num_segments")==0)                 s.node_slots_num_segments = *((int*)pValue);
     break;
     case FT_COLOR:
         if (strcmp(name,"color_background")==0)                             s.color_background = ImColor(tmp);
@@ -150,7 +344,9 @@ static bool StyleParser(ImGuiHelper::FieldType ft,int /*numArrayElements*/,void*
         else if (strcmp(name,"color_node_hovered")==0)                      s.color_node_hovered = ImColor(tmp);
         else if (strcmp(name,"color_node_frame_hovered")==0)                s.color_node_frame_hovered = ImColor(tmp);
         else if (strcmp(name,"color_node_input_slots")==0)                  s.color_node_input_slots = ImColor(tmp);
+        else if (strcmp(name,"color_node_input_slots_border")==0)           s.color_node_input_slots_border = ImColor(tmp);
         else if (strcmp(name,"color_node_output_slots")==0)                 s.color_node_output_slots = ImColor(tmp);
+        else if (strcmp(name,"color_node_output_slots_border")==0)          s.color_node_output_slots_border = ImColor(tmp);
         else if (strcmp(name,"color_mouse_rectangular_selection")==0)       s.color_mouse_rectangular_selection = ImColor(tmp);
         else if (strcmp(name,"color_mouse_rectangular_selection_frame")==0) s.color_mouse_rectangular_selection_frame = ImColor(tmp);
         else if (strcmp(name,"color_link")==0)                              s.color_link = ImColor(tmp);
@@ -615,6 +811,8 @@ void NodeGraphEditor::render()
     const float textSizeButtonCopy = ImGui::CalcTextSize(NodeGraphEditor::CloseCopyPasteChars[1]).x;
     const float textSizeButtonX = ImGui::CalcTextSize(NodeGraphEditor::CloseCopyPasteChars[2]).x;
     int activeNodeIndex = -1;
+    const ImGuiStyle& mainStyle = ImGui::GetStyle();
+    const ImVec4& defaultTextColor = mainStyle.Colors[ImGuiCol_Text];
     for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
     {
         Node* node = nodes[node_idx];
@@ -647,16 +845,20 @@ void NodeGraphEditor::render()
         bool nodeInEditMode = false;
         ImGui::BeginGroup(); // Lock horizontal position
         ImGui::SetNextTreeNodeOpen(node->isOpen,ImGuiSetCond_Always);
+
+        ImVec4 titleTextColor = node->overrideTitleTextColor ? ImGui::ColorConvertU32ToFloat4(node->overrideTitleTextColor) : style.color_node_title;
+        if (titleTextColor.w==0.f) titleTextColor = defaultTextColor;
+        ImGui::PushStyleColor(ImGuiCol_Text,titleTextColor);    // titleTextColor (these 3 lines can be moved down to leave the TreeNode triangle always 'defaultTextColor')
+
         ImGui::PushStyleColor(ImGuiCol_Header,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderActive,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderHovered,transparent);    // Moved from outside loop
         if (ImGui::TreeNode(node,"%s","")) {ImGui::TreePop();node->isOpen = true;}
         else node->isOpen = false;
         ImGui::PopStyleColor(3);   // Moved from outside loop
         ImGui::SameLine(0,2);
 
+        // titleTextColor: the 3 lines above can be moved here  to leave the TreeNode triangle always 'defaultTextColor'
         static char NewNodeName[IMGUINODE_MAX_NAME_LENGTH]="";
         static bool mustStartEditingNodeName = false;
-        const ImVec4 titleTextColor = node->overrideTitleTextColor ? ImGui::ColorConvertU32ToFloat4(node->overrideTitleTextColor) : style.color_node_title;
-        ImGui::PushStyleColor(ImGuiCol_Text,titleTextColor);
         if (!node->isInEditingMode) {
             ImGui::Text("%s",node->Name);
             if (ImGui::IsItemHovered()) {
@@ -681,7 +883,7 @@ void NodeGraphEditor::render()
             }
             mustStartEditingNodeName = false;
         }
-        ImGui::PopStyleColor();
+        ImGui::PopStyleColor();                                 // titleTextColor
 
     // Note: if node->isOpen, we'll draw the buttons later, because we need node->Size that is not known
     // BUTTONS ========================================================
@@ -689,7 +891,7 @@ void NodeGraphEditor::render()
     const bool canCopy = node->canBeCopied();
     static const ImVec4 transparentColor(1,1,1,0);
     const ImVec2 nodeTitleBarButtonsStartCursor = node->isOpen ? ImGui::GetCursorPos() : ImVec2(0,0);
-    if (!node->isOpen && node->Size.x!=0 && !node->isInEditingMode)    {
+    if (!node->isOpen && !node->isInEditingMode)    {
         ImGui::SameLine();
         //== Actual code to draw buttons (same code is copied below) =====================
         ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);
@@ -877,21 +1079,23 @@ void NodeGraphEditor::render()
         // Node Title Bg Color
         const ImU32 nodeTitleBgColor = node->overrideTitleBgColor ? node->overrideTitleBgColor : style.color_node_title_background;//0xFF880000;
         if (nodeTitleBgColor>>24!=0) {
-#           if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
+//#           define SKIP_VERTICAL_GRADIENT
+#           ifndef SKIP_VERTICAL_GRADIENT
             float fillGradientFactor = node->overrideTitleBgColorGradient>=0.f ? node->overrideTitleBgColorGradient : style.color_node_title_background_gradient;//0.15f;
             if (node->isSelected) fillGradientFactor = -fillGradientFactor; // or if (node==activeNode)
             if (fillGradientFactor!=0.f)    {
-                if (node->isOpen) ImGui::ImDrawListAddRectWithVerticalGradient(draw_list,node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor,fillGradientFactor,0x00000000,style.node_rounding,1|2);
-                else ImGui::ImDrawListAddRectWithVerticalGradient(draw_list,node_rect_min, node_rect_max, nodeTitleBgColor,fillGradientFactor,0x00000000, style.node_rounding);
+                if (node->isOpen) ImGui::NGE_Draw::ImDrawListAddRectWithVerticalGradient(draw_list,node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor,fillGradientFactor,0x00000000,style.node_rounding,1|2);
+                else ImGui::NGE_Draw::ImDrawListAddRectWithVerticalGradient(draw_list,node_rect_min, node_rect_max, nodeTitleBgColor,fillGradientFactor,0x00000000, style.node_rounding);
             }
             else {
                 if (node->isOpen) draw_list->AddRectFilled(node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor, style.node_rounding,1|2);
                 else draw_list->AddRectFilled(node_rect_min, node_rect_max, nodeTitleBgColor, style.node_rounding);
             }
-#           else // (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
+#           else // SKIP_VERTICAL_GRADIENT
             if (node->isOpen) draw_list->AddRectFilled(node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor, style.node_rounding,1|2);
             else draw_list->AddRectFilled(node_rect_min, node_rect_max, nodeTitleBgColor, style.node_rounding);
-#           endif //(defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
+#           undef SKIP_VERTICAL_GRADIENT
+#           endif // SKIP_VERTICAL_GRADIENT
         }
 
 
@@ -919,10 +1123,12 @@ void NodeGraphEditor::render()
         const bool mustDeleteLinkIfSlotIsHovered = canDeleteLinks && io.MouseDoubleClicked[0];
         const bool mustDetectIfSlotIsHoveredForDragNDrop = !cantDragAnything && !isSomeNodeMoving && (!isDragNodeValid || isLMBDraggingForMakingLinks);
         ImGui::PushStyleColor(ImGuiCol_Text,style.color_node_input_slots_names);
+        const float connectorBorderThickness = NODE_SLOT_RADIUS*0.25f; // lineThickness = ((activeNode == node) ? 3.0f : (node->isSelected ? 2.0f : 1.f))*currentFontWindowScale;
         ImVec2 connectorNameSize(0,0);
         for (int slot_idx = 0; slot_idx < node->InputsCount; slot_idx++)    {
             connectorScreenPos = offset + node->GetInputSlotPos(slot_idx,currentFontWindowScale);
-            draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, style.color_node_input_slots);
+            //draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, style.color_node_input_slots,connectorNumSegments);
+            ImGui::NGE_Draw::ImDrawListAddCircle(draw_list,connectorScreenPos,NODE_SLOT_RADIUS,style.color_node_input_slots,style.color_node_input_slots_border,style.node_slots_num_segments,connectorBorderThickness,true);
             /*if ((style.color_node_input_slots >> 24) != 0)  {
                 const float a_max = IM_PI * 0.5f * 11.f/12.f;
                 draw_list->PathArcTo(connectorScreenPos, NODE_SLOT_RADIUS, IM_PI-a_max, IM_PI+a_max, 12);
@@ -998,7 +1204,8 @@ void NodeGraphEditor::render()
         ImGui::PushStyleColor(ImGuiCol_Text,style.color_node_output_slots_names);
         for (int slot_idx = 0; slot_idx < node->OutputsCount; slot_idx++)   {
             connectorScreenPos = offset + node->GetOutputSlotPos(slot_idx,currentFontWindowScale);
-            draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, style.color_node_output_slots);
+            //draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, style.color_node_output_slots,connectorNumSegments);
+            ImGui::NGE_Draw::ImDrawListAddCircle(draw_list,connectorScreenPos,NODE_SLOT_RADIUS,style.color_node_output_slots,style.color_node_output_slots_border,style.node_slots_num_segments,connectorBorderThickness,true);
             /*if ((style.color_node_output_slots >> 24) != 0)  {
                 const float a_max = IM_PI * 0.5f * 11.f/12.f;
                 draw_list->PathArcTo(connectorScreenPos, NODE_SLOT_RADIUS, -a_max, a_max, 12);

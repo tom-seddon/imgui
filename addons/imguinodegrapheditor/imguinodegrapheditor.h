@@ -376,8 +376,11 @@ struct NodeGraphEditor	{
         float node_rounding;
         ImVec2 node_window_padding;
         ImU32 color_node_input_slots;
+        ImU32 color_node_input_slots_border;
         ImU32 color_node_output_slots;
+        ImU32 color_node_output_slots_border;
         float node_slots_radius;
+        int node_slots_num_segments;
         ImU32 color_link;
         float link_line_width;
         float link_control_point_distance;
@@ -423,6 +426,9 @@ struct NodeGraphEditor	{
 
             color_mouse_rectangular_selection =         ImColor(255,0,0,45);
             color_mouse_rectangular_selection_frame =   ImColor(45,0,0,175);
+
+            color_node_input_slots_border = color_node_output_slots_border = ImColor(60,60,60,0);
+            node_slots_num_segments = 12;
         }
 
         static bool Edit(Style& style);

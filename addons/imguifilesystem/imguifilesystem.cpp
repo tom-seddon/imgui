@@ -2461,7 +2461,44 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
                             Path::GetFileName(I.files[i],I.saveFileName);
                         }
                     }
-#                   ifdef IMGUI_USE_MINIZIP
+#                   if (defined(__EMSCRIPTEN__) && defined(EMSCRIPTEN_SAVE_SHELL))
+                    static char tmpString[ImGuiFs::MAX_PATH_BYTES*2]="";
+#                       ifndef IMGUI_USE_MINIZIP
+                        if (ImGui::IsItemHovered() && ImGui::GetIO().KeyCtrl)   {
+                            ImGui::SetTooltip("%s","right click to download this file locally");
+                            if (ImGui::GetIO().MouseClicked[1]) {
+                                strcpy(tmpString,"saveFileFromMemoryFSToDisk('");
+                                strcat(tmpString,I.files[i]);strcat(tmpString,"','");
+                                strcat(tmpString,fileName);strcat(tmpString,"')");
+
+                                emscripten_run_script(tmpString);
+                            }
+                        }
+#                       else // IMGUI_USE_MINIZIP
+                        if (ImGui::IsItemHovered())   {
+                            if (!isBrowsingInsideZipFile && ImGui::GetIO().KeyCtrl) {
+                                ImGui::SetTooltip("%s","right click to download this file locally");
+                                if (ImGui::GetIO().MouseClicked[1]) {
+                                    strcpy(tmpString,"saveFileFromMemoryFSToDisk('");
+                                    strcat(tmpString,I.files[i]);strcat(tmpString,"','");
+                                    strcat(tmpString,fileName);strcat(tmpString,"')");
+
+                                    emscripten_run_script(tmpString);
+                                }
+                            }
+                            else if (isZipFile)  {
+                                ImGui::SetTooltip("right click to browse it");
+                                if (ImGui::GetIO().MouseClicked[1])  {
+                                    strcpy(I.currentFolder,I.files[i]);
+                                    strcpy(I.editLocationInputText,I.currentFolder);
+                                    I.history.switchTo(I.currentFolder);
+                                    I.forceRescan = true;
+                                    //------------------------------------------------------------------------------------------------------------------------------
+                                }
+                            }
+                        }
+#                       endif // IMGUI_USE_MINIZIP
+#                   elif IMGUI_USE_MINIZIP // (defined(__EMSCRIPTEN__) && defined(EMSCRIPTEN_SAVE_SHELL))
                     if (isZipFile)  {
                         if (ImGui::IsItemHovered()) ImGui::SetTooltip("right click to browse it");
                         if (ImGui::GetIO().MouseClicked[1])  {
@@ -2472,7 +2509,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
                             //------------------------------------------------------------------------------------------------------------------------------
                         }
                     }
-#                   endif //IMGUI_USE_MINIZIP
+#                   endif //(defined(__EMSCRIPTEN__) && defined(EMSCRIPTEN_SAVE_SHELL))
                     ++cntEntries;
                     if (Internal::BrowsingPerRow) ImGui::NextColumn();
                     else if (cntEntries==I.numBrowsingEntriesPerColumn) {

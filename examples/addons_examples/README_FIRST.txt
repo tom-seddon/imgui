@@ -302,6 +302,32 @@ em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp .
 In short I suggest you use the SDL2 binding when building with the emscripten compiler, because you can use native cursors (that are missing from GLFW < 3.1), and unicode support (that is missing from GLUT).
 GLFW can be a possible alternative only for version 3.1 or above (but of course the GLFW version is the one that em++ downloads on the fly, not yours).
 
+P.S. In the C++ code you can check emscripten builds using the __EMSCRIPTEN__ definition.
+
+Using predefined shells:
+------------------------
+In the examples/addons_examples/html folder, together with the .html (and .js) files that are necessary to run the emscripten version,
+some files with the .shell extensions are also present. 
+These files are NOT necessary when RUNNING the .html files, but can be used in the
+building process to make the .html files have a different look and functionality.
+-> A shell file is a kind of 'template .html file' that can be used by emcc/em++ with the command-line option: --shell-file.
+Currently the available shells are:
+a) --shell-file html/emscripten_default.shell 	-> very similiar to the normal shell, except that it lacks a few options that didn't work as expected in my tests.
+b) --shell-file html/emscripten_load.shell		-> same as above, except that it lacks the emscripten logo and link and it exposes a "Browse" button that can be used
+												   to "upload" files from the user local filesystem to the root folder of the emscripten/browser filesystem, that is the only one accessible from C/C++ code.
+												   (there is currently no notification to the C++ code that files have been added, so that we don't need any modification to our existing C++ code: however it's very easy to modify the shell code to achieve it). 
+c) --shell-file html/emscripten_load_save.shell	-> same as the 'load' shell, except that it allows the C++ code to 'download' files from the emscripten/browser filesystem to the user local filesystem,
+												   through a Javascript method called "saveFileFromMemoryFSToDisk(memoryFSname,localFSname)" [Tip: 'localFSname' shouldn't contain folder paths: it's up to the browser to decide where to put it].
+												   This shell REQUIRES "FileSaver.js" to be present in the output (html/) folder at RUNTIME (when this shell [or shell d)] is not used "FileSaver.js" can be safely removed).
+												   (all this requires no modifications to existing C++ code, but of course it would be useless if "saveFileFromMemoryFSToDisk" is never called). 
+												   P.S. to call Javascript code from C++, we must include <emscripten.h> and then we can write something like: emscripten_run_script("saveFileFromMemoryFSToDisk('images/image.jpg','image.jpg')");
+												   P.S.2. There's more than this: we can call the Javascript methods exposed by "FileSaver.js" too, if we just need to create a file and download it without first saving it to the browser FS [Never tested].
+d) --shell-file html/emscripten_save.shell		-> c) - b). [This shell REQUIRES "FileSaver.js" to be present in the output (html/) folder at RUNTIME too].
+
+WARNING: when using a shell b), c) or d) the command-line: --closure 1 should be avoided.
+TIP: Currently if you use the imguifilesystem addon together with shell c) or d), you can define EMSCRIPTEN_SAVE_SHELL globally,
+so that when a filesystem dialog is open, you can hold CTRL down and right-click on a file to download it locally.
+
 ================================================
 FAQ: HOW TO RUN THE (LOCAL) HTML DEMOS
 ================================================
