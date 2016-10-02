@@ -96,7 +96,7 @@ void ImDrawListAddConvexPolyFilledWithVerticalGradient(ImDrawList *dl, const ImV
     {
         // Anti-aliased Fill
         const float AA_SIZE = 1.0f;
-        //const ImU32 col_trans = col & 0x00ffffff;
+
         const ImVec4 colTransTopf(colTopf.x,colTopf.y,colTopf.z,0.f);
         const ImVec4 colTransBotf(colBotf.x,colBotf.y,colBotf.z,0.f);
         const int idx_count = (points_count-2)*3 + points_count*6;
@@ -2830,7 +2830,7 @@ static bool TabButtonVertical(bool rotateCCW,const char *label, bool selected, b
 
         const float cross_extent = (btnSize * 0.5f * 0.7071f);// - 1.0f;
         const ImVec2 center((startBtn.x+endBtn.x)*0.5f,(startBtn.y+endBtn.y)*0.5f);
-        const ImU32 cross_col = tabStyle.colors[(btnHovered) ? TabLabelStyle::Col_TabLabelCloseButtonTextHovered : selected ? TabLabelStyle::Col_TabLabelSelectedText : TabLabelStyle::Col_TabLabelText];//btnHovered ? 0xFFFF0000 : ImGui::GetColorU32(ImGuiCol_Text);
+        const ImU32 cross_col = tabStyle.colors[(btnHovered) ? TabLabelStyle::Col_TabLabelCloseButtonTextHovered : selected ? TabLabelStyle::Col_TabLabelSelectedText : TabLabelStyle::Col_TabLabelText];
         drawListOverride->AddLine(center + ImVec2(+cross_extent,+cross_extent), center + ImVec2(-cross_extent,-cross_extent), cross_col,tabStyle.closeButtonTextWidth);
         drawListOverride->AddLine(center + ImVec2(+cross_extent,-cross_extent), center + ImVec2(-cross_extent,+cross_extent), cross_col,tabStyle.closeButtonTextWidth);
 

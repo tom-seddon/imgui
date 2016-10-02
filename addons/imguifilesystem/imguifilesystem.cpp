@@ -1353,6 +1353,23 @@ int FileGetExtensionType(const char* path) {
 void FileGetExtensionTypesFromFilenames(ImVector<int>& fileExtensionTypesOut,const FilenameStringVector& fileNames)  {
     MyImGuiFsDrawIconStruct.fillExtensionTypesFromFilenames(fileExtensionTypesOut,fileNames);
 }
+#if (defined(__EMSCRIPTEN__) && defined(EMSCRIPTEN_SAVE_SHELL))
+bool FileDownload(const char* path,const char* optionalSaveFileName)    {
+    if (!path || !FileExists(path)) return false;
+    static char tmpString[ImGuiFs::MAX_PATH_BYTES*2]="";    // Better use static here...
+    strcpy(tmpString,"saveFileFromMemoryFSToDisk('");
+    strcat(tmpString,path);strcat(tmpString,"','");
+    if (optionalSaveFileName) strcat(tmpString,optionalSaveFileName);
+    else {
+        char fileName[ImGuiFs::MAX_FILENAME_BYTES]="";
+        ImGuiFs::PathGetFileName(path,fileName);
+        strcat(tmpString,fileName);
+    }
+    strcat(tmpString,"')");
+    emscripten_run_script(tmpString);
+    return true;
+}
+#endif // (defined(__EMSCRIPTEN__) && defined(EMSCRIPTEN_SAVE_SHELL))
 #endif // IMGUIFS_NO_EXTRA_METHODS
 //-------------------------------------------------------------------------------------------------------
 
@@ -2687,7 +2704,7 @@ const char* Dialog::saveFileDialog(bool dialogTriggerButton,const char* director
 
 
 #ifndef IMGUIFS_NO_EXTRA_METHODS
-// just espose some methods
+// just expose some methods
 
 void PathGetAbsolute(const char *path, char *rv) {Path::GetAbsolutePath(path,rv);}
 void PathGetDirectoryName(const char *filePath, char *rv)    {Path::GetDirectoryName(filePath,rv);}

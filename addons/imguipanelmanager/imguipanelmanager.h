@@ -5,23 +5,6 @@
 
 namespace ImGui {
 
-// TODO: Load/Save layout:
-/* Just serializing these should be enough:
- * numPanes
- forech pane {
- * pane.pos
- * pane.bar.selectedButtonIndex
- * pane.bar.numButtons [must equal pane.windows.size()==pane.bar.buttons.size()]
- foreach button {
- * pane.windows[i].isPresent    [pane.windows[i]!=NULL]
- * pane.windows[i]->sizeFactor [size/displayWidthOrHeight]
- * pane.windows[i]->sizeHoverMode [size/displayWidthOrHeight]
- * pane.windows[i]->extraWindowFlags
-
- * pane.bar.buttons[i].isDown [allow true only if it's a toggle button]
- }
- }
-*/
 
 struct PanelManager {
     enum Position {

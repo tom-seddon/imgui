@@ -1646,6 +1646,7 @@ void SdfAddTextWithTags(SdfTextChunk* chunk,const char* startText,const char* en
 			if (mustInvertColor) {
 			    color = ((color << 8) & 0xFF00FF00 ) | ((color >> 8) & 0xFF00FF );
 			    color = (color << 16) | (color >> 16);
+                // TODO: we should still invert R with B if IMGUI_USE_BGRA_PACKED_COLOR is defined!
 			}
 			TS.color.push_back(SdfTextColor(ImGui::ColorConvertU32ToFloat4(color)));
 		    }

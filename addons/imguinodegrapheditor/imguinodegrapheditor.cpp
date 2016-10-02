@@ -101,7 +101,7 @@ static void ImDrawListAddConvexPolyFilledWithVerticalGradient(ImDrawList *dl, co
     {
         // Anti-aliased Fill
         const float AA_SIZE = 1.0f;
-        //const ImU32 col_trans = col & 0x00ffffff;
+
         const ImVec4 colTransTopf(colTopf.x,colTopf.y,colTopf.z,0.f);
         const ImVec4 colTransBotf(colBotf.x,colBotf.y,colBotf.z,0.f);
         const int idx_count = (points_count-2)*3 + points_count*6;
@@ -1077,15 +1077,15 @@ void NodeGraphEditor::render()
         draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, style.node_rounding); // Bg
 
         // Node Title Bg Color
-        const ImU32 nodeTitleBgColor = node->overrideTitleBgColor ? node->overrideTitleBgColor : style.color_node_title_background;//0xFF880000;
+        const ImU32 nodeTitleBgColor = node->overrideTitleBgColor ? node->overrideTitleBgColor : style.color_node_title_background;
         if (nodeTitleBgColor>>24!=0) {
 //#           define SKIP_VERTICAL_GRADIENT
 #           ifndef SKIP_VERTICAL_GRADIENT
             float fillGradientFactor = node->overrideTitleBgColorGradient>=0.f ? node->overrideTitleBgColorGradient : style.color_node_title_background_gradient;//0.15f;
             if (node->isSelected) fillGradientFactor = -fillGradientFactor; // or if (node==activeNode)
             if (fillGradientFactor!=0.f)    {
-                if (node->isOpen) ImGui::NGE_Draw::ImDrawListAddRectWithVerticalGradient(draw_list,node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor,fillGradientFactor,0x00000000,style.node_rounding,1|2);
-                else ImGui::NGE_Draw::ImDrawListAddRectWithVerticalGradient(draw_list,node_rect_min, node_rect_max, nodeTitleBgColor,fillGradientFactor,0x00000000, style.node_rounding);
+                if (node->isOpen) ImGui::NGE_Draw::ImDrawListAddRectWithVerticalGradient(draw_list,node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor,fillGradientFactor,IM_COL32_BLACK_TRANS,style.node_rounding,1|2);
+                else ImGui::NGE_Draw::ImDrawListAddRectWithVerticalGradient(draw_list,node_rect_min, node_rect_max, nodeTitleBgColor,fillGradientFactor,IM_COL32_BLACK_TRANS, style.node_rounding);
             }
             else {
                 if (node->isOpen) draw_list->AddRectFilled(node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor, style.node_rounding,1|2);
@@ -2198,7 +2198,7 @@ bool FieldInfo::render(int nodeWidth)   {
             if (startPos>0)    {
                 ImGui::PushTextWrapPos(startPos);
                 ImGui::Text(txtField, width);
-                //ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), 0xFF00FFFF);
+                //ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255,255,0,255));
                 ImGui::PopTextWrapPos();
             }
         }
@@ -2507,7 +2507,7 @@ class ColorNode : public Node {
         node->Color = ImColor(255,255,0,255);
 
         // [Optional] customize Node Title Colors [default values: 0,0,-1.f => do not override == use default values from the Style()]
-        //node->overrideTitleTextColor = 0xFFDDDDDD;node->overrideTitleBgColor = 0xFF004400;node->overrideTitleBgColorGradient = -1.f;
+        //node->overrideTitleTextColor = IM_COL32(220,220,220,255);node->overrideTitleBgColor = IM_COL32(0,75,0,255);node->overrideTitleBgColorGradient = -1.f;
 
         return node;
     }
@@ -2547,7 +2547,7 @@ class CombineNode : public Node {
         node->fraction = 0.5f;
 
         // [Optional] customize Node Title Colors [default values: 0,0,-1.0f => do not override do not override == use default values from the Style()]
-        //node->overrideTitleTextColor = 0xFFDDDDDD;node->overrideTitleBgColor = 0xFF662200;node->overrideTitleBgColorGradient = -1.0f;
+        //node->overrideTitleTextColor = IM_COL32(220,220,220,255);node->overrideTitleBgColor = IM_COL32(0,75,0,255);node->overrideTitleBgColorGradient = -1.f;
 
         return node;
     }
@@ -2606,7 +2606,7 @@ class CommentNode : public Node {
 	node->flag = true;
 
     // [Optional] customize Node Title Colors [default values: 0,0,-1.0f => do not override do not override == use default values from the Style()]
-    //node->overrideTitleTextColor = 0xFFAAAAAA;node->overrideTitleBgColor = 0xFF003355;node->overrideTitleBgColorGradient = -1.0f;
+    //node->overrideTitleTextColor = IM_COL32(220,220,220,255);node->overrideTitleBgColor = IM_COL32(0,75,0,255);node->overrideTitleBgColorGradient = -1.f;
 
 
 	return node;
@@ -2663,7 +2663,7 @@ class ComplexNode : public Node {
         node->enumIndex = 1;
 
         // [Optional] customize Node Title Colors [default values: 0,0,-1.0f => do not override do not override == use default values from the Style()]
-        node->overrideTitleTextColor = 0xFFDDDDDD;node->overrideTitleBgColor = 0xFF002277;node->overrideTitleBgColorGradient = -1.0f;
+        node->overrideTitleTextColor = IM_COL32(220,220,220,255);node->overrideTitleBgColor = IM_COL32(125,35,0,255);node->overrideTitleBgColorGradient = -1.f;
 
 
         return node;
@@ -2728,7 +2728,7 @@ class TextureNode : public Node {
 	node->imagePath[0] = node->lastValidImagePath[0] = '\0';
 
     // [Optional] customize Node Title Colors [default values: 0,0,-1.0f => do not override do not override == use default values from the Style()]
-    node->overrideTitleTextColor = 0xFFDDDDDD;node->overrideTitleBgColor = 0xFF006666;node->overrideTitleBgColorGradient = -1.0f;
+    node->overrideTitleTextColor = IM_COL32(220,220,220,255);node->overrideTitleBgColor = IM_COL32(105,105,0,255);node->overrideTitleBgColorGradient = -1.f;
 
 
 	return node;
@@ -2823,7 +2823,7 @@ void TestNodeGraphEditor()  {
         ImGui::Node* combineNode =  nge.addNode(MNT_COMBINE_NODE,ImVec2(300,80)); // optionally use e.g.: ImGui::CombineNode::Cast(combineNode)->fraction = 0.8f;
         //nge.overrideNodeName(combineNode,"CombineNodeCustomName");  // Test only (to remove)
         //nge.overrideNodeInputSlots(combineNode,"in1;in2;in3;in4");  // Test only (to remove)
-        //ImU32 bg = 0xFF006600;nge.overrideNodeTitleBarColors(combineNode,NULL,&bg,NULL);  // Test only (to remove)
+        //ImU32 bg = IM_COL32(0,128,0,255);nge.overrideNodeTitleBarColors(combineNode,NULL,&bg,NULL);  // Test only (to remove)
         //nge.overrideNodeTitleBarColors(complexNode,NULL,&bg,NULL);  // Test only (to remove)
         nge.addLink(colorNode, 0, combineNode, 0);
         nge.addLink(complexNode, 1, combineNode, 1);

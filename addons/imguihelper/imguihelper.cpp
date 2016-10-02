@@ -211,7 +211,7 @@ void ImDrawListAddConvexPolyFilledWithVerticalGradient(ImDrawList *dl, const ImV
     {
         // Anti-aliased Fill
         const float AA_SIZE = 1.0f;
-        //const ImU32 col_trans = col & 0x00ffffff;
+
         const ImVec4 colTransTopf(colTopf.x,colTopf.y,colTopf.z,0.f);
         const ImVec4 colTransBotf(colBotf.x,colBotf.y,colBotf.z,0.f);
         const int idx_count = (points_count-2)*3 + points_count*6;
@@ -668,7 +668,7 @@ void ImDrawListAddConvexPolyFilledWithHorizontalGradient(ImDrawList *dl, const I
     {
         // Anti-aliased Fill
         const float AA_SIZE = 1.0f;
-        //const ImU32 col_trans = col & 0x00ffffff;
+
         const ImVec4 colTransLeftf(colLeftf.x,colLeftf.y,colLeftf.z,0.f);
         const ImVec4 colTransRightf(colRightf.x,colRightf.y,colRightf.z,0.f);
         const int idx_count = (points_count-2)*3 + points_count*6;

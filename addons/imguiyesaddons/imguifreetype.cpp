@@ -404,7 +404,7 @@ void GetTexDataAsRGBA32(ImFontAtlas* atlas,unsigned char** out_pixels, int* out_
         const unsigned char* src = pixels;
         unsigned int* dst = atlas->TexPixelsRGBA32;
         for (int n = atlas->TexWidth * atlas->TexHeight; n > 0; n--)
-            *dst++ = ((unsigned int)(*src++) << 24) | 0x00FFFFFF;
+	    *dst++ = IM_COL32(255, 255, 255, (unsigned int)(*src++));
     }
 
     *out_pixels = (unsigned char*)atlas->TexPixelsRGBA32;

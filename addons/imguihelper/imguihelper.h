@@ -46,7 +46,7 @@ void ImDrawListAddEllipseWithVerticalGradient(ImDrawList* dl,const ImVec2& centr
 void ImDrawListAddCircle(ImDrawList* dl,const ImVec2& centre, float radius,const ImU32& fillColor,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
 void ImDrawListAddCircleWithVerticalGradient(ImDrawList* dl,const ImVec2& centre, float radius,const ImU32& fillColorTop,const ImU32& fillColorBottom,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
 // Overload of ImDrawList::addPolyLine(...) that takes offset and scale:
-void ImDrawListAddPolyLine(ImDrawList *dl,const ImVec2* polyPoints,int numPolyPoints,ImU32 strokeColor=0xFFFFFFFF,float strokeThickness=1.f,bool strokeClosed=false, const ImVec2 &offset=ImVec2(0,0), const ImVec2& scale=ImVec2(1,1),bool antiAliased=false);
+void ImDrawListAddPolyLine(ImDrawList *dl,const ImVec2* polyPoints,int numPolyPoints,ImU32 strokeColor=IM_COL32_WHITE,float strokeThickness=1.f,bool strokeClosed=false, const ImVec2 &offset=ImVec2(0,0), const ImVec2& scale=ImVec2(1,1),bool antiAliased=false);
 
 
 #ifndef NO_IMGUIHELPER_DRAW_METHODS_CONCAVEPOLY
@@ -54,11 +54,11 @@ void ImDrawListAddPolyLine(ImDrawList *dl,const ImVec2* polyPoints,int numPolyPo
 // (Method written by Mark Bayazit (darkzerox) March 23, 2009)
 void DecomposeConcavePoly(const ImVector<ImVec2>& poly,ImVector<ImVec2>& convexPolysOut,ImVector<int>& numConvexPolyPointsOut,bool mustResetOutVectorsBeforeUsage=true);
 // This should be fed with the output of DecomposeConcavePoly(...)
-void ImDrawListAddPolyFill(ImDrawList *dl, const ImVector<ImVec2>& convexPolys, const ImVector<int>& numConvexPolyPoints, ImU32 fillColor=0xFFFFFFFF, const ImVec2& offset=ImVec2(0,0), const ImVec2& scale=ImVec2(1,1) ,bool antiAliased=false);
+void ImDrawListAddPolyFill(ImDrawList *dl, const ImVector<ImVec2>& convexPolys, const ImVector<int>& numConvexPolyPoints, ImU32 fillColor=IM_COL32_WHITE, const ImVec2& offset=ImVec2(0,0), const ImVec2& scale=ImVec2(1,1) ,bool antiAliased=false);
 
 // Test for the 2 methods above. Returns the (scaled) size of the star (its .y should be consistent with the current font size when scale==ImVec(1,1)):
-ImVec2 ImDrawListAddStar(ImDrawList *dl,const ImVec2& offset=ImVec2(0,0),const ImVec2& scale=ImVec2(1,1),ImU32 fillColor=0xFF00FFFF,ImU32 strokeColor=0xFFFFAACC,float strokeThickness=1.f,bool antiAliased=false);
-ImVec2 ImDrawListAddHollowQuad(ImDrawList *dl,const ImVec2& offset=ImVec2(0,0),const ImVec2& scale=ImVec2(1,1),ImU32 fillColor=0xFF008800,ImU32 strokeColor=0xFFAAAAFF,float strokeThickness=1.f,bool antiAliased=false);
+ImVec2 ImDrawListAddStar(ImDrawList *dl,const ImVec2& offset=ImVec2(0,0),const ImVec2& scale=ImVec2(1,1),ImU32 fillColor=IM_COL32(255,255,0,255),ImU32 strokeColor=IM_COL32(200,175,255,255),float strokeThickness=1.f,bool antiAliased=false);
+ImVec2 ImDrawListAddHollowQuad(ImDrawList *dl,const ImVec2& offset=ImVec2(0,0),const ImVec2& scale=ImVec2(1,1),ImU32 fillColor=IM_COL32(0,175,0,255),ImU32 strokeColor=IM_COL32(255,200,200,255),float strokeThickness=1.f,bool antiAliased=false);
 #endif //NO_IMGUIHELPER_DRAW_METHODS_CONCAVEPOLY
 
 void ImDrawListAddConvexPolyFilledWithHorizontalGradient(ImDrawList *dl, const ImVec2 *points, const int points_count, ImU32 colLeft, ImU32 colRight, bool anti_aliased,float minx=-1.f,float maxx=-1.f);

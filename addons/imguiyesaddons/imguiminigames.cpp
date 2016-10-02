@@ -514,7 +514,7 @@ namespace ImGuiMiniGames {
                 // Check what square is under the mouse
                 /*ImVec2 start(win_pos+gridOffset+ImVec2(grid_Line_width,grid_Line_width)+ImVec2(C*GRID_SZ,R*GRID_SZ));
                         ImRect rect(start,start+ImVec2(textLineHeight,textLineHeight));
-                        draw_list->AddRectFilled(rect.GetTL(),rect.GetBR(),0xAAFF0000);*/
+                        draw_list->AddRectFilled(rect.GetTL(),rect.GetBR(),IM_COL32(0,0,255,200));*/
             }
 
             // draw cells:
@@ -591,7 +591,7 @@ namespace ImGuiMiniGames {
                 }
             }
             /*const ImVec2 textSize = ImGui::CalcTextSize(title);
-            const ImU32 col = 0xFF00FF00;
+            const ImU32 col = IM_COL32(0,255,0,255);
             draw_list->AddText(win_pos+ImVec2((canvasSize.x-textSize.x)*0.5f+ImGui::GetScrollX(),(canvasSize.y-textSize.y)*0.5f+ImGui::GetScrollY()),col,title);*/
 
             //if (isMouseDraggingForScrolling) scrolling = scrolling - io.MouseDelta;
@@ -623,27 +623,27 @@ namespace ImGuiMiniGames {
     }
 
     Mine::Style::Style()    {
-        colors[Style::Color_Text] =                     0xFF008800;
-        colors[Style::Color_Background] =               0x00000000;//0xFFF0F1F2;
-        colors[Style::Color_ClosedCellBackground] =     0xFFB6BDBA;
-        colors[Style::Color_OpenCellBackground] =       0xFFDCDEDE;
-        colors[Style::Color_1] =                        0xFF83594B;
-        colors[Style::Color_2] =                        0xFF46A046;
-        colors[Style::Color_3] =                        0xFF1E42E2;
-        colors[Style::Color_4] =                        0xFF815B62;
-        colors[Style::Color_5] =                        0xFF314688;
-        colors[Style::Color_6] =                        0xFFD2B89D;
-        colors[Style::Color_7] =                        0xFF80D6EE;
-        colors[Style::Color_8] =                        0xFF60E6FF;
-        colors[Style::Color_WrongFlagBackground] =      0xFF0000CC;
-        colors[Style::Color_WrongMineOverlay] =         0x8800CCFF;
-        colors[Style::Color_WrongMineOverlayBorder] =   0x99004455;
-        colors[Style::Color_HollowSpace]        =       0xFF000000;
+        colors[Style::Color_Text] =                     IM_COL32(0,136,0,255);;
+        colors[Style::Color_Background] =               IM_COL32_BLACK_TRANS;//IM_COL32(242,241,240,255);
+        colors[Style::Color_ClosedCellBackground] =     IM_COL32(242,241,240,255);
+        colors[Style::Color_OpenCellBackground] =       IM_COL32(222,222,220,255);;
+        colors[Style::Color_1] =                        IM_COL32(75,89,131,255);;
+        colors[Style::Color_2] =                        IM_COL32(70,160,70,255);;
+        colors[Style::Color_3] =                        IM_COL32(226,66,30,255);
+        colors[Style::Color_4] =                        IM_COL32(98,91,129,255);
+        colors[Style::Color_5] =                        IM_COL32(136,70,49,255);
+        colors[Style::Color_6] =                        IM_COL32(157,184,210,255);
+        colors[Style::Color_7] =                        IM_COL32(238,214,128,255);
+        colors[Style::Color_8] =                        IM_COL32(255,230,96,255);
+        colors[Style::Color_WrongFlagBackground] =      IM_COL32(204,0,0,255);
+        colors[Style::Color_WrongMineOverlay] =         IM_COL32(255,204,0,136);
+        colors[Style::Color_WrongMineOverlayBorder] =   IM_COL32(85,68,0,153);
+        colors[Style::Color_HollowSpace]        =       IM_COL32_BLACK;
 
-        colors[Style::Color_Mine] = 0xFF000000;
-        colors[Style::Color_Flag] = 0xFF0000FF;
+        colors[Style::Color_Mine] = IM_COL32_BLACK;
+        colors[Style::Color_Flag] = IM_COL32(255,0,0,255);
 
-        colors[Style::Color_Grid] = 0xFFF0F1F2;//colors[Style::Color_Background];
+        colors[Style::Color_Grid] = IM_COL32(255,0,0,255);//IM_COL32(242,241,240,255);//colors[Style::Color_Background];
 
         const ImVec4 tmp1 = ImGui::ColorConvertU32ToFloat4(colors[Style::Color_ClosedCellBackground]);
         const ImVec4 tmp2 = ImGui::ColorConvertU32ToFloat4(colors[Style::Color_OpenCellBackground]);
@@ -1398,7 +1398,7 @@ namespace ImGuiMiniGames {
                     }
                 }
                 /*const ImVec2 textSize = ImGui::CalcTextSize(title);
-            const ImU32 col = 0xFF00FF00;
+            const ImU32 col = IM_COL32(0,255,0,255);
             draw_list->AddText(win_pos+ImVec2((canvasSize.x-textSize.x)*0.5f+ImGui::GetScrollX(),(canvasSize.y-textSize.y)*0.5f+ImGui::GetScrollY()),col,title);*/
 
                 //if (isMouseDraggingForScrolling) scrolling = scrolling - io.MouseDelta;
@@ -1431,16 +1431,16 @@ namespace ImGuiMiniGames {
     }
 
     Sudoku::Style::Style()    {    
-        colors[Style::Color_Text] =                     0xFF008800;
-        colors[Style::Color_Background] =               0x00000000;//0xFFF0F1F2;
-        colors[Style::Color_GridShadow] =           0xAA868D8A;
-        colors[Style::Color_CellBackground] =       0xFFDCDEDE;
+        colors[Style::Color_Text] =                     IM_COL32(0,136,0,255);
+        colors[Style::Color_Background] =               IM_COL32_BLACK_TRANS;//IM_COL32(242,241,240,255);
+        colors[Style::Color_GridShadow] =           IM_COL32(138,141,134,170);
+        colors[Style::Color_CellBackground] =       IM_COL32(222,222,220,255);
 
-        colors[Color_Numbers]=colors[Style::Color_InitialNumbers] = 0xFF000000;
+        colors[Color_Numbers]=colors[Style::Color_InitialNumbers] = IM_COL32_BLACK;
         colors[Style::Color_Annotations] = (((colors[Color_Numbers]>>24)/2)<<24) | (colors[Color_Numbers]&0x00FFFFFF);
 
-        colors[Style::Color_Grid] = 0xAAC0B1B2;//colors[Style::Color_Background];
-        colors[Style::Color_GridZone] = 0xFF008080;
+        colors[Style::Color_Grid] = IM_COL32(178,177,192,170);//colors[Style::Color_Background];
+        colors[Style::Color_GridZone] = IM_COL32(128,128,0,255);
 
         const ImVec4 tmp1 = ImGui::ColorConvertU32ToFloat4(colors[Style::Color_GridShadow]);
         const ImVec4 tmp2 = ImGui::ColorConvertU32ToFloat4(colors[Style::Color_CellBackground]);
@@ -1461,7 +1461,7 @@ namespace ImGuiMiniGames {
         keyPause = ms.keyPause;
 
         colors[Style::Color_Annotations] = (((colors[Color_Numbers]>>24)/2)<<24) | (colors[Color_Numbers]&0x00FFFFFF);
-        colors[Style::Color_GridZone] = 0xFF00E0E0;
+        colors[Style::Color_GridZone] = IM_COL32(224,224,0,255);
 
     }
 #   endif //NO_IMGUIMINIGAMES_MINE
