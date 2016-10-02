@@ -643,7 +643,8 @@ namespace ImGuiMiniGames {
         colors[Style::Color_Mine] = IM_COL32_BLACK;
         colors[Style::Color_Flag] = IM_COL32(255,0,0,255);
 
-        colors[Style::Color_Grid] = IM_COL32(255,0,0,255);//IM_COL32(242,241,240,255);//colors[Style::Color_Background];
+        colors[Style::Color_Grid] = IM_COL32(242,241,240,255);
+
 
         const ImVec4 tmp1 = ImGui::ColorConvertU32ToFloat4(colors[Style::Color_ClosedCellBackground]);
         const ImVec4 tmp2 = ImGui::ColorConvertU32ToFloat4(colors[Style::Color_OpenCellBackground]);
