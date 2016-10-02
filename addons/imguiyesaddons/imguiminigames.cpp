@@ -625,7 +625,7 @@ namespace ImGuiMiniGames {
     Mine::Style::Style()    {
         colors[Style::Color_Text] =                     IM_COL32(0,136,0,255);;
         colors[Style::Color_Background] =               IM_COL32_BLACK_TRANS;//IM_COL32(242,241,240,255);
-        colors[Style::Color_ClosedCellBackground] =     IM_COL32(242,241,240,255);
+        colors[Style::Color_ClosedCellBackground] =     IM_COL32(186,189,182,255);
         colors[Style::Color_OpenCellBackground] =       IM_COL32(222,222,220,255);;
         colors[Style::Color_1] =                        IM_COL32(75,89,131,255);;
         colors[Style::Color_2] =                        IM_COL32(70,160,70,255);;
