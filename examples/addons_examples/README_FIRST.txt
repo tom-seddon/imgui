@@ -156,6 +156,7 @@ Another benefit of using a binding is that you can access some helper methods su
 IMIMPL_SHADER_NONE 				# no shaders at all, and no vertex buffer object as well (minimal implementation).
 IMIMPL_SHADER_GL3  				# shader uses openGL 3.3 (glsl #version 330)
 IMIMPL_SHADER_GLES 				# shader uses gles (and if IMIMPL_SHADER_GL3 is defined glsl #version 300 es)
+IMIMPL_USE_SDF_SHADER			# shader uses a more complex (= slower) fragment shader, that improves the quality of zoomed fonts a bit. Currently supported only on OpenGL bindings with shader support.
 IMGUI_USE_GLEW     				# inits the glew library (needs -lGLEW). This definition might be mandatory for IMGUI_USE_WINAPI_BINDING. Tip: the glew library provides a static library alternative that can be used by defining GLEW_STATIC at the project level (see the glew docs for further info).
 IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK		# use this if you are using IMGUI_USE_GLUT_BINDING and mouse wheel does not work.
 

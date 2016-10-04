@@ -801,7 +801,14 @@ static const GLchar* gFragmentShaderSource[] = {
       "out vec4 FragColor;\n"
       "void main()\n"
       "{\n"
+#ifdef IMIMPL_USE_SDF_SHADER
+       "vec4 texColor = texture(Texture, Frag_UV.st);\n"
+       "float width = fwidth(texColor.a);\n"
+       "float alpha = smoothstep(0.5 - width, 0.5 + width, texColor.a);\n"
+       "FragColor = vec4(Frag_Colour.rgb*texColor.rgb,Frag_Colour.a*alpha);\n"
+#else //IMIMPL_USE_SDF_SHADER            
       " FragColor = Frag_Colour * texture( Texture, Frag_UV.st);\n"
+#endif //IMIMPL_USE_SDF_SHADER
       "}\n"
     };
 #else //NO IMIMPL_SHADER_GL3
@@ -830,9 +837,15 @@ static const GLchar* gFragmentShaderSource[] = {
       "#version 100\n"
       "precision mediump float;\n"
       "uniform lowp sampler2D Texture;\n"
+#ifdef IMIMPL_USE_SDF_SHADER
+	  "#extension GL_OES_standard_derivatives : enable\n" // fwidth            
+#endif //IMIMPL_USE_SDF_SHADER
 #else //IMIMPL_SHADER_GLES
 #   ifdef __EMSCRIPTEN__
     "precision mediump float;\n"
+#		ifdef IMIMPL_USE_SDF_SHADER
+	  "#extension GL_OES_standard_derivatives : enable\n" // fwidth            
+#		endif //IMIMPL_USE_SDF_SHADER
 #   endif //__EMSCRIPTEN__
       "uniform sampler2D Texture;\n"
 #endif //IMIMPL_SHADER_GLES
@@ -840,7 +853,14 @@ static const GLchar* gFragmentShaderSource[] = {
       "varying vec4 Frag_Colour;\n"
       "void main()\n"
       "{\n"
+#ifdef IMIMPL_USE_SDF_SHADER
+       "vec4 texColor = texture2D(Texture, Frag_UV.st);\n"
+       "float width = fwidth(texColor.a);\n"
+       "float alpha = smoothstep(0.5 - width, 0.5 + width, texColor.a);\n"
+       "gl_FragColor = vec4(Frag_Colour.rgb*texColor.rgb,Frag_Colour.a*alpha);\n"
+#else //IMIMPL_USE_SDF_SHADER            
       " gl_FragColor = Frag_Colour * texture2D( Texture, Frag_UV.st);\n"
+#endif //IMIMPL_USE_SDF_SHADER
       "}\n"
     };
 #endif //IMIMPL_SHADER_GL3
