@@ -52,6 +52,7 @@ IMGUI_BASE_PATH=../..
 #DEFINES += IMGUI_USE_MINIZIP
 #LIBS+= -lz
 #DEFINES+= YES_IMGUIMINIGAMES
+#DEFINES+= IMGUI_USE_SDL_SHADER
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 

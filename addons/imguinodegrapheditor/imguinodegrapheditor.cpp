@@ -634,26 +634,44 @@ void NodeGraphEditor::render()
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.color_background);
     ImGui::BeginChild("scrolling_region", ImVec2(0,0), true, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollWithMouse);
 
-    if (!io.FontAllowUserScaling && io.KeyCtrl && ImGui::GetCurrentWindow()==GImGui->HoveredWindow && (io.MouseWheel || io.MouseClicked[2]))   {
-    // Zoom / Scale window
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = ImGui::GetCurrentWindow();
-    float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
-    if (io.MouseClicked[2]) new_font_scale = 1.f;   // MMB = RESET ZOOM
-    float scale = new_font_scale / window->FontWindowScale;
-    if (scale!=1)	{
-        scrolling=scrolling*scale;
-        window->FontWindowScale = new_font_scale;
-    }
+
+    // New: to ensure font scaling in subchilds of the nodes too, we MUST track g.Font->Scale,
+    // instead of ImGui::GetCurrentWindow()->FontWindowScale.
+    // Note that this change could break io.FontAllowUserScaling==true (To test, but it didn't work as expacted anyway)
+    float oldFontScaleToReset = g.Font->Scale;      // We'll clean up at the bottom
+    float fontScaleStored = oldFontWindowScale ? oldFontWindowScale : oldFontScaleToReset;
+    float& fontScaleToTrack = g.Font->Scale;
+
+    if (!io.FontAllowUserScaling)   {
+        // Set the correct font scale (3 lines)
+        fontScaleToTrack = fontScaleStored;
+        g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize;
+        g.FontSize = window->CalcFontSize();
+
+        if (io.KeyCtrl && ImGui::GetCurrentWindow()==GImGui->HoveredWindow && (io.MouseWheel || io.MouseClicked[2]))   {
+            // Zoom / Scale window
+            float new_font_scale = ImClamp(fontScaleToTrack + g.IO.MouseWheel * 0.075f, 0.50f, 2.50f);
+            if (io.MouseClicked[2]) new_font_scale = 1.f;   // MMB = RESET ZOOM
+            float scale = new_font_scale/fontScaleToTrack;
+            if (scale!=1)	{
+                scrolling=scrolling*scale;
+                // Set the correct font scale (3 lines), and store it
+                fontScaleStored = fontScaleToTrack = new_font_scale;
+                g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize;
+                g.FontSize = window->CalcFontSize();
+            }
+        }
     }
 
     // fixes zooming just a bit
     bool nodesHaveZeroSize = false;
-    const float currentFontWindowScale = ImGui::GetCurrentWindow()->FontWindowScale;
+    const float currentFontWindowScale = !io.FontAllowUserScaling ? fontScaleStored : ImGui::GetCurrentWindow()->FontWindowScale;
     if (oldFontWindowScale==0.f) {
         oldFontWindowScale = currentFontWindowScale;
         nodesHaveZeroSize = true;   // at start or after clear()
-	scrolling = ImGui::GetWindowSize()*.5f;
+        scrolling = ImGui::GetWindowSize()*.5f;
     }
     else if (oldFontWindowScale!=currentFontWindowScale) {
         nodesHaveZeroSize = true;
@@ -694,20 +712,20 @@ void NodeGraphEditor::render()
     if (node_to_center_view_around && !nodesHaveZeroSize) {scrolling = node_to_center_view_around->GetPos(currentFontWindowScale)+node_to_center_view_around->Size*0.5f;node_to_center_view_around = NULL;}
     ImVec2 effectiveScrolling = scrolling - canvasSize*.5f;
     ImVec2 offset = ImGui::GetCursorScreenPos() - effectiveScrolling;
-    ImVec2 offset2 = ImGui::GetCursorPos() - scrolling;
+    ImVec2 offset2 = ImGui::GetCursorPos() - effectiveScrolling;//scrolling;
 
 
 
     // Display grid
     if (show_grid)
     {
-	const ImU32& GRID_COLOR = style.color_grid;
-        const float& GRID_SZ = style.grid_size;
-	const float grid_Line_width = currentFontWindowScale * style.grid_line_width;
-	for (float x = fmodf(offset2.x,GRID_SZ); x < canvasSize.x; x += GRID_SZ)
-	    draw_list->AddLine(ImVec2(x,0.0f)+win_pos, ImVec2(x,canvasSize.y)+win_pos, GRID_COLOR,grid_Line_width);
-	for (float y = fmodf(offset2.y,GRID_SZ); y < canvasSize.y; y += GRID_SZ)
-	    draw_list->AddLine(ImVec2(0.0f,y)+win_pos, ImVec2(canvasSize.x,y)+win_pos, GRID_COLOR,grid_Line_width);
+        const ImU32& GRID_COLOR = style.color_grid;
+        const float& GRID_SZ = currentFontWindowScale * style.grid_size;
+        const float grid_Line_width = currentFontWindowScale * style.grid_line_width;
+        for (float x = fmodf(offset2.x,GRID_SZ); x < canvasSize.x; x += GRID_SZ)
+            draw_list->AddLine(ImVec2(x,0.0f)+win_pos, ImVec2(x,canvasSize.y)+win_pos, GRID_COLOR,grid_Line_width);
+        for (float y = fmodf(offset2.y,GRID_SZ); y < canvasSize.y; y += GRID_SZ)
+            draw_list->AddLine(ImVec2(0.0f,y)+win_pos, ImVec2(canvasSize.x,y)+win_pos, GRID_COLOR,grid_Line_width);
     }
 
     const ImVec2 link_cp(style.link_control_point_distance * currentFontWindowScale,0); // Bezier control point of the links
@@ -1475,8 +1493,14 @@ void NodeGraphEditor::render()
     //if (!isSomeNodeMoving && !isaNodeInActiveState && !dragNode.node && ImGui::IsWindowHovered() &&  ImGui::IsMouseDragging(0, 6.0f)) scrolling = scrolling - io.MouseDelta;
     if (isMouseDraggingForScrolling /*&& ImGui::IsWindowHovered()*/ && (ImGui::IsWindowHovered() || ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused())) scrolling = scrolling - io.MouseDelta;
 
+    if (!io.FontAllowUserScaling)   {
+        // Reset the font scale (3 lines)
+        fontScaleToTrack = oldFontScaleToReset;
+        g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize;
+        g.FontSize = window->CalcFontSize();
+    }
 
-    ImGui::EndChild();
+    ImGui::EndChild();  // scrolling_region
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(2);
 

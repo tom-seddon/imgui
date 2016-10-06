@@ -32,7 +32,7 @@
 -> DONE - Load/Save NodeGraphEditor Style.
 -> DONE - Serialization/Deserialization of the whole NodeGraphEditor + Nodes
 -> DONE - Add node clipping: node links are not culled at all, but it's better than nothing.
--> DONE - Adjust zooming (CTRL + MW when ImGui::GetIO().FontAllowUserScaling = true;).
+-> DONE - Adjust zooming.
           NOW ZOOMING WORKS PROPERLY ONLY IF ImGui::GetIO().FontAllowUserScaling = false,
           (otherwise there's a BAD fallback).
 -> DONE - Nodes links are culled too (not sure if t's faster... it should).

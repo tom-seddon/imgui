@@ -69,6 +69,10 @@ static ImImpl_PrivateParams gImImplPrivateParams;
 #endif //IMGUI_NO_STB_IMAGE_STATIC
 #endif //STBI_INCLUDE_STB_IMAGE_H
 
+static bool gTextureFilteringHintMagFilterNearest = false;  // These internal values can be used by ImImpl_GenerateOrUpdateTexture(...) implementations
+static bool gTextureFilteringHintMinFilterNearest = false;
+
+
 #ifdef IMGUI_USE_AUTO_BINDING_OPENGL
 void ImImpl_FreeTexture(ImTextureID& imtexid) {
     GLuint& texid = reinterpret_cast<GLuint&>(imtexid);
@@ -84,7 +88,8 @@ void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,in
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,wraps ? GL_REPEAT : GL_CLAMP);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,wrapt ? GL_REPEAT : GL_CLAMP);
     //const GLfloat borderColor[]={0.f,0.f,0.f,1.f};glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR,borderColor);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if (gTextureFilteringHintMagFilterNearest) glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    else glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     if (useMipmapsIfPossible)   {
 #       ifdef NO_IMGUI_OPENGL_GLGENERATEMIPMAP
 #           ifndef GL_GENERATE_MIPMAP
@@ -94,7 +99,8 @@ void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,in
         glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);    // This call must be done before glTexImage2D(...) // GL_GENERATE_MIPMAP can't be used with NPOT if there are not supported by the hardware of GL_ARB_texture_non_power_of_two.
 #       endif //NO_IMGUI_OPENGL_GLGENERATEMIPMAP
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, useMipmapsIfPossible ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+    if (gTextureFilteringHintMinFilterNearest) glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, useMipmapsIfPossible ? GL_LINEAR_MIPMAP_NEAREST : GL_NEAREST);
+    else glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, useMipmapsIfPossible ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
@@ -256,7 +262,13 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     ImGuiFreeType::GetTexDataAsRGBA32(io.Fonts,&pixels, &width, &height,NULL,ImGuiFreeType::DefaultRasterizationFlags,&ImGuiFreeType::DefaultRasterizationFlagVector);
 #   endif //YES_IMGUIFREETYPE
 
+#   if (!defined(IMIMPL_USE_SDF_SHADER) && !defined(IMIMPL_USE_ALPHA_SHARPENER_SHADER) && !defined(IMIMPL_USE_FONT_TEXTURE_LINEAR_FILTERING))
+    gTextureFilteringHintMagFilterNearest = true;
+#   endif // (!defined(IMGUI_USE_SDL_SHADER) && ! !defined(IMGUI_USE_ALPHA_SHARPENER_SHADER))
+    gTextureFilteringHintMinFilterNearest = false;
     ImImpl_GenerateOrUpdateTexture(gImImplPrivateParams.fontTex,width,height,4,pixels,false,true,true);
+    gTextureFilteringHintMagFilterNearest = gTextureFilteringHintMinFilterNearest = false;
+
 
     // Store our identifier
     io.Fonts->TexID = gImImplPrivateParams.fontTex;
@@ -806,6 +818,9 @@ static const GLchar* gFragmentShaderSource[] = {
        "float width = fwidth(texColor.a);\n"
        "float alpha = smoothstep(0.5 - width, 0.5 + width, texColor.a);\n"
        "FragColor = vec4(Frag_Colour.rgb*texColor.rgb,Frag_Colour.a*alpha);\n"
+#elif IMIMPL_USE_ALPHA_SHARPENER_SHADER
+       "vec4 texColor = texture(Texture, Frag_UV.st);\n"
+       "FragColor = vec4(Frag_Colour.rgb*texColor.rgb,Frag_Colour.a*step(0.5,texColor.a));\n"
 #else //IMIMPL_USE_SDF_SHADER            
       " FragColor = Frag_Colour * texture( Texture, Frag_UV.st);\n"
 #endif //IMIMPL_USE_SDF_SHADER
@@ -858,6 +873,9 @@ static const GLchar* gFragmentShaderSource[] = {
        "float width = fwidth(texColor.a);\n"
        "float alpha = smoothstep(0.5 - width, 0.5 + width, texColor.a);\n"
        "gl_FragColor = vec4(Frag_Colour.rgb*texColor.rgb,Frag_Colour.a*alpha);\n"
+#elif IMIMPL_USE_ALPHA_SHARPENER_SHADER
+       "vec4 texColor = texture2D(Texture, Frag_UV.st);\n"
+       "gl_FragColor = vec4(Frag_Colour.rgb*texColor.rgb,Frag_Colour.a*step(0.5,texColor.a));\n"
 #else //IMIMPL_USE_SDF_SHADER            
       " gl_FragColor = Frag_Colour * texture2D( Texture, Frag_UV.st);\n"
 #endif //IMIMPL_USE_SDF_SHADER
