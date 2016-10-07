@@ -300,8 +300,8 @@ class Node
     Node() : Pos(0,0),Size(0,0),isSelected(false),baseWidthOverride(-1),mustOverrideName(false),mustOverrideInputSlots(false),mustOverrideOutputSlots(false),overrideTitleTextColor(0),overrideTitleBgColor(0),overrideTitleBgColorGradient(-1.f),isInEditingMode(false) {}
     void init(const char* name, const ImVec2& pos,const char* inputSlotNamesSeparatedBySemicolons=NULL,const char* outputSlotNamesSeparatedBySemicolons=NULL,int _nodeTypeID=0/*,float currentWindowFontScale=-1.f*/);
 
-    inline ImVec2 GetInputSlotPos(int slot_no,float currentFontWindowScale=1.f) const   { return ImVec2(Pos.x*currentFontWindowScale, Pos.y*currentFontWindowScale + Size.y * ((float)slot_no+1) / ((float)InputsCount+1)); }
-    inline ImVec2 GetOutputSlotPos(int slot_no,float currentFontWindowScale=1.f) const  { return ImVec2(Pos.x*currentFontWindowScale + Size.x, Pos.y*currentFontWindowScale + Size.y * ((float)slot_no+1) / ((float)OutputsCount+1)); }
+    inline ImVec2 GetInputSlotPos(int slot_no,float currentFontWindowScale=1.f) const   { return ImVec2(Pos.x*currentFontWindowScale,           Pos.y*currentFontWindowScale + Size.y * ((float)slot_no+1) / ((float)InputsCount+1)); }
+    inline ImVec2 GetOutputSlotPos(int slot_no,float currentFontWindowScale=1.f) const  { return ImVec2(Pos.x*currentFontWindowScale + Size.x,  Pos.y*currentFontWindowScale + Size.y * ((float)slot_no+1) / ((float)OutputsCount+1)); }
     inline const ImVec2 GetPos(float currentFontWindowScale=1.f) const {return ImVec2(Pos.x*currentFontWindowScale,Pos.y*currentFontWindowScale);}
 
     friend struct NodeLink;

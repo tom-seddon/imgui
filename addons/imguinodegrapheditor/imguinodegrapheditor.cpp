@@ -705,7 +705,7 @@ void NodeGraphEditor::render()
     ImGui::PushItemWidth(currentNodeWidth);
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    draw_list->ChannelsSplit(4);
+    draw_list->ChannelsSplit(5);
 
     ImVec2 canvasSize = ImGui::GetWindowSize();
     ImVec2 win_pos = ImGui::GetCursorScreenPos();
@@ -758,64 +758,11 @@ void NodeGraphEditor::render()
     const bool isLMBDoubleClicked = ImGui::IsMouseDoubleClicked(0);
     const bool isMouseDraggingForMovingNodes = ImGui::IsMouseDragging(0, 8.0f);	// This is not enough for a node to be actually moved
 
-    // Display links
-    draw_list->ChannelsSetCurrent(0); // Background
+    // Display links variable (their display code have been moved down)
     const bool cantDragAnything = isMouseDraggingForScrolling || mouseRectangularSelectionForNodesStarted;
     bool isLMBDraggingForMakingLinks = !cantDragAnything && ImGui::IsMouseDragging(0, 0.0f);
     bool isDragNodeValid = dragNode.isValid();
     const bool mustCheckForNearestLink = isMouseHoveringWindow && !isLMBDraggingForMakingLinks && io.KeyShift;
-
-    if (!nodesHaveZeroSize) // Otherwise artifacts while scaling
-    {
-        ImRect cullLink;ImVec2 p1,p2,cp1,cp2;
-        int nearestLinkId=-1;
-        const float hoveredLinkDistSqrThres = 100.0f * currentFontWindowScale;
-        for (int link_idx = 0; link_idx < links.Size; link_idx++)
-        {
-            NodeLink& link = links[link_idx];
-            Node* node_inp = link.InputNode;
-            Node* node_out = link.OutputNode;
-            p1 = offset + node_inp->GetOutputSlotPos(link.InputSlot,currentFontWindowScale);
-            p2 = offset + node_out->GetInputSlotPos(link.OutputSlot,currentFontWindowScale);
-            if (enableLinkCulling) {
-                cullLink.Min=cullLink.Max=p1;cullLink.Add(p2);
-                if (!linkClipRect.Overlaps(cullLink)) {
-                    ++numberOfCulledLinks;
-                    continue;
-                }
-            }
-            cp1 = p1+link_cp;
-            cp2 = p2-link_cp;
-
-            // highlight nearest link
-            if (mustCheckForNearestLink && nearestLinkId==-1 && (enableLinkCulling ? cullLink.Contains(io.MousePos) : true)) {
-                const float distanceSquared = GetSquaredDistanceToBezierCurve(io.MousePos,p1,cp1, cp2,p2);
-                if (distanceSquared<hoveredLinkDistSqrThres) nearestLinkId=link_idx;
-                // dbg line:
-		//if (io.MouseDelta.x!=0.f || io.MouseDelta.y!=0.f)   fprintf(stderr,"%d) MP{%1.0f,%1.0f} p1{%1.0f,%1.0f} p2{%1.0f,%1.0f} distanceSquared=%1.4f hoveredLinkDistSqrThres=%1.4f\n",link_idx,io.MousePos.x,io.MousePos.y,p1.x,p1.y,p2.x,p2.y,distanceSquared,hoveredLinkDistSqrThres);
-            }
-
-            draw_list->AddBezierCurve(p1,cp1,cp2,p2,style.color_link,(nearestLinkId!=link_idx) ? link_line_width : (link_line_width*2.0f), style.link_num_segments);
-        }
-        if (nearestLinkId!=-1 && io.MouseReleased[0]) {
-            //fprintf(stderr,"Removing link at: %d\n",nearestLinkId);
-            removeLinkAt(nearestLinkId);
-            nearestLinkId=-1;
-        }
-    }
-    // Display dragging link
-    if (isLMBDraggingForMakingLinks && isDragNodeValid)   {
-        if (dragNode.inputSlotIdx!=-1)  {   // Dragging from the output slot of dragNode
-            ImVec2 p1 = offset + dragNode.node->GetOutputSlotPos(dragNode.inputSlotIdx,currentFontWindowScale);
-            const ImVec2& p2 = io.MousePos;//offset + node_out->GetInputSlotPos(link.OutputSlot);
-            draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
-        }
-        else if (dragNode.outputSlotIdx!=-1)  {  // Dragging from the input slot of dragNode
-            const ImVec2& p1 = io.MousePos;//
-            ImVec2 p2 = offset + dragNode.node->GetInputSlotPos(dragNode.outputSlotIdx,currentFontWindowScale);
-            draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
-        }
-    }
 
 
     // Display nodes
@@ -856,7 +803,7 @@ void NodeGraphEditor::render()
         ImVec2 node_rect_min = offset + nodePos;
 
         // Display node contents first
-        draw_list->ChannelsSetCurrent(activeNodeIndex==node_idx ? 3 : 1); // Foreground
+        draw_list->ChannelsSetCurrent(activeNodeIndex==node_idx ? 4 : 2); // Foreground
         bool old_any_active = ImGui::IsAnyItemActive();
         ImGui::SetCursorScreenPos(node_rect_min + NODE_WINDOW_PADDING);
 
@@ -1041,7 +988,7 @@ void NodeGraphEditor::render()
 
 
         // Display node box
-        draw_list->ChannelsSetCurrent(activeNodeIndex == node_idx ? 2 : 0); // Background
+        draw_list->ChannelsSetCurrent(activeNodeIndex == node_idx ? 3 : 1); // Background
         ImGui::SetCursorScreenPos(node_rect_min);
         ImGui::InvisibleButton("node##nodeinvbtn", node->Size);
         if (ImGui::IsItemHovered()) {
@@ -1308,6 +1255,61 @@ void NodeGraphEditor::render()
         if (node->baseWidthOverride>0) ImGui::PopItemWidth();
     }
     //ImGui::PopStyleColor(3);      // moved inside the loop to wrap the ImGui::TreeNode()
+
+    // Display Links
+    draw_list->ChannelsSetCurrent(0); // Deeper than Background
+    {
+        ImRect cullLink;ImVec2 p1,p2,cp1,cp2;
+        int nearestLinkId=-1;
+        const float hoveredLinkDistSqrThres = 100.0f * currentFontWindowScale;
+        for (int link_idx = 0; link_idx < links.Size; link_idx++)
+        {
+            NodeLink& link = links[link_idx];
+            Node* node_inp = link.InputNode;
+            Node* node_out = link.OutputNode;
+            p1 = offset + node_inp->GetOutputSlotPos(link.InputSlot,currentFontWindowScale);
+            p2 = offset + node_out->GetInputSlotPos(link.OutputSlot,currentFontWindowScale);
+            if (enableLinkCulling) {
+                cullLink.Min=cullLink.Max=p1;cullLink.Add(p2);
+                if (!linkClipRect.Overlaps(cullLink)) {
+                    ++numberOfCulledLinks;
+                    continue;
+                }
+            }
+            cp1 = p1+link_cp;
+            cp2 = p2-link_cp;
+
+            // highlight nearest link
+            if (mustCheckForNearestLink && nearestLinkId==-1 && (enableLinkCulling ? cullLink.Contains(io.MousePos) : true)) {
+                const float distanceSquared = GetSquaredDistanceToBezierCurve(io.MousePos,p1,cp1, cp2,p2);
+                if (distanceSquared<hoveredLinkDistSqrThres) nearestLinkId=link_idx;
+                // dbg line:
+        //if (io.MouseDelta.x!=0.f || io.MouseDelta.y!=0.f)   fprintf(stderr,"%d) MP{%1.0f,%1.0f} p1{%1.0f,%1.0f} p2{%1.0f,%1.0f} distanceSquared=%1.4f hoveredLinkDistSqrThres=%1.4f\n",link_idx,io.MousePos.x,io.MousePos.y,p1.x,p1.y,p2.x,p2.y,distanceSquared,hoveredLinkDistSqrThres);
+            }
+
+            draw_list->AddBezierCurve(p1,cp1,cp2,p2,style.color_link,(nearestLinkId!=link_idx) ? link_line_width : (link_line_width*2.0f), style.link_num_segments);
+        }
+        if (nearestLinkId!=-1 && io.MouseReleased[0]) {
+            //fprintf(stderr,"Removing link at: %d\n",nearestLinkId);
+            removeLinkAt(nearestLinkId);
+            nearestLinkId=-1;
+        }
+    }
+    // Display dragging link
+    if (isLMBDraggingForMakingLinks && isDragNodeValid)   {
+        if (dragNode.inputSlotIdx!=-1)  {   // Dragging from the output slot of dragNode
+            ImVec2 p1 = offset + dragNode.node->GetOutputSlotPos(dragNode.inputSlotIdx,currentFontWindowScale);
+            const ImVec2& p2 = io.MousePos;//offset + node_out->GetInputSlotPos(link.OutputSlot);
+            draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
+        }
+        else if (dragNode.outputSlotIdx!=-1)  {  // Dragging from the input slot of dragNode
+            const ImVec2& p1 = io.MousePos;//
+            ImVec2 p2 = offset + dragNode.node->GetInputSlotPos(dragNode.outputSlotIdx,currentFontWindowScale);
+            draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
+        }
+    }
+
+
     draw_list->ChannelsMerge();
 
 //#   define DEBUG_NODE_CULLING
