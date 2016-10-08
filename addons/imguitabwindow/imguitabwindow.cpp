@@ -176,26 +176,26 @@ void ImDrawListAddConvexPolyFilledWithVerticalGradient(ImDrawList *dl, const ImV
 void ImDrawListPathFillWithVerticalGradientAndStroke(ImDrawList *dl, const ImU32 &fillColorTop, const ImU32 &fillColorBottom, const ImU32 &strokeColor, bool strokeClosed, float strokeThickness, bool antiAliased,float miny,float maxy)    {
     if (!dl) return;
     if (fillColorTop==fillColorBottom) dl->AddConvexPolyFilled(dl->_Path.Data,dl->_Path.Size, fillColorTop, antiAliased);
-    else if ((fillColorTop >> 24) != 0 || (fillColorBottom >> 24) != 0) ImDrawListAddConvexPolyFilledWithVerticalGradient(dl, dl->_Path.Data, dl->_Path.Size, fillColorTop, fillColorBottom, antiAliased,miny,maxy);
-    if ((strokeColor>> 24)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
+    else if ((fillColorTop & IM_COL32_A_MASK) != 0 || (fillColorBottom & IM_COL32_A_MASK) != 0) ImDrawListAddConvexPolyFilledWithVerticalGradient(dl, dl->_Path.Data, dl->_Path.Size, fillColorTop, fillColorBottom, antiAliased,miny,maxy);
+    if ((strokeColor& IM_COL32_A_MASK)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
     dl->PathClear();
 }
 void ImDrawListPathFillAndStroke(ImDrawList *dl, const ImU32 &fillColor, const ImU32 &strokeColor, bool strokeClosed, float strokeThickness, bool antiAliased)    {
     if (!dl) return;
-    if ((fillColor >> 24) != 0) dl->AddConvexPolyFilled(dl->_Path.Data, dl->_Path.Size, fillColor, antiAliased);
-    if ((strokeColor>> 24)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
+    if ((fillColor & IM_COL32_A_MASK) != 0) dl->AddConvexPolyFilled(dl->_Path.Data, dl->_Path.Size, fillColor, antiAliased);
+    if ((strokeColor& IM_COL32_A_MASK)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
     dl->PathClear();
 }
 void ImDrawListAddRect(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColor, const ImU32 &strokeColor, float rounding, int rounding_corners, float strokeThickness, bool antiAliased) {
-    if (!dl || (((fillColor >> 24) == 0) && ((strokeColor >> 24) == 0)))  return;
+    if (!dl || (((fillColor & IM_COL32_A_MASK) == 0) && ((strokeColor & IM_COL32_A_MASK) == 0)))  return;
     dl->PathRect(a, b, rounding, rounding_corners);
     ImDrawListPathFillAndStroke(dl,fillColor,strokeColor,true,strokeThickness,antiAliased);
 }
 void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColorTop, const ImU32 &fillColorBottom, const ImU32 &strokeColor, float rounding, int rounding_corners, float strokeThickness, bool antiAliased) {
-    if (!dl || (((fillColorTop >> 24) == 0) && ((fillColorBottom >> 24) == 0) && ((strokeColor >> 24) == 0)))  return;
+    if (!dl || (((fillColorTop & IM_COL32_A_MASK) == 0) && ((fillColorBottom & IM_COL32_A_MASK) == 0) && ((strokeColor & IM_COL32_A_MASK) == 0)))  return;
     if (rounding==0.f || rounding_corners==0) {
         dl->AddRectFilledMultiColor(a,b,fillColorTop,fillColorTop,fillColorBottom,fillColorBottom); // Huge speedup!
-        if ((strokeColor>> 24)!= 0 && strokeThickness>0.f) {
+        if ((strokeColor& IM_COL32_A_MASK)!= 0 && strokeThickness>0.f) {
             dl->PathRect(a, b, rounding, rounding_corners);
             dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, true, strokeThickness, antiAliased);
             dl->PathClear();
@@ -226,6 +226,7 @@ const char* TabLabelStyle::TabStateNames[TabLabelStyle::TAB_STATE_COUNT]={"TAB_S
 const ImFont* TabLabelStyle::ImGuiFonts[TabLabelStyle::FONT_STYLE_COUNT]={NULL,NULL,NULL,NULL};
 // These bit operations are probably non-endian independent, but ImGui uses them too and so do I.
 inline static ImU32 ColorMergeWithAlpha(ImU32 c,float alphaMult) {
+    // I'm not sure how to convert these using IM_COL32_A_MASK...
     ImU32 alpha = ((float)(c>>24))*alphaMult;
     return ((c&0x00FFFFFF)|(alpha<<24));
 }

@@ -17,8 +17,8 @@ namespace NGE_Draw {
 // This methods are a subset of the ones already present in imguihelper.h, copied here to enable stand alone usage. Scoped for better isolation (in case of multi .cpp chaining and/or usage in amalgamation engines).
 static void ImDrawListPathFillAndStroke(ImDrawList *dl, const ImU32 &fillColor, const ImU32 &strokeColor, bool strokeClosed, float strokeThickness, bool antiAliased)    {
     if (!dl) return;
-    if ((fillColor >> 24) != 0) dl->AddConvexPolyFilled(dl->_Path.Data, dl->_Path.Size, fillColor, antiAliased);
-    if ((strokeColor>> 24)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
+    if ((fillColor & IM_COL32_A_MASK) != 0) dl->AddConvexPolyFilled(dl->_Path.Data, dl->_Path.Size, fillColor, antiAliased);
+    if ((strokeColor& IM_COL32_A_MASK)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
     dl->PathClear();
 }
 static void ImDrawListPathArcTo(ImDrawList *dl, const ImVec2 &centre, const ImVec2 &radii, float amin, float amax, int num_segments)  {
@@ -181,15 +181,15 @@ static void ImDrawListAddConvexPolyFilledWithVerticalGradient(ImDrawList *dl, co
 static void ImDrawListPathFillWithVerticalGradientAndStroke(ImDrawList *dl, const ImU32 &fillColorTop, const ImU32 &fillColorBottom, const ImU32 &strokeColor, bool strokeClosed = false, float strokeThickness = 1.0f, bool antiAliased = true, float miny=-1.f, float maxy=-1.f)    {
     if (!dl) return;
     if (fillColorTop==fillColorBottom) dl->AddConvexPolyFilled(dl->_Path.Data,dl->_Path.Size, fillColorTop, antiAliased);
-    else if ((fillColorTop >> 24) != 0 || (fillColorBottom >> 24) != 0) ImDrawListAddConvexPolyFilledWithVerticalGradient(dl, dl->_Path.Data, dl->_Path.Size, fillColorTop, fillColorBottom, antiAliased,miny,maxy);
-    if ((strokeColor>> 24)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
+    else if ((fillColorTop & IM_COL32_A_MASK) != 0 || (fillColorBottom & IM_COL32_A_MASK) != 0) ImDrawListAddConvexPolyFilledWithVerticalGradient(dl, dl->_Path.Data, dl->_Path.Size, fillColorTop, fillColorBottom, antiAliased,miny,maxy);
+    if ((strokeColor& IM_COL32_A_MASK)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
     dl->PathClear();
 }
 static void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColorTop, const ImU32 &fillColorBottom, const ImU32 &strokeColor, float rounding = 0.0f, int rounding_corners = 0x0F,float strokeThickness = 1.0f,bool antiAliased = true) {
-    if (!dl || (((fillColorTop >> 24) == 0) && ((fillColorBottom >> 24) == 0) && ((strokeColor >> 24) == 0)))  return;
+    if (!dl || (((fillColorTop & IM_COL32_A_MASK) == 0) && ((fillColorBottom & IM_COL32_A_MASK) == 0) && ((strokeColor & IM_COL32_A_MASK) == 0)))  return;
     if (rounding==0.f || rounding_corners==0) {
         dl->AddRectFilledMultiColor(a,b,fillColorTop,fillColorTop,fillColorBottom,fillColorBottom); // Huge speedup!
-        if ((strokeColor>> 24)!= 0 && strokeThickness>0.f) {
+        if ((strokeColor& IM_COL32_A_MASK)!= 0 && strokeThickness>0.f) {
             dl->PathRect(a, b, rounding, rounding_corners);
             dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, true, strokeThickness, antiAliased);
             dl->PathClear();
@@ -1043,7 +1043,7 @@ void NodeGraphEditor::render()
 
         // Node Title Bg Color
         const ImU32 nodeTitleBgColor = node->overrideTitleBgColor ? node->overrideTitleBgColor : style.color_node_title_background;
-        if (nodeTitleBgColor>>24!=0) {
+        if ((nodeTitleBgColor&IM_COL32_A_MASK)!=0) {
 //#           define SKIP_VERTICAL_GRADIENT
 #           ifndef SKIP_VERTICAL_GRADIENT
             float fillGradientFactor = node->overrideTitleBgColorGradient>=0.f ? node->overrideTitleBgColorGradient : style.color_node_title_background_gradient;//0.15f;
@@ -1094,7 +1094,7 @@ void NodeGraphEditor::render()
             connectorScreenPos = offset + node->GetInputSlotPos(slot_idx,currentFontWindowScale);
             //draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, style.color_node_input_slots,connectorNumSegments);
             ImGui::NGE_Draw::ImDrawListAddCircle(draw_list,connectorScreenPos,NODE_SLOT_RADIUS,style.color_node_input_slots,style.color_node_input_slots_border,style.node_slots_num_segments,connectorBorderThickness,true);
-            /*if ((style.color_node_input_slots >> 24) != 0)  {
+            /*if ((style.color_node_input_slots & IM_COL32_A_MASK) != 0)  {
                 const float a_max = IM_PI * 0.5f * 11.f/12.f;
                 draw_list->PathArcTo(connectorScreenPos, NODE_SLOT_RADIUS, IM_PI-a_max, IM_PI+a_max, 12);
                 draw_list->PathFill(style.color_node_input_slots);
@@ -1171,7 +1171,7 @@ void NodeGraphEditor::render()
             connectorScreenPos = offset + node->GetOutputSlotPos(slot_idx,currentFontWindowScale);
             //draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, style.color_node_output_slots,connectorNumSegments);
             ImGui::NGE_Draw::ImDrawListAddCircle(draw_list,connectorScreenPos,NODE_SLOT_RADIUS,style.color_node_output_slots,style.color_node_output_slots_border,style.node_slots_num_segments,connectorBorderThickness,true);
-            /*if ((style.color_node_output_slots >> 24) != 0)  {
+            /*if ((style.color_node_output_slots & IM_COL32_A_MASK) != 0)  {
                 const float a_max = IM_PI * 0.5f * 11.f/12.f;
                 draw_list->PathArcTo(connectorScreenPos, NODE_SLOT_RADIUS, -a_max, a_max, 12);
                 draw_list->PathFill(style.color_node_output_slots);

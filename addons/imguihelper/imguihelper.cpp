@@ -291,26 +291,26 @@ void ImDrawListAddConvexPolyFilledWithVerticalGradient(ImDrawList *dl, const ImV
 void ImDrawListPathFillWithVerticalGradientAndStroke(ImDrawList *dl, const ImU32 &fillColorTop, const ImU32 &fillColorBottom, const ImU32 &strokeColor, bool strokeClosed, float strokeThickness, bool antiAliased,float miny,float maxy)    {
     if (!dl) return;
     if (fillColorTop==fillColorBottom) dl->AddConvexPolyFilled(dl->_Path.Data,dl->_Path.Size, fillColorTop, antiAliased);
-    else if ((fillColorTop >> 24) != 0 || (fillColorBottom >> 24) != 0) ImDrawListAddConvexPolyFilledWithVerticalGradient(dl, dl->_Path.Data, dl->_Path.Size, fillColorTop, fillColorBottom, antiAliased,miny,maxy);
-    if ((strokeColor>> 24)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
+    else if ((fillColorTop & IM_COL32_A_MASK) != 0 || (fillColorBottom & IM_COL32_A_MASK) != 0) ImDrawListAddConvexPolyFilledWithVerticalGradient(dl, dl->_Path.Data, dl->_Path.Size, fillColorTop, fillColorBottom, antiAliased,miny,maxy);
+    if ((strokeColor& IM_COL32_A_MASK)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
     dl->PathClear();
 }
 void ImDrawListPathFillAndStroke(ImDrawList *dl, const ImU32 &fillColor, const ImU32 &strokeColor, bool strokeClosed, float strokeThickness, bool antiAliased)    {
     if (!dl) return;
-    if ((fillColor >> 24) != 0) dl->AddConvexPolyFilled(dl->_Path.Data, dl->_Path.Size, fillColor, antiAliased);
-    if ((strokeColor>> 24)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
+    if ((fillColor & IM_COL32_A_MASK) != 0) dl->AddConvexPolyFilled(dl->_Path.Data, dl->_Path.Size, fillColor, antiAliased);
+    if ((strokeColor& IM_COL32_A_MASK)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
     dl->PathClear();
 }
 void ImDrawListAddRect(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColor, const ImU32 &strokeColor, float rounding, int rounding_corners, float strokeThickness, bool antiAliased) {
-    if (!dl || (((fillColor >> 24) == 0) && ((strokeColor >> 24) == 0)))  return;
+    if (!dl || (((fillColor & IM_COL32_A_MASK) == 0) && ((strokeColor & IM_COL32_A_MASK) == 0)))  return;
     dl->PathRect(a, b, rounding, rounding_corners);
     ImDrawListPathFillAndStroke(dl,fillColor,strokeColor,true,strokeThickness,antiAliased);
 }
 void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColorTop, const ImU32 &fillColorBottom, const ImU32 &strokeColor, float rounding, int rounding_corners, float strokeThickness, bool antiAliased) {
-    if (!dl || (((fillColorTop >> 24) == 0) && ((fillColorBottom >> 24) == 0) && ((strokeColor >> 24) == 0)))  return;
+    if (!dl || (((fillColorTop & IM_COL32_A_MASK) == 0) && ((fillColorBottom & IM_COL32_A_MASK) == 0) && ((strokeColor & IM_COL32_A_MASK) == 0)))  return;
     if (rounding==0.f || rounding_corners==0) {
         dl->AddRectFilledMultiColor(a,b,fillColorTop,fillColorTop,fillColorBottom,fillColorBottom); // Huge speedup!
-        if ((strokeColor>> 24)!= 0 && strokeThickness>0.f) {
+        if ((strokeColor& IM_COL32_A_MASK)!= 0 && strokeThickness>0.f) {
             dl->PathRect(a, b, rounding, rounding_corners);
             dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, true, strokeThickness, antiAliased);
             dl->PathClear();
@@ -362,7 +362,7 @@ void ImDrawListAddRectWithVerticalGradient(ImDrawList *dl, const ImVec2 &a, cons
     ImDrawListAddRectWithVerticalGradient(dl,a,b,fillColorTop,fillColorBottom,strokeColor,rounding,rounding_corners,strokeThickness,antiAliased);
 }
 void ImDrawListAddPolyLine(ImDrawList *dl, const ImVec2* polyPoints,int numPolyPoints, ImU32 strokeColor,float strokeThickness,bool strokeClosed, const ImVec2 &offset, const ImVec2 &scale,bool antiAliased) {
-    if (polyPoints && numPolyPoints>0 && (strokeColor >> 24) != 0) {
+    if (polyPoints && numPolyPoints>0 && (strokeColor & IM_COL32_A_MASK) != 0) {
 	static ImVector<ImVec2> points;
 	points.resize(numPolyPoints);
 	for (int i=0;i<numPolyPoints;i++)   points[i] = offset + polyPoints[i]*scale;
@@ -543,7 +543,7 @@ void DecomposeConcavePoly(const ImVector<ImVec2>& poly, ImVector<ImVec2>& convex
 // March 23, 2009---------------------------------------------------------------------------------------------------------------------------------------
 
 void ImDrawListAddPolyFill(ImDrawList *dl, const ImVector<ImVec2>& convexPolys, const ImVector<int>& numConvexPolyPoints, ImU32 fillColor, const ImVec2 &offset, const ImVec2 &scale,bool antiAliased) {
-    if (convexPolys.size()>0 && (fillColor >> 24) != 0) {
+    if (convexPolys.size()>0 && (fillColor & IM_COL32_A_MASK) != 0) {
 	static ImVector<ImVec2> points;
         int cpStartIndex = 0,cpEndIndex=0,numPoints=0;
         for (int cp=0,cpSz=numConvexPolyPoints.size();cp<cpSz;cp++) {
@@ -748,15 +748,15 @@ void ImDrawListAddConvexPolyFilledWithHorizontalGradient(ImDrawList *dl, const I
 void ImDrawListPathFillWithHorizontalGradientAndStroke(ImDrawList *dl, const ImU32 &fillColorLeft, const ImU32 &fillColorRight, const ImU32 &strokeColor, bool strokeClosed, float strokeThickness, bool antiAliased, float minx, float maxx)    {
     if (!dl) return;
     if (fillColorLeft==fillColorRight) dl->AddConvexPolyFilled(dl->_Path.Data,dl->_Path.Size, fillColorLeft, antiAliased);
-    else if ((fillColorLeft >> 24) != 0 || (fillColorRight >> 24) != 0) ImDrawListAddConvexPolyFilledWithHorizontalGradient(dl, dl->_Path.Data, dl->_Path.Size, fillColorLeft, fillColorRight, antiAliased,minx,maxx);
-    if ((strokeColor>> 24)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
+    else if ((fillColorLeft & IM_COL32_A_MASK) != 0 || (fillColorRight & IM_COL32_A_MASK) != 0) ImDrawListAddConvexPolyFilledWithHorizontalGradient(dl, dl->_Path.Data, dl->_Path.Size, fillColorLeft, fillColorRight, antiAliased,minx,maxx);
+    if ((strokeColor& IM_COL32_A_MASK)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
     dl->PathClear();
 }
 void ImDrawListAddRectWithHorizontalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColorLeft, const ImU32 &fillColoRight, const ImU32 &strokeColor, float rounding, int rounding_corners, float strokeThickness, bool antiAliased) {
-    if (!dl || (((fillColorLeft >> 24) == 0) && ((fillColoRight >> 24) == 0) && ((strokeColor >> 24) == 0)))  return;
+    if (!dl || (((fillColorLeft & IM_COL32_A_MASK) == 0) && ((fillColoRight & IM_COL32_A_MASK) == 0) && ((strokeColor & IM_COL32_A_MASK) == 0)))  return;
     if (rounding==0.f || rounding_corners==0) {
         dl->AddRectFilledMultiColor(a,b,fillColorLeft,fillColoRight,fillColoRight,fillColorLeft); // Huge speedup!
-        if ((strokeColor>> 24)!= 0 && strokeThickness>0.f) {
+        if ((strokeColor& IM_COL32_A_MASK)!= 0 && strokeThickness>0.f) {
             dl->PathRect(a, b, rounding, rounding_corners);
             dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, true, strokeThickness, antiAliased);
             dl->PathClear();
@@ -991,7 +991,7 @@ void RenderTextVertical(const ImFont* font,ImDrawList* draw_list, float size, Im
     draw_list->_VtxCurrentIdx = (unsigned int)draw_list->VtxBuffer.Size;
 }
 void AddTextVertical(ImDrawList* drawList,const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect,bool rotateCCW)    {
-    if ((col >> 24) == 0)
+    if ((col & IM_COL32_A_MASK) == 0)
         return;
 
     if (text_end == NULL)

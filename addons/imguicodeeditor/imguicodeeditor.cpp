@@ -34,12 +34,12 @@ namespace CodeEditorDrawListHelper {
 // Extensions to ImDrawList:
 static void ImDrawListPathFillAndStroke(ImDrawList* dl,const ImU32& fillColor,const ImU32& strokeColor,bool strokeClosed=false, float strokeThickness = 1.0f, bool antiAliased = true)    {
     if (!dl) return;
-    if ((fillColor >> 24) != 0) dl->AddConvexPolyFilled(dl->_Path.Data, dl->_Path.Size, fillColor, antiAliased);
-    if ((strokeColor>> 24)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
+    if ((fillColor & IM_COL32_A_MASK) != 0) dl->AddConvexPolyFilled(dl->_Path.Data, dl->_Path.Size, fillColor, antiAliased);
+    if ((strokeColor& IM_COL32_A_MASK)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
     dl->PathClear();
 }
 static void ImDrawListAddRect(ImDrawList* dl,const ImVec2& a, const ImVec2& b,const ImU32& fillColor,const ImU32& strokeColor,float rounding = 0.0f, int rounding_corners = 0x0F,float strokeThickness = 1.0f,bool antiAliased = true) {
-    if (!dl || (((fillColor >> 24) == 0) && ((strokeColor >> 24) == 0)))  return;
+    if (!dl || (((fillColor & IM_COL32_A_MASK) == 0) && ((strokeColor & IM_COL32_A_MASK) == 0)))  return;
     //dl->AddRectFilled(a,b,fillColor,rounding,rounding_corners);
     //dl->AddRect(a,b,strokeColor,rounding,rounding_corners);
     dl->PathRect(a, b, rounding, rounding_corners);
@@ -287,7 +287,7 @@ static inline void ImDrawListRenderTextLine(ImDrawList* draw_list,const ImFont* 
 static inline void ImDrawListAddTextLine(ImDrawList* draw_list,const ImFont* font, float font_size, ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, const ImVec4* cpu_fine_clip_rect = NULL)
 {
     if (text_end == NULL)   text_end = text_begin + strlen(text_begin);
-    if ((col >> 24) == 0)   {
+    if ((col & IM_COL32_A_MASK) == 0)   {
         pos.x+= (int)pos.x + MyCalcTextWidth(text_begin,text_end);
         return;
     }
@@ -2203,7 +2203,7 @@ void CodeEditor::render()   {
 
                     // draw the folded tag
                     SyntaxHighlightingType sht = FoldingTypeToSyntaxHighlightingType[line->foldingStartTag->kind];
-                    if (style.color_syntax_highlighting[sht]>>24==0)    {
+                    if ((style.color_syntax_highlighting[sht]&IM_COL32_A_MASK)==0)    {
                         if (line->foldingStartTag->kind==FOLDING_TYPE_COMMENT) sht = SH_COMMENT;
                         else if (line->foldingStartTag->kind==FOLDING_TYPE_PARENTHESIS) {
                             if (line->foldingStartTag->start[0]=='{') sht = SH_BRACKETS_CURLY;
@@ -2216,7 +2216,7 @@ void CodeEditor::render()   {
                     if (line->foldingStartTag->title.size()>0) {
                         // See if we must draw the bg:
                         const ImU32 bgColor = line->foldingStartTag->kind == FOLDING_TYPE_COMMENT ? style.color_folded_comment_background : line->foldingStartTag->kind == FOLDING_TYPE_PARENTHESIS ? style.color_folded_parenthesis_background : 0;
-                        if (bgColor >> 24 !=0)	{
+                        if ((bgColor & IM_COL32_A_MASK) !=0)	{
                             const ImVec2 regionNameSize = ImGui::CalcTextSize(line->foldingStartTag->title.c_str());    // Well, it'a a monospace font... we can optimize it
                             ImVec2 startPos = ImGui::GetCursorPos();
                             startPos.x+= windowPos.x - ImGui::GetScrollX() - lineHeight*0.09f;
@@ -2327,7 +2327,7 @@ void CodeEditor::render()   {
     if (showIconMargin && ImGui::GetScrollX()<startCursorPosLineNumbers.x) {
         ImGui::SetCursorPos(startCursorPosIconMargin);
         // Draw background --------------------------------------
-        if (style.color_icon_margin_background>>24!=0)    {
+        if ((style.color_icon_margin_background&IM_COL32_A_MASK)!=0)    {
             ImDrawList* drawList = ImGui::GetWindowDrawList();
             //const float deltaX = windowScale * ImGui::GetStyle().WindowPadding.x;   // I'm not sure it's ImGui::GetStyle().WindowPadding.x *2.f...
             const ImVec2 ssp(startCursorPosIconMargin.x+windowPos.x-ImGui::GetScrollX()-lineHeight*0.25f,startCursorPosIconMargin.y+windowPos.y-ImGui::GetScrollY());
@@ -2411,7 +2411,7 @@ void CodeEditor::render()   {
         ImGui::SetCursorPos(startCursorPosLineNumbers);
         ImGui::BeginGroup();
         // Draw background --------------------------------------
-        if (style.color_line_numbers_background>>24!=0)    {
+        if ((style.color_line_numbers_background&IM_COL32_A_MASK)!=0)    {
             ImDrawList* drawList = ImGui::GetWindowDrawList();
             const ImVec2 ssp(startCursorPosLineNumbers.x+windowPos.x-ImGui::GetScrollX(),startCursorPosLineNumbers.y+windowPos.y-ImGui::GetScrollY());
             const ImVec2 sep(ssp.x+lineNumberSize,ssp.y+ lineHeight*visibleLines.size());
@@ -2436,7 +2436,7 @@ void CodeEditor::render()   {
     if (enableTextFolding &&  ImGui::GetScrollX()<startCursorPosTextEditor.x) {
         ImGui::SetCursorPos(startCursorPosFoldingMarks);
         // Draw background --------------------------------------
-        if (style.color_folding_margin_background>>24!=0)    {
+        if ((style.color_folding_margin_background&IM_COL32_A_MASK)!=0)    {
             ImDrawList* drawList = ImGui::GetWindowDrawList();
             const ImVec2 ssp(startCursorPosFoldingMarks.x+windowPos.x-ImGui::GetScrollX(),startCursorPosFoldingMarks.y+windowPos.y-ImGui::GetScrollY());
             const ImVec2 sep(ssp.x+sizeFoldingMarks*0.8f,ssp.y+ lineHeight*visibleLines.size());
@@ -2466,7 +2466,7 @@ void CodeEditor::render()   {
             {
                 //fprintf(stderr,"enableTextFolding: Line[%d] is foldable\n",line->lineNumber);
                 SyntaxHighlightingType sht = FoldingTypeToSyntaxHighlightingType[foldableLine->foldingStartTag->kind];
-                if (style.color_syntax_highlighting[sht]>>24==0)    {
+                if ((style.color_syntax_highlighting[sht]&IM_COL32_A_MASK)==0)    {
                     if (line->foldingStartTag->kind==FOLDING_TYPE_COMMENT) sht = SH_COMMENT;
                     else if (line->foldingStartTag->kind==FOLDING_TYPE_PARENTHESIS) {
                         if (line->foldingStartTag->start[0]=='{') sht = SH_BRACKETS_CURLY;
@@ -3924,7 +3924,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         //ImGui::BeginGroup();
 
         //CodeEditor::GetStyle().color_line_numbers_background = ImGui::ColorConvertFloat4ToU32(ImVec4(0.2,0,0,0.4));   // TO REMOVE!
-        if (ceStyle.color_line_numbers_background>>24!=0)
+        if ((ceStyle.color_line_numbers_background&IM_COL32_A_MASK)!=0)
         {
             // Here we manually blend bg colors, so that we can paint in one pass.
             // Otherwise we have to simply use here: ImGui::PushStyleColor(ImGuiCol_FrameBg,ceStyle.color_background)
@@ -3952,7 +3952,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             return false;
         }
         // Draw background --------------------------------------
-        /*if (ceStyle.color_line_numbers_background>>24!=0)    {
+        /*if ((ceStyle.color_line_numbers_background&IM_COL32_A_MASK)!=0)    {
             ImDrawList* drawList = ImGui::GetWindowDrawList();
             const ImVec2 windowPos = ImGui::GetWindowPos();
             const ImVec2 ssp(windowPos.x-ImGui::GetScrollX(),windowPos.y-ImGui::GetScrollY());

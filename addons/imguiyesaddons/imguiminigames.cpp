@@ -38,12 +38,12 @@ namespace ImGuiMiniGames {
     }*/
     static void ImDrawListPathFillAndStroke(ImDrawList *dl, const ImU32 &fillColor, const ImU32 &strokeColor, bool strokeClosed, float strokeThickness, bool antiAliased)    {
         if (!dl) return;
-        if ((fillColor >> 24) != 0) dl->AddConvexPolyFilled(dl->_Path.Data, dl->_Path.Size, fillColor, antiAliased);
-        if ((strokeColor>> 24)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
+        if ((fillColor & IM_COL32_A_MASK) != 0) dl->AddConvexPolyFilled(dl->_Path.Data, dl->_Path.Size, fillColor, antiAliased);
+        if ((strokeColor& IM_COL32_A_MASK)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
         dl->PathClear();
     }
     static void ImDrawListAddRect(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColor, const ImU32 &strokeColor, float rounding, int rounding_corners, float strokeThickness, bool antiAliased) {
-        if (!dl || (((fillColor >> 24) == 0) && ((strokeColor >> 24) == 0)))  return;
+        if (!dl || (((fillColor & IM_COL32_A_MASK) == 0) && ((strokeColor & IM_COL32_A_MASK) == 0)))  return;
         dl->PathRect(a, b, rounding, rounding_corners);
         ImDrawListPathFillAndStroke(dl,fillColor,strokeColor,true,strokeThickness,antiAliased);
     }
@@ -244,7 +244,7 @@ namespace ImGuiMiniGames {
         }
 
         ImU32 colorText = style.colors[Mine::Style::Color_Text];
-        if (colorText>>24==0) colorText = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]);
+        if ((colorText&IM_COL32_A_MASK)==0) colorText = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]);
 
         ImGui::PushID(this);
         bool mustReInit = false;
@@ -1438,7 +1438,7 @@ namespace ImGuiMiniGames {
         colors[Style::Color_CellBackground] =       IM_COL32(222,222,220,255);
 
         colors[Color_Numbers]=colors[Style::Color_InitialNumbers] = IM_COL32_BLACK;
-        colors[Style::Color_Annotations] = (((colors[Color_Numbers]>>24)/2)<<24) | (colors[Color_Numbers]&0x00FFFFFF);
+        colors[Style::Color_Annotations] = (((colors[Color_Numbers]>>24)/2)<<24) | (colors[Color_Numbers]&0x00FFFFFF);  // How to do this using IM_COL32_A_MASK ?
 
         colors[Style::Color_Grid] = IM_COL32(178,177,192,170);//colors[Style::Color_Background];
         colors[Style::Color_GridZone] = IM_COL32(128,128,0,255);
@@ -1461,7 +1461,7 @@ namespace ImGuiMiniGames {
         colors[Style::Color_HoveredCellBackground]                  =   ms.colors[Mine::Style::Color_HoveredCellBackground];
         keyPause = ms.keyPause;
 
-        colors[Style::Color_Annotations] = (((colors[Color_Numbers]>>24)/2)<<24) | (colors[Color_Numbers]&0x00FFFFFF);
+        colors[Style::Color_Annotations] = (((colors[Color_Numbers]>>24)/2)<<24) | (colors[Color_Numbers]&0x00FFFFFF);  // How to do this using IM_COL32_A_MASK ?
         colors[Style::Color_GridZone] = IM_COL32(224,224,0,255);
 
     }
