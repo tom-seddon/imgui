@@ -3539,7 +3539,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                 const int ie = edit_state.HasSelection() ? ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end) : edit_state.CurLenW;
                 edit_state.TempTextBuffer.resize((ie-ib) * 4 + 1);
                 ImTextStrToUtf8(edit_state.TempTextBuffer.Data, edit_state.TempTextBuffer.Size, edit_state.Text.Data+ib, edit_state.Text.Data+ie);
-                g.IO.SetClipboardTextFn(edit_state.TempTextBuffer.Data);
+                g.IO.SetClipboardTextFn(NULL,edit_state.TempTextBuffer.Data);
             }
 
             if (cut)
@@ -3553,7 +3553,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             // Paste
             if (g.IO.GetClipboardTextFn)
             {
-                if (const char* clipboard = g.IO.GetClipboardTextFn())
+                if (const char* clipboard = g.IO.GetClipboardTextFn(NULL))
                 {
                     // Remove new-line from pasted buffer
                     const int clipboard_len = (int)strlen(clipboard);

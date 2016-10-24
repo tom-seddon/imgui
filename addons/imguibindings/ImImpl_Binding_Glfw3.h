@@ -79,12 +79,12 @@ static ImVec2 mousePosScale(1.0f, 1.0f);
 
 
 // NB: ImGui already provide OS clipboard support for Windows so this isn't needed if you are using Windows only.
-static const char* ImImpl_GetClipboardTextFn()
+static const char* ImImpl_GetClipboardTextFn(void*)
 {
     return glfwGetClipboardString(window);
 }
 
-static void ImImpl_SetClipboardTextFn(const char* text)
+static void ImImpl_SetClipboardTextFn(void*,const char* text)
 {
     glfwSetClipboardString(window, text);
 }

@@ -20,7 +20,7 @@ static const SDL_SystemCursor sdlCursorIds[ImGuiMouseCursor_Count_+1] = {
 static SDL_Cursor* sdlCursors[ImGuiMouseCursor_Count_+1];
 
 // NB: ImGui already provide OS clipboard support for Windows so this isn't needed if you are using Windows only.
-static const char* ImImpl_GetClipboardTextFn()
+static const char* ImImpl_GetClipboardTextFn(void*)
 {
     //return SDL_GetClipboardText();	// Wrong!!! Gets UTF-8 text from the clipboard, which must be freed with SDL_free(), otherwise leaks memory!
     const char* text = SDL_GetClipboardText();
@@ -38,7 +38,7 @@ static const char* ImImpl_GetClipboardTextFn()
     return (const char*) &clipboardBuffer[0];
 }
 
-static void ImImpl_SetClipboardTextFn(const char* text)
+static void ImImpl_SetClipboardTextFn(void*,const char* text)
 {
     SDL_SetClipboardText(text);
 }

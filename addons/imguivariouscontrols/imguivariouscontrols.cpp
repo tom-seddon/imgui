@@ -663,7 +663,7 @@ bool InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu(const char *la
 
     if (hasSelectedText || !readOnly)	{
         const bool onlyPaste = !readOnly && !hasSelectedText;
-        const char* clipboardText = ImGui::GetIO().GetClipboardTextFn();
+        const char* clipboardText = ImGui::GetIO().GetClipboardTextFn(NULL);
         const bool canPaste = clipboardText && strlen(clipboardText)>0;
         if (onlyPaste && !canPaste) popup_open = false;
         else {
@@ -679,7 +679,7 @@ bool InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu(const char *la
                 // Copy to clipboard
                 if (!mustPaste)	{
                     const char tmp = buf[selectionEnd];buf[selectionEnd]='\0';
-                    ImGui::GetIO().SetClipboardTextFn(&buf[selectionStart]);
+                    ImGui::GetIO().SetClipboardTextFn(NULL,&buf[selectionStart]);
                     buf[selectionEnd]=tmp;
                 }
                 // Delete chars

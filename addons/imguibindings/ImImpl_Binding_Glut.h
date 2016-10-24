@@ -18,14 +18,14 @@ static const int specialCharMapAddend = 128;    // to prevent some special chars
 #ifndef _WIN32
 // If somebody implements these, in InitImGui(...) these callbacks MUST be set (they're currently detached).
 // The default fallback on non-Windows OS is a "private" clipboard.
-static const char* ImImpl_GetClipboardTextFn()
+static const char* ImImpl_GetClipboardTextFn(void*)
 {
     //fprintf(stderr,"ImImpl_GetClipboardTextFn()\n");
     static const char* txt = "copy and paste not implemented in the glut backend!";
     //return SDL_GetClipboardText();
     return txt;
 }
-static void ImImpl_SetClipboardTextFn(const char* /*text*/)
+static void ImImpl_SetClipboardTextFn(void*,const char* /*text*/)
 {
     //fprintf(stderr,"ImImpl_SetClipboardTextFn()\n");
     //SDL_SetClipboardText(text);
