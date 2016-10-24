@@ -53,7 +53,9 @@ struct SdfCharsetProperties {
     SdfCharsetProperties(bool _flipYOffset=false) : flipYOffset(_flipYOffset) {}
 };
 // Tip: load the texture into fntTexture (owned by you), before calling these methods
+#if (!defined(NO_IMGUISDF_LOAD) || (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD)))
 struct SdfCharset* SdfAddCharsetFromFile(const char* fntFilePath,ImTextureID fntTexture,const SdfCharsetProperties& properties=SdfCharsetProperties());
+#endif // (!defined(NO_IMGUISDF_LOAD) ...)
 struct SdfCharset* SdfAddCharsetFromMemory(const void* data,unsigned int data_size,ImTextureID fntTexture,const SdfCharsetProperties& properties=SdfCharsetProperties());
 //-------------------------------------------------------------------------------------------------
 

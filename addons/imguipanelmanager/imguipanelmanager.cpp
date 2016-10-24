@@ -561,9 +561,9 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             window->ScrollbarY = (window->SizeContents.y > window->Size.y + style.ItemSpacing.y) && !(flags & ImGuiWindowFlags_NoScrollbar);
             window->ScrollbarX = (window->SizeContents.x > window->Size.x - (window->ScrollbarY ? style.ScrollbarSize : 0.0f) - window->WindowPadding.x) && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar);
             window->ScrollbarSizes = ImVec2(window->ScrollbarY ? style.ScrollbarSize : 0.0f, window->ScrollbarX ? style.ScrollbarSize : 0.0f);
+            //window->BorderSize = (flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
 
-            // Window background
-            // Default alpha
+            // Window background, Default alpha
             ImGuiCol bg_color_idx = ImGuiCol_WindowBg;
             if ((flags & ImGuiWindowFlags_ComboBox) != 0)
                 bg_color_idx = ImGuiCol_ComboBg;
@@ -577,6 +577,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             bg_color.w *= style.Alpha;
             if (bg_color.w > 0.0f)
                 window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, ColorConvertFloat4ToU32(bg_color), window_rounding);
+                //window->DrawList->AddRectFilled(window->Pos+ImVec2(0,window->TitleBarHeight()), window->Pos+window->Size, ColorConvertFloat4ToU32(bg_color), window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImGuiCorner_All : ImGuiCorner_BottomLeft|ImGuiCorner_BottomRight);
 
 
             // Title bar
@@ -586,13 +587,13 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                     ImU32 col = GetColorU32((g.FocusedWindow && window->RootNonPopupWindow == g.FocusedWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
                     ImGui::ImDrawListAddRectWithVerticalGradient(window->DrawList,
                         title_bar_rect.GetTL(), title_bar_rect.GetBR(),col,0.15f,0,
-                        window_rounding, 1|2,1.f,ImGui::GetStyle().AntiAliasedShapes
+                        window_rounding, ImGuiCorner_TopLeft|ImGuiCorner_TopRight,1.f,ImGui::GetStyle().AntiAliasedShapes
                     );
                 }
                 else
 #               endif // (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
                 {
-                    window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32((g.FocusedWindow && window->RootNonPopupWindow == g.FocusedWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, 1|2);
+                    window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32((g.FocusedWindow && window->RootNonPopupWindow == g.FocusedWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, ImGuiCorner_TopLeft|ImGuiCorner_TopRight);
                 }
             }
 
@@ -600,7 +601,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             if (flags & ImGuiWindowFlags_MenuBar)
             {
                 ImRect menu_bar_rect = window->MenuBarRect();
-                window->DrawList->AddRectFilled(menu_bar_rect.GetTL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, 1|2);
+                //if (flags & ImGuiWindowFlags_ShowBorders) window->DrawList->AddLine(menu_bar_rect.GetBL()-ImVec2(0,0), menu_bar_rect.GetBR()-ImVec2(0,0), GetColorU32(ImGuiCol_Border));
+                window->DrawList->AddRectFilled(menu_bar_rect.GetTL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImGuiCorner_TopLeft|ImGuiCorner_TopRight);
             }
 
             // Scrollbars
@@ -625,9 +627,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             {
                 window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), window_rounding);
                 window->DrawList->AddRect(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_Border), window_rounding);
-                if (!(flags & ImGuiWindowFlags_NoTitleBar))
-                    window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border));
             }
+            if ((flags & ImGuiWindowFlags_ShowBorders) && !(flags & ImGuiWindowFlags_NoTitleBar))
+                window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border));
+
         }
 
         // Update ContentsRegionMax. All the variable it depends on are set above in this function.
@@ -689,7 +692,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
             if (!(flags & ImGuiWindowFlags_NoCollapse))
-                RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f, true);
+                RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f);
 
             /*
             ImVec2 text_min = window->Pos + style.FramePadding;
@@ -910,7 +913,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
             if (allowManualResizeGrip)  {
                 ImRect resize_aabb(0,0,0,0);
                 const ImGuiID resize_id = window->GetID("#RESIZE");
-                float rounding=0; int rounding_corners=0x0F;
+                float rounding=0; int rounding_corners=~0;
                 float gripDist = 0;float gripSize = 8;
                 bool hovered=false, held=false;ImVec2 newSize(-1,-1);
                 const ImRect& aabb = window->Rect();

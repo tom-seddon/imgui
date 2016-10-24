@@ -995,6 +995,8 @@ void DrawGL()	// Mandatory
 #       endif //DOES_NOT_WORK
 
 #       ifdef YES_IMGUISDF
+        // The following check is to ensure ImGui::SdfAddCharsetFromFile(...) can be called (some users don't like to use FILE* in <stdio.h>, and prefer loading stuff from memory only)
+#       if (!defined(NO_IMGUISDF_LOAD) || (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD)))
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguisdf (yes_addon)");ImGui::Separator();
         // Well, we should move the init stuff to InitGL(), clean up textures, etc. (all skipped to avoid multiple preprocessor branches around this file)
         static ImTextureID sdfTexture = 0;
@@ -1036,6 +1038,7 @@ void DrawGL()	// Mandatory
                 ImGui::SdfRender(); // This should be moved at the top of DrawGL(), to work when ImGui is not active too. [or after ImGui::Render(), but that spot is not supported at the moment here...]
             }
          }
+#       endif // (!defined(NO_IMGUISDF_LOAD) ...)
 #       endif //YES_IMGUISDF
 
 #       ifdef YES_IMGUISOLOUD

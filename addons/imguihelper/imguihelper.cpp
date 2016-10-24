@@ -377,7 +377,7 @@ void ImDrawListAddPolyLine(ImDrawList *dl, const ImVec2* polyPoints,int numPolyP
 // March 23, 2009---------------------------------------------------------------------------------------------------------------------------------------
 namespace bayazit {
 inline static bool eq(const float &a, float const &b) {return fabs(a - b) <= 1e-8;}
-inline static float min(const float &a, const float &b) {return a < b ? a : b;}
+//inline static float min(const float &a, const float &b) {return a < b ? a : b;}
 inline static int wrap(const int &a, const int &b) {return a < 0 ? a % b + b : a % b;}
 inline static const ImVec2& at(const ImVector<ImVec2>& v, int i) {return v[wrap(i, v.size())];};
 inline static float area(const ImVec2 &a, const ImVec2 &b, const ImVec2 &c) {return (((b.x - a.x)*(c.y - a.y))-((c.x - a.x)*(b.y - a.y)));}

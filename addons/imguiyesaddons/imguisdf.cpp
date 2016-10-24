@@ -665,6 +665,10 @@ struct SdfShaderProgram {
 };
 SdfShaderProgram gSdfShaderPrograms[2]; // 0-Normal and 1-Outline font
 
+#if (!defined(NO_IMGUISDF_LOAD) || (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD)))
+#include <stdio.h>  // FILE* used in SdfCharset::GetFileContent(...)
+#endif // (!defined(NO_IMGUISDF_LOAD) ...)
+
 struct SdfCharset {
     float LineHeight;
     float Base;
@@ -888,7 +892,39 @@ struct SdfCharset {
 
     }
 
-
+#   if (!defined(NO_IMGUISDF_LOAD) || (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD)))
+    // Cloned from imguihelper.h/cpp remove its dependency:
+    static bool GetFileContent(const char *filePath,ImVector<char> &contentOut,bool clearContentOutBeforeUsage,const char *modes="rb",bool appendTrailingZeroIfModesIsNotBinary=true)   {
+        ImVector<char>& f_data = contentOut;
+        if (clearContentOutBeforeUsage) f_data.clear();
+        //----------------------------------------------------
+        if (!filePath) return false;
+        const bool appendTrailingZero = appendTrailingZeroIfModesIsNotBinary && modes && strlen(modes)>0 && modes[strlen(modes)-1]!='b';
+        FILE* f;
+        if ((f = fopen(filePath, modes)) == NULL) return false;
+        if (fseek(f, 0, SEEK_END))  {
+            fclose(f);
+            return false;
+        }
+        const long f_size_signed = ftell(f);
+        if (f_size_signed == -1)    {
+            fclose(f);
+            return false;
+        }
+        size_t f_size = (size_t)f_size_signed;
+        if (fseek(f, 0, SEEK_SET))  {
+            fclose(f);
+            return false;
+        }
+        f_data.resize(f_size+(appendTrailingZero?1:0));
+        const size_t f_size_read = fread(&f_data[0], 1, f_size, f);
+        fclose(f);
+        if (f_size_read == 0 || f_size_read!=f_size)    return false;
+        if (appendTrailingZero) f_data[f_size] = '\0';
+        //----------------------------------------------------
+        return true;
+    }
+#   endif //(!defined(NO_IMGUISDF_LOAD) ...)
 };
 
 void SdfTextChunk::addText(const char* startText, bool _italic, const SdfTextColor* pSdfTextColor, const ImVec2* textScaling, const char* endText,const SDFHAlignment *phalignOverride, bool fakeBold) {
@@ -1443,12 +1479,13 @@ void SdfStaticStructs::DestroyAllCharsets()  {
 }
 
 
-
+#if (!defined(NO_IMGUISDF_LOAD) || (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD)))
 SdfCharset* SdfAddCharsetFromFile(const char* fntFilePath,ImTextureID fntTexture,const SdfCharsetProperties& properties)    {
     ImVector<char> contentOut;
-    if (!ImGuiHelper::GetFileContent(fntFilePath,contentOut,true,"r") || contentOut.size()==0) return NULL;
+    if (!SdfCharset::GetFileContent(fntFilePath,contentOut,true,"r") || contentOut.size()==0) return NULL;
     return SdfAddCharsetFromMemory(&contentOut[0],contentOut.size(),fntTexture,properties);
 }
+#endif // (!defined(NO_IMGUISDF_LOAD) ...)
 SdfCharset* SdfAddCharsetFromMemory(const void* data,unsigned int data_size,ImTextureID fntTexture,const SdfCharsetProperties& properties)  {
     SdfCharset* p = (SdfCharset*) ImGui::MemAlloc(sizeof(SdfCharset));
     IM_PLACEMENT_NEW (p) SdfCharset();

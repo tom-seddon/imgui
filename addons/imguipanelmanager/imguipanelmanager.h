@@ -133,7 +133,7 @@ struct PanelManager {
     mutable float innerQuadChangedTimer;
     mutable ImGuiWindowFlags dockedWindowsExtraFlags;
     public:
-    PanelManager(bool _visible=true,float _dockedWindowsAlpha=0.8f,bool showDockedWindowBorders=true) : paneLeft(NULL),paneRight(NULL),paneTop(NULL),paneBottom(NULL),visible(_visible),
+    PanelManager(bool _visible=true,float _dockedWindowsAlpha=0.8f,bool showDockedWindowBorders=false) : paneLeft(NULL),paneRight(NULL),paneTop(NULL),paneBottom(NULL),visible(_visible),
     innerBarQuadPos(0,0),innerBarQuadSize(-1,-1),innerQuadPos(0,0),innerQuadSize(-1,-1),dockedWindowsAlpha(_dockedWindowsAlpha),innerQuadChangedTimer(-1.f),dockedWindowsExtraFlags(showDockedWindowBorders?ImGuiWindowFlags_ShowBorders:0) {}
     ~PanelManager() {clear();}
     void clear() {
