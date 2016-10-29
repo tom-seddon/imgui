@@ -168,7 +168,11 @@ IMIMPL_USE_FONT_TEXTURE_LINEAR_FILTERING		# By default the font texture now uses
 IMIMPL_USE_ALPHA_SHARPENER_SHADER		# shader uses a different fragment shader that improves the quality of zoomed fonts a bit. It forces GL_LINEAR filtering too.
 IMIMPL_USE_SDF_SHADER				# shader uses a more complex (= slower) fragment shader, that improves the quality of zoomed fonts a bit. It forces GL_LINEAR filtering too.
 
-
+IMIMPL_BUILD_SDF				# builds Signed Distance Fonts for ImGui. To display them correctly:
+						# -> use an OpenGL binding with shader support (don't define IMIMPL_SHADER_NONE)
+						# -> define IMIMPL_USE_SDF_SHADER or IMIMPL_USE_SDF_OUTLINE_SHADER together with IMIMPL_BUILD_SDF.
+						# -> set the font's ImFontConfig::OversampleH==ImFontConfig::OversampleV (tested with 1 only. Note that this is NOT the default for custom fonts [it's 3,1]).
+						# -> if you use the outline shader, don't use too thin fonts (like the default one).
 
 IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON:		# when defined ImGui::GetIO()->Fonts->ClearInputData() and ImGui::GetIO()->Fonts->ClearTexData() are called as soon as possible saving some memory (and allowing you to append new fonts later (e.g. in InitGL())).
 						# it used to be the default, but future ImGui dynamic atlas support will require input data anyway.
