@@ -366,6 +366,7 @@ void DrawGL()	// Mandatory
             ImGui::SameLine(0,10);
             if (ImGui::SmallButton("Reset##glFontGlobalScale")) ImGui::GetIO().FontGlobalScale = 1.f;
         }
+        ImImpl_EditSdfParams(); // This lets you edit signed distance font params ONLY when they are used
 
         // Some options ported from imgui_demo.cpp
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("Window options");ImGui::Separator();
@@ -1514,7 +1515,10 @@ int main(int argc, char** argv)
         };
     const float fontSizeInPixels = 18.f;
                                   //-40.f; // If < 0, it's the number of lines that fit the whole screen (but without any kind of vertical spacing)
-
+    ImFontConfig cfg;
+#   ifdef IMIMPL_BUILD_SDF
+    cfg.OversampleH=1;cfg.OversampleV=1;    // signed distance fonts works better when these values are equal (default: 3,1 )
+#   endif //IMIMPL_BUILD_SDF
 
     // These lines load an embedded font. [However these files are way too big... inside <imgui.cpp> they used a better format storing bytes at groups of 4, so the files are more concise (1/4?) than mine]
     const unsigned char ttfMemory[] =
@@ -1535,7 +1539,7 @@ int main(int argc, char** argv)
 
     fontSizeInPixels,
     &ranges[0],
-    NULL,                                                               // optional ImFontConfig* (useful for merging glyph to the default font, according to ImGui)
+    &cfg,                                                               // optional ImFontConfig* (useful for merging glyph to the default font, according to ImGui)
     false                                                               // true = addDefaultImGuiFontAsFontZero
     ); // If you need to add more than one TTF file, there's another ctr (TO TEST).
     // Here are some optional tweaking of the desired FPS settings (they can be changed at runtime if necessary, but through some global values defined in imguibindinds.h)

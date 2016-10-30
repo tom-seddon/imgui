@@ -357,6 +357,14 @@ extern "C" void GLDebugMessageCallback(GLenum source, GLenum type,
 
 extern void ImImpl_NewFramePaused();
 
+// Returns NULL in all cases where Sdf fonts are not used or built (always check!)
+// Default is (0.5,0.4,0.25,0.04). All numbers in [0,1].
+// When no outline shader is used: x -> shrinks/grows the font.
+// otherwise: (x-y) controls the outline width, and shifting both values shrinks/grows the font.
+// w -> this is just a fallback value to set fwidth when standard derivates are not supported.
+extern const ImVec4* ImImpl_SdfShaderGetParams();
+extern bool ImImpl_SdfShaderSetParams(const ImVec4& sdfParams);
+extern bool ImImpl_EditSdfParams();
 
 #endif //IMGUIBINDINGS_H_
 

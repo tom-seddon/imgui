@@ -19,6 +19,37 @@ ImImplVoidDelegate gImGuiPreDrawGLSwapBuffersCallback = NULL;
 ImImplVoidDelegate gImGuiPostDrawGLSwapBuffersCallback = NULL;
 // --------------------------------------------------------------------------------------------------------------
 
+#ifdef IMIMPL_BUILD_SDF
+#define EDTAA3FUNC_HAS_IMGUI_SUPPORT
+#include "edtaa3func.h"
+#endif //IMIMPL_BUILD_SDF
+
+#ifdef IMIMPL_USE_SDF_SHADER_OUTLINE	// Bad spelling fix
+#undef IMIMPL_USE_SDF_OUTLINE_SHADER
+#define IMIMPL_USE_SDF_OUTLINE_SHADER
+#endif //IMIMPL_USE_SDF_SHADER_OUTLINE
+
+#ifdef IMIMPL_USE_SDF_OUTLINE_SHADER // Ensure IMIMPL_USE_SDF_SHADER is defined too
+#undef IMIMPL_USE_SDF_SHADER
+#define IMIMPL_USE_SDF_SHADER
+#endif //IMIMPL_USE_SDF_SHADER
+
+#ifdef IMGUI_USE_DIRECT3D9_BINDING
+#ifdef IMIMPL_USE_SDF_SHADER
+#warning Signed distance font shaders are not supported in the DIRECT3D9 binding.
+#elif IMIMPL_BUILD_SDF
+#warning IMIMPL_BUILD_SDF works, but DIRECT3D9 shaders to use it are not supported.
+#endif //IMIMPL_USE_SDF_SHADER
+#endif //IMGUI_USE_DIRECT3D9_BINDING
+
+#ifdef IMIMPL_SHADER_NONE
+#ifdef IMIMPL_USE_SDF_SHADER
+#warning Signed distance font shaders won't be used with IMIMPL_SHADER_NONE.
+#elif IMIMPL_BUILD_SDF
+#warning IMIMPL_BUILD_SDF works, but the shaders to use it are not supported with IMIMPL_SHADER_NONE.
+#endif //IMIMPL_USE_SDF_SHADER
+#endif //IMGUI_USE_DIRECT3D9_BINDING
+
 struct ImImpl_PrivateParams  {
 #if (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
 
@@ -35,20 +66,33 @@ struct ImImpl_PrivateParams  {
     // gProgram uniform locations:
     GLint uniLocOrthoMatrix;
     GLint uniLocTexture;
+    GLint uniLocSdfParams;
     // gProgram attribute locations:
     GLint attrLocPosition;
     GLint attrLocUV;
     GLint attrLocColour;
     // font texture
     ImTextureID fontTex;
-    ImImpl_PrivateParams() :program(0),uniLocOrthoMatrix(-1),uniLocTexture(-1),
+
+    // Default values
+    ImVec4 sdfParams;
+
+    ImImpl_PrivateParams() :program(0),uniLocOrthoMatrix(-1),uniLocTexture(-1),uniLocSdfParams(-1),
         attrLocPosition(-1),attrLocUV(-1),attrLocColour(-1),fontTex(0)
-    {for (int i=0;i<IMIMPL_NUM_ROUND_ROBIN_VERTEX_BUFFERS;i++) {vertexBuffers[i]=0;indexBuffers[i]=0;}}
+    {resetSdfParams();for (int i=0;i<IMIMPL_NUM_ROUND_ROBIN_VERTEX_BUFFERS;i++) {vertexBuffers[i]=0;indexBuffers[i]=0;}}
+    void resetSdfParams() {
+        sdfParams = ImVec4(0.5f,0.4f,0.2f,0.04f);
+#       ifndef IMIMPL_USE_SDF_OUTLINE_SHADER
+        sdfParams.x=0.5f;
+#       endif //IMIMPL_USE_SDF_OUTLINE_SHADER
+    }
+
 #else // (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
     // font texture
     ImTextureID fontTex;
     ImImpl_PrivateParams() :fontTex(0) {}
 #endif // (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
+
 };
 static ImImpl_PrivateParams gImImplPrivateParams;
 
@@ -160,36 +204,6 @@ void ImImpl_ClearColorBuffer(const ImVec4& bgColor)  {
 }
 #endif //defined(IMGUI_USE_DIRECT3D9_BINDING)
 
-#ifdef IMIMPL_BUILD_SDF
-#define EDTAA3FUNC_HAS_IMGUI_SUPPORT
-#include "edtaa3func.h"
-#endif //IMIMPL_BUILD_SDF
-
-#ifdef IMIMPL_USE_SDF_SHADER_OUTLINE	// Bad spelling fix
-#undef IMIMPL_USE_SDF_OUTLINE_SHADER
-#define IMIMPL_USE_SDF_OUTLINE_SHADER
-#endif //IMIMPL_USE_SDF_SHADER_OUTLINE
-
-#ifdef IMIMPL_USE_SDF_OUTLINE_SHADER // Ensure IMIMPL_USE_SDF_SHADER is defined too
-#undef IMIMPL_USE_SDF_SHADER
-#define IMIMPL_USE_SDF_SHADER
-#endif //IMIMPL_USE_SDF_SHADER
-
-#ifdef IMGUI_USE_DIRECT3D9_BINDING
-#ifdef IMIMPL_USE_SDF_SHADER
-#warning Signed distance font shaders are not supported in the DIRECT3D9 binding.
-#elif IMIMPL_BUILD_SDF
-#warning IMIMPL_BUILD_SDF works, but DIRECT3D9 shaders to use it are not supported.
-#endif //IMIMPL_USE_SDF_SHADER
-#endif //IMGUI_USE_DIRECT3D9_BINDING
-
-#ifdef IMIMPL_SHADER_NONE
-#ifdef IMIMPL_USE_SDF_SHADER
-#warning Signed distance font shaders won't be used with IMIMPL_SHADER_NONE.
-#elif IMIMPL_BUILD_SDF
-#warning IMIMPL_BUILD_SDF works, but the shaders to use it are not supported with IMIMPL_SHADER_NONE.
-#endif //IMIMPL_USE_SDF_SHADER
-#endif //IMGUI_USE_DIRECT3D9_BINDING
 
 void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     if (pOptionalInitParams && pOptionalInitParams->skipBuildingFonts) return;
@@ -302,8 +316,9 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     ImGuiFreeType::GetTexDataAsRGBA32(io.Fonts,&pixels, &width, &height,NULL,ImGuiFreeType::DefaultRasterizationFlags,&ImGuiFreeType::DefaultRasterizationFlagVector);
 #   endif //YES_IMGUIFREETYPE
 
-#   if (!defined(IMIMPL_USE_SDF_SHADER) && !defined(IMIMPL_USE_ALPHA_SHARPENER_SHADER) && !defined(IMIMPL_USE_FONT_TEXTURE_LINEAR_FILTERING))
+#   if ((!defined(IMIMPL_USE_SDF_SHADER) && !defined(IMIMPL_USE_ALPHA_SHARPENER_SHADER) && !defined(IMIMPL_USE_FONT_TEXTURE_LINEAR_FILTERING)) || defined(IMIMPL_USE_FONT_TEXTURE_NEAREST_FILTERING))
     gTextureFilteringHintMagFilterNearest = true;
+    //printf("Using nearest filtering for ImGui Font Texture\n");
 #   endif // (!defined(IMGUI_USE_SDL_SHADER) && ! !defined(IMGUI_USE_ALPHA_SHARPENER_SHADER))
     gTextureFilteringHintMinFilterNearest = false;
     ImImpl_GenerateOrUpdateTexture(gImImplPrivateParams.fontTex,width,height,4,pixels,false,true,true);
@@ -816,7 +831,7 @@ void InitImGuiProgram()  {
 // -----------------------------------------------------------------------
 // START SHADER CODE
 //------------------------------------------------------------------------
-// shaders (TODO: make GL_OES_standard_derivatives optional in SDF shaders)
+// shaders
 #ifdef IMIMPL_SHADER_GL3
 static const GLchar* gVertexShaderSource[] = {
 #ifdef IMIMPL_SHADER_GLES
@@ -848,28 +863,28 @@ static const GLchar* gFragmentShaderSource[] = {
 #endif //IMIMPL_SHADER_GLES
       "precision mediump float;\n"
       "uniform lowp sampler2D Texture;\n"
+      "uniform vec4 SdfParams;\n"           // it should get culled out when not used
       "in vec2 Frag_UV;\n"
       "in vec4 Frag_Colour;\n"
-      "out vec4 FragColor;\n"
+      "out vec4 FragColor;\n"      
       "void main()\n"
       "{\n"
 #ifdef IMIMPL_USE_SDF_SHADER
        "vec4 texColor = texture(Texture, Frag_UV.st);\n"
        "float width = fwidth(texColor.a);\n"
 #	ifndef IMIMPL_USE_SDF_OUTLINE_SHADER
-       "float alpha = smoothstep(0.5 - width, 0.5 + width, texColor.a);\n"
+       "float alpha = smoothstep(SdfParams.x - width, SdfParams.x + width, texColor.a);\n"
        "FragColor = vec4(Frag_Colour.rgb*texColor.rgb,Frag_Colour.a*alpha);\n"
 #	else //IMIMPL_USE_SDF_OUTLINE_SHADER
-    "float outlineThreshold = 0.455;\n"              // 0.5 -> threshold for glyph border
-    "float alphaThreshold = 0.415;\n"             // 0.425//0.2  -> threshold for glyph outline
-    "float outlineDarkeningFactor = 0.3;\n"     // 0.3
+    //"float outlineThreshold = 0.455;\n"              // 0.5 -> threshold for glyph border -> SdfParams.x
+    //"float alphaThreshold = 0.415;\n"             // 0.425//0.2  -> threshold for glyph outline -> SdfParams.y
+    //"float outlineDarkeningFactor = 0.2;\n"     // 0.3 -> SdfParams.z
     "\n"
-    "float inside = smoothstep(outlineThreshold - width, outlineThreshold + width, texColor.a) ;\n"
-    "float glow = smoothstep (0.0 , 20.0 , texColor.a ) ;\n"    // This can just be set to 1.0...
+    "float inside = smoothstep(SdfParams.x - width, SdfParams.x + width, texColor.a) ;\n"
     "vec3 insidecolor = Frag_Colour.rgb*texColor.rgb;\n"
-    "vec3 outlinecolor = insidecolor.rgb*outlineDarkeningFactor;\n"
-    "vec3 fragcolor = mix ( glow * outlinecolor , insidecolor , inside ) ;\n"
-    "float alpha = smoothstep(alphaThreshold - width, alphaThreshold + width, texColor.a);\n"
+    "vec3 outlinecolor = insidecolor.rgb*SdfParams.z;\n"
+    "vec3 fragcolor = mix ( outlinecolor , insidecolor , inside ) ;\n"
+    "float alpha = smoothstep(SdfParams.y - width, SdfParams.y + width, texColor.a);\n"
     "\n"
     "FragColor = vec4(fragcolor,Frag_Colour.a*alpha);\n"
 #	endif //IMIMPL_USE_SDF_OUTLINE_SHADER
@@ -919,27 +934,35 @@ static const GLchar* gFragmentShaderSource[] = {
 #   endif //__EMSCRIPTEN__
       "uniform sampler2D Texture;\n"
 #endif //IMIMPL_SHADER_GLES
+      "uniform vec4 SdfParams;\n"           // it should get culled out when not used
       "varying vec2 Frag_UV;\n"
       "varying vec4 Frag_Colour;\n"
       "void main()\n"
       "{\n"
 #ifdef IMIMPL_USE_SDF_SHADER   
        "vec4 texColor = texture2D(Texture, Frag_UV.st);\n"
+#       if (defined(IMIMPL_SHADER_GLES) || defined(__EMSCRIPTEN__))
+        "#ifdef GL_OES_standard_derivatives\n"
+        "float width = fwidth(texColor.a);\n"
+        "#else //GL_OES_standard_derivatives\n"
+        "float width = SdfParams.w;\n"
+        "#endif //GL_OES_standard_derivatives\n"
+#       else // (defined(IMIMPL_SHADER_GLES) || defined(__EMSCRIPTEN__))
        "float width = fwidth(texColor.a);\n"
+#       endif //(defined(IMIMPL_SHADER_GLES) || defined(__EMSCRIPTEN__))
 #	ifndef IMIMPL_USE_SDF_OUTLINE_SHADER
-       "float alpha = smoothstep(0.5 - width, 0.5 + width, texColor.a);\n"
+       "float alpha = smoothstep(SdfParams.x - width, SdfParams.x + width, texColor.a);\n"
        "gl_FragColor = vec4(Frag_Colour.rgb*texColor.rgb,Frag_Colour.a*alpha);\n"
 #	else //IMIMPL_USE_SDF_OUTLINE_SHADER
-    "float outlineThreshold = 0.455;\n"              // 0.5 -> threshold for glyph border
-    "float alphaThreshold = 0.415;\n"             // 0.425//0.2  -> threshold for glyph outline
-    "float outlineDarkeningFactor = 0.3;\n"     // 0.3
+    //"float outlineThreshold = 0.455;\n"              // 0.5 -> threshold for glyph border -> SdfParams.x
+    //"float alphaThreshold = 0.415;\n"             // 0.425//0.2  -> threshold for glyph outline -> SdfParams.y
+    //"float outlineDarkeningFactor = 0.2;\n"     // 0.3 -> SdfParams.z
     "\n"
-    "float inside = smoothstep(outlineThreshold - width, outlineThreshold + width, texColor.a) ;\n"
-    "float glow = smoothstep (0.0 , 20.0 , texColor.a ) ;\n"    // This can just be set to 1.0...
+    "float inside = smoothstep(SdfParams.x - width, SdfParams.x + width, texColor.a) ;\n"
     "vec3 insidecolor = Frag_Colour.rgb*texColor.rgb;\n"
-    "vec3 outlinecolor = insidecolor.rgb*outlineDarkeningFactor;\n"
-    "vec3 fragcolor = mix ( glow * outlinecolor , insidecolor , inside ) ;\n"
-    "float alpha = smoothstep(alphaThreshold - width, alphaThreshold + width, texColor.a);\n"
+    "vec3 outlinecolor = insidecolor.rgb*SdfParams.z;\n"
+    "vec3 fragcolor = mix ( outlinecolor , insidecolor , inside ) ;\n"
+    "float alpha = smoothstep(SdfParams.y - width, SdfParams.y + width, texColor.a);\n"
     "\n"
     "gl_FragColor = vec4(fragcolor,Frag_Colour.a*alpha);\n"
 #	endif //IMIMPL_USE_SDF_OUTLINE_SHADER
@@ -965,6 +988,7 @@ static const GLchar* gFragmentShaderSource[] = {
         //Get Uniform locations
         gImImplPrivateParams.uniLocTexture = glGetUniformLocation(gImImplPrivateParams.program,"Texture");
         gImImplPrivateParams.uniLocOrthoMatrix = glGetUniformLocation(gImImplPrivateParams.program,"ortho");
+        gImImplPrivateParams.uniLocSdfParams = glGetUniformLocation(gImImplPrivateParams.program,"SdfParams");
 
         //Get Attribute locations
         gImImplPrivateParams.attrLocPosition  = glGetAttribLocation(gImImplPrivateParams.program,"Position");
@@ -972,13 +996,14 @@ static const GLchar* gFragmentShaderSource[] = {
         gImImplPrivateParams.attrLocColour  = glGetAttribLocation(gImImplPrivateParams.program,"Colour");
 
         // Debug
-        /*
-        printf("gUniLocTexture = %d\n",gImImplPrivateParams.gUniLocTexture);
-        printf("gUniLocLayers = %d\n",gImImplPrivateParams.gUniLocOrthoMatrix);
-        printf("gAttrLocPosition = %d\n",gImImplPrivateParams.gAttrLocPosition);
-        printf("gAttrLocUV = %d\n",gImImplPrivateParams.gAttrLocUV);
-        printf("gAttrLocColour = %d\n",gImImplPrivateParams.gAttrLocColour);
-        */
+
+        /*printf("gUniLocTexture = %d\n",gImImplPrivateParams.uniLocTexture);
+        printf("gUniLocLayers = %d\n",gImImplPrivateParams.uniLocOrthoMatrix);
+        printf("uniLocSdfParams = %d\n",gImImplPrivateParams.uniLocSdfParams);
+        printf("gAttrLocPosition = %d\n",gImImplPrivateParams.attrLocPosition);
+        printf("gAttrLocUV = %d\n",gImImplPrivateParams.attrLocUV);
+        printf("gAttrLocColour = %d\n",gImImplPrivateParams.attrLocColour);*/
+
     }
 #endif //IMIMPL_SHADER_NONE
 }
@@ -1063,7 +1088,52 @@ extern "C" void GLDebugMessageCallback(GLenum source, GLenum type,
 }
 #endif //IMIMPL_FORCE_DEBUG_CONTEXT
 
-
+const ImVec4* ImImpl_SdfShaderGetParams() {
+#if (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
+#ifdef IMIMPL_USE_SDF_SHADER
+return &gImImplPrivateParams.sdfParams;
+#endif // IMIMPL_USE_SDF_SHADER
+#endif // (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
+return NULL;
+}
+bool ImImpl_SdfShaderSetParams(const ImVec4& sdfParams) {
+#if (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
+#ifdef IMIMPL_USE_SDF_SHADER
+gImImplPrivateParams.sdfParams = sdfParams;
+return true;
+#endif // IMIMPL_USE_SDF_SHADER
+#endif // (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
+return false;
+}
+bool ImImpl_EditSdfParams() {
+using namespace ImGui;
+bool changed = false;
+#if (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
+#ifdef IMIMPL_USE_SDF_SHADER
+const float maxValue = 0.75f;
+#ifdef IMIMPL_USE_SDF_OUTLINE_SHADER
+PushItemWidth(GetWindowWidth()*0.15f);
+changed|=DragFloat("###ImImpl_EditSdfParams_X",&gImImplPrivateParams.sdfParams.x,0.01f,gImImplPrivateParams.sdfParams.y,maxValue);
+if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Glyph Extension");
+ImGui::SameLine();
+changed|=DragFloat("###ImImpl_EditSdfParams_Y",&gImImplPrivateParams.sdfParams.y,0.01f,0.f,gImImplPrivateParams.sdfParams.x);
+if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Outline Extension");
+ImGui::SameLine();
+changed|=DragFloat("Global Font Params###ImImpl_EditSdfParams_Z",&gImImplPrivateParams.sdfParams.z,0.01f,0.f,maxValue);
+if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Outline Darkness");
+PopItemWidth();
+#else //IMIMPL_USE_SDF_OUTLINE_SHADER
+PushItemWidth(GetWindowWidth()*0.5f);
+changed|=DragFloat("Global Font Params###ImImpl_EditSdfParams_X",&gImImplPrivateParams.sdfParams.x,0.01f,0.f,maxValue);
+if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Glyph Extension");
+PopItemWidth();
+#endif //IMIMPL_USE_SDF_OUTLINE_SHADER
+ImGui::SameLine();
+if (ImGui::SmallButton("Reset###ImImpl_EditSdfParams_R")) {gImImplPrivateParams.resetSdfParams();changed=true;}
+#endif // IMIMPL_USE_SDF_SHADER
+#endif // (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
+return changed;
+}
 
 void ImImpl_RenderDrawLists(ImDrawData* draw_data)
 {
@@ -1101,6 +1171,10 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     // Setup program and uniforms
     glUseProgram(gImImplPrivateParams.program);
     glUniform1i(gImImplPrivateParams.uniLocTexture, 0);
+#   ifdef IMIMPL_USE_SDF_SHADER
+    glUniform4fv(gImImplPrivateParams.uniLocSdfParams,1,&gImImplPrivateParams.sdfParams.x);
+#   endif //IMIMPL_USE_SDF_SHADER
+
     // Setup orthographic projection matrix
     const float ortho[4][4] = {
         { 2.0f/width,   0.0f,           0.0f, 0.0f },
