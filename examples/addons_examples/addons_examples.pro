@@ -22,6 +22,7 @@ CONFIG+= use_glfw3
 #CONFIG+= use_direct3d9
 # Optional, but it might be mandatory for IMGUI_USE_WINAPI (i.e. CONFIG+= use_winapi)
 #CONFIG+= use_glew
+#CONFIG+= use_glad	# experimental, but use_glew and use_glad CANNOT be used together!
 
 IMGUI_BASE_PATH=../..
 
@@ -197,6 +198,14 @@ LIBS+=-lGLEW
 INCLUDEPATH+=/usr/include/
 INCLUDEPATH+=/usr/include/GL
 HEADERS+= /usr/include/GL/glew.h
+}
+use_glad {
+GLAD_BASE_PATH ="/home/flix/Desktop/Repositories/glad-openGL4.5"    # This should be changed on a per user basis
+DEFINES+= IMGUI_USE_GLAD
+INCLUDEPATH+=$$GLAD_BASE_PATH"/include/"
+INCLUDEPATH+=$$GLAD_BASE_PATH"/src"
+HEADERS+= $$GLAD_BASE_PATH"/include/glad/glad.h"
+SOURCES+=$$GLAD_BASE_PATH"/src/glad.c"
 }
 
 !use_winapi {

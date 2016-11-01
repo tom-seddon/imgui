@@ -19,6 +19,8 @@
 #   else //__APPLE
 #       include <GL/glew.h>
 #   endif //__APPLE
+#elif IMGUI_USE_GLAD
+#   include <glad/glad.h>
 #else //IMGUI_USE_GLEW
 #   define GL_GLEXT_PROTOTYPES
 #endif //IMGUI_USE_GLEW
@@ -54,13 +56,13 @@ typedef char GLchar;    // Is this needed for all GL bindings ?
 //-------------------------------------------------------------------------------
 #elif IMGUI_USE_SDL2_BINDING
 //-------------------------------------------------------------------------------
-#   ifndef IMGUI_USE_GLEW
+#   if (!defined(IMGUI_USE_GLEW) && !defined(IMGUI_USE_GLAD))
 #       if (!defined(IMIMPL_SHADER_GLES) || defined (IMIMPL_SHADER_NONE))
 #           include <SDL2/SDL_opengl.h>
 #       else //IMIMPL_SHADER_GLES
 #           include <SDL2/SDL_opengles2.h>
 #       endif //IMIMPL_SHADER_GLES
-#   endif //IMGUI_USE_GLEW
+#   endif //(!defined(IMGUI_USE_GLEW) && !defined(IMGUI_USE_GLAD))
 #   include <SDL2/SDL.h>
 #ifdef _WIN32
 typedef char GLchar;    // Is this needed for all GL bindings ?
@@ -90,7 +92,7 @@ typedef char GLchar;    // Is this needed for all GL bindings ?
 //-------------------------------------------------------------------------------
 #elif (defined(_WIN32) || defined(IMGUI_USE_WINAPI_BINDING))
 //-------------------------------------------------------------------------------
-#   ifndef IMGUI_USE_GLEW
+#   if (!defined(IMGUI_USE_GLEW) && !defined(IMGUI_USE_GLAD))
 //      I've never managed to make this branch work => when using Windows, ALWAYS use glew (on Linux it's much easier)
 #       define GL_GLEXT_PROTOTYPES
 #       ifdef __APPLE__   // or __MACOSX__ ?
@@ -98,7 +100,7 @@ typedef char GLchar;    // Is this needed for all GL bindings ?
 #       else //__APPLE
 #           include <GL/glext.h>
 #       endif //__APPLE
-#   endif // IMGUI_USE_GLEW
+#   endif //(!defined(IMGUI_USE_GLEW) && !defined(IMGUI_USE_GLAD))
 #   ifdef __APPLE__   // or __MACOSX__ ?
 #       include <OpenGL/gl.h>       // guessing...
 #   else //__APPLE

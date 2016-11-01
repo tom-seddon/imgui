@@ -172,6 +172,15 @@ I think failing in SDL_Init() when a requested subsystem doesn't work properly i
 
     SDL_GL_CreateContext(window);
 
+
+#ifdef IMGUI_USE_GLAD
+   if(!gladLoadGL()) {
+        fprintf(stderr,"Error initializing GLAD!\n");
+        return false;
+    }
+    // gladLoadGLLoader(&SDL_GL_GetProcAddress);
+#endif //IMGUI_USE_GLAD
+
     //OpenGL info
     {
         printf("GL Vendor: %s\n", glGetString( GL_VENDOR ));

@@ -157,6 +157,7 @@ IMIMPL_SHADER_NONE 				# no shaders at all, and no vertex buffer object as well 
 IMIMPL_SHADER_GL3  				# shader uses openGL 3.3 (glsl #version 330)
 IMIMPL_SHADER_GLES 				# shader uses gles (and if IMIMPL_SHADER_GL3 is defined glsl #version 300 es)
 IMGUI_USE_GLEW     				# inits the glew library (needs -lGLEW). This definition might be mandatory for IMGUI_USE_WINAPI_BINDING. Tip: the glew library provides a static library alternative that can be used by defining GLEW_STATIC at the project level (see the glew docs for further info).
+IMGUI_USE_GLAD     				# (experimental) inits the glad library (needs glad.c). Intended to be used as a possible ALTERNATIVE to IMGUI_USE_GLEW.
 IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK		# use this if you are using IMGUI_USE_GLUT_BINDING and mouse wheel does not work.
 
 IMGUIBINDINGS_RESTORE_GL_STATE			# restores the glViewport (and most of other GL state settings) after the call to ImGui::Render().
@@ -164,15 +165,16 @@ IMGUIBINDINGS_RESTORE_GL_STATE			# restores the glViewport (and most of other GL
 						# Without it the user must specify its own viewport at the beginning of DrawGL() (if it's different from full screen),
 						# and the openGL state is not fully restored, but it's just set to some "commonly used" values.
 
-IMIMPL_USE_FONT_TEXTURE_LINEAR_FILTERING		# By default the font texture now uses GL_NEAREST filtering (so that scaled text looks better using the embedded imgui font). This definition sets it to GL_LINEAR, that might bebettr with custom fonts.
-IMIMPL_USE_ALPHA_SHARPENER_SHADER		# shader uses a different fragment shader that improves the quality of zoomed fonts a bit. It forces GL_LINEAR filtering too.
-IMIMPL_USE_SDF_SHADER				# shader uses a more complex (= slower) fragment shader, that improves the quality of zoomed fonts a bit. It forces GL_LINEAR filtering too.
+IMIMPL_USE_FONT_TEXTURE_LINEAR_FILTERING	# By default the font texture now uses GL_NEAREST filtering (so that scaled text looks better using the embedded imgui font). This definition sets it to GL_LINEAR, that might be better with custom fonts.
+IMIMPL_USE_ALPHA_SHARPENER_SHADER		# shader uses a different fragment shader that improves the quality of zoomed fonts a bit. It forces GL_LINEAR filtering too (unless IMIMPL_USE_FONT_TEXTURE_NEAREST_FILTERING is defined by the user, and it shouldn't).
+IMIMPL_USE_SDF_SHADER				# shader uses a more complex (= slower) fragment shader, that improves the quality of zoomed fonts a bit. It forces GL_LINEAR filtering too (unless IMIMPL_USE_FONT_TEXTURE_NEAREST_FILTERING is defined by the user, and it shouldn't).
 
 IMIMPL_BUILD_SDF				# builds Signed Distance Fonts for ImGui. To display them correctly:
 						# -> use an OpenGL binding with shader support (don't define IMIMPL_SHADER_NONE)
-						# -> define IMIMPL_USE_SDF_SHADER or IMIMPL_USE_SDF_OUTLINE_SHADER together with IMIMPL_BUILD_SDF.
+						# -> IMIMPL_BUILD_SDF defines IMIMPL_USE_SDF_SHADER internally, but IMIMPL_USE_SDF_OUTLINE_SHADER can be defined too. (They force GL_LINEAR filtering for the font texture, unless IMIMPL_USE_FONT_TEXTURE_NEAREST_FILTERING is defined by the user, and it shouldn't).
 						# -> set the font's ImFontConfig::OversampleH==ImFontConfig::OversampleV (tested with 1 only. Note that this is NOT the default for custom fonts [it's 3,1]).
 						# -> if you use the outline shader, don't use too thin fonts (like the default one).
+						# -> you can tune the values in the shader using the glabal functions: const ImVec4* ImImpl_SdfShaderGetParams();bool ImImpl_SdfShaderSetParams(const ImVec4& sdfParams);bool ImImpl_EditSdfParams(). See main.cpp for further info.
 
 IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON:		# when defined ImGui::GetIO()->Fonts->ClearInputData() and ImGui::GetIO()->Fonts->ClearTexData() are called as soon as possible saving some memory (and allowing you to append new fonts later (e.g. in InitGL())).
 						# it used to be the default, but future ImGui dynamic atlas support will require input data anyway.

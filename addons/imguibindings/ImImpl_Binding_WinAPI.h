@@ -283,6 +283,14 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
     }
     //---------------------------------------------------------------
 
+#ifdef IMGUI_USE_GLAD
+   if(!gladLoadGL()) {
+        fprintf(stderr,"Error initializing GLAD!\n");
+        return false;
+    }
+    // gladLoadGLLoader(&GetProcAddress);
+#endif //IMGUI_USE_GLAD
+
     //OpenGL info
     {
         printf("GL Vendor: %s\n", glGetString( GL_VENDOR ));

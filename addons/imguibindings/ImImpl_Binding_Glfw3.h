@@ -328,6 +328,14 @@ if (pOptionalInitParams && pOptionalInitParams->useOpenGLDebugContext) glfwWindo
     glfwSetFramebufferSizeCallback(window, glfw_framebuffer_size_callback);
     glfwSetWindowIconifyCallback(window, glfw_window_iconify_callback);
 
+#ifdef IMGUI_USE_GLAD
+   if(!gladLoadGL()) {
+        fprintf(stderr,"Error initializing GLAD!\n");
+        return false;
+    }
+    // gladLoadGLLoader(&glfwGetProcAddress);
+#endif //IMGUI_USE_GLAD
+
         //OpenGL info
     {
         printf("GLFW Version: %d.%d.%d\n",GLFW_VERSION_MAJOR,GLFW_VERSION_MINOR,GLFW_VERSION_REVISION);

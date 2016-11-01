@@ -391,6 +391,14 @@ static bool InitBinding(const ImImpl_InitParams* pOptionalInitParams=NULL,int ar
         return false;
     }
 
+#ifdef IMGUI_USE_GLAD
+   if(!gladLoadGL()) {
+        fprintf(stderr,"Error initializing GLAD!\n");
+        return false;
+    }
+    // gladLoadGLLoader(&glutGetProcAddress);
+#endif //IMGUI_USE_GLAD
+
     //OpenGL info
     {
         printf("GL Vendor: %s\n", glGetString( GL_VENDOR ));

@@ -20,6 +20,9 @@ ImImplVoidDelegate gImGuiPostDrawGLSwapBuffersCallback = NULL;
 // --------------------------------------------------------------------------------------------------------------
 
 #ifdef IMIMPL_BUILD_SDF
+#ifndef IMIMPL_USE_SDF_SHADER
+#define IMIMPL_USE_SDF_SHADER   // This is required with IMIMPL_USE_SDF_OUTLINE_SHADER too
+#endif //IMIMPL_USE_SDF_SHADER
 #define EDTAA3FUNC_HAS_IMGUI_SUPPORT
 #include "edtaa3func.h"
 #endif //IMIMPL_BUILD_SDF
@@ -35,18 +38,18 @@ ImImplVoidDelegate gImGuiPostDrawGLSwapBuffersCallback = NULL;
 #endif //IMIMPL_USE_SDF_SHADER
 
 #ifdef IMGUI_USE_DIRECT3D9_BINDING
-#ifdef IMIMPL_USE_SDF_SHADER
+#ifdef IMIMPL_BUILD_SDF
+#error IMIMPL_BUILD_SDF actually works, but DIRECT3D9 shaders to use it are not supported. So we prefer stopping compilation.
+#elif IMIMPL_USE_SDF_SHADER
 #warning Signed distance font shaders are not supported in the DIRECT3D9 binding.
-#elif IMIMPL_BUILD_SDF
-#warning IMIMPL_BUILD_SDF works, but DIRECT3D9 shaders to use it are not supported.
 #endif //IMIMPL_USE_SDF_SHADER
 #endif //IMGUI_USE_DIRECT3D9_BINDING
 
 #ifdef IMIMPL_SHADER_NONE
-#ifdef IMIMPL_USE_SDF_SHADER
-#warning Signed distance font shaders won't be used with IMIMPL_SHADER_NONE.
-#elif IMIMPL_BUILD_SDF
-#warning IMIMPL_BUILD_SDF works, but the shaders to use it are not supported with IMIMPL_SHADER_NONE.
+#ifdef IMIMPL_BUILD_SDF
+#error IMIMPL_BUILD_SDF actually works, but the shaders to use it are not supported with IMIMPL_SHADER_NONE. So we prefer stopping compilation.
+#elif IMIMPL_USE_SDF_SHADER
+#warning Signed distance font shaders cannot be used with IMIMPL_SHADER_NONE.
 #endif //IMIMPL_USE_SDF_SHADER
 #endif //IMGUI_USE_DIRECT3D9_BINDING
 
@@ -129,8 +132,18 @@ void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,in
     if (texid==0) glGenTextures(1, &texid);
 
     glBindTexture(GL_TEXTURE_2D, texid);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,wraps ? GL_REPEAT : GL_CLAMP);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,wrapt ? GL_REPEAT : GL_CLAMP);
+    GLenum clampEnum = 0x2900;    // 0x2900 -> GL_CLAMP; 0x812F -> GL_CLAMP_TO_EDGE
+#   ifndef GL_CLAMP
+#       ifdef GL_CLAMP_TO_EDGE
+        clampEnum = GL_CLAMP_TO_EDGE;
+#       else //GL_CLAMP_TO_EDGE
+        clampEnum = 0x812F;
+#       endif // GL_CLAMP_TO_EDGE
+#   else //GL_CLAMP
+    clampEnum = GL_CLAMP;
+#   endif //GL_CLAMP
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,wraps ? GL_REPEAT : clampEnum);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,wrapt ? GL_REPEAT : clampEnum);
     //const GLfloat borderColor[]={0.f,0.f,0.f,1.f};glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR,borderColor);
     if (gTextureFilteringHintMagFilterNearest) glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     else glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -148,7 +161,12 @@ void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,in
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    const GLenum ifmt = channels==1 ? GL_ALPHA : channels==2 ? GL_LUMINANCE_ALPHA : channels==3 ? GL_RGB : GL_RGBA;  // channels == 1 could be GL_LUMINANCE, GL_ALPHA, GL_RED ...
+    GLenum luminanceAlphaEnum = 0x190A; // 0x190A -> GL_LUMINANCE_ALPHA [Note that we're FORCING this definition even if when it's not defined! What should we use for 2 channels?]
+#   ifdef GL_LUMINANCE_ALPHA
+    luminanceAlphaEnum = GL_LUMINANCE_ALPHA;
+#   endif //GL_LUMINANCE_ALPHA
+
+    const GLenum ifmt = channels==1 ? GL_ALPHA : channels==2 ? luminanceAlphaEnum : channels==3 ? GL_RGB : GL_RGBA;  // channels == 1 could be GL_LUMINANCE, GL_ALPHA, GL_RED ...
     const GLenum fmt = ifmt;
     glTexImage2D(GL_TEXTURE_2D, 0, ifmt, width, height, 0, fmt, GL_UNSIGNED_BYTE, pixels);
 
@@ -1111,20 +1129,21 @@ bool changed = false;
 #if (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
 #ifdef IMIMPL_USE_SDF_SHADER
 const float maxValue = 0.75f;
+const float step = 0.005f;
 #ifdef IMIMPL_USE_SDF_OUTLINE_SHADER
 PushItemWidth(GetWindowWidth()*0.15f);
-changed|=DragFloat("###ImImpl_EditSdfParams_X",&gImImplPrivateParams.sdfParams.x,0.01f,gImImplPrivateParams.sdfParams.y,maxValue);
+changed|=DragFloat("###ImImpl_EditSdfParams_X",&gImImplPrivateParams.sdfParams.x,step,gImImplPrivateParams.sdfParams.y,maxValue);
 if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Glyph Extension");
 ImGui::SameLine();
-changed|=DragFloat("###ImImpl_EditSdfParams_Y",&gImImplPrivateParams.sdfParams.y,0.01f,0.f,gImImplPrivateParams.sdfParams.x);
+changed|=DragFloat("###ImImpl_EditSdfParams_Y",&gImImplPrivateParams.sdfParams.y,step,0.f,gImImplPrivateParams.sdfParams.x);
 if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Outline Extension");
 ImGui::SameLine();
-changed|=DragFloat("Global Font Params###ImImpl_EditSdfParams_Z",&gImImplPrivateParams.sdfParams.z,0.01f,0.f,maxValue);
+changed|=DragFloat("Global Font Params###ImImpl_EditSdfParams_Z",&gImImplPrivateParams.sdfParams.z,step,0.f,maxValue);
 if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Outline Darkness");
 PopItemWidth();
 #else //IMIMPL_USE_SDF_OUTLINE_SHADER
 PushItemWidth(GetWindowWidth()*0.5f);
-changed|=DragFloat("Global Font Params###ImImpl_EditSdfParams_X",&gImImplPrivateParams.sdfParams.x,0.01f,0.f,maxValue);
+changed|=DragFloat("Global Font Params###ImImpl_EditSdfParams_X",&gImImplPrivateParams.sdfParams.x,step,0.f,maxValue);
 if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Glyph Extension");
 PopItemWidth();
 #endif //IMIMPL_USE_SDF_OUTLINE_SHADER
