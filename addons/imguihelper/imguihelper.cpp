@@ -7,9 +7,6 @@
 #include <unistd.h>
 #endif //_WIN32
 
-#ifndef NO_IMGUIHELPER_FONTMETHODS
-static ImVector<ImFont*> gImGuiFonts;
-#endif // NO_IMGUIHELPER_FONTMETHODS
 #include <imgui_internal.h>
 
 #ifndef NO_IMGUIHELPER_DRAW_METHODS
@@ -80,20 +77,10 @@ bool IsItemJustReleased()   {
 }
 
 #ifndef NO_IMGUIHELPER_FONT_METHODS
-void InitPushFontOverload() {
-    ImGuiIO& io = ImGui::GetIO();
-    gImGuiFonts.clear();
-    gImGuiFonts.reserve(io.Fonts->Fonts.size());
-    for (int i=0,isz=io.Fonts->Fonts.size();i<isz;i++) gImGuiFonts.push_back(io.Fonts->Fonts[i]);
-}
-const ImFont *GetFont(int fntIndex) {
-    if (gImGuiFonts.size()!=ImGui::GetIO().Fonts->Fonts.size()) InitPushFontOverload();
-    return (fntIndex>=0 && fntIndex<gImGuiFonts.size()) ? gImGuiFonts[fntIndex] : NULL;
-}
+const ImFont *GetFont(int fntIndex) {return (fntIndex>=0 && fntIndex<ImGui::GetIO().Fonts->Fonts.size()) ? ImGui::GetIO().Fonts->Fonts[fntIndex] : NULL;}
 void PushFont(int fntIndex)    {
-    if (gImGuiFonts.size()!=ImGui::GetIO().Fonts->Fonts.size()) InitPushFontOverload();
-    IM_ASSERT(gImGuiFonts.size()==ImGui::GetIO().Fonts->Fonts.size() && fntIndex>=0 && fntIndex<gImGuiFonts.size());
-    ImGui::PushFont(gImGuiFonts[fntIndex]);
+    IM_ASSERT(fntIndex>=0 && fntIndex<ImGui::GetIO().Fonts->Fonts.size());
+    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[fntIndex]);
 }
 void TextColoredV(int fntIndex, const ImVec4 &col, const char *fmt, va_list args) {
     ImGui::PushFont(fntIndex);
@@ -145,7 +132,6 @@ float CalcMainMenuHeight()  {
         return (io.FontGlobalScale * font->Scale * font->FontSize) + style.FramePadding.y * 2.0f;
     }
 }
-
 #endif //NO_IMGUIHELPER_FONT_METHODS
 
 #ifndef NO_IMGUIHELPER_DRAW_METHODS

@@ -17,8 +17,6 @@ bool IsItemActiveLastFrame();
 bool IsItemJustReleased();
 
 #ifndef NO_IMGUIHELPER_FONT_METHODS
-void InitPushFontOverload();            // Internally fills a static ImFont* vector, consolidating the Font order, so that the following Font Methods are available:
-
 const ImFont* GetFont(int fntIndex);
 void PushFont(int fntIndex);    // using the index of the font instead of a ImFont* is easier (you can set up an enum).
 void TextColoredV(int fntIndex,const ImVec4& col, const char* fmt, va_list args);

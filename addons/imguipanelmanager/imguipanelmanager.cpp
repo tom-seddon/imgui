@@ -714,8 +714,9 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             ImRect clip_rect;
             clip_rect.Max = ImVec2(window->Pos.x + window->Size.x - (p_opened ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x) - (p_undocked ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x), text_max.y); // Match the size of CloseWindowButton()
 
-            float pad_left = (flags & ImGuiWindowFlags_NoCollapse) == 0 ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : 0.0f;
-            float pad_right = (p_opened != NULL) ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : 0.0f;
+            float pad_left = (flags & ImGuiWindowFlags_NoCollapse) == 0 ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : style.FramePadding.x;
+            float pad_right = (p_opened != NULL) ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : style.FramePadding.x;
+
             if (style.WindowTitleAlign.x > 0.0f) pad_right = ImLerp(pad_right, pad_left, style.WindowTitleAlign.x);
             text_min.x += pad_left;
             text_max.x -= pad_right;

@@ -353,11 +353,6 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
 #   endif //IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON
 
     //fprintf(stderr,"Loaded font texture\n");
-#   if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_FONT_METHODS))
-    ImGui::InitPushFontOverload();  // Allows us to use ImGui::PushFont(fontIndex). Can be called in InitGL() instead and the system is self-inited on the first call to ImGui::PushFont(), but better stay on the safe side.
-#   endif //NO_IMGUIHELPER
-
-
 
 // We overuse this method to load textures from other imgui addons
 #   ifndef NO_IMGUITABWINDOW

@@ -49,8 +49,9 @@ void DrawGL()	// Mandatory
 
     static bool open = true;
     ImGui::Begin("imguicodeeditor (WIP: UNUSABLE)", &open, ImVec2(800,600));
+    //io.FontDefault = io.Fonts->Fonts[FNT_ITALIC];
     //ImGui::Text("Hello, world!");   // This changes if we change the dafault ImGui Font
-    //ImGui::TextColored(FNT_MONO,KNOWNIMGUICOLOR_YELLOW,"%s","Hello,");ImGui::SameLine(0,0);ImGui::Text(FNT_DEFAULT,"%s"," world!");   // This stays the same
+    //ImGui::TextColored(FNT_BOLDITALIC,KNOWNIMGUICOLOR_YELLOW,"%s","Hello,");ImGui::SameLine(0,0);ImGui::Text(FNT_NORMAL,"%s"," world!");   // This stays the same
 	
     static ImGuiCe::CodeEditor ce;
     if (!ce.isInited()) {        
