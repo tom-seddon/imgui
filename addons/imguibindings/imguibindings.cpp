@@ -323,7 +323,7 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
 #   	ifndef YES_IMGUIFREETYPE
 		io.Fonts->GetTexDataAsAlpha8(&io.Fonts->TexPixelsAlpha8,NULL,NULL);
 #		else //YES_IMGUIFREETYPE
-		ImGuiFreeType::GetTexDataAlpha8(io.Fonts,&io.Fonts->TexPixelsAlpha8,NULL,NULL,NULL,ImGuiFreeType::DefaultRasterizationFlags,&ImGuiFreeType::DefaultRasterizationFlagVector);
+		ImGuiFreeType::GetTexDataAsAlpha8(io.Fonts,&io.Fonts->TexPixelsAlpha8,NULL,NULL,NULL,ImGuiFreeType::DefaultRasterizationFlags,&ImGuiFreeType::DefaultRasterizationFlagVector);
 #		endif //YES_IMGUIFREETYPE
 	}    	
 	ImGui::PostBuildForSignedDistanceFontEffect(io.Fonts);

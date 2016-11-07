@@ -86,7 +86,6 @@ bool ImGui_ImplGlfw_CreateFontsTexture()
 // The methods ImGuiEdtaaHelper::make_distance_mapd(...) and ImGuiEdtaaHelper::make_distance_mapb(...)
 // are based on https://github.com/rougier/freetype-gl/blob/master/distance-field.c [Copyright 2011,2012 Nicolas P. Rougier. All rights reserved.]
 // freetype-gl license:
-/*
 /* =========================================================================
  * Freetype GL - A C OpenGL Freetype engine
  * Platform:    Any

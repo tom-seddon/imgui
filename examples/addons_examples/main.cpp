@@ -1517,7 +1517,8 @@ int main(int argc, char** argv)
                                   //-40.f; // If < 0, it's the number of lines that fit the whole screen (but without any kind of vertical spacing)
     ImFontConfig cfg;
 #   ifdef IMIMPL_BUILD_SDF
-    cfg.OversampleH=1;cfg.OversampleV=1;    // signed distance fonts works better when these values are equal (default: 3,1 )
+    cfg.OversampleH=1;cfg.OversampleV=1;    // signed distance fonts works better when these values are equal (default: 3,1 are not equal)
+	//ImImpl_SdfShaderSetParams(ImVec4(0.460f,0.365f,0.120f,0.04f));	// (optional) Sets sdf params
 #   endif //IMIMPL_BUILD_SDF
 
     // These lines load an embedded font. [However these files are way too big... inside <imgui.cpp> they used a better format storing bytes at groups of 4, so the files are more concise (1/4?) than mine]
