@@ -25,6 +25,7 @@
    - How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on the purpose of labels/IDs.
    - How can I tell when ImGui wants my mouse/keyboard inputs and when I can pass them to my application?
    - How can I load a different font than the default?
+   - How can I easily use icons in my application?
    - How can I load multiple fonts?
    - How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
    - How can I use the drawing facilities without an ImGui window? (using ImDrawList API)
@@ -406,6 +407,10 @@
       io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
       io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
 
+ Q: How can I easily use icons in my application?
+ A: The most convenient and practical way is to merge an icon font such as FontAwesome inside you main font. Then you can refer to icons within your strings.
+    Read 'How can I load multiple fonts?' and the file 'extra_fonts/README.txt' for instructions.
+
  Q: How can I load multiple fonts?
  A: Use the font atlas to pack them into a single texture:
     (Read extra_fonts/README.txt and the code in ImFontAtlas for more details.)
@@ -425,13 +430,13 @@
       config.GlyphExtraSpacing.x = 1.0f;
       io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, &config);
 
-      // Combine multiple fonts into one
+      // Combine multiple fonts into one (e.g. for icon fonts)
       ImWchar ranges[] = { 0xf000, 0xf3ff, 0 };
       ImFontConfig config;
       config.MergeMode = true;
       io.Fonts->AddFontDefault();
-      io.Fonts->LoadFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges);
-      io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, &config, io.Fonts->GetGlyphRangesJapanese());
+      io.Fonts->LoadFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges); // Merge icon font
+      io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, &config, io.Fonts->GetGlyphRangesJapanese()); // Merge japanese glyphs
 
  Q: How can I display and input non-Latin characters such as Chinese, Japanese, Korean, Cyrillic?
  A: When loading a font, pass custom Unicode ranges to specify the glyphs to load. 
@@ -658,6 +663,7 @@ static float            GetDraggedColumnOffset(int column_index);
 
 static bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 
+static ImFont*          GetDefaultFont();
 static void             SetCurrentFont(ImFont* font);
 static void             SetCurrentWindow(ImGuiWindow* window);
 static void             SetWindowScrollY(ImGuiWindow* window, float new_scroll_y);
@@ -809,6 +815,7 @@ ImGuiIO::ImGuiIO()
     LogFilename = "imgui_log.txt";
     Fonts = &GImDefaultFontAtlas;
     FontGlobalScale = 1.0f;
+    FontDefault = NULL;
     DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
     MousePos = ImVec2(-1,-1);
     MousePosPrev = ImVec2(-1,-1);
@@ -2106,7 +2113,8 @@ void ImGui::NewFrame()
         g.Initialized = true;
     }
 
-    SetCurrentFont(g.IO.Fonts->Fonts[0]);
+    SetCurrentFont(GetDefaultFont());
+    IM_ASSERT(g.Font->IsLoaded());
 
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
@@ -4324,8 +4332,8 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             ImVec2 text_max = window->Pos + ImVec2(window->Size.x, style.FramePadding.y*2 + text_size.y);
             ImRect clip_rect;
             clip_rect.Max = ImVec2(window->Pos.x + window->Size.x - (p_open ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x), text_max.y); // Match the size of CloseWindowButton()
-            float pad_left = (flags & ImGuiWindowFlags_NoCollapse) == 0 ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : 0.0f;
-            float pad_right = (p_open != NULL) ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : 0.0f;
+            float pad_left = (flags & ImGuiWindowFlags_NoCollapse) == 0 ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : style.FramePadding.x;
+            float pad_right = (p_open != NULL) ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : style.FramePadding.x;
             if (style.WindowTitleAlign.x > 0.0f) pad_right = ImLerp(pad_right, pad_left, style.WindowTitleAlign.x);
             text_min.x += pad_left;
             text_max.x -= pad_right;
@@ -4586,6 +4594,12 @@ float ImGui::CalcItemWidth()
     return w;
 }
 
+static ImFont* GetDefaultFont()
+{
+    ImGuiContext& g = *GImGui;
+    return g.IO.FontDefault ? g.IO.FontDefault : g.IO.Fonts->Fonts[0];
+}
+
 static void SetCurrentFont(ImFont* font)
 {
     ImGuiContext& g = *GImGui;
@@ -4601,7 +4615,7 @@ void ImGui::PushFont(ImFont* font)
 {
     ImGuiContext& g = *GImGui;
     if (!font)
-        font = g.IO.Fonts->Fonts[0];
+        font = GetDefaultFont();
     SetCurrentFont(font);
     g.FontStack.push_back(font);
     g.CurrentWindow->DrawList->PushTextureID(font->ContainerAtlas->TexID);
@@ -4612,7 +4626,7 @@ void  ImGui::PopFont()
     ImGuiContext& g = *GImGui;
     g.CurrentWindow->DrawList->PopTextureID();
     g.FontStack.pop_back();
-    SetCurrentFont(g.FontStack.empty() ? g.IO.Fonts->Fonts[0] : g.FontStack.back());
+    SetCurrentFont(g.FontStack.empty() ? GetDefaultFont() : g.FontStack.back());
 }
 
 void ImGui::PushAllowKeyboardFocus(bool allow_keyboard_focus)
