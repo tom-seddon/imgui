@@ -279,6 +279,7 @@ static void ImImplMainLoopFrame(void* pDone)	{
             }
             key&=~SDLK_SCANCODE_MASK;
             // Don't remember what these 3 lines are for... removed because they prevent arrows key to work (TODO: understand what these lines were for).
+            // Found these 3 lines here: https://github.com/ocornut/imgui/issues/729
             /*if (event.key.keysym.sym & (1<<30)) {
                 //fprintf(stderr,"SDL Highbit remask %x -> %x\n", event.key.keysym.sym, key);
                 key |= 0x100;
