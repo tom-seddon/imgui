@@ -979,13 +979,12 @@ void DrawGL()	// Mandatory
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUITABWINDOW
 
-#       ifdef DOES_NOT_WORK
+
         // BadCodeEditor Test:
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguicodeeditor");ImGui::Separator();
 #       ifndef NO_IMGUITABWINDOW
         ImGui::Spacing();
-        ImGui::Text("ImGui::InputTextWithSyntaxHighlighting(...):");
-        ImGui::TextColored(halfTextColor,"(Cursor doesn't work. I think I'll give up and remove it).");
+        ImGui::Text("ImGui::InputTextWithSyntaxHighlighting(...) [Experimental] (CTRL+MW: zoom):");
         static const char* myCode="# include <sadd.h>\n\nusing namespace std;\n\n//This is a comment\nclass MyClass\n{\npublic:\nMyClass() {}\nvoid Init(int num)\n{  // for loop\nfor (int t=0;t<20;t++)\n	{\n     mNum=t; /* setting var */\n     const float myFloat = 1.25f;\n      break;\n	}\n}\n\nprivate:\nint mNum;\n};\n\nstatic const char* SomeStrings[] = {\"One\"/*Comment One*//*Comment*/,\"Two /*Fake Comment*/\",\"Three\\\"Four\"};\n\nwhile (i<25 && i>=0)   {\n\ti--;\nbreak;} /*comment*/{/*This should not fold*/}/*comment2*/for (int i=0;i<20;i++)    {\n\t\t\tcontinue;//OK\n} // end second folding\n\nfor (int j=0;j<200;j++)  {\ncontinue;}\n\n//region Custom Region Here\n{\n//something inside here\n}\n//endregion\n\n/*\nMultiline\nComment\nHere\n*/\n\n/*\nSome Unicode Characters here:\n€€€€\n*/\n\n";
         static char bceBuffer[1024]="";
         if (bceBuffer[0]=='\0') strcpy(bceBuffer,myCode);   //Bad init (use initGL() to fill the buffer
@@ -993,7 +992,7 @@ void DrawGL()	// Mandatory
 #       else //NO_IMGUICODEEDITOR
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUICODEEDITOR
-#       endif //DOES_NOT_WORK
+
 
 #       ifdef YES_IMGUISDF
         // The following check is to ensure ImGui::SdfAddCharsetFromFile(...) can be called (some users don't like to use FILE* in <stdio.h>, and prefer loading stuff from memory only)
@@ -1616,6 +1615,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
 
 
 #ifdef YES_IMGUISQLITE3	// yes_addon
+// Actually I've just discovered that imgui.h has a struct named ImGuiTextBuffer,
+// that can be used instead of ImVector<char>.
+// Its ImGuiTextBuffer::append(...) method is implemented
+// in a way similar to AppendString(...) below.
 
 #ifdef _MSC_VER
 #   ifndef va_copy

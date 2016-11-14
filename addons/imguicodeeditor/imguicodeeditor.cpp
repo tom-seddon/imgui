@@ -1233,7 +1233,7 @@ static void InitFoldingStringVectors() {
         }
         {
             const SyntaxHighlightingType sht = SH_KEYWORD_MODIFIER;
-            static const char* vars[] = {"virtual","override","final","explicit","export","friend","mutable","const","static","thread_local","volatile","extern","register"};
+            static const char* vars[] = {"inline","virtual","override","final","explicit","export","friend","mutable","const","static","thread_local","volatile","extern","register"};
             const int varsSize = (int)sizeof(vars)/sizeof(vars[0]);foldingStrings.keywords[sht].reserve(foldingStrings.keywords[sht].size()+varsSize);for (int i=0;i<varsSize;i++) foldingStrings.keywords[sht].push_back(vars[i]);
         }
         {
@@ -3236,6 +3236,13 @@ static void MyTextLineWithSH(const BadCodeEditorData& ceData,const char* fmt, ..
 
 bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
 {
+//#define BAD_CODE_EDITOR_HAS_HORIZONTAL_SCROLLBAR  // doesn't work... maybe we can fix it someday... but default ImGui::InputTextMultiline() should be made with it...
+#   ifndef BAD_CODE_EDITOR_HAS_HORIZONTAL_SCROLLBAR
+    const ImGuiWindowFlags myChildWindowFlags = 0;
+#   else //BAD_CODE_EDITOR_HAS_HORIZONTAL_SCROLLBAR
+    const ImGuiWindowFlags myChildWindowFlags = ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar;
+#   endif //BAD_CODE_EDITOR_HAS_HORIZONTAL_SCROLLBAR
+
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
@@ -3270,23 +3277,51 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     const ImVec2 label_size(0,0);// = CalcTextSize(label, NULL, true);
     ImGui::PushFont(ImFonts[FONT_STYLE_NORMAL]);
     float textLineHeight = ImGui::GetTextLineHeight();
-    if (showLineNumbers) {
-        // No time for a better approach
-        const int lastVisibleLineNumber = 10; // Actually "lastVisibleNumber" is not available right now
-        if (lastVisibleLineNumber<9)          {lineNumberPrecision=1;lineNumberSize=textLineHeight;/*ImGui::MyCalcTextWidth("9");*/}
-        else if (lastVisibleLineNumber<99)    {lineNumberPrecision=2;lineNumberSize=textLineHeight*2;/*ImGui::MyCalcTextWidth("99");*/}
-        else if (lastVisibleLineNumber<999)   {lineNumberPrecision=3;lineNumberSize=textLineHeight*3;/*ImGui::MyCalcTextWidth("999");*/}
-        else if (lastVisibleLineNumber<9999)  {lineNumberPrecision=4;lineNumberSize=textLineHeight*4;/*ImGui::MyCalcTextWidth("9999");*/}
-        else if (lastVisibleLineNumber<99999) {lineNumberPrecision=5;lineNumberSize=textLineHeight*5;/*ImGui::MyCalcTextWidth("99999");*/}
-        else if (lastVisibleLineNumber<999999){lineNumberPrecision=6;lineNumberSize=textLineHeight*6;/*ImGui::MyCalcTextWidth("999999");*/}
-        else                                  {lineNumberPrecision=7;lineNumberSize=textLineHeight*7;/*ImGui::MyCalcTextWidth("9999999");*/}
-    }
     ImVec2 size = CalcItemSize(size_arg, CalcItemWidth(), (textLineHeight * 15.f) + style.FramePadding.y*2.0f);
     if (size_arg.x<=0) {
         const float remainingSpace = ImGui::GetContentRegionAvail().x + size_arg.x;
         if (remainingSpace>0) size.x = remainingSpace;
     }
     if (showLineNumbers) {
+        // FIXME: This chunk of code is executed avery frame (even if the editor is out of view/hidden)
+
+        int firstVisibleLineNumber = 0; // It's not available right now and we don't store any 'state' here.
+
+        // So we must enter and exit the child window space that owns the vertical scrollbar
+
+        const ImVec2 cursorPos = ImGui::GetCursorPos();
+
+        // This doesn't work:
+        /*if (ImGui::BeginChildFrame(id*2, size,myChildWindowFlags))
+        {
+            firstVisibleLineNumber = (int) (ImGui::GetScrollY()/textLineHeight);
+            ImGui::EndChildFrame();
+        }*/
+        // Workaround
+        char title[256];
+        ImFormatString(title, IM_ARRAYSIZE(title), "%s.%08X", window->Name, 2*id);
+        ImGuiWindow* childWindow = FindWindowByName(title);
+        const float scaledTextHeight = textLineHeight*(childWindow?childWindow->FontWindowScale:1.f);
+        if (childWindow) firstVisibleLineNumber = (int) (childWindow->Scroll.y/scaledTextHeight);
+
+        ImGui::SetCursorPos(cursorPos);
+
+        const int numVisibleLines =  (int) (size.y/scaledTextHeight);
+        const int lastVisibleLineNumber = firstVisibleLineNumber + numVisibleLines;
+        //fprintf(stderr,"%d->%d (%d)\n",firstVisibleLineNumber,lastVisibleLineNumber,numVisibleLines);
+        // No time for a better approach
+        const float avgSingleLetterWidth = //ImGui::CalcTextSize("9").x;
+        textLineHeight*0.75f;
+        if (lastVisibleLineNumber<9)          lineNumberPrecision=1;
+        else if (lastVisibleLineNumber<99)    lineNumberPrecision=2;
+        else if (lastVisibleLineNumber<999)   lineNumberPrecision=3;
+        else if (lastVisibleLineNumber<9999)  lineNumberPrecision=4;
+        else if (lastVisibleLineNumber<99999) lineNumberPrecision=5;
+        else if (lastVisibleLineNumber<999999)lineNumberPrecision=6;
+        else                                  lineNumberPrecision=7;
+        lineNumberSize=(float)lineNumberPrecision*avgSingleLetterWidth;
+        if (childWindow) lineNumberSize*=childWindow->FontWindowScale;
+
         if (size.x - lineNumberSize <=0) {showLineNumbers=false;lineNumberSize=0.f;}
         else size.x-=lineNumberSize;
     }
@@ -3303,7 +3338,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     ImGui::PushStyleColor(ImGuiCol_FrameBg,ceStyle.color_background);
     ImGui::BeginGroup();
     //ImGui::SetNextWindowContentWidth(codeEditorContentWidth);
-    if (!ImGui::BeginChildFrame(id*2, frame_bb.GetSize(),ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar))
+    if (!ImGui::BeginChildFrame(id*2, frame_bb.GetSize(),myChildWindowFlags))
     {
         ImGui::EndChildFrame();
         ImGui::EndGroup();
@@ -3823,7 +3858,6 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
     // Render Text Here:
     {
-
         // Draw with manual Y-clipping-----------
         const float oldCurPosY = ImGui::GetCursorPosY();
         ImGui::SetCursorPosY(oldCurPosY+firstVisibleLineNumber*textLineHeight);
@@ -3869,6 +3903,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                         }
                     }
                 }
+                if (render_scroll.x!=0) ImGui::SetCursorPosX(render_pos.x - render_scroll.x - draw_window->Pos.x);
                 if (!nextLineStart) {
                     MyTextLineWithSH(langData,"%s",lineStart);
                     break;
@@ -3893,6 +3928,8 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
         //codeEditorContentWidth = langData.textSizeX;
     }
+
+
 
     if (canModifyText)   {
         // Draw blinking cursor
@@ -3978,7 +4015,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         ImGui::SetCursorPos(endCursorPos);
     }
     ImGui::EndGroup();
-
+    //if (ImGui::IsItemHovered()) ImGui::SetTooltip("ScrollX = %1.2f",edit_state.ScrollX);
 
     // Log as text
     if (g.LogEnabled)
@@ -3993,6 +4030,8 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         return enter_pressed;
     else
         return value_changed;
+
+#   undef BAD_CODE_EDITOR_HAS_HORIZONTAL_SCROLLBAR // clean up
 }
 
 

@@ -13,6 +13,7 @@ DESTDIR = ./
 #CONFIG+= use_main3  # dev only
 #CONFIG+= use_main4  # dev only
 #CONFIG+= use_main5  # dev only
+#CONFIG+= use_main6  # dev only
 
 # Only one of these must be active:
 CONFIG+= use_glfw3
@@ -105,6 +106,12 @@ SOURCES+=  $$IMGUI_BASE_PATH"/imgui.cpp" \
 	   $$IMGUI_BASE_PATH"/imgui_draw.cpp" \
 	   $$IMGUI_BASE_PATH"/imgui_demo.cpp" \ #\ # optional: for ImGui::ShowTestWindow()
 
+use_main6 {
+SOURCES+=main6.cpp
+TARGET = imgui_addons_example6
+#DEFINES+=NO_IMGUISTYLESERIALIZER NO_IMGUIDATECHOOSER NO_IMGUILISTVIEW NO_IMGUIGRAPHEDITOR NO_IMGUITOOLBAR NO_IMGUIPANELMANAGER NO_IMGUIFILESYSTEM NO_IMGUICODEEDITOR NO_IMGUITABWINDOW
+} #use_main6
+!use_main6 {
 use_main5 {
 SOURCES+=main5.cpp
 TARGET = imgui_addons_example5
@@ -135,6 +142,7 @@ TARGET = imgui_addons_example1
 } #!use_main3
 } #!use_main4
 } #!use_main5
+} #!#use_main6
 
 imguifilesystem_supports_zip_files {
 DEFINES+=IMGUI_USE_MINIZIP

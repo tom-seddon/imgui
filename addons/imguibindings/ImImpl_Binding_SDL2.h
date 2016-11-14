@@ -278,10 +278,11 @@ static void ImImplMainLoopFrame(void* pDone)	{
                 //fprintf(stderr,"%d) D:%d P:%d R:%d\n",i,(int)gImGuiFunctionKeyDown[i],(int)gImGuiFunctionKeyPressed[i],(int)gImGuiFunctionKeyReleased[i]);
             }
             key&=~SDLK_SCANCODE_MASK;
-            if (event.key.keysym.sym & (1<<30)) {
+            // Don't remember what these 3 lines are for... removed because they prevent arrows key to work (TODO: understand what these lines were for).
+            /*if (event.key.keysym.sym & (1<<30)) {
                 //fprintf(stderr,"SDL Highbit remask %x -> %x\n", event.key.keysym.sym, key);
                 key |= 0x100;
-            }
+            }*/
             if (key>=0 && key<512)  io.KeysDown[key] = down;
         }
             break;
