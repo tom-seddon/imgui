@@ -398,6 +398,12 @@ static bool InitBinding(const ImImpl_InitParams* pOptionalInitParams=NULL,int ar
     }
     // gladLoadGLLoader(&glutGetProcAddress);
 #endif //IMGUI_USE_GLAD
+#ifdef IMGUI_USE_GL3W
+   if (gl3wInit()) {
+       fprintf(stderr, "Error initializing GL3W!\n");
+       return false;
+   }
+#endif //IMGUI_USE_GL3W
 
     //OpenGL info
     {

@@ -426,6 +426,9 @@ CodeEditor::Style::Style() {
     color_syntax_highlighting[SH_MATH_OPERATORS]        = ImColor(255,150,100,255);
     //font_syntax_highlighting[ SH_MATH_OPERATORS]        = FONT_STYLE_BOLD;
 
+    color_syntax_highlighting[SH_KEYWORD_KEYWORD_USER1]        = ImColor(140,230,120,255);
+    color_syntax_highlighting[SH_KEYWORD_KEYWORD_USER2]        = ImColor(220,180,100,255);
+
 
     color_icon_margin_background = color_line_numbers_background = color_folding_margin_background
     = ImColor(color_background.x,color_background.y,color_background.z,0.f);
@@ -1188,7 +1191,7 @@ static void InitFoldingStringVectors() {
         // Keywords
         {
             const SyntaxHighlightingType sht = SH_KEYWORD_PREPROCESSOR;
-            static const char* vars[] = {"#include","#if","#ifdef","#ifndef","#else","#elif","#endif","#include","#define","#undef","#warning","#error","#pragma"};
+            static const char* vars[] = {"#include","#if","#ifdef","#ifndef","#else","#elif","#endif","#define","#undef","#warning","#error","#pragma"};
             const int varsSize = (int)sizeof(vars)/sizeof(vars[0]);foldingStrings.keywords[sht].reserve(foldingStrings.keywords[sht].size()+varsSize);for (int i=0;i<varsSize;i++) foldingStrings.keywords[sht].push_back(vars[i]);
         }
         {
@@ -1364,6 +1367,149 @@ static void InitFoldingStringVectors() {
             // Assignment:
             gFoldingStringVectors.push_back(foldingStrings);
             gFoldingStringVectorIndices[LANG_CS] = gFoldingStringVectors.size()-1;
+        }
+        // GLSL
+        {
+        FoldingStringVector foldingStrings; // To fill and push_back
+        // Main Folding
+        foldingStrings.push_back(FoldingString ("{", "}", "{...}", FOLDING_TYPE_PARENTHESIS,true));
+        foldingStrings.push_back(FoldingString ("//region ", "//endregion", "", FOLDING_TYPE_REGION));
+        foldingStrings.push_back (FoldingString ("/*", "*/", "/*...*/", FOLDING_TYPE_COMMENT));
+        // Optional Folding
+        foldingStrings.push_back(FoldingString ("#pragma region ", "#pragma endregion", "", FOLDING_TYPE_REGION));
+        foldingStrings.push_back(FoldingString ("(", ")", "(...)", FOLDING_TYPE_PARENTHESIS, true));
+        foldingStrings.push_back(FoldingString ("[", "]", "[...]", FOLDING_TYPE_PARENTHESIS, true));
+
+        // Syntax (for Syntax Highlighting)
+        static const char* vars[]={"//","/*","*/","\"'"}; // static storage
+        foldingStrings.singleLineComment = vars[0];
+        foldingStrings.multiLineCommentStart = vars[1];
+        foldingStrings.multiLineCommentEnd = vars[2];
+        foldingStrings.stringDelimiterChars = vars[3];
+        foldingStrings.stringEscapeChar = '\\';
+
+        // Keywords
+        {
+            const SyntaxHighlightingType sht = SH_KEYWORD_KEYWORD_USER1;
+            static const char* vars[] = {"gl_Position","gl_PointSize","gl_ClipVertex","gl_Vertex","gl_Normal","gl_Color","gl_SecondaryColor",
+            "gl_MultiTexCoord0","gl_MultiTexCoord1","gl_MultiTexCoord2","gl_MultiTexCoord3","gl_MultiTexCoord4","gl_MultiTexCoord5",
+            "gl_MultiTexCoord6","gl_MultiTexCoord7","gl_FogCoord","gl_FrontColor","gl_BackColor","gl_FrontSecondaryColor","gl_BackSecondaryColor",
+            "gl_TexCoord","gl_FogFragCoord","gl_FragColor","gl_FragData","gl_FragDepth","gl_Color","gl_SecondaryColor","gl_FragCoord","gl_FrontFacing",
+            "gl_VertexID","gl_InstanceID","gl_PointCoord",
+            "gl_PatchVerticesIn","gl_PrimitiveID","gl_InvocationID","gl_TessLevelOuter","gl_TessLevelInner","gl_TessCoord","gl_PrimitiveIDIn",
+            "gl_Layer","gl_SampleMask"
+            };
+            const int varsSize = (int)sizeof(vars)/sizeof(vars[0]);foldingStrings.keywords[sht].reserve(foldingStrings.keywords[sht].size()+varsSize);for (int i=0;i<varsSize;i++) foldingStrings.keywords[sht].push_back(vars[i]);
+        }
+        {
+            const SyntaxHighlightingType sht = SH_KEYWORD_KEYWORD_USER2;
+            static const char* vars[] = {"gl_ModelViewMatrix","gl_ModelViewProjectionMatrix","gl_ProjectionMatrix","gl_TextureMatrix",
+            "gl_ModelViewMatrixInverse","gl_ModelViewProjectionMatrixInverse","gl_ProjectionMatrixInverse","gl_TextureMatrixInverse",
+            "gl_ModelViewMatrixTranspose","gl_ModelViewProjectionMatrixTranspose","gl_ProjectionMatrixInverseTranspose","gl_TextureMatrixInverseTranspose",
+            "gl_NormalMatrix","gl_NormalScale",
+            "gl_DepthRange","gl_Fog","gl_LightSource","gl_LightModel","gl_FrontLightModelProduct","gl_BackLightModelProduct","gl_FrontLightProduct","gl_BackLightProduct","gl_FrontMaterial","gl_BackMaterial","gl_Point",
+            "gl_TextureEnvColor","gl_ClipPlane","gl_EyePlaneS","gl_EyePlaneT","gl_EyePlaneR","gl_EyePlaneQ","gl_ObjectPlaneS","gl_ObjectPlaneT","gl_ObjectPlaneR","gl_ObjectPlaneQ"
+            };
+            const int varsSize = (int)sizeof(vars)/sizeof(vars[0]);foldingStrings.keywords[sht].reserve(foldingStrings.keywords[sht].size()+varsSize);for (int i=0;i<varsSize;i++) foldingStrings.keywords[sht].push_back(vars[i]);
+        }
+        {
+            const SyntaxHighlightingType sht = SH_KEYWORD_CONSTANT;
+            static const char* vars[] = {
+            "gl_MaxVertexUniformComponents","gl_MaxFragmentUniformComponents","gl_MaxVertexAttribs","gl_MaxVaryingFloats","gl_MaxDrawBuffers",
+            "gl_MaxTextureCoords","gl_MaxTextureUnits","gl_MaxTextureImageUnits","gl_MaxVertexTextureImageUnits","gl_MaxCombinedTextureImageUnits",
+            "gl_MaxLights","gl_MaxClipPlanes",
+            "gl_MaxVertexUniformVectors","gl_MaxVertexOutputVectors","gl_MaxFragmentInputVectors","gl_MaxFragmentUniformVectors","gl_MinProgramTexelOffset","gl_MaxProgramTexelOffset",
+            };
+            const int varsSize = (int)sizeof(vars)/sizeof(vars[0]);foldingStrings.keywords[sht].reserve(foldingStrings.keywords[sht].size()+varsSize);for (int i=0;i<varsSize;i++) foldingStrings.keywords[sht].push_back(vars[i]);
+        }
+        {
+            const SyntaxHighlightingType sht = SH_KEYWORD_TYPE;
+            static const char* vars[] = {"float","vec2","vec3","vec4","int","ivec2","ivec3","ivec4","uint","uvec2","uvec3","uvec4","bool","bvec2","bvec3","bvec4","mat2","mat3","mat4",
+            "mat2x2","mat2x3","mat2x4","mat3x2","mat3x3","mat3x4","mat4x2", "mat4x3", "mat4x4","void",
+            "double","dvec2", "dvec3","dvec4","dmat2", "dmat3", "dmat4", "dmat2x2", "dmat2x3","dmat2x4","dmat3x2","dmat3x3","dmat3x4","dmat4x2","dmat4x3","dmat4x4",
+            "sampler1D","sampler2D","sampler3D","samplerCube","sampler1DShadow","sampler2DShadow","samplerCubeShadow","sampler2DArray","sampler2DArrayShadow",
+            "isampler2D","isampler3D","isamplerCube","isampler2DArray","usampler2D","usampler3D","usamplerCube","usampler2DArray",
+            "gl_DepthRangeParameters","gl_FogParameters","gl_LightSourceParameters","gl_LightModelParameters","gl_LightModelProducts","gl_LightProducts","gl_MaterialParameters","gl_PointParameters",
+            "gl_PerVertex"
+            };
+            const int varsSize = (int)sizeof(vars)/sizeof(vars[0]);foldingStrings.keywords[sht].reserve(foldingStrings.keywords[sht].size()+varsSize);for (int i=0;i<varsSize;i++) foldingStrings.keywords[sht].push_back(vars[i]);
+        }
+        {
+            const SyntaxHighlightingType sht = SH_KEYWORD_MODIFIER;
+            static const char* vars[] = {"uniform","attribute","varying","const","in","out","inout","centroid","invariant","interpolation","storage","precision","parameter","flat","smooth","layout","location","patch","noperspective",
+            "shared", "packed", "std140",
+            "highp","mediump","lowp"
+            };
+            const int varsSize = (int)sizeof(vars)/sizeof(vars[0]);foldingStrings.keywords[sht].reserve(foldingStrings.keywords[sht].size()+varsSize);for (int i=0;i<varsSize;i++) foldingStrings.keywords[sht].push_back(vars[i]);
+        }
+        {
+            const SyntaxHighlightingType sht = SH_KEYWORD_OPERATOR;
+            static const char* vars[] = {"sin","cos","tan","asin","acos","atan","radians","degrees","pow","exp","log","exp2","log2","sqrt","inversesqrt",
+            "sinh","cosh","tanh","asinh","acosh","atanh","trunc","round","roundEven","modf",
+            "fma","frexp","ldexp","interpolateAtCentroid","interpolateAtSample","interpolateAtOffset",
+            "EmitStreamVertex","EndStreamPrimitive","EmitVertex","EndPrimitive","barrier",
+            "isnan","isinf","floatBitsToInt","floatBitsToUint","intBitsToFloat","uintBitsToFloat","outerProduct","transpose","determinant","inverse",
+            "textureSize","textureOffset","texelFetch","texelFetchOffset","textureProjOffset","textureLodOffset","textureProjLodOffset","textureGrad",
+            "textureGradOffset","textureProjGrad",
+            "textureProjGradOffset",
+            "abs","ceil","clamp","floor","fract","max","min","mix","mod","sign","smoothstep","step","ftrasform","cross","distance","dot","faceforward"
+            "length","normalize","reflect","refract","dFdx","dFdy","fwidth","matrixCompMult","all","any","equal","greaterThan","greaterThanEqual","lessThan","lessThanEqual","not","notEqual"
+            "texture","texture1D","texture2D","texture3D","textureCube",
+            "textureProj","texture1DProj","texture2DProj","texture3DProj",
+            "shadow","shadow1D","shadow2D","shadow1DProj","shadow2DProj",
+            "textureLod","texture1DLod","texture2DLod","textureCubeLod",
+            "textureProjLod","texture1DProjLod","texture2DProjLod","texture3DProjLod",
+            "textureGather","textureGatherOffset","textureGatherOffsets",
+            "shadowLod","shadow1DLod","shadow2DLod",
+            "shadowProjLod","shadow1DProjLod","shadow2DProjLod",
+            "noise1","noise2","noise3","noise4",
+            "main"//,"","","","","","","","","","","",""
+            };
+            const int varsSize = (int)sizeof(vars)/sizeof(vars[0]);foldingStrings.keywords[sht].reserve(foldingStrings.keywords[sht].size()+varsSize);for (int i=0;i<varsSize;i++) foldingStrings.keywords[sht].push_back(vars[i]);
+        }
+        {
+            const SyntaxHighlightingType sht = SH_KEYWORD_PREPROCESSOR;
+            static const char* vars[] = {
+            "#include",
+            "#if","#ifdef","#ifndef","#else","#elif","#endif","#define","#undef","#extension","#line","#error","#pragma","#version","__LINE__","__FILE__","__VERSION__","GL_ES","GL_compatibility_profile"
+            };
+            const int varsSize = (int)sizeof(vars)/sizeof(vars[0]);foldingStrings.keywords[sht].reserve(foldingStrings.keywords[sht].size()+varsSize);for (int i=0;i<varsSize;i++) foldingStrings.keywords[sht].push_back(vars[i]);
+        }
+        {
+            const SyntaxHighlightingType sht = SH_KEYWORD_ITERATION;
+            static const char* vars[] = {"for","while","do"};
+            const int varsSize = (int)sizeof(vars)/sizeof(vars[0]);foldingStrings.keywords[sht].reserve(foldingStrings.keywords[sht].size()+varsSize);for (int i=0;i<varsSize;i++) foldingStrings.keywords[sht].push_back(vars[i]);
+        }
+        {
+            const SyntaxHighlightingType sht = SH_KEYWORD_JUMP;
+            static const char* vars[] = {"break","continue","return","discard"};
+            const int varsSize = (int)sizeof(vars)/sizeof(vars[0]);foldingStrings.keywords[sht].reserve(foldingStrings.keywords[sht].size()+varsSize);for (int i=0;i<varsSize;i++) foldingStrings.keywords[sht].push_back(vars[i]);
+        }
+        {
+            const SyntaxHighlightingType sht = SH_KEYWORD_SELECTION;
+            static const char* vars[] = {"switch","case","default","if","else"};
+            const int varsSize = (int)sizeof(vars)/sizeof(vars[0]);foldingStrings.keywords[sht].reserve(foldingStrings.keywords[sht].size()+varsSize);for (int i=0;i<varsSize;i++) foldingStrings.keywords[sht].push_back(vars[i]);
+        }
+        {
+            const SyntaxHighlightingType sht = SH_KEYWORD_DECLARATION;
+            static const char* vars[] = {"struct"/*,"class","enum","union","template","typedef","typename"*/};
+            const int varsSize = (int)sizeof(vars)/sizeof(vars[0]);foldingStrings.keywords[sht].reserve(foldingStrings.keywords[sht].size()+varsSize);for (int i=0;i<varsSize;i++) foldingStrings.keywords[sht].push_back(vars[i]);
+        }
+        {
+            const SyntaxHighlightingType sht = SH_KEYWORD_ACCESS;
+            static const char* vars[] = {"require","enable","warn","disable"};
+            const int varsSize = (int)sizeof(vars)/sizeof(vars[0]);foldingStrings.keywords[sht].reserve(foldingStrings.keywords[sht].size()+varsSize);for (int i=0;i<varsSize;i++) foldingStrings.keywords[sht].push_back(vars[i]);
+        }
+
+        // Extensions:
+        static const char exts[] = ".glsl;.vert;.geom;.frag;.vsh;.gsh;.fsh"; // static storage
+        foldingStrings.languageExtensions = exts;
+        // Mandatory call:
+        foldingStrings.initSyntaxHighlighting();     // Mandatory
+
+        // Assignment:
+        gFoldingStringVectors.push_back(foldingStrings);
+        gFoldingStringVectorIndices[LANG_CPP] = gFoldingStringVectors.size()-1;
         }
         // LUA
         {
@@ -2744,7 +2890,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
         // Handle '#' in Cpp
         if (*s=='#')	{
             gCurlineStartedWithDiesis = lineStartsWithDiesis = true;
-            if (lang==LANG_CPP && s+1<text_end && (*(s+1)==sp || *(s+1)==tab)) firstTokenHasPreprocessorStyle = true;
+            if ((lang==LANG_CPP || lang==LANG_GLSL) && s+1<text_end && (*(s+1)==sp || *(s+1)==tab)) firstTokenHasPreprocessorStyle = true;
         }
     }
 
@@ -2784,7 +2930,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
         if (len_tok>0)  {
             int sht = -1;	// Mandatory assignment
             // Handle special starting tokens
-            if ((firstTokenHasPreprocessorStyle && num_tokens<2) || (lang==LANG_CPP && lineStartsWithDiesis && strcmp(tok,"defined")==0))	sht = SH_KEYWORD_PREPROCESSOR;
+            if ((firstTokenHasPreprocessorStyle && num_tokens<2) || ((lang==LANG_CPP || lang==LANG_GLSL) && lineStartsWithDiesis && strcmp(tok,"defined")==0))	sht = SH_KEYWORD_PREPROCESSOR;
             if (sht==-1)	{
                 // Handle numbers
                 if (tokenIsNumber==0)   {
@@ -3080,7 +3226,7 @@ static void MyRenderTextLineWrappedWithSH(const BadCodeEditorData& ceData,ImVec2
         // Handle '#' in Cpp
         if (*s=='#')	{
             gCurlineStartedWithDiesis = lineStartsWithDiesis = true;
-            if (ceData.lang==LANG_CPP && s+1<text_end && (*(s+1)==sp || *(s+1)==tab)) firstTokenHasPreprocessorStyle = true;
+            if ((ceData.lang==LANG_CPP || ceData.lang==LANG_GLSL) && s+1<text_end && (*(s+1)==sp || *(s+1)==tab)) firstTokenHasPreprocessorStyle = true;
         }
     }
 
@@ -3122,7 +3268,7 @@ static void MyRenderTextLineWrappedWithSH(const BadCodeEditorData& ceData,ImVec2
         if (len_tok>0)  {
             int sht = -1;	// Mandatory assignment
             // Handle special starting tokens
-            if ((firstTokenHasPreprocessorStyle && num_tokens<2) || (ceData.lang==LANG_CPP && lineStartsWithDiesis && strcmp(tok,"defined")==0))	sht = SH_KEYWORD_PREPROCESSOR;
+            if ((firstTokenHasPreprocessorStyle && num_tokens<2) || ((ceData.lang==LANG_CPP || ceData.lang==LANG_GLSL) && lineStartsWithDiesis && strcmp(tok,"defined")==0))	sht = SH_KEYWORD_PREPROCESSOR;
             if (sht==-1)	{
                 // Handle numbers
                 if (tokenIsNumber==0)   {
@@ -3289,22 +3435,23 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
         // So we must enter and exit the child window space that owns the vertical scrollbar
 
-        const ImVec2 cursorPos = ImGui::GetCursorPos();
 
         // This doesn't work:
-        /*if (ImGui::BeginChildFrame(id*2, size,myChildWindowFlags))
+        /*
+        const ImVec2 cursorPos = ImGui::GetCursorPos();
+        if (ImGui::BeginChildFrame(id*2, size,myChildWindowFlags))
         {
             firstVisibleLineNumber = (int) (ImGui::GetScrollY()/textLineHeight);
             ImGui::EndChildFrame();
-        }*/
+        }
+        ImGui::SetCursorPos(cursorPos);
+        */
         // Workaround
         char title[256];
         ImFormatString(title, IM_ARRAYSIZE(title), "%s.%08X", window->Name, 2*id);
         ImGuiWindow* childWindow = FindWindowByName(title);
         const float scaledTextHeight = textLineHeight*(childWindow?childWindow->FontWindowScale:1.f);
         if (childWindow) firstVisibleLineNumber = (int) (childWindow->Scroll.y/scaledTextHeight);
-
-        ImGui::SetCursorPos(cursorPos);
 
         const int numVisibleLines =  (int) (size.y/scaledTextHeight);
         const int lastVisibleLineNumber = firstVisibleLineNumber + numVisibleLines;

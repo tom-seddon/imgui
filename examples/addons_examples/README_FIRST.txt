@@ -30,14 +30,17 @@ and report the results here: https://github.com/Flix01/imgui/issues
 cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLUT_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe glut32.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # With GLEW static only:
 cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_WINAPI_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
-# With DIRECT3D9:
+# With bundled GL3W only (and using shaders from GL3: /D"IMIMPL_SHADER_GL3"):	-> This should work with no dependencies <-
+cl /O2 /MT /I"../../" /I"../libs/gl3w/" ../libs/gl3w/GL/gl3w.c main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_WINAPI_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUI_USE_GL3W" /D"IMIMPL_SHADER_GL3" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
+# With DIRECT3D9:	-> This should work with no dependencies <-
 cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_DIRECT3D9_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe d3d9.lib d3dx9.lib gdi32.lib Shell32.lib advapi32.lib user32.lib kernel32.lib
 # With GLFW3 + GLEW static:
 cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLEW_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe glfw3.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # TODO: Add the last command-line for SDL2
 
-P.S. currently GLEW is required to compile all the Windows bindings except Direct3D9. I'm not sure if it's possible to avoid this dependency...
-
+P.S. currently GLEW is required to compile all the Windows bindings except Direct3D9.
+Now GLEW can be optionally replaced by GLAD or by GL3W. The latter is already present in the repository,
+so that we have another Windows binding that should work without additional libraries.
 
 ====================================
 WHAT IS "IMGUI ADDONS" ?

@@ -335,6 +335,12 @@ if (pOptionalInitParams && pOptionalInitParams->useOpenGLDebugContext) glfwWindo
     }
     // gladLoadGLLoader(&glfwGetProcAddress);
 #endif //IMGUI_USE_GLAD
+#ifdef IMGUI_USE_GL3W
+   if (gl3wInit()) {
+       fprintf(stderr, "Error initializing GL3W!\n");
+       return false;
+   }
+#endif //IMGUI_USE_GL3W
 
         //OpenGL info
     {

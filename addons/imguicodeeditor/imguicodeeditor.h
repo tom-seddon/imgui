@@ -39,15 +39,9 @@
   styles and languages can be added for both controls in one pass.
 
   // TO FIX:
-  -> mouse text selection when horizontal scrolling is present
-  -> line number alignment
+  -> See if adding horizontal scrollbar is possible or not
   -> speed: add a global static id-map to hold some state info could speed up the ctrl considerably
-  //
-  // UPDATE:
-  IT DOES NOT WORK! Cursor and selection is completely wrong!
 
-  I guess I'll quit developing this file. Too much time spent with very little result.
-  I'll probably drop it in the future...
 */
 
 // ImGuiCe::CodeEditor
@@ -96,6 +90,7 @@ enum Language {
     LANG_NONE=0,
     LANG_CPP,
     LANG_CS,
+    LANG_GLSL,
     LANG_LUA,
     LANG_PYTHON,
     LANG_COUNT

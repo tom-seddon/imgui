@@ -21,9 +21,11 @@ CONFIG+= use_glfw3
 #CONFIG+= use_sdl2
 #CONFIG+= use_winapi
 #CONFIG+= use_direct3d9
-# Optional, but it might be mandatory for IMGUI_USE_WINAPI (i.e. CONFIG+= use_winapi)
+# Optional, but it might be mandatory for Windows: only ONE of them is allowed
 #CONFIG+= use_glew
-#CONFIG+= use_glad	# experimental, but use_glew and use_glad CANNOT be used together!
+#CONFIG+= use_glad	# experimental
+#CONFIG+= use_gl3w	# experimental
+#------------------------------------------------------------------------------
 
 IMGUI_BASE_PATH=../..
 
@@ -214,6 +216,13 @@ INCLUDEPATH+=$$GLAD_BASE_PATH"/include/"
 INCLUDEPATH+=$$GLAD_BASE_PATH"/src"
 HEADERS+= $$GLAD_BASE_PATH"/include/glad/glad.h"
 SOURCES+=$$GLAD_BASE_PATH"/src/glad.c"
+}
+use_gl3w {
+GL3W_BASE_PATH ="../libs/gl3w/"    # This should be changed on a per user basis
+DEFINES+= IMGUI_USE_GL3W
+INCLUDEPATH+=$$GL3W_BASE_PATH
+HEADERS+= $$GL3W_BASE_PATH/GL/gl3w.h
+SOURCES+= $$GL3W_BASE_PATH/GL/gl3w.c
 }
 
 !use_winapi {
