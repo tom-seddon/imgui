@@ -1492,46 +1492,219 @@ int AppendTreeNodeHeaderButtons(const void* ptr_id, float startWindowCursorXForC
     return rv;
 }
 
+// Start PlotHistogram(...) implementation -------------------------------
+struct ImGuiPlotMultiArrayGetterData    {
+    const float** Values;int Stride;
+    ImGuiPlotMultiArrayGetterData(const float** values, int stride) { Values = values; Stride = stride; }
 
-/* // Snippet by Omar. To evalutate. But in main.cpp thare's another example that supports correct window resizing.
- * // And here is not straightforward to determine the sizes we want to use...
-//#include <imgui_internal.h>
-static void DrawSplitter(float& size0, float& size1,const char* label="##Splitter",int split_vertically=true,float min_size0=20.f, float min_size1=20.f,float thickness=8.f)
-{
-    ImVec2 backup_pos = ImGui::GetCursorPos();
-    if (split_vertically) ImGui::SetCursorPosY(backup_pos.y + size0);
-    else ImGui::SetCursorPosX(backup_pos.x + size0);
+    // Some static helper methods stuffed in this struct fo convenience
+    inline static void GetVerticalGradientTopAndBottomColors(ImU32 c,float fillColorGradientDeltaIn0_05,ImU32& tc,ImU32& bc)  {
+        if (fillColorGradientDeltaIn0_05==0) {tc=bc=c;return;}
 
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,0,0,0));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0,0,0,0));          // We don't draw while active/pressed because as we move the panes the splitter button will be 1 frame late
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f,0.6f,0.6f,0.10f));
-    ImGui::Button(label, ImVec2(!split_vertically ? thickness : -1.0f, split_vertically ? thickness : -1.0f));
-    ImGui::PopStyleColor(3);
-
-
-    // This is to allow having other buttons OVER our splitter. All of this should be moved to ImGui
-    // GImGui can be accessed with: #include <imgui_internal.h>
-    if (GImGui->HoveredId == GImGui->CurrentWindow->DC.LastItemID)
-        GImGui->HoveredIdAllowHoveringOthers = true;
-    if (GImGui->ActiveId == GImGui->CurrentWindow->DC.LastItemID)
-        GImGui->ActiveIdAllowHoveringOthers = true;
-
-    if (ImGui::IsItemActive())
-    {
-        ImGui::SetMouseCursor(split_vertically ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS);
-        float mouse_delta = split_vertically ? ImGui::GetIO().MouseDelta.y : ImGui::GetIO().MouseDelta.x;
-
-        // Minimum pane size
-        if (mouse_delta < min_size0 - size0)   mouse_delta = min_size0 - size0;
-        if (mouse_delta > size1 - min_size1)   mouse_delta = size1 - min_size1;
-
-        // Apply resize
-        size0 += mouse_delta;
-        size1 -= mouse_delta;
+        const bool negative = (fillColorGradientDeltaIn0_05<0);
+        if (negative) fillColorGradientDeltaIn0_05=-fillColorGradientDeltaIn0_05;
+        if (fillColorGradientDeltaIn0_05>0.5f) fillColorGradientDeltaIn0_05=0.5f;
+        // Can we do it without the double conversion ImU32 -> ImVec4 -> ImU32 ?
+        const ImVec4 cf = ColorConvertU32ToFloat4(c);
+        ImVec4 tmp(cf.x+fillColorGradientDeltaIn0_05,cf.y+fillColorGradientDeltaIn0_05,cf.z+fillColorGradientDeltaIn0_05,cf.w+fillColorGradientDeltaIn0_05);
+        if (tmp.x>1.f) tmp.x=1.f;if (tmp.y>1.f) tmp.y=1.f;if (tmp.z>1.f) tmp.z=1.f;if (tmp.w>1.f) tmp.w=1.f;
+        if (negative) bc = ColorConvertFloat4ToU32(tmp); else tc = ColorConvertFloat4ToU32(tmp);
+        tmp=ImVec4(cf.x-fillColorGradientDeltaIn0_05,cf.y-fillColorGradientDeltaIn0_05,cf.z-fillColorGradientDeltaIn0_05,cf.w-fillColorGradientDeltaIn0_05);
+        if (tmp.x<0.f) tmp.x=0.f;if (tmp.y<0.f) tmp.y=0.f;if (tmp.z<0.f) tmp.z=0.f;if (tmp.w<0.f) tmp.w=0.f;
+        if (negative) tc = ColorConvertFloat4ToU32(tmp); else bc = ColorConvertFloat4ToU32(tmp);
     }
-    ImGui::SetCursorPos(backup_pos);
+    // Same as default ImSaturate, but overflowOut can be -1,0 or 1 in case of clamping:
+    inline static float ImSaturate(float f,short& overflowOut)	{
+        if (f < 0.0f) {overflowOut=-1;return 0.0f;}
+        if (f > 1.0f) {overflowOut=1;return 1.0f;}
+        overflowOut=0;return f;
+    }
+};
+static float Plot_MultiArrayGetter(void* data, int idx,int histogramIdx)    {
+    ImGuiPlotMultiArrayGetterData* plot_data = (ImGuiPlotMultiArrayGetterData*)data;
+    const float v = *(float*)(void*)((unsigned char*)(&plot_data->Values[histogramIdx][0]) + (size_t)idx * plot_data->Stride);
+    return v;
 }
-*/
+int PlotHistogram(const char* label, const float** values,int num_histograms,int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size, int stride,float histogramGroupSpacingInPixels,int* pOptionalHoveredHistogramIndexOut,float fillColorGradientDeltaIn0_05,const ImU32* pColorsOverride,int numColorsOverride)   {
+    ImGuiPlotMultiArrayGetterData data(values, stride);
+    return PlotHistogram(label, &Plot_MultiArrayGetter, (void*)&data, num_histograms, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size,histogramGroupSpacingInPixels,pOptionalHoveredHistogramIndexOut,fillColorGradientDeltaIn0_05,pColorsOverride,numColorsOverride);
+}
+int PlotHistogram(const char* label, float (*values_getter)(void* data, int idx,int histogramIdx), void* data,int num_histograms, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size,float histogramGroupSpacingInPixels,int* pOptionalHoveredHistogramIndexOut,float fillColorGradientDeltaIn0_05,const ImU32* pColorsOverride,int numColorsOverride)  {
+    ImGuiWindow* window = GetCurrentWindow();
+    if (pOptionalHoveredHistogramIndexOut) *pOptionalHoveredHistogramIndexOut=-1;
+    if (window->SkipItems) return -1;
+
+    static const float minSingleHistogramWidth = 5.f;   // in pixels
+    static const float maxSingleHistogramWidth = 100.f;   // in pixels
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+
+    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    if (graph_size.x == 0.0f) graph_size.x = CalcItemWidth();
+    if (graph_size.y == 0.0f) graph_size.y = label_size.y + (style.FramePadding.y * 2);
+
+    const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(graph_size.x, graph_size.y));
+    const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
+    const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0));
+    ItemSize(total_bb, style.FramePadding.y);
+    if (!ItemAdd(total_bb, NULL)) return -1;
+
+    // Determine scale from values if not specified
+    if (scale_min == FLT_MAX || scale_max == FLT_MAX || scale_min==scale_max)   {
+        float v_min = FLT_MAX;
+        float v_max = -FLT_MAX;
+        for (int i = 0; i < values_count; i++)  {
+            for (int h=0;h<num_histograms;h++)  {
+                const float v = values_getter(data, (i + values_offset) % values_count, h);
+                v_min = ImMin(v_min, v);
+                v_max = ImMax(v_max, v);
+            }
+        }
+        if (scale_min == FLT_MAX  || scale_min>=scale_max) scale_min = v_min;
+        if (scale_max == FLT_MAX  || scale_min>=scale_max) scale_max = v_max;
+    }
+    if (scale_min>scale_max) {float tmp=scale_min;scale_min=scale_max;scale_max=tmp;}
+
+    RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
+
+    static ImU32 col_base_embedded[] = {0,IM_COL32(100,100,225,255),IM_COL32(100,225,100,255),IM_COL32(225,100,100,255),IM_COL32(150,75,225,255)};
+    static const int num_colors_embedded = sizeof(col_base_embedded)/sizeof(col_base_embedded[0]);
+
+
+    int v_hovered = -1, h_hovered = -1;
+    if (values_count > 0 && num_histograms > 0)
+    {
+        const bool mustOverrideColors = (pColorsOverride && numColorsOverride>0);
+        const ImU32* col_base = mustOverrideColors ? pColorsOverride : col_base_embedded;
+        const int num_colors = mustOverrideColors ? numColorsOverride : num_colors_embedded;
+
+        const int total_histograms = values_count * num_histograms;
+
+        const bool isItemHovered = IsHovered(inner_bb, 0);
+
+        if (!mustOverrideColors) col_base_embedded[0] = GetColorU32(ImGuiCol_PlotHistogram);
+        const ImU32 lineCol = GetColorU32(ImGuiCol_WindowBg);
+        const float lineThick = 1.f;
+        const ImU32 overflowCol = lineCol;
+
+        const ImVec2 inner_bb_extension(inner_bb.Max.x-inner_bb.Min.x,inner_bb.Max.y-inner_bb.Min.y);
+        const float scale_extension = scale_max - scale_min;
+        const bool hasXAxis = scale_max>=0 && scale_min<=0;
+        const float xAxisSat = ImSaturate((0.0f - scale_min) / (scale_max - scale_min));
+        const float xAxisSatComp = 1.f-xAxisSat;
+        const float posXAxis = inner_bb.Max.y-inner_bb_extension.y*xAxisSat-0.5f;
+        const bool isAlwaysNegative = scale_max<0 && scale_min<0;
+
+        float t_step = (inner_bb.Max.x-inner_bb.Min.x-(float)(values_count-1)*histogramGroupSpacingInPixels)/(float)total_histograms;
+        if (t_step<minSingleHistogramWidth) t_step = minSingleHistogramWidth;
+        else if (t_step>maxSingleHistogramWidth) t_step = maxSingleHistogramWidth;
+
+        float t1 = 0.f;
+        float posY=0.f;ImVec2 pos0(0.f,0.f),pos1(0.f,0.f);
+        ImU32 rectCol=0,topRectCol=0,bottomRectCol=0;float gradient = 0.f;
+        short overflow = 0;
+        for (int i = 0; i < values_count; i++)  {
+            if (i!=0) t1+=histogramGroupSpacingInPixels;
+            if (t1>inner_bb.Max.x) break;
+            for (int h=0;h<num_histograms;h++)  {
+                const float v1 = values_getter(data, (i + values_offset) % values_count, h);
+
+                pos0.x = inner_bb.Min.x+t1;
+                pos1.x = pos0.x+t_step;
+
+                const int col_num = h%num_colors;
+                rectCol = col_base[col_num];
+                if (isItemHovered && ImGui::IsMouseHoveringRect(ImVec2(pos0.x,inner_bb.Min.y),ImVec2(pos1.x,inner_bb.Max.y))) {
+                    h_hovered = h;
+                    v_hovered = i; // or: (i + values_offset) % values_count ?
+                    if (pOptionalHoveredHistogramIndexOut) *pOptionalHoveredHistogramIndexOut=h_hovered;
+                    SetTooltip("%d: %8.4g", i, v1); // Tooltip on hover
+
+                    if (h==0 && !mustOverrideColors) rectCol = GetColorU32(ImGuiCol_PlotHistogramHovered); // because: col_base[0] = GetColorU32(ImGuiCol_PlotHistogram);
+                    else {
+                        // We don't have any hover color ready, but we can calculate it based on the same logic used between ImGuiCol_PlotHistogramHovered and ImGuiCol_PlotHistogram.
+                        // Note that this code is executed only once, when a histogram is hovered.
+                        const ImGuiStyle& style = ImGui::GetStyle();
+                        ImVec4 diff = style.Colors[ImGuiCol_PlotHistogramHovered];
+                        ImVec4 base = style.Colors[ImGuiCol_PlotHistogram];
+                        diff.x-=base.x;diff.y-=base.y;diff.z-=base.z;diff.w-=base.w;
+                        base = ImGui::ColorConvertU32ToFloat4(rectCol);
+                        if (style.Alpha!=0.f) base.w /= style.Alpha;	// See GetColorU32(...) for this
+                        base.x+=diff.x;base.y+=diff.y;base.z+=diff.z;base.w+=diff.w;
+                        base = ImVec4(ImSaturate(base.x),ImSaturate(base.y),ImSaturate(base.z),ImSaturate(base.w));
+                        rectCol = GetColorU32(base);
+                    }
+                }
+                gradient = fillColorGradientDeltaIn0_05;
+
+                if (!hasXAxis) {
+                    if (isAlwaysNegative)   {
+                        posY = inner_bb_extension.y*ImGuiPlotMultiArrayGetterData::ImSaturate((scale_max - v1) / scale_extension,overflow);
+                        overflow=-overflow;
+
+                        pos0.y = inner_bb.Min.y;
+                        pos1.y = inner_bb.Min.y+posY;
+
+                        gradient = -fillColorGradientDeltaIn0_05;
+                    }
+                    else {
+                        posY = inner_bb_extension.y*ImGuiPlotMultiArrayGetterData::ImSaturate((v1 - scale_min) / scale_extension,overflow);
+
+                        pos0.y = inner_bb.Max.y-posY;
+                        pos1.y = inner_bb.Max.y;
+                    }
+                }
+                else if (v1>=0){
+                    posY = ImGuiPlotMultiArrayGetterData::ImSaturate(v1/scale_max,overflow);
+                    pos1.y = posXAxis;
+                    pos0.y = posXAxis-inner_bb_extension.y*xAxisSatComp*posY;
+                }
+                else {
+                    posY = ImGuiPlotMultiArrayGetterData::ImSaturate(v1/scale_min,overflow);
+                    overflow = -overflow;	// Probably redundant
+                    pos0.y = posXAxis;
+                    pos1.y = posXAxis+inner_bb_extension.y*xAxisSat*posY;
+                    gradient = -fillColorGradientDeltaIn0_05;
+                }
+
+                ImGuiPlotMultiArrayGetterData::GetVerticalGradientTopAndBottomColors(rectCol,gradient,topRectCol,bottomRectCol);
+
+                window->DrawList->AddRectFilledMultiColor(pos0, pos1,topRectCol,topRectCol,bottomRectCol,bottomRectCol); // Gradient for free!
+
+                if (overflow!=0)    {
+                    // Here we draw the small arrow that indicates that the histogram is out of scale
+                    const float spacing = lineThick+1;
+                    const float height = inner_bb_extension.y*0.075f;
+                    // Using CW order here... but I'm not sure this is correct in Dear ImGui (we should enable GL_CULL_FACE and see if it's the same output)
+                    if (overflow>0)	    window->DrawList->AddTriangleFilled(ImVec2((pos0.x+pos1.x)*0.5f,inner_bb.Min.y+spacing),ImVec2(pos1.x-spacing,inner_bb.Min.y+spacing+height), ImVec2(pos0.x+spacing,inner_bb.Min.y+spacing+height),overflowCol);
+                    else if (overflow<0)    window->DrawList->AddTriangleFilled(ImVec2((pos0.x+pos1.x)*0.5f,inner_bb.Max.y-spacing),ImVec2(pos0.x+spacing,inner_bb.Max.y-spacing-height), ImVec2(pos1.x-spacing,inner_bb.Max.y-spacing-height),overflowCol);
+                }
+
+                window->DrawList->AddRect(pos0, pos1,lineCol,0.f,0,lineThick);
+
+                t1+=t_step; if (t1>inner_bb.Max.x) break;
+            }
+        }
+
+        if (hasXAxis) {
+            // Draw x Axis:
+            const ImU32 axisCol = GetColorU32(ImGuiCol_Text);
+            const float axisThick = 1.f;
+            window->DrawList->AddLine(ImVec2(inner_bb.Min.x,posXAxis),ImVec2(inner_bb.Max.x,posXAxis),axisCol,axisThick);
+        }
+    }
+
+    // Text overlay
+    if (overlay_text)
+        RenderTextClipped(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FramePadding.y), frame_bb.Max, overlay_text, NULL, NULL, ImVec2(0.5f,0.0f));
+
+    if (label_size.x > 0.0f)
+        RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, inner_bb.Min.y), label);
+
+    return v_hovered;
+}
+// End PlotHistogram(...) implementation ----------------------------------
 
 }   // ImGui namespace
 

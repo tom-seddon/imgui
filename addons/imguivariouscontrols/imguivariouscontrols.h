@@ -311,7 +311,8 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
                         &closed,"delete",NULL,0,      // Button 0 (far-right) quartet:        &pressed | tooltip | single glyph as const char* (if NULL it's a close button) | isToggleButton?1:0
                         &paste,"paste","v",0,         // Button 1 (second far-right) quartet: &pressed | tooltip | single glyph as const char* (if NULL it's a close button) | isToggleButton?1:0
                         &copy,"copy","^",0            // Button 2 (third far-right) quartet:  &pressed | tooltip | single glyph as const char* (if NULL it's a close button) | isToggleButton?1:0
-                    );  // returns true if one button is hovered, so that you can prevent the 'tree node header' tooltip to show up if you use it.
+                    );  // return value non-negative if one button is hovered or clicked, so that you can prevent the 'tree node header' tooltip to show up if you use it.
+                    // return value can be: -1 => No button is hovered or clicked | [0,numButtons-1] => buttons[rv] has been clicked | [numButtons,2*numButtons-1] => buttons[rv-numButtons] is hovered
                 }
                 if (myTreeNodeIsOpen) {
                     // (optional) Fill the header with data within tree node indent
@@ -327,6 +328,10 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
 */
 // Return value rv can be: -1 => No button is hovered or clicked | [0,numButtons-1] => buttons[rv] has been clicked | [numButtons,2*numButtons-1] => buttons[rv-numButtons] is hovered
 int AppendTreeNodeHeaderButtons(const void* ptr_id, float startWindowCursorXForClipping, int numButtons, ...);
+
+// Returns the hovered value index, without 'values_offset', (or -1). The index of the hovered histogram can be retrieved through 'pOptionalHoveredHistogramIndexOut'.
+int PlotHistogram(const char* label, const float** values,int num_histograms,int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), int stride = sizeof(float),float histogramGroupSpacingInPixels=0.f,int* pOptionalHoveredHistogramIndexOut=NULL,float fillColorGradientDeltaIn0_05=0.05f,const ImU32* pColorsOverride=NULL,int numColorsOverride=0);
+int PlotHistogram(const char* label, float (*values_getter)(void* data, int idx,int histogramIdx), void* data,int num_histograms, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0),float histogramGroupSpacingInPixels=0.f,int* pOptionalHoveredHistogramIndexOut=NULL,float fillColorGradientDeltaIn0_05=0.05f,const ImU32* pColorsOverride=NULL,int numColorsOverride=0);
 
 
 // Basic tree view implementation
@@ -708,7 +713,7 @@ protected:
 
 
 protected:
-    TreeView(const TreeView&) {}
+    TreeView(const TreeView& tv) : TreeViewNode(tv) {}
     void operator=(const TreeView&) {}
     TreeView(const TreeViewNode&) {}
     void operator=(const TreeViewNode&) {}

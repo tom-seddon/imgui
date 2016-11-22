@@ -770,7 +770,46 @@ void DrawGL()	// Mandatory
                 ImGui::EndGroup();    // Not sure grouping is strictly necessary here
             }
             else if (ImGui::Button("Reset collapsable header##AppendTreeNodeHeaderButtonsReset")) closed = false;
-        } // end scope
+        } // end scope        
+
+        ImGui::Spacing();
+        ImGui::Text("ImGui::PlotHistogram(...) overload:");
+        {
+            if (ImGui::TreeNode("Histogram Examples###ImGui::PlotHistogram(...) overloadCH")) {
+                static const float values[][5]={
+                {2.f,   -1.f,   0.5f,   1.f,    0.25f},
+                {1.8f,  -1.5f,  0.75f,  1.3f,   -0.25f},
+                {1.f,   -2.75f, 1.2f,   0.8f,   0.5f},
+                };
+                static const int num_histograms = sizeof(values)/sizeof(values[0]);
+                static const int num_values = sizeof(values[0])/sizeof(values[0][0]);
+                //IM_ASSERT(num_histograms==3 && num_values==5);
+                // It's not straight-forward, but 'values' CAN'T be simply converted to a 'const float**':
+                static const float *ppValues[num_histograms] = {values[0],values[1],values[2]};
+                //for (int i=0;i<num_histograms;i++) ppValues[i]=values[i];
+
+                ImGui::PlotHistogram("Range[-2,2]###MHSGM",ppValues,num_histograms,num_values,0,"Multi-Histogram",-2.f,2.f,ImVec2(0,80),sizeof(float),10.f);
+
+                ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.2f);
+                {
+                static const float values[1][5]={{1,2,3,4,5}};
+                static const int num_values = sizeof(values[0])/sizeof(values[0][0]);
+                static const float *ppValues[1]={values[0]};
+                ImGui::PlotHistogram("Range[-0.2,4]###MHSGM2",ppValues,1,num_values,0,NULL,0.2f,4.f,ImVec2(0,80));
+                }
+                ImGui::SameLine();
+                {
+                static const float values[1][5]={{-1,-2,-3,-4,-5}};
+                static const int num_values = sizeof(values[0])/sizeof(values[0][0]);
+                static const float *ppValues[1]={values[0]};
+                ImGui::PlotHistogram("Range[-6,-2.1]###MHSGM3",ppValues,1,num_values,0,NULL,-6.f,-2.1f,ImVec2(0,80));
+                }
+                ImGui::PopItemWidth();
+
+                ImGui::TreePop();
+            }
+        }
+
 
         ImGui::Spacing();
         ImGui::Text("Generic TreeView Implementation:");
