@@ -1603,12 +1603,13 @@ int PlotHistogram(const char* label, float (*values_getter)(void* data, int idx,
         float t1 = 0.f;
         float posY=0.f;ImVec2 pos0(0.f,0.f),pos1(0.f,0.f);
         ImU32 rectCol=0,topRectCol=0,bottomRectCol=0;float gradient = 0.f;
-        short overflow = 0;
+        short overflow = 0;bool mustSkipBorder = false;int iWithOffset=0;
         for (int i = 0; i < values_count; i++)  {
             if (i!=0) t1+=histogramGroupSpacingInPixels;
             if (t1>inner_bb.Max.x) break;
+            iWithOffset = (i + values_offset) % values_count;
             for (int h=0;h<num_histograms;h++)  {
-                const float v1 = values_getter(data, (i + values_offset) % values_count, h);
+                const float v1 = values_getter(data, iWithOffset, h);
 
                 pos0.x = inner_bb.Min.x+t1;
                 pos1.x = pos0.x+t_step;
@@ -1617,7 +1618,7 @@ int PlotHistogram(const char* label, float (*values_getter)(void* data, int idx,
                 rectCol = col_base[col_num];
                 if (isItemHovered && ImGui::IsMouseHoveringRect(ImVec2(pos0.x,inner_bb.Min.y),ImVec2(pos1.x,inner_bb.Max.y))) {
                     h_hovered = h;
-                    v_hovered = i; // or: (i + values_offset) % values_count ?
+                    v_hovered = iWithOffset; // iWithOffset or just i ?
                     if (pOptionalHoveredHistogramIndexOut) *pOptionalHoveredHistogramIndexOut=h_hovered;
                     SetTooltip("%d: %8.4g", i, v1); // Tooltip on hover
 
@@ -1637,6 +1638,7 @@ int PlotHistogram(const char* label, float (*values_getter)(void* data, int idx,
                     }
                 }
                 gradient = fillColorGradientDeltaIn0_05;
+                mustSkipBorder = false;
 
                 if (!hasXAxis) {
                     if (isAlwaysNegative)   {
@@ -1647,12 +1649,14 @@ int PlotHistogram(const char* label, float (*values_getter)(void* data, int idx,
                         pos1.y = inner_bb.Min.y+posY;
 
                         gradient = -fillColorGradientDeltaIn0_05;
+                        mustSkipBorder = (overflow==1);
                     }
                     else {
                         posY = inner_bb_extension.y*ImGuiPlotMultiArrayGetterData::ImSaturate((v1 - scale_min) / scale_extension,overflow);
 
                         pos0.y = inner_bb.Max.y-posY;
                         pos1.y = inner_bb.Max.y;
+                        mustSkipBorder = (overflow==-1);
                     }
                 }
                 else if (v1>=0){
@@ -1681,7 +1685,7 @@ int PlotHistogram(const char* label, float (*values_getter)(void* data, int idx,
                     else if (overflow<0)    window->DrawList->AddTriangleFilled(ImVec2((pos0.x+pos1.x)*0.5f,inner_bb.Max.y-spacing),ImVec2(pos0.x+spacing,inner_bb.Max.y-spacing-height), ImVec2(pos1.x-spacing,inner_bb.Max.y-spacing-height),overflowCol);
                 }
 
-                window->DrawList->AddRect(pos0, pos1,lineCol,0.f,0,lineThick);
+                if (!mustSkipBorder) window->DrawList->AddRect(pos0, pos1,lineCol,0.f,0,lineThick);
 
                 t1+=t_step; if (t1>inner_bb.Max.x) break;
             }
@@ -1704,6 +1708,11 @@ int PlotHistogram(const char* label, float (*values_getter)(void* data, int idx,
 
     return v_hovered;
 }
+int PlotHistogram2(const char* label, const float* values,int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size, int stride,float fillColorGradientDeltaIn0_05,const ImU32* pColorsOverride,int numColorsOverride) {
+    const float* pValues[1] = {values};
+    return PlotHistogram(label,pValues,1,values_count,values_offset,overlay_text,scale_min,scale_max,graph_size,stride,0.f,NULL,fillColorGradientDeltaIn0_05,pColorsOverride,numColorsOverride);
+}
+
 // End PlotHistogram(...) implementation ----------------------------------
 
 }   // ImGui namespace

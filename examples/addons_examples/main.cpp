@@ -792,17 +792,20 @@ void DrawGL()	// Mandatory
 
                 ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.2f);
                 {
-                static const float values[1][5]={{1,2,3,4,5}};
-                static const int num_values = sizeof(values[0])/sizeof(values[0][0]);
-                static const float *ppValues[1]={values[0]};
-                ImGui::PlotHistogram("Range[-0.2,4]###MHSGM2",ppValues,1,num_values,0,NULL,0.2f,4.f,ImVec2(0,80));
+                    // Using the same signature as the multi-PlotHistogram used above
+                    // for a single histogram is a bit tricky:
+                    static const float values[1][5]={{1,2,3,4,5}};
+                    static const int num_values = sizeof(values[0])/sizeof(values[0][0]);
+                    static const float *ppValues[1]={values[0]};
+                    ImGui::PlotHistogram("Range[-0.2,4]###MHSGM2",ppValues,1,num_values,0,NULL,0.2f,4.f,ImVec2(0,80));
                 }
                 ImGui::SameLine();
                 {
-                static const float values[1][5]={{-1,-2,-3,-4,-5}};
-                static const int num_values = sizeof(values[0])/sizeof(values[0][0]);
-                static const float *ppValues[1]={values[0]};
-                ImGui::PlotHistogram("Range[-6,-2.1]###MHSGM3",ppValues,1,num_values,0,NULL,-6.f,-2.1f,ImVec2(0,80));
+                    // So we provide ImGui::PlotHistogram2(...) with the same signature of (one of) the
+                    // dafault Dear ImGui::PlotHistogram(...) methods.
+                    static const float values[]={-1,-2,-3,-4,-5};
+                    static const int num_values = sizeof(values)/sizeof(values[0]);
+                    ImGui::PlotHistogram2("Range[-4.5,-2.1]###MHSGM3",values,num_values,0,NULL,-4.5f,-2.1f,ImVec2(0,80));
                 }
                 ImGui::PopItemWidth();
 
