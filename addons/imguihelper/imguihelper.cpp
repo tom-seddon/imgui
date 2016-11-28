@@ -21,6 +21,7 @@
 #  endif // alloca
 #endif //NO_IMGUIHELPER_DRAW_METHODS
 
+extern FILE* ImFileOpen(const char* filename, const char* mode);
 
 namespace ImGui {
 
@@ -39,7 +40,7 @@ bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS)	{
                 for (size_t i=0,sz=sizeof(openPrograms)/sizeof(openPrograms[0]);i<sz;i++) {
                     strcpy(tmp,"/usr/bin/");	// Well, we should check all the folders inside $PATH... and we ASSUME that /usr/bin IS inside $PATH (see below)
                     strcat(tmp,openPrograms[i]);
-                    FILE* fd = fopen(tmp,"r");
+                    FILE* fd = ImFileOpen(tmp,"r");
                     if (fd) {
                         fclose(fd);
                         openProgramIndex = (int)i;
@@ -843,7 +844,7 @@ bool Deserializer::loadFromFile(const char *filename) {
     clear();
     if (!filename) return false;
     FILE* f;
-    if ((f = fopen(filename, "rt")) == NULL) return false;
+    if ((f = ImFileOpen(filename, "rt")) == NULL) return false;
     if (fseek(f, 0, SEEK_END))  {
         fclose(f);
         return false;
@@ -1084,7 +1085,7 @@ bool GetFileContent(const char *filePath, ImVector<char> &contentOut, bool clear
     if (!filePath) return false;
     const bool appendTrailingZero = appendTrailingZeroIfModesIsNotBinary && modes && strlen(modes)>0 && modes[strlen(modes)-1]!='b';
     FILE* f;
-    if ((f = fopen(filePath, modes)) == NULL) return false;
+    if ((f = ImFileOpen(filePath, modes)) == NULL) return false;
     if (fseek(f, 0, SEEK_END))  {
         fclose(f);
         return false;
@@ -1109,7 +1110,7 @@ bool GetFileContent(const char *filePath, ImVector<char> &contentOut, bool clear
 }
 bool FileExists(const char *filePath)   {
     if (!filePath || strlen(filePath)==0) return false;
-    FILE* f = fopen(filePath, "rb");
+    FILE* f = ImFileOpen(filePath, "rb");
     if (!f) return false;
     fclose(f);f=NULL;
     return true;
@@ -1134,7 +1135,7 @@ public:
     ~SerializeToFile() {close();}
     bool saveToFile(const char* filename) {
         close();
-        f = fopen(filename,"wt");
+        f = ImFileOpen(filename,"wt");
         return (f);
     }
     void close() {if (f) fclose(f);f=NULL;}
@@ -1155,7 +1156,7 @@ public:
     ~SerializeToBuffer() {close();}
     bool saveToFile(const char* filename) {
         if (!isValid()) return false;
-        FILE* f = fopen(filename,"wt");
+        FILE* f = ImFileOpen(filename,"wt");
         if (!f) return false;
         fwrite((void*) &b[0],b.size(),1,f);
         fclose(f);f=NULL;
@@ -1194,7 +1195,7 @@ int Serializer::getBufferSize() const {
 }
 bool Serializer::WriteBufferToFile(const char* filename,const char* buffer,int bufferSize)   {
     if (!buffer) return false;
-    FILE* f = fopen(filename,"wt");
+    FILE* f = ImFileOpen(filename,"wt");
     if (!f) return false;
     fwrite((void*) buffer,bufferSize,1,f);
     fclose(f);

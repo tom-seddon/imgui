@@ -81,6 +81,8 @@ The TED / SID support is based on tedplay (c) 2012 Attila Grosz, used under Unli
 #   pragma GCC diagnostic ignored "-Wunused-variable"
 #endif //_MSC_VER
 
+extern FILE* ImFileOpen(const char* filename, const char* mode);
+
 
 //----soloud_internal.h------------------------------------------------------------------------
 namespace SoLoud
@@ -5346,7 +5348,7 @@ mFileHandle(fp)
 	{
 		if (!aFilename)
 			return INVALID_PARAMETER;
-		mFileHandle = fopen(aFilename, "rb");
+        mFileHandle = ImFileOpen(aFilename, "rb");
 		if (!mFileHandle)
 			return FILE_NOT_FOUND;
 		return SO_NO_ERROR;

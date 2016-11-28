@@ -11,6 +11,8 @@
 #   define snprintf _snprintf
 #endif //(defined(_MSC_VER) && !defined(snprintf))
 
+extern FILE* ImFileOpen(const char* filename, const char* mode);
+
 namespace ImGui	{
 
 namespace NGE_Draw {
@@ -2814,7 +2816,7 @@ class TextureNode : public Node {
 
         // TODO: check extension
 
-        FILE* f = fopen(path,"rb");
+        FILE* f = ImFileOpen(path,"rb");
         if (f) {fclose(f);f=NULL;return true;}
 
         return false;

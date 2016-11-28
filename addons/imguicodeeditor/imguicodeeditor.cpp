@@ -26,6 +26,7 @@
 
 #define IMGUI_NEW(type)         IM_PLACEMENT_NEW (ImGui::MemAlloc(sizeof(type) ) ) type
 #define IMGUI_DELETE(type, obj) reinterpret_cast<type*>(obj)->~type(), ImGui::MemFree(obj)
+extern FILE* ImFileOpen(const char* filename, const char* mode);
 
 
 namespace ImGui {
@@ -1793,7 +1794,7 @@ bool CodeEditor::save(const char* filename) {
     if (!filename || strlen(filename)==0) return false;
     ImString text = "";
     lines.getText(text);
-    FILE* f = fopen(filename,"w");
+    FILE* f = ImFileOpen(filename,"w");
     if (!f) return false;
     // TODO: UTF8 BOM here ?
     fwrite((const void*) text.c_str(),text.size(),1,f);
@@ -1805,7 +1806,7 @@ bool CodeEditor::save(const char* filename) {
 bool CodeEditor::load(const char* filename, Language optionalLanguage) {
     if (!filename || strlen(filename)==0) return false;
     ImVector<char> text;
-    FILE* f = fopen(filename,"r");
+    FILE* f = ImFileOpen(filename,"r");
     if (!f) return false;
     fseek(f,0,SEEK_END);
     const size_t length = ftell(f);

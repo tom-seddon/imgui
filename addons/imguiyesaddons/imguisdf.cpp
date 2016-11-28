@@ -17,6 +17,8 @@
 
 // TODO: try to reuse ImDrawList to do the drawing (instead of using vbos)
 
+extern FILE* ImFileOpen(const char* filename, const char* mode);
+
 namespace ImGui {
 
 static SdfTextColor gSdfTextDefaultColor(ImVec4(1,1,1,1));
@@ -901,7 +903,7 @@ struct SdfCharset {
         if (!filePath) return false;
         const bool appendTrailingZero = appendTrailingZeroIfModesIsNotBinary && modes && strlen(modes)>0 && modes[strlen(modes)-1]!='b';
         FILE* f;
-        if ((f = fopen(filePath, modes)) == NULL) return false;
+        if ((f = ImFileOpen(filePath, modes)) == NULL) return false;
         if (fseek(f, 0, SEEK_END))  {
             fclose(f);
             return false;

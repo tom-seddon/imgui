@@ -14,6 +14,8 @@
 
 #include "imguifilesystem.h"
 
+
+
 #ifdef _WIN32
 #include <shlobj.h> // Known Directory locations
 #   ifndef CSIDL_MYPICTURES
@@ -100,6 +102,8 @@ enum Sorting {
     }
 */
 #   endif //(defined(_MSC_VER) && !defined(strcasecmp))
+
+extern FILE* ImFileOpen(const char* filename, const char* mode);
 
 namespace ImGuiFs {
 
@@ -1236,7 +1240,7 @@ bool FileGetContent(const char* path,ImVector<unsigned char>& bufferOut,const ch
 #   else //IMGUI_USE_MINIZIP
     strcpy(mainPath,path);
 #   endif //IMGUI_USE_MINIZIP
-    FILE* fin = fopen(mainPath,"rb");
+    FILE* fin = ImFileOpen(mainPath,"rb");
     if (!fin) return false;
     fseek(fin,0,SEEK_END);
     const long szl = ftell(fin);
