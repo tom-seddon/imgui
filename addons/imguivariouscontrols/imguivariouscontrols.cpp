@@ -1519,6 +1519,20 @@ struct ImGuiPlotMultiArrayGetterData    {
         if (f > 1.0f) {overflowOut=1;return 1.0f;}
         overflowOut=0;return f;
     }
+    // Same as IsMouseHoveringRect, but only for the X axis (we already know if the whole item has been hovered or not)
+    inline static bool IsMouseBetweenXValues(float x_min, float x_max,float *pOptionalXDeltaOut=NULL, bool clip=true, bool expandForTouchInput=false)   {
+        ImGuiContext& g = *GImGui;
+        ImGuiWindow* window = GetCurrentWindowRead();
+
+        if (clip) {
+            if (x_min < window->ClipRect.Min.x) x_min = window->ClipRect.Min.x;
+            if (x_max > window->ClipRect.Max.x) x_max = window->ClipRect.Max.x;
+        }
+        if (expandForTouchInput)    {x_min-=g.Style.TouchExtraPadding.x;x_max+=g.Style.TouchExtraPadding.x;}
+
+        if (pOptionalXDeltaOut) *pOptionalXDeltaOut = g.IO.MousePos.x - x_min;
+        return (g.IO.MousePos.x >= x_min && g.IO.MousePos.x < x_max);
+    }
 };
 static float Plot_MultiArrayGetter(void* data, int idx,int histogramIdx)    {
     ImGuiPlotMultiArrayGetterData* plot_data = (ImGuiPlotMultiArrayGetterData*)data;
@@ -1616,7 +1630,10 @@ int PlotHistogram(const char* label, float (*values_getter)(void* data, int idx,
 
                 const int col_num = h%num_colors;
                 rectCol = col_base[col_num];
-                if (isItemHovered && ImGui::IsMouseHoveringRect(ImVec2(pos0.x,inner_bb.Min.y),ImVec2(pos1.x,inner_bb.Max.y))) {
+                if (isItemHovered &&
+                //ImGui::IsMouseHoveringRect(ImVec2(pos0.x,inner_bb.Min.y),ImVec2(pos1.x,inner_bb.Max.y))
+                ImGuiPlotMultiArrayGetterData::IsMouseBetweenXValues(pos0.x,pos1.x)
+                ) {
                     h_hovered = h;
                     v_hovered = iWithOffset; // iWithOffset or just i ?
                     if (pOptionalHoveredHistogramIndexOut) *pOptionalHoveredHistogramIndexOut=h_hovered;
@@ -1712,8 +1729,190 @@ int PlotHistogram2(const char* label, const float* values,int values_count, int 
     const float* pValues[1] = {values};
     return PlotHistogram(label,pValues,1,values_count,values_offset,overlay_text,scale_min,scale_max,graph_size,stride,0.f,NULL,fillColorGradientDeltaIn0_05,pColorsOverride,numColorsOverride);
 }
-
 // End PlotHistogram(...) implementation ----------------------------------
+// Start PlotCurve(...)----------------------------------------------------
+int PlotCurve(const char* label, float (*values_getter)(void* data, float x,int numCurve), void* data,int num_curves,const char* overlay_text,const ImVec2 rangeY,const ImVec2 rangeX, ImVec2 graph_size,ImVec2* pOptionalHoveredValueOut,float precisionInPixels,float numGridLinesHint,const ImU32* pColorsOverride,int numColorsOverride)  {
+    ImGuiWindow* window = GetCurrentWindow();
+    if (pOptionalHoveredValueOut) *pOptionalHoveredValueOut=ImVec2(0,0);    // Not sure how to initialize this...
+    if (window->SkipItems || !values_getter) return -1;
+
+    if (precisionInPixels<=1.f) precisionInPixels = 1.f;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+
+    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    if (graph_size.x == 0.0f) graph_size.x = CalcItemWidth();
+    if (graph_size.y == 0.0f) graph_size.y = label_size.y + (style.FramePadding.y * 2);
+
+    const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(graph_size.x, graph_size.y));
+    const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
+    const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0));
+    ItemSize(total_bb, style.FramePadding.y);
+    if (!ItemAdd(total_bb, NULL)) return -1;
+    const ImVec2 inner_bb_extension(inner_bb.Max.x-inner_bb.Min.x,inner_bb.Max.y-inner_bb.Min.y);
+
+    ImVec2 xRange = rangeX,yRange = rangeY,rangeExtension(0,0);
+
+    if (yRange.x>yRange.y) {float tmp=yRange.x;yRange.x=yRange.y;yRange.y=tmp;}
+    else if (yRange.x==yRange.y) {yRange.x-=5.f;yRange.y+=5.f;}
+    rangeExtension.y = yRange.y-yRange.x;
+
+    if (xRange.x>xRange.y) {float tmp=xRange.x;xRange.x=xRange.y;xRange.y=tmp;}
+    else if (xRange.x==xRange.y) xRange.x-=1.f;
+    if (xRange.y==FLT_MAX || xRange.x==xRange.y) xRange.y = xRange.x + (rangeExtension.y/inner_bb_extension.y)*inner_bb_extension.x;
+    rangeExtension.x = xRange.y-xRange.x;
+
+    RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
+
+    static ImU32 col_base_embedded[] = {0,IM_COL32(150,150,225,255),IM_COL32(150,225,150,255),IM_COL32(225,150,150,255),IM_COL32(150,100,225,255)};
+    static const int num_colors_embedded = sizeof(col_base_embedded)/sizeof(col_base_embedded[0]);
+
+
+    int v_hovered=-1;int h_hovered = -1;ImVec2 hoveredValue(FLT_MAX,FLT_MAX);
+    {
+        const bool mustOverrideColors = (pColorsOverride && numColorsOverride>0);
+        const ImU32* col_base = mustOverrideColors ? pColorsOverride : col_base_embedded;
+        const int num_colors = mustOverrideColors ? numColorsOverride : num_colors_embedded;
+
+        const bool isItemHovered = IsHovered(inner_bb, 0);
+
+        if (!mustOverrideColors) col_base_embedded[0] = GetColorU32(ImGuiCol_PlotLines);
+
+        const bool hasXAxis = yRange.y>=0 && yRange.x<=0;
+        const float xAxisSat = ImSaturate((0.0f - yRange.x) / rangeExtension.y);
+        const float posXAxis = inner_bb.Max.y-inner_bb_extension.y*xAxisSat;
+
+        const bool hasYAxis = xRange.y>=0 && xRange.x<=0;
+        const float yAxisSat = ImSaturate((0.0f-xRange.x) / rangeExtension.x);
+        const float posYAxis = inner_bb.Min.x+inner_bb_extension.x*yAxisSat;
+
+        // Draw additinal horizontal and vertical lines: TODO: Fix this it's wrong
+        if (numGridLinesHint>=1.f)   {
+            ImU32 lineCol = GetColorU32(ImGuiCol_WindowBg);
+            lineCol = (((lineCol>>24)/2)<<24)|(lineCol&0x00FFFFFF);	// Halve alpha
+            const float lineThick = 1.f;
+            float lineSpacing = (rangeExtension.x < rangeExtension.y) ? rangeExtension.x : rangeExtension.y;
+            lineSpacing/=numGridLinesHint;      // We draw 'numGridLinesHint' lines (or so) on the shortest axis
+            lineSpacing = floor(lineSpacing);   // We keep integral delta
+            if (lineSpacing>0)  {
+                float pos=0.f;
+                // Draw horizontal lines:
+                float rangeCoord = floor(yRange.x);if (rangeCoord<yRange.x) rangeCoord+=lineSpacing;
+                while (rangeCoord<=yRange.y) {
+                    pos = inner_bb.Max.y-inner_bb_extension.y*(yRange.y-rangeCoord)/rangeExtension.y;
+                    window->DrawList->AddLine(ImVec2(inner_bb.Min.x,pos),ImVec2(inner_bb.Max.x,pos),lineCol,lineThick);
+                    rangeCoord+=lineSpacing;
+                }
+                // Draw vertical lines:
+                rangeCoord = floor(xRange.x);if (rangeCoord<xRange.x) rangeCoord+=lineSpacing;
+                while (rangeCoord<=xRange.y) {
+                    pos = inner_bb.Max.x-inner_bb_extension.x*(xRange.y-rangeCoord)/rangeExtension.x;
+                    window->DrawList->AddLine(ImVec2(pos,inner_bb.Min.y),ImVec2(pos,inner_bb.Max.y),lineCol,lineThick);
+                    rangeCoord+=lineSpacing;
+                }
+            }
+        }
+
+        const ImU32 axisCol = GetColorU32(ImGuiCol_Text);
+        const float axisThick = 1.f;
+        if (hasXAxis) {
+            // Draw x Axis:
+            window->DrawList->AddLine(ImVec2(inner_bb.Min.x,posXAxis),ImVec2(inner_bb.Max.x,posXAxis),axisCol,axisThick);
+        }
+        if (hasYAxis) {
+            // Draw y Axis:
+            window->DrawList->AddLine(ImVec2(posYAxis,inner_bb.Min.y),ImVec2(posYAxis,inner_bb.Max.y),axisCol,axisThick);
+        }
+
+        float mouseHoverDeltaX = 0.f;float minDistanceValue=FLT_MAX;float hoveredValueXInBBCoords=-1.f;
+        ImU32 curveCol=0;const float curveThick=2.f;
+        ImVec2 pos0(0.f,0.f),pos1(0.f,0.f);
+        float yValue=0.f,lastYValue=0.f;
+        const float t_step_xScale = precisionInPixels*rangeExtension.x/inner_bb_extension.x;
+        const float t1Start = xRange.x+t_step_xScale;
+        const float t1Max = xRange.x + rangeExtension.x;
+        for (int h=0;h<num_curves;h++)  {
+            const int col_num = h%num_colors;
+            curveCol = col_base[col_num];
+            lastYValue = values_getter(data, xRange.x, h);
+            pos0.x = inner_bb.Min.x;
+            pos0.y = inner_bb.Max.y - inner_bb_extension.y*((lastYValue-yRange.x)/rangeExtension.y);
+
+            int v_idx = 0;
+            for (float t1 = t1Start; t1 < t1Max; t1+=t_step_xScale)  {
+                yValue = values_getter(data, t1, h);
+
+                pos1.x = pos0.x+precisionInPixels;
+                pos1.y = inner_bb.Max.y - inner_bb_extension.y*((yValue-yRange.x)/rangeExtension.y);
+
+                if (pos0.y>=inner_bb.Min.y && pos0.y<=inner_bb.Max.y && pos1.y>=inner_bb.Min.y && pos1.y<=inner_bb.Max.y)
+                {
+                    // Draw this curve segment
+                    window->DrawList->AddLine(pos0, pos1,curveCol,curveThick);
+                }
+
+                if (isItemHovered && h==0 && v_hovered==-1 && ImGuiPlotMultiArrayGetterData::IsMouseBetweenXValues(pos0.x,pos1.x,&mouseHoverDeltaX)) {
+                    v_hovered = v_idx;
+                    hoveredValueXInBBCoords = pos0.x+mouseHoverDeltaX;
+                    hoveredValue.x = xRange.x+(hoveredValueXInBBCoords - inner_bb.Min.x)*rangeExtension.x/inner_bb_extension.x;
+
+                }
+
+                if (v_hovered == v_idx) {
+                    const float value = values_getter(data, hoveredValue.x, h);
+                    float deltaYMouseSquared = inner_bb.Min.y + (yRange.y-value)*inner_bb_extension.y/rangeExtension.y - ImGui::GetIO().MousePos.y;
+                    deltaYMouseSquared*=deltaYMouseSquared;
+                    if (deltaYMouseSquared<minDistanceValue) {
+                        minDistanceValue = deltaYMouseSquared;
+
+                        h_hovered = h;
+                        hoveredValue.y = value;
+                    }
+                }
+
+
+                // Mandatory
+                lastYValue = yValue;
+                pos0 = pos1;
+                ++v_idx;
+            }
+        }
+
+
+        if (v_hovered>=0 && h_hovered>=0)   {
+            if (pOptionalHoveredValueOut) *pOptionalHoveredValueOut=hoveredValue;
+            SetTooltip("(%1.4f , %1.4f)", hoveredValue.x, hoveredValue.y); // Tooltip on hover
+
+            const float circleRadius = curveThick*3.f;
+            const float hoveredValueYInBBCoords = inner_bb.Min.y+(yRange.y-hoveredValue.y)*inner_bb_extension.y/rangeExtension.y;
+
+            // We must draw a circle in (hoveredValueXInBBCoords,hoveredValueYInBBCoords)
+            if (hoveredValueYInBBCoords/*-circleRadius*/>=inner_bb.Min.y && hoveredValueYInBBCoords/*+circleRadius*/<=inner_bb.Max.y)
+            {
+                const int col_num = h_hovered%num_colors;
+                curveCol = col_base[col_num];
+
+                window->DrawList->AddCircle(ImVec2(hoveredValueXInBBCoords,hoveredValueYInBBCoords),circleRadius,curveCol,12,curveThick);
+            }
+
+        }
+
+    }
+
+
+
+    // Text overlay
+    if (overlay_text)
+        RenderTextClipped(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FramePadding.y), frame_bb.Max, overlay_text, NULL, NULL, ImVec2(0.5f,0.0f));
+
+    if (label_size.x > 0.0f)
+        RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, inner_bb.Min.y), label);
+
+    return h_hovered;
+}
+
+// End PlotCurve(...)------------------------------------------------------
 
 }   // ImGui namespace
 
