@@ -411,23 +411,6 @@ void ImImpl_FlipTexturesVerticallyOnLoad(bool flag_true_if_should_flip)   {
     stbi_set_flip_vertically_on_load(flag_true_if_should_flip);
 }
 
-ImTextureID ImImpl_LoadTexture(const char* filename, int req_comp, bool useMipmapsIfPossible, bool wraps, bool wrapt)  {
-    int w,h,n;
-    unsigned char* pixels = stbi_load(filename,&w,&h,&n,req_comp);
-    if (!pixels) {
-        fprintf(stderr,"Error: can't load texture: \"%s\".\n",filename);
-        return 0;
-    }
-    if (req_comp>0 && req_comp<=4) n = req_comp;
-
-    ImTextureID texId = NULL;
-    ImImpl_GenerateOrUpdateTexture(texId,w,h,n,pixels,useMipmapsIfPossible,wraps,wrapt);
-
-    stbi_image_free(pixels);
-
-    return texId;
-}
-
 ImTextureID ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory,int filenameInMemorySize,int req_comp,bool useMipmapsIfPossible,bool wraps,bool wrapt)  {
     int w,h,n;
     unsigned char* pixels = stbi_load_from_memory(filenameInMemory,filenameInMemorySize,&w,&h,&n,req_comp);
@@ -442,6 +425,19 @@ ImTextureID ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory,i
 
     stbi_image_free(pixels);
 
+    return texId;
+}
+
+
+ImTextureID ImImpl_LoadTexture(const char* filename, int req_comp, bool useMipmapsIfPossible, bool wraps, bool wrapt)  {
+    // We avoid using stbi_load(...), because we support UTF8 paths under Windows too.
+    int file_size = 0;
+    unsigned char* file = (unsigned char*) ImLoadFileToMemory(filename,"rb",&file_size,0);
+    ImTextureID texId = NULL;
+    if (file)   {
+        texId = ImImpl_LoadTextureFromMemory(file,file_size,req_comp,useMipmapsIfPossible,wraps,wrapt);
+        ImGui::MemFree(file);file=NULL;
+    }
     return texId;
 }
 
