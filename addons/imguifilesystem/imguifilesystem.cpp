@@ -103,7 +103,6 @@ enum Sorting {
 */
 #   endif //(defined(_MSC_VER) && !defined(strcasecmp))
 
-extern FILE* ImFileOpen(const char* filename, const char* mode);
 
 namespace ImGuiFs {
 

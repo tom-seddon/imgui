@@ -17,7 +17,6 @@
 
 // TODO: try to reuse ImDrawList to do the drawing (instead of using vbos)
 
-extern FILE* ImFileOpen(const char* filename, const char* mode);
 
 namespace ImGui {
 

@@ -11,7 +11,6 @@
 #   define snprintf _snprintf
 #endif //(defined(_MSC_VER) && !defined(snprintf))
 
-extern FILE* ImFileOpen(const char* filename, const char* mode);
 
 namespace ImGui	{
 

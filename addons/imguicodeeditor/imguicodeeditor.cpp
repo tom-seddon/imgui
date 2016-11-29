@@ -26,8 +26,6 @@
 
 #define IMGUI_NEW(type)         IM_PLACEMENT_NEW (ImGui::MemAlloc(sizeof(type) ) ) type
 #define IMGUI_DELETE(type, obj) reinterpret_cast<type*>(obj)->~type(), ImGui::MemFree(obj)
-extern FILE* ImFileOpen(const char* filename, const char* mode);
-
 
 namespace ImGui {
 

@@ -21,7 +21,6 @@
 #  endif // alloca
 #endif //NO_IMGUIHELPER_DRAW_METHODS
 
-extern FILE* ImFileOpen(const char* filename, const char* mode);
 
 namespace ImGui {
 
