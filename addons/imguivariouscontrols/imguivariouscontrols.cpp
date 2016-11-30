@@ -1730,7 +1730,7 @@ int PlotHistogram2(const char* label, const float* values,int values_count, int 
     return PlotHistogram(label,pValues,1,values_count,values_offset,overlay_text,scale_min,scale_max,graph_size,stride,0.f,NULL,fillColorGradientDeltaIn0_05,pColorsOverride,numColorsOverride);
 }
 // End PlotHistogram(...) implementation ----------------------------------
-// Start PlotCurve(...)----------------------------------------------------
+// Start PlotCurve(...) implementation ------------------------------------
 int PlotCurve(const char* label, float (*values_getter)(void* data, float x,int numCurve), void* data,int num_curves,const char* overlay_text,const ImVec2 rangeY,const ImVec2 rangeX, ImVec2 graph_size,ImVec2* pOptionalHoveredValueOut,float precisionInPixels,float numGridLinesHint,const ImU32* pColorsOverride,int numColorsOverride)  {
     ImGuiWindow* window = GetCurrentWindow();
     if (pOptionalHoveredValueOut) *pOptionalHoveredValueOut=ImVec2(0,0);    // Not sure how to initialize this...
@@ -1856,15 +1856,14 @@ int PlotCurve(const char* label, float (*values_getter)(void* data, float x,int 
                     v_hovered = v_idx;
                     hoveredValueXInBBCoords = pos0.x+mouseHoverDeltaX;
                     hoveredValue.x = xRange.x+(hoveredValueXInBBCoords - inner_bb.Min.x)*rangeExtension.x/inner_bb_extension.x;
-
                 }
 
                 if (v_hovered == v_idx) {
                     const float value = values_getter(data, hoveredValue.x, h);
-                    float deltaYMouseSquared = inner_bb.Min.y + (yRange.y-value)*inner_bb_extension.y/rangeExtension.y - ImGui::GetIO().MousePos.y;
-                    deltaYMouseSquared*=deltaYMouseSquared;
-                    if (deltaYMouseSquared<minDistanceValue) {
-                        minDistanceValue = deltaYMouseSquared;
+                    float deltaYMouse = inner_bb.Min.y + (yRange.y-value)*inner_bb_extension.y/rangeExtension.y - ImGui::GetIO().MousePos.y;
+                    if (deltaYMouse<0) deltaYMouse=-deltaYMouse;
+                    if (deltaYMouse<minDistanceValue) {
+                        minDistanceValue = deltaYMouse;
 
                         h_hovered = h;
                         hoveredValue.y = value;
@@ -1882,14 +1881,16 @@ int PlotCurve(const char* label, float (*values_getter)(void* data, float x,int 
 
         if (v_hovered>=0 && h_hovered>=0)   {
             if (pOptionalHoveredValueOut) *pOptionalHoveredValueOut=hoveredValue;
-            SetTooltip("(%1.4f , %1.4f)", hoveredValue.x, hoveredValue.y); // Tooltip on hover
+
+	    // Tooltip on hover
+	    if (num_curves==1)	SetTooltip("P (%1.4f , %1.4f)", hoveredValue.x, hoveredValue.y);
+	    else		SetTooltip("P%d (%1.4f , %1.4f)",h_hovered, hoveredValue.x, hoveredValue.y);
 
             const float circleRadius = curveThick*3.f;
             const float hoveredValueYInBBCoords = inner_bb.Min.y+(yRange.y-hoveredValue.y)*inner_bb_extension.y/rangeExtension.y;
 
             // We must draw a circle in (hoveredValueXInBBCoords,hoveredValueYInBBCoords)
-            if (hoveredValueYInBBCoords/*-circleRadius*/>=inner_bb.Min.y && hoveredValueYInBBCoords/*+circleRadius*/<=inner_bb.Max.y)
-            {
+	    if (hoveredValueYInBBCoords>=inner_bb.Min.y && hoveredValueYInBBCoords<=inner_bb.Max.y) {
                 const int col_num = h_hovered%num_colors;
                 curveCol = col_base[col_num];
 
@@ -1911,8 +1912,7 @@ int PlotCurve(const char* label, float (*values_getter)(void* data, float x,int 
 
     return h_hovered;
 }
-
-// End PlotCurve(...)------------------------------------------------------
+// End PlotCurve(...) implementation --------------------------------------
 
 }   // ImGui namespace
 
