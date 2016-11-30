@@ -340,7 +340,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 if (window->AutoFitFramesY > 0)
                     window->SizeFull.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
                 if (!(flags & ImGuiWindowFlags_NoSavedSettings))
-                    MarkSettingsDirty();
+                    MarkIniSettingsDirty();
             }
             window->Size = window->SizeFull;
         }
@@ -406,7 +406,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 {
                     window->PosFloat += g.IO.MouseDelta;
                     if (!(flags & ImGuiWindowFlags_NoSavedSettings))
-                        MarkSettingsDirty();
+                        MarkIniSettingsDirty();
                 }
                 IM_ASSERT(g.MovedWindow != NULL);
                 FocusWindow(g.MovedWindow);
