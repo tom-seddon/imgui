@@ -95,6 +95,11 @@ enum Language {
     LANG_PYTHON,
     LANG_COUNT
 };
+inline static const char** GetLanguageNames()   {
+    static const char* gLanguageNames[LANG_COUNT] = {"LANG_NONE","LANG_CPP","LANG_CS","LANG_GLSL","LANG_LUA","LANG_PYTHON"};
+    return &gLanguageNames[0];
+}
+inline static int GetNumLanguages() {return (int) LANG_COUNT;}
 
 enum FoldingType {
     FOLDING_TYPE_PARENTHESIS = 0,

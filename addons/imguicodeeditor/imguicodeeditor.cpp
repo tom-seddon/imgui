@@ -1160,11 +1160,11 @@ public:
 };
 
 
-
 static ImVectorEx<FoldingStringVector> gFoldingStringVectors;
-static int gFoldingStringVectorIndices[LANG_COUNT] = {-1,-1,-1,-1,-1}; // global variable (values are indices from LANG_ENUM into gFoldingStringVectors)
+static int gFoldingStringVectorIndices[LANG_COUNT] = {-1,-1,-1,-1,-1,-1}; // global variable (values are indices from LANG_ENUM into gFoldingStringVectors)
 static ImString gTotalLanguageExtensionFilter = ""; // SOMETHING LIKE ".cpp;.h;.cs;.py"
 static void InitFoldingStringVectors() {
+    for (int i=0;i<(int)LANG_COUNT;i++) gFoldingStringVectorIndices[i] = -1;    // This is mandatory, because when I add an enum, the compiler somehow does not trigger any error in the declaration of gFoldingStringVectorIndices...
     if (gFoldingStringVectors.size()==0)    {
 	//gFoldingStringVectors.reserve(LANG_COUNT);
         // CPP
@@ -1508,7 +1508,7 @@ static void InitFoldingStringVectors() {
 
         // Assignment:
         gFoldingStringVectors.push_back(foldingStrings);
-        gFoldingStringVectorIndices[LANG_CPP] = gFoldingStringVectors.size()-1;
+        gFoldingStringVectorIndices[LANG_GLSL] = gFoldingStringVectors.size()-1;
         }
         // LUA
         {
