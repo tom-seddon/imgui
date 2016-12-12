@@ -1467,7 +1467,8 @@ void NodeGraphEditor::render()
             ImGui::Separator();
             if (nodeFactoryFunctionPtr) {
                 if (sourceCopyNode && sourceCopyNode->canBeCopied()) {
-                    if (ImGui::MenuItem("Paste##cloneCopySource")) {
+                    AvailableNodeInfo* ni = fetchAvailableNodeInfo(sourceCopyNode->getType());
+                    if ((!ni || ni->maxNumInstances<0 || ni->curNumInstances<ni->maxNumInstances) && ImGui::MenuItem("Paste##cloneCopySource")) {
                         Node* clonedNode = addNode(nodeFactoryFunctionPtr(sourceCopyNode->typeID,scene_pos));
                         clonedNode->fields.copyPDataValuesFrom(sourceCopyNode->fields);
                         clonedNode->onCopied();
@@ -1476,8 +1477,9 @@ void NodeGraphEditor::render()
                 }
                 for (int nt=0,ntSize=getNumAvailableNodeTypes();nt<ntSize;nt++) {
                     ImGui::PushID(nt);
-                    if (ImGui::MenuItem(pNodeTypeNames[availableNodeTypes[nt]])) {
-                        addNode(nodeFactoryFunctionPtr(availableNodeTypes[nt],scene_pos));
+                    AvailableNodeInfo& ni = availableNodesInfo[nt];
+                    if ((ni.maxNumInstances<0 || ni.curNumInstances<ni.maxNumInstances) && ImGui::MenuItem(pNodeTypeNames[ni.type])) {
+                        addNode(ni.type,scene_pos,&ni);
                     }
                     ImGui::PopID();
                 }
@@ -1526,23 +1528,30 @@ void NodeGraphEditor::render()
 }
 
 
-void NodeGraphEditor::registerNodeTypes(const char *nodeTypeNames[], int numNodeTypeNames, NodeFactoryDelegate _nodeFactoryFunctionPtr, const int *pOptionalNodeTypesToUse, int numNodeTypesToUse)
+void NodeGraphEditor::registerNodeTypes(const char *nodeTypeNames[], int numNodeTypeNames, NodeFactoryDelegate _nodeFactoryFunctionPtr, const int *pOptionalNodeTypesToUse, int numNodeTypesToUse, const int* pOptionalMaxNumAllowedInstancesToUse, int numMaxNumAllowedInstancesToUse)
 {
     this->numNodeTypeNames = numNodeTypeNames;
     this->pNodeTypeNames = numNodeTypeNames>0 ? &nodeTypeNames[0] : NULL;
     this->nodeFactoryFunctionPtr = _nodeFactoryFunctionPtr;
-    this->availableNodeTypes.clear();
+    this->availableNodesInfo.clear();
     if (numNodeTypesToUse>numNodeTypeNames) numNodeTypesToUse = numNodeTypeNames;
+    AvailableNodeInfo tmp;
     if (pOptionalNodeTypesToUse && numNodeTypesToUse>0) {
-        this->availableNodeTypes.resize(numNodeTypesToUse);
-        for (int i=0;i<numNodeTypesToUse;i++) this->availableNodeTypes[i] = pOptionalNodeTypesToUse[i];
+        this->availableNodesInfo.reserve(numNodeTypesToUse);
+        for (int i=0;i<numNodeTypesToUse;i++) {
+            tmp = AvailableNodeInfo(pOptionalNodeTypesToUse[i],(numMaxNumAllowedInstancesToUse>i && pOptionalMaxNumAllowedInstancesToUse) ? pOptionalMaxNumAllowedInstancesToUse[i] : -1);
+            this->availableNodesInfo.push_back(tmp);
+        }
     }
     else if (numNodeTypeNames>0)    {
-        this->availableNodeTypes.resize(numNodeTypeNames);
-        for (int i=0;i<numNodeTypeNames;i++) this->availableNodeTypes[i] = i;
+        this->availableNodesInfo.reserve(numNodeTypeNames);
+        for (int i=0;i<numNodeTypeNames;i++) {
+            tmp = AvailableNodeInfo(i,(numMaxNumAllowedInstancesToUse>i && pOptionalMaxNumAllowedInstancesToUse) ? pOptionalMaxNumAllowedInstancesToUse[i] : -1);
+            this->availableNodesInfo.push_back(tmp);
+        }
     }
     // Is it possible to sort "this->availableNodeTypes" based on "this->pNodeTypeNames",
-    // so that it display is elements in alphabetical order ?
+    // so that it display its elements in alphabetical order ?
 }
 
 bool NodeGraphEditor::removeLinkAt(int link_idx) {
@@ -2485,13 +2494,14 @@ enum MyNodeTypes {
     MNT_COMBINE_NODE,
     MNT_COMMENT_NODE,
     MNT_COMPLEX_NODE,
+    MNT_OUTPUT_NODE,
 #   ifdef IMGUI_USE_AUTO_BINDING
     MNT_TEXTURE_NODE,
 #   endif
     MNT_COUNT
 };
 // used in the "add Node" menu (and optionally as node title names)
-static const char* MyNodeTypeNames[MNT_COUNT] = {"Color","Combine","Comment","Complex"
+static const char* MyNodeTypeNames[MNT_COUNT] = {"Color","Combine","Comment","Complex","Output"
 #						ifdef IMGUI_USE_AUTO_BINDING
 						 ,"Texture"
 #						endif
@@ -2706,6 +2716,52 @@ class ComplexNode : public Node {
     inline static ThisClass* Cast(Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
     inline static const ThisClass* Cast(const Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
 };
+class OutputNode : public Node {
+    protected:
+    typedef Node Base;  //Base Class
+    typedef OutputNode ThisClass;
+    OutputNode() : Base() {}
+    static const int TYPE = MNT_OUTPUT_NODE;
+
+    // No field values in this class
+
+    virtual const char* getTooltip() const {return "OutputNode tooltip.";}
+    virtual const char* getInfo() const {return "OutputNode info.\n\nThis is supposed to display some info about this node.";}
+    virtual void getDefaultTitleBarColors(ImU32& defaultTitleTextColorOut,ImU32& defaultTitleBgColorOut,float& defaultTitleBgColorGradientOut) const {
+        // [Optional Override] customize Node Title Colors [default values: 0,0,-1.f => do not override == use default values from the Style()]
+        defaultTitleTextColorOut = IM_COL32(230,180,180,255);defaultTitleBgColorOut = IM_COL32(40,55,55,200);defaultTitleBgColorGradientOut = 0.025f;
+    }
+    virtual bool canBeCopied() const {return false;}
+
+    public:
+
+    // create:
+    static ThisClass* Create(const ImVec2& pos) {
+        // 1) allocation
+        // MANDATORY (NodeGraphEditor::~NodeGraphEditor() will delete these with ImGui::MemFree(...))
+    // MANDATORY even with blank ctrs. Reason: ImVector does not call ctrs/dctrs on items.
+    ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));IM_PLACEMENT_NEW (node) ThisClass();
+
+        // 2) main init
+        node->init("OutputNode",pos,"ch1;ch2;ch3;ch4","",TYPE);
+
+        // 3) init fields ( this uses the node->fields variable; otherwise we should have overridden other virtual methods (to render and serialize) )
+
+        // 4) set (or load) field values
+
+        return node;
+    }
+
+    // casts:
+    inline static ThisClass* Cast(Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
+    inline static const ThisClass* Cast(const Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
+
+    protected:
+    bool render(float /*nodeWidth*/)   {
+        ImGui::Text("There can be a single\ninstance of this class.\nTry and see if it's true!");
+        return false;
+    }
+};
 #ifdef IMGUI_USE_AUTO_BINDING
 class TextureNode : public Node {
     protected:
@@ -2835,6 +2891,7 @@ static Node* MyNodeFactory(int nt,const ImVec2& pos) {
     case MNT_COMBINE_NODE: return CombineNode::Create(pos);
     case MNT_COMMENT_NODE: return CommentNode::Create(pos);
     case MNT_COMPLEX_NODE: return ComplexNode::Create(pos);
+    case MNT_OUTPUT_NODE: return OutputNode::Create(pos);
 #   ifdef IMGUI_USE_AUTO_BINDING
     case MNT_TEXTURE_NODE: return TextureNode::Create(pos);
 #   endif //IMGUI_USE_AUTO_BINDING
@@ -2849,17 +2906,21 @@ void TestNodeGraphEditor()  {
     if (nge.isInited())	{
         // This adds entries to the "add node" context menu
         nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,NULL,-1); // last 2 args can be used to add only a subset of nodes (or to sort their order inside the context menu)
+        nge.registerNodeTypeMaxAllowedInstances(MNT_OUTPUT_NODE,1); // Here we set the max number of allowed instances of the output node (1)
 
         // Optional: starting nodes and links (TODO: load from file instead):-----------
         ImGui::Node* colorNode = nge.addNode(MNT_COLOR_NODE,ImVec2(40,50));
         ImGui::Node* complexNode =  nge.addNode(MNT_COMPLEX_NODE,ImVec2(40,150));
-        ImGui::Node* combineNode =  nge.addNode(MNT_COMBINE_NODE,ImVec2(300,80)); // optionally use e.g.: ImGui::CombineNode::Cast(combineNode)->fraction = 0.8f;
+        ImGui::Node* combineNode =  nge.addNode(MNT_COMBINE_NODE,ImVec2(275,80)); // optionally use e.g.: ImGui::CombineNode::Cast(combineNode)->fraction = 0.8f;
+        ImGui::Node* outputNode =  nge.addNode(MNT_OUTPUT_NODE,ImVec2(520,140));
         //nge.overrideNodeName(combineNode,"CombineNodeCustomName");  // Test only (to remove)
         //nge.overrideNodeInputSlots(combineNode,"in1;in2;in3;in4");  // Test only (to remove)
         //ImU32 bg = IM_COL32(0,128,0,255);nge.overrideNodeTitleBarColors(combineNode,NULL,&bg,NULL);  // Test only (to remove)
         //nge.overrideNodeTitleBarColors(complexNode,NULL,&bg,NULL);  // Test only (to remove)
         nge.addLink(colorNode, 0, combineNode, 0);
         nge.addLink(complexNode, 1, combineNode, 1);
+        nge.addLink(complexNode, 0, outputNode, 1);
+        nge.addLink(combineNode, 0, outputNode, 0);
         //-------------------------------------------------------------------------------
         //nge.load("nodeGraphEditor.nge");
         //-------------------------------------------------------------------------------

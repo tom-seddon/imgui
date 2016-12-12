@@ -356,7 +356,12 @@ struct NodeGraphEditor	{
     const char** pNodeTypeNames; // NOT OWNED! -> Must point to a static reference
     int numNodeTypeNames;
     NodeFactoryDelegate nodeFactoryFunctionPtr;
-    ImVector<int> availableNodeTypes;   // These will appear in the "add node menu"
+
+    struct AvailableNodeInfo {
+        int type,maxNumInstances,curNumInstances;
+        AvailableNodeInfo(int _type=0,int _maxNumInstances=-1,int _curNumInstances=0) : type(_type),maxNumInstances(_maxNumInstances),curNumInstances(_curNumInstances) {}
+    };
+    ImVector<AvailableNodeInfo> availableNodesInfo;   // These will appear in the "add node menu"
 
     enum NodeState {NS_ADDED,NS_DELETED,NS_EDITED};
     typedef void (*NodeCallback)(Node*& node,NodeState state,NodeGraphEditor& editor);
@@ -524,6 +529,7 @@ struct NodeGraphEditor	{
         }
         activeNode = dragNode.node = NULL;
         oldFontWindowScale = 0.f;
+        for (int i=0,isz=availableNodesInfo.size();i<isz;i++) {availableNodesInfo[i].curNumInstances=0;}
     }
 
     bool isInited() const {return !inited;}
@@ -531,15 +537,15 @@ struct NodeGraphEditor	{
     bool isEmpty() const {return nodes.size()==0;}
 
     // nodeTypeNames must point to a block of static memory: it's not owned, nor copied. pOptionalNodeTypesToUse is copied.
-    void registerNodeTypes(const char* nodeTypeNames[],int numNodeTypeNames,NodeFactoryDelegate _nodeFactoryFunctionPtr,const int* pOptionalNodeTypesToUse=NULL,int numNodeTypesToUse=-1);
-    inline int getNumAvailableNodeTypes() const {return availableNodeTypes.size();}
-
-    Node* addNode(int nodeType,const ImVec2& Pos=ImVec2(0,0))  {
-        if (!nodeFactoryFunctionPtr) return NULL;
-        //const float fontWindowScale = oldFontWindowScale==0 ? 1.f : oldFontWindowScale;
-        // Just to say that I've tried all the combinations of Pos, fontWindowScale and scrolling, at it just does not work to adjust Pos to zooming/scrolling.
-        return addNode(nodeFactoryFunctionPtr(nodeType,Pos));
+    void registerNodeTypes(const char* nodeTypeNames[],int numNodeTypeNames,NodeFactoryDelegate _nodeFactoryFunctionPtr,const int* pOptionalNodeTypesToUse=NULL,int numNodeTypesToUse=-1,const int* pOptionalMaxNumAllowedInstancesToUse=NULL, int numMaxNumAllowedInstancesToUse=0);
+    inline int getNumAvailableNodeTypes() const {return availableNodesInfo.size();}
+    bool registerNodeTypeMaxAllowedInstances(int nodeType,int maxAllowedNodeTypeInstances=-1) {
+        AvailableNodeInfo* ni = fetchAvailableNodeInfo(nodeType);
+        if (ni) ni->maxNumInstances = maxAllowedNodeTypeInstances;
+        return (ni);
     }
+
+    Node* addNode(int nodeType,const ImVec2& Pos=ImVec2(0,0))  {return addNode(nodeType,Pos,NULL);}
     bool deleteNode(Node* node) {
         if (node == activeNode)  activeNode = NULL;
         if (node == dragNode.node) dragNode.node = NULL;
@@ -547,6 +553,8 @@ struct NodeGraphEditor	{
         for (int i=0;i<nodes.size();i++)    {
             Node*& n = nodes[i];
             if (n==node)  {
+                AvailableNodeInfo* ni = fetchAvailableNodeInfo(node->getType());
+                if (ni) --(ni->curNumInstances);
                 removeAnyLinkFromNode(n);
                 if (nodeCallback) nodeCallback(n,NS_DELETED,*this);
                 n->~Node();              // ImVector does not call it
@@ -559,6 +567,11 @@ struct NodeGraphEditor	{
         }
         if (!activeNode) findANewActiveNode();
         return false;
+    }
+    int getNumNodeInstances(int nodeType,int* pMaxNumAllowedInstancesForThisNodeType=NULL) const {
+        const AvailableNodeInfo* ni = fetchAvailableNodeInfo(nodeType);
+        if (pMaxNumAllowedInstancesForThisNodeType) *pMaxNumAllowedInstancesForThisNodeType = ni ? ni->maxNumInstances : -1;
+        return ni->curNumInstances;
     }
     bool addLink(Node* inputNode, int input_slot, Node* outputNode, int output_slot,bool checkIfAlreadyPresent = false)	{
         bool insert = true;
@@ -650,6 +663,23 @@ struct NodeGraphEditor	{
     };
     DragNode dragNode;
 
+    inline AvailableNodeInfo* fetchAvailableNodeInfo(int nodeType) {
+        for (int i=0,isz=availableNodesInfo.size();i<isz;i++) {if (availableNodesInfo[i].type==nodeType) return &availableNodesInfo[i];}
+        return NULL;
+    }
+    inline const AvailableNodeInfo* fetchAvailableNodeInfo(int nodeType) const {
+        for (int i=0,isz=availableNodesInfo.size();i<isz;i++) {if (availableNodesInfo[i].type==nodeType) return &availableNodesInfo[i];}
+        return NULL;
+    }
+
+    Node* addNode(int nodeType,const ImVec2& Pos,AvailableNodeInfo* pOptionalNi)  {
+        if (!nodeFactoryFunctionPtr) return NULL;
+        if (!pOptionalNi) pOptionalNi = fetchAvailableNodeInfo(nodeType);
+        if (!pOptionalNi || (pOptionalNi->maxNumInstances>=0 && pOptionalNi->curNumInstances>=pOptionalNi->maxNumInstances)) return NULL;
+        Node* rv = nodeFactoryFunctionPtr(pOptionalNi->type,Pos);
+        if (rv) ++(pOptionalNi->curNumInstances);
+        return addNode(rv);
+    }
     // BEST PRACTICE: always call this method like: Node* node = addNode(ExampleNode::Create(...));
     Node* addNode(Node* justCreatedNode)	{
         if (justCreatedNode) {
