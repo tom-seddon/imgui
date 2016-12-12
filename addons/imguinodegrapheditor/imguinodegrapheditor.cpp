@@ -2449,6 +2449,8 @@ bool NodeGraphEditor::load(ImGuiHelper::Deserializer& d, const char ** pOptional
         IM_ASSERT(n->fields.size()==cbn.numFields); // optional check (to remove)
         amount = n->fields.deserialize(d,amount);        
         addNode(n);
+        AvailableNodeInfo* pOptionalNi = fetchAvailableNodeInfo(n->getType());
+        if (pOptionalNi) ++(pOptionalNi->curNumInstances);
     }
     if (cbs.selectedNodeIndex>=0 && cbs.selectedNodeIndex<nodes.size()) activeNode = nodes[cbs.selectedNodeIndex];
     for (int i=0;i<cbs.numLinks;i++)    {
@@ -2501,10 +2503,11 @@ enum MyNodeTypes {
     MNT_COUNT
 };
 // used in the "add Node" menu (and optionally as node title names)
-static const char* MyNodeTypeNames[MNT_COUNT] = {"Color","Combine","Comment","Complex","Output"
+static const char* MyNodeTypeNames[MNT_COUNT] = {"Color","Combine","Comment","Complex"
 #						ifdef IMGUI_USE_AUTO_BINDING
 						 ,"Texture"
 #						endif
+                        ,"Output"
 						};
 class ColorNode : public Node {
     protected:
