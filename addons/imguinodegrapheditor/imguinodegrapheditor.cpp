@@ -812,7 +812,10 @@ void NodeGraphEditor::render()
         ImGui::BeginGroup(); // Lock horizontal position
         ImGui::SetNextTreeNodeOpen(node->isOpen,ImGuiSetCond_Always);
 
-        ImVec4 titleTextColor = node->overrideTitleTextColor ? ImGui::ColorConvertU32ToFloat4(node->overrideTitleTextColor) : style.color_node_title;
+        ImU32 titleTextColorU32 = 0, titleBgColorU32 = 0;float titleBgGradient = -1.f;
+        node->getDefaultTitleBarColors(titleTextColorU32,titleBgColorU32,titleBgGradient);
+
+        ImVec4 titleTextColor = node->overrideTitleTextColor ? ImGui::ColorConvertU32ToFloat4(node->overrideTitleTextColor) : titleTextColorU32 ? ImGui::ColorConvertU32ToFloat4(titleTextColorU32) : style.color_node_title;
         if (titleTextColor.w==0.f) titleTextColor = defaultTextColor;
         ImGui::PushStyleColor(ImGuiCol_Text,titleTextColor);    // titleTextColor (these 3 lines can be moved down to leave the TreeNode triangle always 'defaultTextColor')
 
@@ -1043,11 +1046,11 @@ void NodeGraphEditor::render()
         draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, style.node_rounding); // Bg
 
         // Node Title Bg Color
-        const ImU32 nodeTitleBgColor = node->overrideTitleBgColor ? node->overrideTitleBgColor : style.color_node_title_background;
+        const ImU32 nodeTitleBgColor = node->overrideTitleBgColor ? node->overrideTitleBgColor : titleBgColorU32 ? titleBgColorU32 : style.color_node_title_background;
         if ((nodeTitleBgColor&IM_COL32_A_MASK)!=0) {
 //#           define SKIP_VERTICAL_GRADIENT
 #           ifndef SKIP_VERTICAL_GRADIENT
-            float fillGradientFactor = node->overrideTitleBgColorGradient>=0.f ? node->overrideTitleBgColorGradient : style.color_node_title_background_gradient;//0.15f;
+            float fillGradientFactor = node->overrideTitleBgColorGradient>=0.f ? node->overrideTitleBgColorGradient : titleBgGradient>=0.f ? titleBgGradient : style.color_node_title_background_gradient;//0.15f;
             if (node->isSelected) fillGradientFactor = -fillGradientFactor; // or if (node==activeNode)
             if (fillGradientFactor!=0.f)    {
                 if (node->isOpen) ImGui::NGE_Draw::ImDrawListAddRectWithVerticalGradient(draw_list,node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor,fillGradientFactor,IM_COL32_BLACK_TRANS,style.node_rounding,1|2);
@@ -2514,6 +2517,10 @@ class ColorNode : public Node {
 
     virtual const char* getTooltip() const {return "ColorNode tooltip.";}
     virtual const char* getInfo() const {return "ColorNode info.\n\nThis is supposed to display some info about this node.";}
+    /*virtual void getDefaultTitleBarColors(ImU32& defaultTitleTextColorOut,ImU32& defaultTitleBgColorOut,float& defaultTitleBgColorGradientOut) const {
+        // [Optional Override] customize Node Title Colors [default values: 0,0,-1.f => do not override == use default values from the Style()]
+        defaultTitleTextColorOut = IM_COL32(220,220,220,255);defaultTitleBgColorOut = IM_COL32(0,75,0,255);defaultTitleBgColorGradientOut = -1.f;
+    }*/
 
     public:
 
@@ -2533,11 +2540,9 @@ class ColorNode : public Node {
         // 4) set (or load) field values
         node->Color = ImColor(255,255,0,255);
 
-        // [Optional] customize Node Title Colors [default values: 0,0,-1.f => do not override == use default values from the Style()]
-        //node->overrideTitleTextColor = IM_COL32(220,220,220,255);node->overrideTitleBgColor = IM_COL32(0,75,0,255);node->overrideTitleBgColorGradient = -1.f;
-
         return node;
     }
+
 
     // casts:
     inline static ThisClass* Cast(Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
@@ -2554,6 +2559,10 @@ class CombineNode : public Node {
 
     virtual const char* getTooltip() const {return "CombineNode tooltip.";}
     virtual const char* getInfo() const {return "CombineNode info.\n\nThis is supposed to display some info about this node.";}
+    /*virtual void getDefaultTitleBarColors(ImU32& defaultTitleTextColorOut,ImU32& defaultTitleBgColorOut,float& defaultTitleBgColorGradientOut) const {
+        // [Optional Override] customize Node Title Colors [default values: 0,0,-1.f => do not override == use default values from the Style()]
+        defaultTitleTextColorOut = IM_COL32(220,220,220,255);defaultTitleBgColorOut = IM_COL32(0,75,0,255);defaultTitleBgColorGradientOut = -1.f;
+    }*/
 
     public:
 
@@ -2572,9 +2581,6 @@ class CombineNode : public Node {
 
         // 4) set (or load) field values
         node->fraction = 0.5f;
-
-        // [Optional] customize Node Title Colors [default values: 0,0,-1.0f => do not override do not override == use default values from the Style()]
-        //node->overrideTitleTextColor = IM_COL32(220,220,220,255);node->overrideTitleBgColor = IM_COL32(0,75,0,255);node->overrideTitleBgColorGradient = -1.f;
 
         return node;
     }
@@ -2601,6 +2607,10 @@ class CommentNode : public Node {
 
     virtual const char* getTooltip() const {return "CommentNode tooltip.";}
     virtual const char* getInfo() const {return "CommentNode info.\n\nThis is supposed to display some info about this node.";}
+    /*virtual void getDefaultTitleBarColors(ImU32& defaultTitleTextColorOut,ImU32& defaultTitleBgColorOut,float& defaultTitleBgColorGradientOut) const {
+        // [Optional Override] customize Node Title Colors [default values: 0,0,-1.f => do not override == use default values from the Style()]
+        defaultTitleTextColorOut = IM_COL32(220,220,220,255);defaultTitleBgColorOut = IM_COL32(0,75,0,255);defaultTitleBgColorGradientOut = -1.f;
+    }*/
 
     public:
 
@@ -2632,10 +2642,6 @@ class CommentNode : public Node {
 	strncpy(node->comment4,txtWrapped,TextBufferSize);
 	node->flag = true;
 
-    // [Optional] customize Node Title Colors [default values: 0,0,-1.0f => do not override do not override == use default values from the Style()]
-    //node->overrideTitleTextColor = IM_COL32(220,220,220,255);node->overrideTitleBgColor = IM_COL32(0,75,0,255);node->overrideTitleBgColorGradient = -1.f;
-
-
 	return node;
     }
 
@@ -2666,6 +2672,10 @@ class ComplexNode : public Node {
 
     virtual const char* getTooltip() const {return "ComplexNode tooltip.";}
     virtual const char* getInfo() const {return "ComplexNode info.\n\nThis is supposed to display some info about this node.";}
+    virtual void getDefaultTitleBarColors(ImU32& defaultTitleTextColorOut,ImU32& defaultTitleBgColorOut,float& defaultTitleBgColorGradientOut) const {
+        // [Optional Override] customize Node Title Colors [default values: 0,0,-1.f => do not override == use default values from the Style()]
+        defaultTitleTextColorOut = IM_COL32(220,220,220,255);defaultTitleBgColorOut = IM_COL32(125,35,0,255);defaultTitleBgColorGradientOut = -1.f;
+    }
 
     public:
 
@@ -2688,10 +2698,6 @@ class ComplexNode : public Node {
         node->Value[0] = 0;node->Value[1] = 3.14f; node->Value[2] = 4.68f;
         node->Color = ImColor(126,200,124,230);
         node->enumIndex = 1;
-
-        // [Optional] customize Node Title Colors [default values: 0,0,-1.0f => do not override do not override == use default values from the Style()]
-        node->overrideTitleTextColor = IM_COL32(220,220,220,255);node->overrideTitleBgColor = IM_COL32(125,35,0,255);node->overrideTitleBgColorGradient = -1.f;
-
 
         return node;
     }
@@ -2725,6 +2731,10 @@ class TextureNode : public Node {
 
     virtual const char* getTooltip() const {return "TextureNode tooltip.";}
     virtual const char* getInfo() const {return "TextureNode info.\n\nThis is supposed to display some info about this node.";}
+    virtual void getDefaultTitleBarColors(ImU32& defaultTitleTextColorOut,ImU32& defaultTitleBgColorOut,float& defaultTitleBgColorGradientOut) const {
+        // [Optional Override] customize Node Title Colors [default values: 0,0,-1.f => do not override == use default values from the Style()]
+        defaultTitleTextColorOut = IM_COL32(220,220,220,255);defaultTitleBgColorOut = IM_COL32(105,105,0,255);defaultTitleBgColorGradientOut = -1.f;
+    }
 
     public:
 
@@ -2753,10 +2763,6 @@ class TextureNode : public Node {
 	// 4) set (or load) field values
 	node->textureID = 0;
 	node->imagePath[0] = node->lastValidImagePath[0] = '\0';
-
-    // [Optional] customize Node Title Colors [default values: 0,0,-1.0f => do not override do not override == use default values from the Style()]
-    node->overrideTitleTextColor = IM_COL32(220,220,220,255);node->overrideTitleBgColor = IM_COL32(105,105,0,255);node->overrideTitleBgColorGradient = -1.f;
-
 
 	return node;
     }

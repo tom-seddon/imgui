@@ -2994,6 +2994,47 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
 
 }
 
+template <int NUM_TOKENS> inline static const char* FindPrevToken(const char* text,const char* text_end,const char* token_start[NUM_TOKENS],const char* token_end[NUM_TOKENS],int* pTokenIndexOut=NULL,const char* optionalStringDelimiters=NULL,const char stringEscapeChar='\\',bool skipEscapeChar=false,bool findNewLineCharToo=false) {
+    if (pTokenIndexOut) *pTokenIndexOut=-1;
+    const char *pt,*t,*tks,*tke;
+    int optionalStringDelimitersSize = optionalStringDelimiters ? strlen(optionalStringDelimiters) : -1;
+    for (const char* p = text_end;p!=text;--p)  {
+        if (token_start)    {
+            for (int j=0;j<NUM_TOKENS;j++)  {
+                tks = token_start[j];
+                tke = token_end[j];
+                t = tke;
+                pt = p;
+                while (*(--t)==*(--pt)) {
+                    if (t==tks) {
+                        if (pTokenIndexOut) *pTokenIndexOut=j;
+                        return p;
+                    }
+                }
+                //fprintf(stderr,"%d) \"%s\"\n",j,tks);
+            }
+        }
+        if (optionalStringDelimiters)	{
+            for (int j=0;j<optionalStringDelimitersSize;j++)	{
+                if (*(p-1) == optionalStringDelimiters[j])	{
+                    if (skipEscapeChar || (p-1) == text || *(p-2)!=stringEscapeChar) {
+                        if (pTokenIndexOut) *pTokenIndexOut=NUM_TOKENS + j;
+                        return p;
+                    }
+                }
+            }
+        }
+        if (findNewLineCharToo) {
+            if (*(p-1)=='\n') {
+                if (skipEscapeChar || (p-1) == text || *(p-2)!=stringEscapeChar) {
+                    if (pTokenIndexOut) *pTokenIndexOut=NUM_TOKENS + optionalStringDelimitersSize;
+                    return p;
+                }
+            }
+        }
+    }
+    return NULL;
+}
 
 
 
@@ -3673,7 +3714,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             else if (is_editable)
             {
                 const bool matchTabsInPreviousLine = true;  // if we want to match tabs from the previous line after this block...
-                int numTabs = 0;
+		int numTabs = 0;
                 if (matchTabsInPreviousLine) {
                     int prevLineStart = edit_state.StbState.cursor;
                     while (--prevLineStart>0) {
@@ -4011,20 +4052,25 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         while (lineStart)    {
             nextLineStart=strchr(lineStart,'\n');
             if (numLines>=firstVisibleLineNumber && numLines<=lastVisibleLineNumber) {
-                if (numLines==firstVisibleLineNumber)   {
-                    // The line below is costly [but could be cached until the first visible line changes... (ATM I have no storage struct except "buf")]
-                    const bool correctlyCheckIfTheFirstVisibleLineIsInAMultilineComment = //true;
-                    canModifyText;  // "true" only when cursor is active (= the field is focused)
-                    if (correctlyCheckIfTheFirstVisibleLineIsInAMultilineComment)  {
-                        // we must set langData.pendingOpenMultilineComment, because the first visible line can be inside a multiline comment
+		if (numLines==firstVisibleLineNumber)   {
+		    // we must set langData.pendingOpenMultilineComment, because the first visible line can be inside a multiline comment
+		    // The correct code to set it is costly [but could be cached until the first visible line changes... (ATM I have no storage struct except "buf")]
 
-                        const char *nextToken=buf;int tokenIndexOut = -1;
-                        const char* startComments[3] = {langData.startComments[0],langData.startComments[1],langData.startComments[2]};
-                        const char* endComments[3] = {langData.endComments[0],langData.endComments[1],langData.endComments[2]};
-                        const int numStringDelimitersChars = langData.stringDelimiterChars ? strlen(langData.stringDelimiterChars) : 0;
+		    // We''l use two code paths: one more accurate than the other:
+            const bool correctlyCheckIfTheFirstVisibleLineIsInAMultilineComment = numLines<=200 &&
+		    canModifyText;  // "true" only when cursor is active (= the field is focused)
 
-                        langData.pendingOpenMultilineComment = false;
-                        bool isInStringDelimiters = false;
+		    int tokenIndexOut = -1;
+		    const char* startComments[3] = {langData.startComments[0],langData.startComments[1],langData.startComments[2]};
+		    const char* endComments[3] = {langData.endComments[0],langData.endComments[1],langData.endComments[2]};
+		    langData.pendingOpenMultilineComment = false;
+
+		    if (correctlyCheckIfTheFirstVisibleLineIsInAMultilineComment && startComments[0] && startComments[1])  {
+			// More accurate version:
+			const char *nextToken=buf;
+			const int numStringDelimitersChars = langData.stringDelimiterChars ? strlen(langData.stringDelimiterChars) : 0;
+
+			bool isInStringDelimiters = false;
                         bool waitForEndLine = false;
                         while (
                                (nextToken = ImGuiCe::FindNextToken<3>(nextToken,lineStart,startComments,endComments,&tokenIndexOut,langData.stringDelimiterChars,langData.stringEscapeChar,false,true))
@@ -4048,6 +4094,13 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
                         }
                     }
+		    else if (startComments[1]) {
+			// Cheaper alternative:
+			if (nextLineStart!=buf) {
+			    // Not perfect because it does not check if multiline comments are inside single-line comments or strings, but it should work in most cases.
+			    if (ImGuiCe::FindPrevToken<2>(buf,nextLineStart,&startComments[1],&endComments[1],&tokenIndexOut,langData.stringDelimiterChars,langData.stringEscapeChar,false,false) && tokenIndexOut==0) langData.pendingOpenMultilineComment = true;
+			}
+		    }
                 }
                 if (render_scroll.x!=0) ImGui::SetCursorPosX(render_pos.x - render_scroll.x - draw_window->Pos.x);
                 if (!nextLineStart) {

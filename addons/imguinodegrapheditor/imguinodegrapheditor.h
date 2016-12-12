@@ -266,6 +266,12 @@ class Node
     virtual void onCopied() {}  // called after the node fileds has been copied from another node
     virtual void onLoaded() {}  // called after the node has been loaded (=deserialized from file)
     virtual bool canBeCopied() const {return true;}
+    // called on a class basis to set the default colors different from the ones defined in NodeGraphEditor::GetStyle()
+    // [but on an instance basis these colors can still be overridden using the protected fields defined below, or better NodeGraphEditor::overrideNodeTitleBarColors(...)]
+    virtual void getDefaultTitleBarColors(ImU32& defaultTitleTextColorOut,ImU32& defaultTitleBgColorOut,float& defaultTitleBgColorGradientOut) const {
+            defaultTitleTextColorOut = defaultTitleBgColorOut = 0;  // 0 -> use values defined in NodeGraphEditor::GetStyle()
+            defaultTitleBgColorGradientOut = -1;                    // -1 -> use value defined in NodeGraphEditor::GetStyle()
+    }
 
     // some constants
 #   ifndef IMGUINODE_MAX_NAME_LENGTH

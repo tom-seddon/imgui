@@ -39,7 +39,7 @@ cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../.
 # TODO: Add the last command-line for SDL2
 
 P.S. currently GLEW is required to compile all the Windows bindings except Direct3D9.
-Now GLEW can be optionally replaced by GLAD or by GL3W. The latter is already present in the repository,
+UPDATE: Now GLEW can be optionally replaced by GLAD or by GL3W. The latter is already present in the repository,
 so that we have another Windows binding that should work without additional libraries.
 
 ====================================
@@ -161,6 +161,7 @@ IMIMPL_SHADER_GL3  				# shader uses openGL 3.3 (glsl #version 330)
 IMIMPL_SHADER_GLES 				# shader uses gles (and if IMIMPL_SHADER_GL3 is defined glsl #version 300 es)
 IMGUI_USE_GLEW     				# inits the glew library (needs -lGLEW). This definition might be mandatory for IMGUI_USE_WINAPI_BINDING. Tip: the glew library provides a static library alternative that can be used by defining GLEW_STATIC at the project level (see the glew docs for further info).
 IMGUI_USE_GLAD     				# (experimental) inits the glad library (needs glad.c). Intended to be used as a possible ALTERNATIVE to IMGUI_USE_GLEW.
+IMGUI_USE_GL3W     				# (experimental) inits the gl3w library (needs gl3w.c). Intended to be used as a possible ALTERNATIVE to IMGUI_USE_GLEW and IMGUI_USE_GLAD.
 IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK		# use this if you are using IMGUI_USE_GLUT_BINDING and mouse wheel does not work.
 
 IMGUIBINDINGS_RESTORE_GL_STATE			# restores the glViewport (and most of other GL state settings) after the call to ImGui::Render().
