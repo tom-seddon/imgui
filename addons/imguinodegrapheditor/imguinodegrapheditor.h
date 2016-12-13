@@ -351,6 +351,7 @@ struct NodeGraphEditor	{
     //bool isAContextMenuOpen;            // to fix a bug
     float oldFontWindowScale;           // to fix zooming (CTRL+mouseWheel)    
     float maxConnectorNameWidth;        //used to enlarge node culling space to include connector names
+    int nodeListFilterComboIndex;
 
     // Node types here are supposed to be zero-based and contiguous
     const char** pNodeTypeNames; // NOT OWNED! -> Must point to a static reference
@@ -499,6 +500,7 @@ struct NodeGraphEditor	{
         oldFontWindowScale = 0.f;
         nodesBaseWidth = 120.f;
         maxConnectorNameWidth = 0;
+        nodeListFilterComboIndex = 0;
     }
     virtual ~NodeGraphEditor() {
         clear();
@@ -530,6 +532,7 @@ struct NodeGraphEditor	{
         activeNode = dragNode.node = NULL;
         oldFontWindowScale = 0.f;
         for (int i=0,isz=availableNodesInfo.size();i<isz;i++) {availableNodesInfo[i].curNumInstances=0;}
+        nodeListFilterComboIndex = 0;
     }
 
     bool isInited() const {return !inited;}

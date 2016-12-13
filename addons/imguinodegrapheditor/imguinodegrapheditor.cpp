@@ -451,8 +451,25 @@ void NodeGraphEditor::render()
         ImGui::Separator();
     if (ImGui::CollapsingHeader("Node List##node_list_1",NULL,false))   {
         ImGui::Separator();
+        typedef struct _MyDummyStuff {
+            const char** pNodeTypeNames;
+            int numNodeTypeNames;
+            _MyDummyStuff(const char** _pNodeTypeNames,int _numNodeTypeNames) : pNodeTypeNames(_pNodeTypeNames),numNodeTypeNames(_numNodeTypeNames){}
+            static bool item_getter(void* pmds,int idx,const char** pOut) {
+                const _MyDummyStuff& mds = * ((const _MyDummyStuff*) pmds);
+                if (idx<0 || idx>mds.numNodeTypeNames) return false;
+                static const char ZeroName[] = "ALL";
+                *pOut = idx==0 ? ZeroName : mds.pNodeTypeNames[idx-1];
+                return true;
+            }
+        } MyDummyStuff;
+        MyDummyStuff mds(pNodeTypeNames,numNodeTypeNames);
+        ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.5f);
+        ImGui::Combo("Type Filter",&nodeListFilterComboIndex,&MyDummyStuff::item_getter,&mds,numNodeTypeNames+1,numNodeTypeNames+1);
+        ImGui::PopItemWidth();
         for (int node_idx = 0; node_idx < nodes.Size; node_idx++)   {
         Node* node = nodes[node_idx];
+        if (nodeListFilterComboIndex>0 && node->getType()!=nodeListFilterComboIndex-1) continue;
         ImGui::PushID((const void*) node);
         if (ImGui::Selectable(node->Name, node->isSelected)) {
             if (!node->isSelected || !io.KeyCtrl)  {
