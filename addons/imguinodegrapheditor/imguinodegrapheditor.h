@@ -577,6 +577,7 @@ struct NodeGraphEditor	{
         return ni->curNumInstances;
     }
     bool addLink(Node* inputNode, int input_slot, Node* outputNode, int output_slot,bool checkIfAlreadyPresent = false)	{
+        if (!inputNode || !outputNode) return false;
         bool insert = true;
         if (checkIfAlreadyPresent) insert = !isLinkPresent(inputNode,input_slot,outputNode,output_slot);
         if (insert) {

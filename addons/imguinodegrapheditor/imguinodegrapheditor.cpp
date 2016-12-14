@@ -454,22 +454,28 @@ void NodeGraphEditor::render()
         typedef struct _MyDummyStuff {
             const char** pNodeTypeNames;
             int numNodeTypeNames;
-            _MyDummyStuff(const char** _pNodeTypeNames,int _numNodeTypeNames) : pNodeTypeNames(_pNodeTypeNames),numNodeTypeNames(_numNodeTypeNames){}
+            const ImVector<AvailableNodeInfo>& availableNodesInfo;
+            ImVector<int> availableNodeTypeMap; // This is the inverse of the vector above
+            _MyDummyStuff(const char** _pNodeTypeNames,int _numNodeTypeNames,const ImVector<AvailableNodeInfo>& _availableNodesInfo) : pNodeTypeNames(_pNodeTypeNames),numNodeTypeNames(_numNodeTypeNames),availableNodesInfo(_availableNodesInfo){
+                availableNodeTypeMap.resize(numNodeTypeNames);for (int i=0;i<numNodeTypeNames;i++) availableNodeTypeMap[i] = -1;
+                for (int i=0,isz=availableNodesInfo.size();i<isz;i++) {availableNodeTypeMap[availableNodesInfo[i].type]=i;}
+            }
             static bool item_getter(void* pmds,int idx,const char** pOut) {
                 const _MyDummyStuff& mds = * ((const _MyDummyStuff*) pmds);
                 if (idx<0 || idx>mds.numNodeTypeNames) return false;
                 static const char ZeroName[] = "ALL";
-                *pOut = idx==0 ? ZeroName : mds.pNodeTypeNames[idx-1];
+                *pOut = idx==0 ? ZeroName : mds.pNodeTypeNames[mds.availableNodesInfo[idx-1].type];
                 return true;
             }
         } MyDummyStuff;
-        MyDummyStuff mds(pNodeTypeNames,numNodeTypeNames);
+        MyDummyStuff mds(pNodeTypeNames,numNodeTypeNames,availableNodesInfo);
         ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.5f);
-        ImGui::Combo("Type Filter",&nodeListFilterComboIndex,&MyDummyStuff::item_getter,&mds,numNodeTypeNames+1,numNodeTypeNames+1);
+        const int numEntriesInNodeListFilterCombo = availableNodesInfo.size()+1;
+        ImGui::Combo("Type Filter",&nodeListFilterComboIndex,&MyDummyStuff::item_getter,&mds,numEntriesInNodeListFilterCombo,numEntriesInNodeListFilterCombo<25 ? numEntriesInNodeListFilterCombo : 25);
         ImGui::PopItemWidth();
         for (int node_idx = 0; node_idx < nodes.Size; node_idx++)   {
         Node* node = nodes[node_idx];
-        if (nodeListFilterComboIndex>0 && node->getType()!=nodeListFilterComboIndex-1) continue;
+        if (nodeListFilterComboIndex>0 && mds.availableNodeTypeMap[node->getType()]!=nodeListFilterComboIndex-1) continue;
         ImGui::PushID((const void*) node);
         if (ImGui::Selectable(node->Name, node->isSelected)) {
             if (!node->isSelected || !io.KeyCtrl)  {
@@ -2516,7 +2522,7 @@ enum MyNodeTypes {
 #   ifdef IMGUI_USE_AUTO_BINDING
     MNT_TEXTURE_NODE,
 #   endif
-    MNT_OUTPUT_NODE = 5,    // One problem here when adding new values is backward compatibility with old saved files: they rely on the previously used int values (it should be OK only if we append new values at the end).
+    MNT_OUTPUT_NODE,    // One problem here when adding new values is backward compatibility with old saved files: they rely on the previously used int values (it should be OK only if we append new values at the end).
     MNT_COUNT
 };
 // used in the "add Node" menu (and optionally as node title names)
@@ -2736,52 +2742,6 @@ class ComplexNode : public Node {
     inline static ThisClass* Cast(Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
     inline static const ThisClass* Cast(const Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
 };
-class OutputNode : public Node {
-    protected:
-    typedef Node Base;  //Base Class
-    typedef OutputNode ThisClass;
-    OutputNode() : Base() {}
-    static const int TYPE = MNT_OUTPUT_NODE;
-
-    // No field values in this class
-
-    virtual const char* getTooltip() const {return "OutputNode tooltip.";}
-    virtual const char* getInfo() const {return "OutputNode info.\n\nThis is supposed to display some info about this node.";}
-    virtual void getDefaultTitleBarColors(ImU32& defaultTitleTextColorOut,ImU32& defaultTitleBgColorOut,float& defaultTitleBgColorGradientOut) const {
-        // [Optional Override] customize Node Title Colors [default values: 0,0,-1.f => do not override == use default values from the Style()]
-        defaultTitleTextColorOut = IM_COL32(230,180,180,255);defaultTitleBgColorOut = IM_COL32(40,55,55,200);defaultTitleBgColorGradientOut = 0.025f;
-    }
-    virtual bool canBeCopied() const {return false;}
-
-    public:
-
-    // create:
-    static ThisClass* Create(const ImVec2& pos) {
-        // 1) allocation
-        // MANDATORY (NodeGraphEditor::~NodeGraphEditor() will delete these with ImGui::MemFree(...))
-    // MANDATORY even with blank ctrs. Reason: ImVector does not call ctrs/dctrs on items.
-    ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));IM_PLACEMENT_NEW (node) ThisClass();
-
-        // 2) main init
-        node->init("OutputNode",pos,"ch1;ch2;ch3;ch4","",TYPE);
-
-        // 3) init fields ( this uses the node->fields variable; otherwise we should have overridden other virtual methods (to render and serialize) )
-
-        // 4) set (or load) field values
-
-        return node;
-    }
-
-    // casts:
-    inline static ThisClass* Cast(Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
-    inline static const ThisClass* Cast(const Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
-
-    protected:
-    bool render(float /*nodeWidth*/)   {
-        ImGui::Text("There can be a single\ninstance of this class.\nTry and see if it's true!");
-        return false;
-    }
-};
 #ifdef IMGUI_USE_AUTO_BINDING
 class TextureNode : public Node {
     protected:
@@ -2905,6 +2865,53 @@ class TextureNode : public Node {
 
 };
 #endif //IMGUI_USE_AUTO_BINDING
+class OutputNode : public Node {
+    protected:
+    typedef Node Base;  //Base Class
+    typedef OutputNode ThisClass;
+    OutputNode() : Base() {}
+    static const int TYPE = MNT_OUTPUT_NODE;
+
+    // No field values in this class
+
+    virtual const char* getTooltip() const {return "OutputNode tooltip.";}
+    virtual const char* getInfo() const {return "OutputNode info.\n\nThis is supposed to display some info about this node.";}
+    virtual void getDefaultTitleBarColors(ImU32& defaultTitleTextColorOut,ImU32& defaultTitleBgColorOut,float& defaultTitleBgColorGradientOut) const {
+        // [Optional Override] customize Node Title Colors [default values: 0,0,-1.f => do not override == use default values from the Style()]
+        defaultTitleTextColorOut = IM_COL32(230,180,180,255);defaultTitleBgColorOut = IM_COL32(40,55,55,200);defaultTitleBgColorGradientOut = 0.025f;
+    }
+    virtual bool canBeCopied() const {return false;}
+
+    public:
+
+    // create:
+    static ThisClass* Create(const ImVec2& pos) {
+        // 1) allocation
+        // MANDATORY (NodeGraphEditor::~NodeGraphEditor() will delete these with ImGui::MemFree(...))
+    // MANDATORY even with blank ctrs. Reason: ImVector does not call ctrs/dctrs on items.
+    ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));IM_PLACEMENT_NEW (node) ThisClass();
+
+        // 2) main init
+        node->init("OutputNode",pos,"ch1;ch2;ch3;ch4","",TYPE);
+
+        // 3) init fields ( this uses the node->fields variable; otherwise we should have overridden other virtual methods (to render and serialize) )
+
+        // 4) set (or load) field values
+
+        return node;
+    }
+
+    // casts:
+    inline static ThisClass* Cast(Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
+    inline static const ThisClass* Cast(const Node* n) {return Node::Cast<ThisClass>(n,TYPE);}
+
+    protected:
+    bool render(float /*nodeWidth*/)   {
+        ImGui::Text("There can be a single\ninstance of this class.\nTry and see if it's true!");
+        return false;
+    }
+};
+
 static Node* MyNodeFactory(int nt,const ImVec2& pos) {
     switch (nt) {
     case MNT_COLOR_NODE: return ColorNode::Create(pos);
@@ -2926,6 +2933,9 @@ void TestNodeGraphEditor()  {
     if (nge.isInited())	{
         // This adds entries to the "add node" context menu
         nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,NULL,-1); // last 2 args can be used to add only a subset of nodes (or to sort their order inside the context menu)
+        // The line above can be replaced by the following two lines, if we want to use only an active subset of the available node types:
+        //const int optionalNodeTypesToUse[] = {MNT_COMPLEX_NODE,MNT_COMMENT_NODE,MNT_OUTPUT_NODE};
+        //nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,optionalNodeTypesToUse,sizeof(optionalNodeTypesToUse)/sizeof(optionalNodeTypesToUse[0]));
         nge.registerNodeTypeMaxAllowedInstances(MNT_OUTPUT_NODE,1); // Here we set the max number of allowed instances of the output node (1)
 
         // Optional: starting nodes and links (TODO: load from file instead):-----------
@@ -2933,16 +2943,18 @@ void TestNodeGraphEditor()  {
         ImGui::Node* complexNode =  nge.addNode(MNT_COMPLEX_NODE,ImVec2(40,150));
         ImGui::Node* combineNode =  nge.addNode(MNT_COMBINE_NODE,ImVec2(275,80)); // optionally use e.g.: ImGui::CombineNode::Cast(combineNode)->fraction = 0.8f;
         ImGui::Node* outputNode =  nge.addNode(MNT_OUTPUT_NODE,ImVec2(520,140));
+        // Return values can be NULL (if node types are not registered of their instance limit has been already reached).
         //nge.overrideNodeName(combineNode,"CombineNodeCustomName");  // Test only (to remove)
         //nge.overrideNodeInputSlots(combineNode,"in1;in2;in3;in4");  // Test only (to remove)
         //ImU32 bg = IM_COL32(0,128,0,255);nge.overrideNodeTitleBarColors(combineNode,NULL,&bg,NULL);  // Test only (to remove)
         //nge.overrideNodeTitleBarColors(complexNode,NULL,&bg,NULL);  // Test only (to remove)
+        // addLink(...) should be robust enough to handle NULL nodes, so we don't check it.
         nge.addLink(colorNode, 0, combineNode, 0);
         nge.addLink(complexNode, 1, combineNode, 1);
         nge.addLink(complexNode, 0, outputNode, 1);
         nge.addLink(combineNode, 0, outputNode, 0);
         //-------------------------------------------------------------------------------
-        //nge.load("nodeGraphEditor.nge");
+        //nge.load("nodeGraphEditor.nge");  // Please note than if the saved graph has nodes out of our active subset, they will be displayed as usual (it's not clear what should be done in this case: hope that's good enough, it's a user's mistake).
         //-------------------------------------------------------------------------------
         nge.show_style_editor = true;
         nge.show_load_save_buttons = true;
