@@ -354,7 +354,7 @@ struct NodeGraphEditor	{
     int nodeListFilterComboIndex;
 
     // Node types here are supposed to be zero-based and contiguous
-    const char** pNodeTypeNames; // NOT OWNED! -> Must point to a static reference
+    const char** pNodeTypeNames; // NOT OWNED! -> Must point to a static reference. Must contain ALL node names.
     int numNodeTypeNames;
     NodeFactoryDelegate nodeFactoryFunctionPtr;
 
@@ -362,7 +362,8 @@ struct NodeGraphEditor	{
         int type,maxNumInstances,curNumInstances;
         AvailableNodeInfo(int _type=0,int _maxNumInstances=-1,int _curNumInstances=0) : type(_type),maxNumInstances(_maxNumInstances),curNumInstances(_curNumInstances) {}
     };
-    ImVector<AvailableNodeInfo> availableNodesInfo;   // These will appear in the "add node menu"
+    ImVector<AvailableNodeInfo> availableNodesInfo;     // These will appear in the "add node menu"
+    ImVector<int> availableNodesInfoInverseMap;         // map: absolute node type -> availableNodesInfo index. Must be size() = totalNumberOfNodeTypes.
 
     enum NodeState {NS_ADDED,NS_DELETED,NS_EDITED};
     typedef void (*NodeCallback)(Node*& node,NodeState state,NodeGraphEditor& editor);
@@ -668,12 +669,10 @@ struct NodeGraphEditor	{
     DragNode dragNode;
 
     inline AvailableNodeInfo* fetchAvailableNodeInfo(int nodeType) {
-        for (int i=0,isz=availableNodesInfo.size();i<isz;i++) {if (availableNodesInfo[i].type==nodeType) return &availableNodesInfo[i];}
-        return NULL;
+        const int tmp = availableNodesInfoInverseMap[nodeType];return tmp>=0 ? &availableNodesInfo[tmp] : NULL;
     }
     inline const AvailableNodeInfo* fetchAvailableNodeInfo(int nodeType) const {
-        for (int i=0,isz=availableNodesInfo.size();i<isz;i++) {if (availableNodesInfo[i].type==nodeType) return &availableNodesInfo[i];}
-        return NULL;
+        const int tmp = availableNodesInfoInverseMap[nodeType];return tmp>=0 ? &availableNodesInfo[tmp] : NULL;
     }
 
     Node* addNode(int nodeType,const ImVec2& Pos,AvailableNodeInfo* pOptionalNi)  {

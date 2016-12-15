@@ -455,11 +455,8 @@ void NodeGraphEditor::render()
             const char** pNodeTypeNames;
             int numNodeTypeNames;
             const ImVector<AvailableNodeInfo>& availableNodesInfo;
-            ImVector<int> availableNodeTypeMap; // This is the inverse of the vector above
-            _MyDummyStuff(const char** _pNodeTypeNames,int _numNodeTypeNames,const ImVector<AvailableNodeInfo>& _availableNodesInfo) : pNodeTypeNames(_pNodeTypeNames),numNodeTypeNames(_numNodeTypeNames),availableNodesInfo(_availableNodesInfo){
-                availableNodeTypeMap.resize(numNodeTypeNames);for (int i=0;i<numNodeTypeNames;i++) availableNodeTypeMap[i] = -1;
-                for (int i=0,isz=availableNodesInfo.size();i<isz;i++) {availableNodeTypeMap[availableNodesInfo[i].type]=i;}
-            }
+            const ImVector<int>& availableNodeTypeMap; // This is the inverse of the vector above
+            _MyDummyStuff(const char** _pNodeTypeNames,int _numNodeTypeNames,const ImVector<AvailableNodeInfo>& _availableNodesInfo,const ImVector<int>& _availableNodesInverseMap) : pNodeTypeNames(_pNodeTypeNames),numNodeTypeNames(_numNodeTypeNames),availableNodesInfo(_availableNodesInfo),availableNodeTypeMap(_availableNodesInverseMap){}
             static bool item_getter(void* pmds,int idx,const char** pOut) {
                 const _MyDummyStuff& mds = * ((const _MyDummyStuff*) pmds);
                 if (idx<0 || idx>mds.numNodeTypeNames) return false;
@@ -468,7 +465,7 @@ void NodeGraphEditor::render()
                 return true;
             }
         } MyDummyStuff;
-        MyDummyStuff mds(pNodeTypeNames,numNodeTypeNames,availableNodesInfo);
+        MyDummyStuff mds(pNodeTypeNames,numNodeTypeNames,availableNodesInfo,availableNodesInfoInverseMap);
         ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.5f);
         const int numEntriesInNodeListFilterCombo = availableNodesInfo.size()+1;
         ImGui::Combo("Type Filter",&nodeListFilterComboIndex,&MyDummyStuff::item_getter,&mds,numEntriesInNodeListFilterCombo,numEntriesInNodeListFilterCombo<25 ? numEntriesInNodeListFilterCombo : 25);
@@ -1556,14 +1553,17 @@ void NodeGraphEditor::registerNodeTypes(const char *nodeTypeNames[], int numNode
     this->numNodeTypeNames = numNodeTypeNames;
     this->pNodeTypeNames = numNodeTypeNames>0 ? &nodeTypeNames[0] : NULL;
     this->nodeFactoryFunctionPtr = _nodeFactoryFunctionPtr;
-    this->availableNodesInfo.clear();
+    this->availableNodesInfo.clear();this->availableNodesInfoInverseMap.clear();
     if (numNodeTypesToUse>numNodeTypeNames) numNodeTypesToUse = numNodeTypeNames;
+    availableNodesInfoInverseMap.resize(numNodeTypeNames);
+    for (int i=0;i<numNodeTypeNames;i++) availableNodesInfoInverseMap[i]=-1;
     AvailableNodeInfo tmp;
     if (pOptionalNodeTypesToUse && numNodeTypesToUse>0) {
         this->availableNodesInfo.reserve(numNodeTypesToUse);
         for (int i=0;i<numNodeTypesToUse;i++) {
             tmp = AvailableNodeInfo(pOptionalNodeTypesToUse[i],(numMaxNumAllowedInstancesToUse>i && pOptionalMaxNumAllowedInstancesToUse) ? pOptionalMaxNumAllowedInstancesToUse[i] : -1);
             this->availableNodesInfo.push_back(tmp);
+            this->availableNodesInfoInverseMap[tmp.type] = i;
         }
     }
     else if (numNodeTypeNames>0)    {
@@ -1571,6 +1571,7 @@ void NodeGraphEditor::registerNodeTypes(const char *nodeTypeNames[], int numNode
         for (int i=0;i<numNodeTypeNames;i++) {
             tmp = AvailableNodeInfo(i,(numMaxNumAllowedInstancesToUse>i && pOptionalMaxNumAllowedInstancesToUse) ? pOptionalMaxNumAllowedInstancesToUse[i] : -1);
             this->availableNodesInfo.push_back(tmp);
+            this->availableNodesInfoInverseMap[tmp.type] = i;
         }
     }
     // Is it possible to sort "this->availableNodeTypes" based on "this->pNodeTypeNames",
