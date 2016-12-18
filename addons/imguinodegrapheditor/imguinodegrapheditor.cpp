@@ -472,7 +472,7 @@ void NodeGraphEditor::render()
         ImGui::PopItemWidth();
         for (int node_idx = 0; node_idx < nodes.Size; node_idx++)   {
         Node* node = nodes[node_idx];
-        if (nodeListFilterComboIndex>0 && mds.availableNodeTypeMap[node->getType()]!=nodeListFilterComboIndex-1) continue;
+	if (nodeListFilterComboIndex>0 && availableNodesInfoInverseMap[node->getType()]!=nodeListFilterComboIndex-1) continue;
         ImGui::PushID((const void*) node);
         if (ImGui::Selectable(node->Name, node->isSelected)) {
             if (!node->isSelected || !io.KeyCtrl)  {
@@ -1491,7 +1491,7 @@ void NodeGraphEditor::render()
                     if ((!ni || ni->maxNumInstances<0 || ni->curNumInstances<ni->maxNumInstances) && ImGui::MenuItem("Paste##cloneCopySource")) {
                         Node* clonedNode = addNode(nodeFactoryFunctionPtr(sourceCopyNode->typeID,scene_pos));
                         clonedNode->fields.copyPDataValuesFrom(sourceCopyNode->fields);
-                        clonedNode->onCopied();
+			clonedNode->onCopied();
                     }
                     ImGui::Separator();
                 }
@@ -1548,7 +1548,8 @@ void NodeGraphEditor::render()
 }
 
 
-void NodeGraphEditor::registerNodeTypes(const char *nodeTypeNames[], int numNodeTypeNames, NodeFactoryDelegate _nodeFactoryFunctionPtr, const int *pOptionalNodeTypesToUse, int numNodeTypesToUse, const int* pOptionalMaxNumAllowedInstancesToUse, int numMaxNumAllowedInstancesToUse)
+
+void NodeGraphEditor::registerNodeTypes(const char *nodeTypeNames[], int numNodeTypeNames, NodeFactoryDelegate _nodeFactoryFunctionPtr, const int *pOptionalNodeTypesToUse, int numNodeTypesToUse, const int* pOptionalMaxNumAllowedInstancesToUse, int numMaxNumAllowedInstancesToUse,bool sortEntriesAlphabetically)
 {
     this->numNodeTypeNames = numNodeTypeNames;
     this->pNodeTypeNames = numNodeTypeNames>0 ? &nodeTypeNames[0] : NULL;
@@ -1560,22 +1561,31 @@ void NodeGraphEditor::registerNodeTypes(const char *nodeTypeNames[], int numNode
     AvailableNodeInfo tmp;
     if (pOptionalNodeTypesToUse && numNodeTypesToUse>0) {
         this->availableNodesInfo.reserve(numNodeTypesToUse);
-        for (int i=0;i<numNodeTypesToUse;i++) {
-            tmp = AvailableNodeInfo(pOptionalNodeTypesToUse[i],(numMaxNumAllowedInstancesToUse>i && pOptionalMaxNumAllowedInstancesToUse) ? pOptionalMaxNumAllowedInstancesToUse[i] : -1);
+	for (int i=0;i<numNodeTypesToUse;i++) {
+	    IM_ASSERT(numNodeTypeNames>pOptionalNodeTypesToUse[i]); // Missing some names inside 'nodeTypeNames'
+	    tmp = AvailableNodeInfo(pOptionalNodeTypesToUse[i],(numMaxNumAllowedInstancesToUse>i && pOptionalMaxNumAllowedInstancesToUse) ? pOptionalMaxNumAllowedInstancesToUse[i] : -1,0,pNodeTypeNames[pOptionalNodeTypesToUse[i]]);
             this->availableNodesInfo.push_back(tmp);
-            this->availableNodesInfoInverseMap[tmp.type] = i;
+	    if (!sortEntriesAlphabetically) this->availableNodesInfoInverseMap[tmp.type] = i;
         }
     }
     else if (numNodeTypeNames>0)    {
         this->availableNodesInfo.reserve(numNodeTypeNames);
+	IM_ASSERT(numNodeTypeNames>=numNodeTypeNames);
         for (int i=0;i<numNodeTypeNames;i++) {
-            tmp = AvailableNodeInfo(i,(numMaxNumAllowedInstancesToUse>i && pOptionalMaxNumAllowedInstancesToUse) ? pOptionalMaxNumAllowedInstancesToUse[i] : -1);
+	    tmp = AvailableNodeInfo(i,(numMaxNumAllowedInstancesToUse>i && pOptionalMaxNumAllowedInstancesToUse) ? pOptionalMaxNumAllowedInstancesToUse[i] : -1,0,pNodeTypeNames[i]);
             this->availableNodesInfo.push_back(tmp);
-            this->availableNodesInfoInverseMap[tmp.type] = i;
+	    if (!sortEntriesAlphabetically) this->availableNodesInfoInverseMap[tmp.type] = i;
         }
     }
+
     // Is it possible to sort "this->availableNodeTypes" based on "this->pNodeTypeNames",
-    // so that it display its elements in alphabetical order ?
+    // so that it display its elements in alphabetical order ? Attempt:
+    if (sortEntriesAlphabetically && availableNodesInfo.size()>0)	{
+	// qsort is in <stdlib.h>
+	qsort(&availableNodesInfo[0], availableNodesInfo.size(), sizeof(AvailableNodeInfo), &AvailableNodeInfoNameSorter);
+	for (int i=0;i<availableNodesInfo.size();i++) {this->availableNodesInfoInverseMap[availableNodesInfo[i].type] = i;}
+    }
+
 }
 
 bool NodeGraphEditor::removeLinkAt(int link_idx) {
@@ -2933,10 +2943,10 @@ void TestNodeGraphEditor()  {
     static ImGui::NodeGraphEditor nge;
     if (nge.isInited())	{
         // This adds entries to the "add node" context menu
-        nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,NULL,-1); // last 2 args can be used to add only a subset of nodes (or to sort their order inside the context menu)
+	nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,NULL,-1); // last 2 args can be used to add only a subset of nodes (or to sort their order inside the context menu)
         // The line above can be replaced by the following two lines, if we want to use only an active subset of the available node types:
-        //const int optionalNodeTypesToUse[] = {MNT_COMPLEX_NODE,MNT_COMMENT_NODE,MNT_OUTPUT_NODE};
-        //nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,optionalNodeTypesToUse,sizeof(optionalNodeTypesToUse)/sizeof(optionalNodeTypesToUse[0]));
+	//const int optionalNodeTypesToUse[] = {MNT_COMPLEX_NODE,MNT_COMMENT_NODE,MNT_OUTPUT_NODE};
+	//nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,optionalNodeTypesToUse,sizeof(optionalNodeTypesToUse)/sizeof(optionalNodeTypesToUse[0]));
         nge.registerNodeTypeMaxAllowedInstances(MNT_OUTPUT_NODE,1); // Here we set the max number of allowed instances of the output node (1)
 
         // Optional: starting nodes and links (TODO: load from file instead):-----------

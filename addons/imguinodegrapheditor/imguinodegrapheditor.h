@@ -360,7 +360,8 @@ struct NodeGraphEditor	{
 
     struct AvailableNodeInfo {
         int type,maxNumInstances,curNumInstances;
-        AvailableNodeInfo(int _type=0,int _maxNumInstances=-1,int _curNumInstances=0) : type(_type),maxNumInstances(_maxNumInstances),curNumInstances(_curNumInstances) {}
+        const char* name;   // from static persitent user storage
+        AvailableNodeInfo(int _type=0,int _maxNumInstances=-1,int _curNumInstances=0,const char* _name=NULL) : type(_type),maxNumInstances(_maxNumInstances),curNumInstances(_curNumInstances),name(_name) {}
     };
     ImVector<AvailableNodeInfo> availableNodesInfo;     // These will appear in the "add node menu"
     ImVector<int> availableNodesInfoInverseMap;         // map: absolute node type -> availableNodesInfo index. Must be size() = totalNumberOfNodeTypes.
@@ -541,7 +542,7 @@ struct NodeGraphEditor	{
     bool isEmpty() const {return nodes.size()==0;}
 
     // nodeTypeNames must point to a block of static memory: it's not owned, nor copied. pOptionalNodeTypesToUse is copied.
-    void registerNodeTypes(const char* nodeTypeNames[],int numNodeTypeNames,NodeFactoryDelegate _nodeFactoryFunctionPtr,const int* pOptionalNodeTypesToUse=NULL,int numNodeTypesToUse=-1,const int* pOptionalMaxNumAllowedInstancesToUse=NULL, int numMaxNumAllowedInstancesToUse=0);
+    void registerNodeTypes(const char* nodeTypeNames[], int numNodeTypeNames, NodeFactoryDelegate _nodeFactoryFunctionPtr, const int* pOptionalNodeTypesToUse=NULL, int numNodeTypesToUse=-1, const int* pOptionalMaxNumAllowedInstancesToUse=NULL, int numMaxNumAllowedInstancesToUse=0, bool sortEntriesAlphabetically=true);
     inline int getNumAvailableNodeTypes() const {return availableNodesInfo.size();}
     bool registerNodeTypeMaxAllowedInstances(int nodeType,int maxAllowedNodeTypeInstances=-1) {
         AvailableNodeInfo* ni = fetchAvailableNodeInfo(nodeType);
@@ -715,6 +716,11 @@ struct NodeGraphEditor	{
     // Refactored for cleaner exposure (without the misleading 'flag' argument)
     void selectNodePrivate(const Node* node, bool flag=true,bool findANewActiveNodeWhenNeeded=true);
     void selectAllNodesPrivate(bool flag=true,bool findANewActiveNodeWhenNeeded=true);
+    static int AvailableNodeInfoNameSorter(const void *s0, const void *s1) {
+        const AvailableNodeInfo& ni0 = *((AvailableNodeInfo*) s0);
+        const AvailableNodeInfo& ni1 = *((AvailableNodeInfo*) s1);
+        return strcmp(ni0.name,ni1.name);
+    }
 
 };
 
