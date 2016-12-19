@@ -452,20 +452,17 @@ void NodeGraphEditor::render()
     if (ImGui::CollapsingHeader("Node List##node_list_1",NULL,false))   {
         ImGui::Separator();
         typedef struct _MyDummyStuff {
-            const char** pNodeTypeNames;
-            int numNodeTypeNames;
-            const ImVector<AvailableNodeInfo>& availableNodesInfo;
-            const ImVector<int>& availableNodeTypeMap; // This is the inverse of the vector above
-            _MyDummyStuff(const char** _pNodeTypeNames,int _numNodeTypeNames,const ImVector<AvailableNodeInfo>& _availableNodesInfo,const ImVector<int>& _availableNodesInverseMap) : pNodeTypeNames(_pNodeTypeNames),numNodeTypeNames(_numNodeTypeNames),availableNodesInfo(_availableNodesInfo),availableNodeTypeMap(_availableNodesInverseMap){}
+	    const ImVector<AvailableNodeInfo>& availableNodesInfo;
+	    _MyDummyStuff(const ImVector<AvailableNodeInfo>& _availableNodesInfo) : availableNodesInfo(_availableNodesInfo){}
             static bool item_getter(void* pmds,int idx,const char** pOut) {
                 const _MyDummyStuff& mds = * ((const _MyDummyStuff*) pmds);
-                if (idx<0 || idx>mds.numNodeTypeNames) return false;
+		if (idx<0 || idx>mds.availableNodesInfo.size()) return false;
                 static const char ZeroName[] = "ALL";
-                *pOut = idx==0 ? ZeroName : mds.pNodeTypeNames[mds.availableNodesInfo[idx-1].type];
+		*pOut = idx==0 ? ZeroName : mds.availableNodesInfo[idx-1].name;
                 return true;
             }
         } MyDummyStuff;
-        MyDummyStuff mds(pNodeTypeNames,numNodeTypeNames,availableNodesInfo,availableNodesInfoInverseMap);
+	MyDummyStuff mds(availableNodesInfo);
         ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.5f);
         const int numEntriesInNodeListFilterCombo = availableNodesInfo.size()+1;
         ImGui::Combo("Type Filter",&nodeListFilterComboIndex,&MyDummyStuff::item_getter,&mds,numEntriesInNodeListFilterCombo,numEntriesInNodeListFilterCombo<25 ? numEntriesInNodeListFilterCombo : 25);
@@ -2943,10 +2940,10 @@ void TestNodeGraphEditor()  {
     static ImGui::NodeGraphEditor nge;
     if (nge.isInited())	{
         // This adds entries to the "add node" context menu
-	nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,NULL,-1); // last 2 args can be used to add only a subset of nodes (or to sort their order inside the context menu)
+        nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,NULL,-1); // last 2 args can be used to add only a subset of nodes (or to sort their order inside the context menu)
         // The line above can be replaced by the following two lines, if we want to use only an active subset of the available node types:
-	//const int optionalNodeTypesToUse[] = {MNT_COMPLEX_NODE,MNT_COMMENT_NODE,MNT_OUTPUT_NODE};
-	//nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,optionalNodeTypesToUse,sizeof(optionalNodeTypesToUse)/sizeof(optionalNodeTypesToUse[0]));
+        //const int optionalNodeTypesToUse[] = {MNT_COMPLEX_NODE,MNT_COMMENT_NODE,MNT_OUTPUT_NODE};
+        //nge.registerNodeTypes(MyNodeTypeNames,MNT_COUNT,MyNodeFactory,optionalNodeTypesToUse,sizeof(optionalNodeTypesToUse)/sizeof(optionalNodeTypesToUse[0]));
         nge.registerNodeTypeMaxAllowedInstances(MNT_OUTPUT_NODE,1); // Here we set the max number of allowed instances of the output node (1)
 
         // Optional: starting nodes and links (TODO: load from file instead):-----------
