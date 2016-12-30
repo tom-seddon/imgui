@@ -223,6 +223,16 @@ void ImImpl_ClearColorBuffer(const ImVec4& bgColor)  {
 #endif //defined(IMGUI_USE_DIRECT3D9_BINDING)
 
 
+static void AddFontFromMemoryTTFCloningFontData(ImGuiIO& io, ImVector<char>& buffVec, ImFont*& my_font, const float sizeInPixels, const ImImpl_InitParams::FontData& fd)    {
+    char* tempBuffer = NULL;void* bufferToFeedImGui = NULL;
+    tempBuffer = (char*)ImGui::MemAlloc(buffVec.size());
+    memcpy(tempBuffer,(void*)&buffVec[0],buffVec.size());
+    bufferToFeedImGui = tempBuffer;
+    ImImpl_InitParams::FontData fd2 = fd;fd2.fontConfig.FontDataOwnedByAtlas=true;
+    my_font = io.Fonts->AddFontFromMemoryTTF(bufferToFeedImGui,buffVec.size(),sizeInPixels,fd.useFontConfig?&fd2.fontConfig:NULL,fd.pGlyphRanges);
+    if (!my_font) {ImGui::MemFree(tempBuffer);tempBuffer=NULL;bufferToFeedImGui=NULL;}
+}
+
 void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     if (pOptionalInitParams && pOptionalInitParams->skipBuildingFonts) return;
     ImGuiIO& io = ImGui::GetIO();
@@ -241,33 +251,71 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
             const bool hasValidMemory = fd.pMemoryData && fd.memoryDataSize>0;
             //if (i==0 && !P.forceAddDefaultFontAsFirstFont && (hasValidPath || hasValidMemory) && fd.useFontConfig && fd.fontConfig.MergeMode) io.Fonts->AddFontDefault();
             if (hasValidPath)  {
-#if         (defined(IMGUI_USE_ZLIB) && !defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
-                bool isTtfGz = false;
-                char* ttfGzExt = strrchr((char*) fd.filePath,'.');
-                if (ttfGzExt && (strcmp(ttfGzExt,".gz")==0 || strcmp(ttfGzExt,".GZ")==0))   {
-                    ImVector<char> buffVec;
-                    if (ImGui::GzDecompressFromFile((const char*)fd.filePath,buffVec) && buffVec.size()>0)  {
-                        // Actually the only thing I can do with a vector is to allocate, copy and let ImGui delete it:
-                        char* tempBuffer = NULL;void* bufferToFeedImGui = NULL;
-                        tempBuffer = (char*)ImGui::MemAlloc(buffVec.size());
-                        memcpy(tempBuffer,(void*)&buffVec[0],buffVec.size());
-                        bufferToFeedImGui = tempBuffer;
-                        ImImpl_InitParams::FontData fd2 = fd;fd2.fontConfig.FontDataOwnedByAtlas=true;
-                        my_font = io.Fonts->AddFontFromMemoryTTF(bufferToFeedImGui,buffVec.size(),sizeInPixels,fd.useFontConfig?&fd2.fontConfig:NULL,fd.pGlyphRanges);
-                        if (!my_font) {ImGui::MemFree(tempBuffer);tempBuffer=NULL;bufferToFeedImGui=NULL;}
-                    }
-                    isTtfGz = my_font!=NULL;
+                char* ttfExt = strrchr((char*) fd.filePath,'.');
+                char* innerExt = ttfExt ? strrchr(ttfExt,'.') : NULL;
+                const int innerExtLen = innerExt ? (strlen(innerExt)-strlen(ttfExt)) : 0;
+                ImVector<char> buffVec;
+                // Actually in many of these methods I clone the Font Data to make ImGui own them (see AddFontFromMemoryTTFCloningFontData(...) above):
+#               if (defined(IMGUI_USE_ZLIB) && !defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
+                if (!my_font && ttfExt && (strcmp(ttfExt,".gz")==0 || strcmp(ttfExt,".GZ")==0))   {
+                    if (ImGui::GzDecompressFromFile((const char*)fd.filePath,buffVec) && buffVec.size()>0) AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
                 }
-                if (!isTtfGz) my_font = io.Fonts->AddFontFromFileTTF(fd.filePath,sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
-#           else   //IMGUI_USE_ZLIB
-                my_font = io.Fonts->AddFontFromFileTTF(fd.filePath,sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
-#           endif   //IMGUI_USE_ZLIB
+#               endif // IMGUI_USE_ZLIB
+#               if (defined(YES_IMGUIBZ2) && !defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
+                if (!my_font && ttfExt && (strcmp(ttfExt,".bz2")==0 || strcmp(ttfExt,".BZ2")==0))   {
+                    if (ImGui::Bz2DecompressFromFile((const char*)fd.filePath,buffVec) && buffVec.size()>0) AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
+                }
+#               endif   //YES_IMGUIBZ2
+#               if (defined(YES_IMGUISTRINGIFIER) && !defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
+                if (!my_font && ttfExt && (strcmp(ttfExt,".b64")==0 || strcmp(ttfExt,".B64")==0 || strcmp(ttfExt,".base64")==0 || strcmp(ttfExt,".BASE64")==0))   {
+#                   ifdef IMGUI_USE_ZLIB
+                    if (!my_font && innerExt && (strncmp(innerExt,".gz",innerExtLen)==0 || strncmp(innerExt,".GZ",innerExtLen)==0))   {
+                        if (ImGui::GzBase64DecompressFromFile((const char*)fd.filePath,buffVec) && buffVec.size()>0)  AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
+                    }
+#                   endif //IMGUI_USE_ZLIB
+#                   ifdef YES_IMGUIBZ2
+                    if (!my_font && innerExt && (strncmp(innerExt,".bz2",innerExtLen)==0 || strncmp(innerExt,".BZ2",innerExtLen)==0))   {
+                        if (ImGui::Bz2Base64DecompressFromFile((const char*)fd.filePath,buffVec) && buffVec.size()>0)  AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
+                    }
+#                   endif //YES_IMGUIBZ2
+                    if (!my_font && ImGui::Base64DecodeFromFile((const char*)fd.filePath,buffVec) && buffVec.size()>0)  AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
+                }
+                if (!my_font && ttfExt && (strcmp(ttfExt,".b85")==0 || strcmp(ttfExt,".B85")==0 || strcmp(ttfExt,".base85")==0 || strcmp(ttfExt,".BASE85")==0))   {
+#                   ifdef IMGUI_USE_ZLIB
+                    if (!my_font && innerExt && (strncmp(innerExt,".gz",innerExtLen)==0 || strncmp(innerExt,".GZ",innerExtLen)==0))   {
+                        if (ImGui::GzBase85DecompressFromFile((const char*)fd.filePath,buffVec) && buffVec.size()>0)  AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
+                    }
+#                   endif //IMGUI_USE_ZLIB
+#                   ifdef YES_IMGUIBZ2
+                    if (!my_font && innerExt && (strncmp(innerExt,".bz2",innerExtLen)==0 || strncmp(innerExt,".BZ2",innerExtLen)==0))   {
+                        if (ImGui::Bz2Base85DecompressFromFile((const char*)fd.filePath,buffVec) && buffVec.size()>0)  AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
+                    }
+#                   endif //YES_IMGUIBZ2
+                    if (!my_font && ImGui::Base85DecodeFromFile((const char*)fd.filePath,buffVec) && buffVec.size()>0) AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
+                }
+#               endif   //YES_IMGUISTRINGIFIER
+                if (!my_font) my_font = io.Fonts->AddFontFromFileTTF(fd.filePath,sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
             }
             else if (hasValidMemory)  {
-                // Sometimes ImGui tries to delete the memory we have passed it: should this happen, we should try something like:
+                ImVector<char> buffVec;
                 bool mustCloneMemoryBufferBecauseImGuiDeletesIt = (fd.memoryDataCompression==ImImpl_InitParams::FontData::COMP_NONE && fd.useFontConfig) ? fd.fontConfig.FontDataOwnedByAtlas : true;//false;//true;
 #if             (!defined(NO_IMGUIHELPER) && defined(IMGUI_USE_ZLIB))
                 if (fd.memoryDataCompression==ImImpl_InitParams::FontData::COMP_GZ) mustCloneMemoryBufferBecauseImGuiDeletesIt = false;
+#if                 (defined(YES_IMGUISTRINGIFIER))
+                    if (fd.memoryDataCompression==ImImpl_InitParams::FontData::COMP_GZBASE64 ||
+                    fd.memoryDataCompression==ImImpl_InitParams::FontData::COMP_GZBASE85) mustCloneMemoryBufferBecauseImGuiDeletesIt = false;
+#                   endif
+#               endif
+#if             (defined(YES_IMGUIBZ2))
+                if (fd.memoryDataCompression==ImImpl_InitParams::FontData::COMP_BZ2) mustCloneMemoryBufferBecauseImGuiDeletesIt = false;
+#if                 (defined(YES_IMGUISTRINGIFIER))
+                    if (fd.memoryDataCompression==ImImpl_InitParams::FontData::COMP_BZ2BASE64 ||
+                    fd.memoryDataCompression==ImImpl_InitParams::FontData::COMP_BZ2BASE85) mustCloneMemoryBufferBecauseImGuiDeletesIt = false;
+#                   endif
+#               endif
+#if             (defined(YES_IMGUISTRINGIFIER))
+                if (fd.memoryDataCompression==ImImpl_InitParams::FontData::COMP_BASE64 ||
+                fd.memoryDataCompression==ImImpl_InitParams::FontData::COMP_BASE85) mustCloneMemoryBufferBecauseImGuiDeletesIt = false;
 #               endif
                 char* tempBuffer = NULL;void* bufferToFeedImGui = NULL;
                 if (!mustCloneMemoryBufferBecauseImGuiDeletesIt) bufferToFeedImGui = (void*) fd.pMemoryData;
@@ -287,20 +335,39 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
                     my_font = io.Fonts->AddFontFromMemoryCompressedBase85TTF((const char*)bufferToFeedImGui,sizeInPixels,fd.useFontConfig?&fd.fontConfig:NULL,fd.pGlyphRanges);
                     break;
 #if             (!defined(NO_IMGUIHELPER) && defined(IMGUI_USE_ZLIB))
-                case ImImpl_InitParams::FontData::COMP_GZ:  {
-                    ImVector<char> buffVec;
-                    if (ImGui::GzDecompressFromMemory((const char*)fd.pMemoryData,fd.memoryDataSize,buffVec) && buffVec.size()>0)  {
-                        // Actually the only thing I can do with a vector is to allocate, copy and let ImGui delete it:
-                        tempBuffer = (char*)ImGui::MemAlloc(buffVec.size());
-                        memcpy(tempBuffer,(void*)&buffVec[0],buffVec.size());
-                        bufferToFeedImGui = tempBuffer;
-                        ImImpl_InitParams::FontData fd2 = fd;fd2.fontConfig.FontDataOwnedByAtlas=true;
-                        my_font = io.Fonts->AddFontFromMemoryTTF(bufferToFeedImGui,buffVec.size(),sizeInPixels,fd.useFontConfig?&fd2.fontConfig:NULL,fd.pGlyphRanges);
-                        if (!my_font) {ImGui::MemFree(tempBuffer);tempBuffer=NULL;bufferToFeedImGui=NULL;}
-                    }
-                    }
+                case ImImpl_InitParams::FontData::COMP_GZ:
+                    if (ImGui::GzDecompressFromMemory((const char*)fd.pMemoryData,fd.memoryDataSize,buffVec) && buffVec.size()>0) AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
                     break;
+#   ifdef           YES_IMGUISTRINGIFIER
+                case ImImpl_InitParams::FontData::COMP_GZBASE64:
+                    if (ImGui::GzBase64DecompressFromMemory((const char*)fd.pMemoryData,buffVec) && buffVec.size()>0) AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
+                    break;
+                case ImImpl_InitParams::FontData::COMP_GZBASE85:
+                    if (ImGui::GzBase85DecompressFromMemory((const char*)fd.pMemoryData,buffVec) && buffVec.size()>0) AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
+                    break;
+#   endif           //YES_IMGUISTRINGIFIER
 #               endif   //IMGUI_USE_ZLIB
+#if             (defined(YES_IMGUIBZ2))
+                case ImImpl_InitParams::FontData::COMP_BZ2:
+                    if (ImGui::Bz2DecompressFromMemory((const char*)fd.pMemoryData,fd.memoryDataSize,buffVec) && buffVec.size()>0) AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
+                    break;
+#   ifdef           YES_IMGUISTRINGIFIER
+                case ImImpl_InitParams::FontData::COMP_BZ2BASE64:
+                    if (ImGui::Bz2Base64Decode((const char*)fd.pMemoryData,buffVec) && buffVec.size()>0) AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
+                    break;
+                case ImImpl_InitParams::FontData::COMP_BZ2BASE85:
+                    if (ImGui::Bz2Base85Decode((const char*)fd.pMemoryData,buffVec) && buffVec.size()>0) AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
+                    break;
+#   endif           //YES_IMGUISTRINGIFIER
+#               endif   //IMGUI_USE_ZLIB
+#   ifdef       YES_IMGUISTRINGIFIER
+                case ImImpl_InitParams::FontData::COMP_BASE64:
+                    if (ImGui::Base64Decode((const char*)fd.pMemoryData,buffVec) && buffVec.size()>0) AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
+                    break;
+                case ImImpl_InitParams::FontData::COMP_BASE85:
+                    if (ImGui::Base85Decode((const char*)fd.pMemoryData,buffVec) && buffVec.size()>0) AddFontFromMemoryTTFCloningFontData(io, buffVec, my_font, sizeInPixels, fd);
+                    break;
+#   endif       //YES_IMGUISTRINGIFIER
                 default:
                     IM_ASSERT(true);    //Unsupported font compression
                     break;
@@ -311,6 +378,7 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
         }
 
         if (!P.forceAddDefaultFontAsFirstFont && P.fonts.size()==0) io.Fonts->AddFontDefault();
+
     }
     else io.Fonts->AddFontDefault();
 

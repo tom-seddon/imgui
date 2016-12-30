@@ -78,6 +78,7 @@ Currently the extra imgui widgets that are available are:
 					In any case, if you need this kind of control, I suggest you try a more reliable solution, such as the Scintilla Editor,
 					that some user has successfully managed to integrate with ImGui (please see: https://github.com/ocornut/imgui/issues/108 and https://github.com/ocornut/imgui/issues/200).
 					The file main3.cpp is intended as a development playground for this control.
+					UPDATE: It contains ImGui::InputTextWithSyntaxHighlighting(...), a cut-down version of the code editor that some users might find useful (see main.cpp).
 
 And in addition:
 -> imguistring:				this addon file contains some classes that can be used to replace some STL equivalents (STL is not accepted inside ImGui code):
@@ -87,6 +88,8 @@ And in addition:
 							-> ImGui::OpenWithDefaultApplication(...) that should work with urls, folders and files
 							-> two serialization helper classes (mainly for internal usage, to provide serialization support to other addons) in a dedicated ImGuiHelper namespace.
 							-> some Gz decompression helper methods, available if IMGUI_USE_ZLIB is defined at the project level (this definition requires linking to the zlib library).
+							-> some Bz2 decompression helper methods, available if YES_IMGUIBZ2 is defined at the project level.
+
 
 Tip: every single imgui "widget" addon listed above (and in some cases even some part of it) CAN BE EXCLUDED from the compilation by defining at the project level something like: NO_IMGUIFILESYSTEM, etc (and the first demo, main.cpp, should always compile).
 The definitions needed to exclude all the addons are:
@@ -123,6 +126,8 @@ Currently "yes addons" are:
 -> imguisqlite3.h/cpp:		depends on -lsqlite3. It's CppSQLite from [http://www.codeproject.com/KB/database/CppSQLite.aspx]
 -> imguifreetype.h/cpp:		depends on freetype2 (-lfreetype). License: MIT. It allows better font hinting, and Bold and Oblique variations of the .ttf font. Link: [https://github.com/Vuhdo/imgui_freetype]
 -> imguiminigames.h/cpp:	no dependencies. For a list of minigames and their own license, please read addons/yes_addons/imguiminigames.h.
+-> imguibz2.h/cpp:		no dependencies. It's libbzip2 (http://www.bzip.org/), inlined and made a bit more ImGui-friendly. License: BSD-style. It allows loading .ttf.bz2 font files when using some imguibinding. [You can define BZ_DECOMPRESS_ONLY to reduce memory impact a bit].
+-> imguistringifier.h/cpp:	W.I.P. No dependencies. It includes libb64 (libb64.sourceforge.net). License: Public Domain. It makes easier to embed files inside source code (e.g. ttf fonts, shader source code, and so on).
 
 Tip: If you used the NO_IMGUI_ADDONS definition to disable all the "normal" addons, then all your addons behave like yes_addons!
      That means that you can define, for example, YES_IMGUISTYLESERIALIZER to re-enable the "normal" imguistyleserializer addon.

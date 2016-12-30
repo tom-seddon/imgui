@@ -59,6 +59,8 @@ IMGUI_BASE_PATH=../..
 #DEFINES+= IMIMPL_BUILD_SDF IMIMPL_USE_SDF_SHADER IMIMPL_USE_SDF_OUTLINE_SHADER
 #DEFINES+= IMIMPL_SHADER_GL3
 #DEFINES+= IMIMPL_SHADER_NONE
+#DEFINES+=YES_IMGUIBZ2
+#DEFINES+=YES_IMGUISTRINGIFIER
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 
@@ -95,14 +97,7 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguitabwindow/imguitabwindow.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiemscripten/imguiemscripten.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguidock/imguidock.h"			    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguipdfviewer.h"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguidock.h"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.h"			    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguitinyfiledialogs.h"	    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisqlite3.h"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguifreetype.h"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisoloud.h"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguiminigames.h"
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imgui*.h"
 
 SOURCES+=  $$IMGUI_BASE_PATH"/imgui.cpp" \
 	   $$IMGUI_BASE_PATH"/imgui_draw.cpp" \
@@ -172,11 +167,7 @@ OTHER_FILES+= $$IMGUI_BASE_PATH"/addons/imgui_user.inl"				    \
 	   $$IMGUI_BASE_PATH"/addons/imguitabwindow/imguitabwindow.cpp"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguiemscripten/imguiemscripten.cpp"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguidock/imguidock.h"			    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguipdfviewer.cpp"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguidock.cpp"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisdf.cpp"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguisoloud.cpp"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguiminigames.cpp"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imgui*.cpp"			    \
 	   README_FIRST.txt
 
 

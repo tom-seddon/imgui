@@ -88,6 +88,12 @@
 #include "./imguidock/imguidock.cpp"
 #endif //NO_IMGUIDOCK
 
+#ifdef YES_IMGUIBZ2
+#include "./imguiyesaddons/imguibz2.cpp"
+#endif //YES_IMGUIBZ2
+#ifdef YES_IMGUISTRINGIFIER
+#include "./imguiyesaddons/imguistringifier.cpp"
+#endif //YES_IMGUISTRINGIFIER
 #ifdef YES_IMGUIPDFVIEWER
 #include "./imguiyesaddons/imguipdfviewer.cpp"
 #endif //YES_IMGUIPDFVIEWER

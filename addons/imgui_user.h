@@ -31,6 +31,11 @@
 #	endif
 #endif//IMGUI_NO_INLINE
 
+#ifdef NO_IMGUIADDONS	// Mispell fix
+#	undef NO_IMGUI_ADDONS
+#	define NO_IMGUI_ADDONS
+#endif //NO_IMGUIADDONS
+
 #ifdef NO_IMGUI_ADDONS  // This definition turns all "normal" addons into "yes_addons"
 #   if (!defined(YES_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER))
 #       define NO_IMGUISTYLESERIALIZER
@@ -87,6 +92,25 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #   define IMGUI_USE_ZLIB	// requires linking to library -lZlib
 #   endif //IMGUI_USE_ZLIB
 #endif //IMGUI_USE_MINIZIP
+
+// We add these yes_addons before imguibindings.h
+#ifdef YES_IMGUIADDONS_ALL
+#	ifndef NO_IMGUIBZ2
+#		undef YES_IMGUIBZ2
+#		define YES_IMGUIBZ2
+#	endif //NO_IMGUIBZ2
+#	ifndef NO_IMGUISTRINGIFIER
+#		undef YES_IMGUISTRINGIFIER
+#		define YES_IMGUISTRINGIFIER
+#	endif //NO_IMGUISTRINGIFIER
+#endif // YES_IMGUIADDONS_ALL
+
+#ifdef YES_IMGUIBZ2
+#include "./imguiyesaddons/imguibz2.h"
+#endif //YES_IMGUIBZ2
+#ifdef YES_IMGUISTRINGIFIER
+#include "./imguiyesaddons/imguistringifier.h"
+#endif //YES_IMGUISTRINGIFIER
 
 #ifdef __EMSCRIPTEN__
 #   ifndef NO_IMGUIEMSCRIPTEN

@@ -156,9 +156,10 @@ enum ImGuiTabLabelStyleEnum {
     ImGuiTabLabelStyle_Blue,
     ImGuiTabLabelStyle_Yellow,
     ImGuiTabLabelStyle_Orange,
+    ImGuiTabLabelStyle_White,
     ImGuiTabLabelStyle_Tidy,
     ImGuiTabLabelStyle_Foxy,
-    ImGuiTabLabelStyle_FoxyInverse,
+    ImGuiTabLabelStyle_FoxyInverse,    
 
     ImGuiTabLabelStyle_Count
 };

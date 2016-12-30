@@ -406,6 +406,8 @@ void DrawGL()	// Mandatory
             else if (styleEnumNum==ImGuiStyle_DarkOpaque)   ImGui::SetTooltip("%s","\"DarkOpaque\"\nA dark-grayscale style with\nno transparency (by default)");
             else if (styleEnumNum==ImGuiStyle_OSXOpaque)   ImGui::SetTooltip("%s","\"OSXOpaque\"\nPosted by @dougbinks here:\nhttps://gist.github.com/dougbinks/8089b4bbaccaaf6fa204236978d165a9\n(hope I can use it)");
             else if (styleEnumNum==ImGuiStyle_Soft) ImGui::SetTooltip("%s","\"Soft\"\nPosted by @olekristensen here:\nhttps://github.com/ocornut/imgui/issues/539\n(hope I can use it)");
+            else if (styleEnumNum==ImGuiStyle_EdinBlack || styleEnumNum==ImGuiStyle_EdinWhite) ImGui::SetTooltip("%s","Based on an image posted by @edin_p\n(hope I can use it)");
+            else if (styleEnumNum==ImGuiStyle_Maya) ImGui::SetTooltip("%s","\"Maya\"\nPosted by @ongamex here:\nhttps://gist.github.com/ongamex/4ee36fb23d6c527939d0f4ba72144d29\n(hope I can use it)");
         }
 
         ImGui::SameLine();
@@ -1056,6 +1058,125 @@ void DrawGL()	// Mandatory
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUICODEEDITOR
 
+#       if (defined(YES_IMGUISTRINGIFIER) && !defined(NO_IMGUIFILESYSTEM) && !defined(NO_IMGUIHELPER)  && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
+        ImGui::Text("\n");ImGui::Separator();
+        ImGui::Text("imguistringifier (yes_addon)");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","It should allow users to make files\nembeddable in their source code.");
+        ImGui::Separator();
+        if (ImGui::TreeNode("imguistringifier tests:")) {
+            ImGui::Text("%s","--> No testing for this addon. Expect errors! <--");
+            typedef struct _SupportedTypes {
+                enum Type {
+                    TYPE_RAW_BINARY=0
+                    ,TYPE_RAW_TEXT
+                    ,TYPE_BASE64
+                    ,TYPE_BASE85
+#                   ifdef YES_IMGUIBZ2
+                    ,TYPE_BZ2
+                    ,TYPE_BZ2BASE64
+                    ,TYPE_BZ2BASE85
+#                   endif //YES_IMGUIBZ2
+                    ,NUM_TYPES
+                };
+                inline static const char** GetNames() {
+                    static const char* Names[] = {
+                        "Raw (Binary)","Raw (Text-Based)","Base64","Base85"
+#                       ifdef YES_IMGUIBZ2
+                        ,"Bz2 (Raw)","Bz2Base64","Bz2Base85"
+#                       endif //YES_IMGUIBZ2
+                    };
+                    IM_ASSERT(sizeof(Names)/sizeof(Names[0])==NUM_TYPES);
+                    return &Names[0];
+                }
+                inline static const char** GetExtensions() {
+                    static const char* Names[] = {
+                        ".bin.inl",".inl",".b64.inl",".b85.inl"
+#                       ifdef YES_IMGUIBZ2
+                        ,".bz2.inl",".bz2.b64.inl",".bz2.b85.inl"
+#                       endif //YES_IMGUIBZ2
+                    };
+                    IM_ASSERT(sizeof(Names)/sizeof(Names[0])==NUM_TYPES);
+                    return &Names[0];
+                }
+            } SupportedTypes;
+
+            static bool mustDisplayOkMassage = false;
+
+            // Load dialog
+            static ImGuiFs::Dialog loadDlg;
+            ImGui::Text("File to stringify:");ImGui::SameLine();
+            ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.35f);
+            ImGui::InputText("###FiletostringifyloadID",(char*)loadDlg.getChosenPath(),ImGuiFs::MAX_PATH_BYTES,ImGuiInputTextFlags_ReadOnly);
+            ImGui::PopItemWidth();
+            ImGui::SameLine();
+            const bool browseButton = ImGui::Button("...##FiletostringifyloadbuttonID");
+            if (browseButton) mustDisplayOkMassage=false;
+            loadDlg.chooseFileDialog(browseButton,loadDlg.getLastDirectory());
+
+            // Load combo
+            static int strType = 0;
+            ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.25f);
+            if (ImGui::Combo("Stringified Type",&strType,SupportedTypes::GetNames(),(int) SupportedTypes::NUM_TYPES,(int)SupportedTypes::NUM_TYPES)) mustDisplayOkMassage = false;
+            ImGui::PopItemWidth();
+
+            // Action Button
+            if (strlen(loadDlg.getChosenPath())>0)  {
+                ImGui::SameLine();
+                if (ImGui::Button("STRINGIFY###FiletostringifygobuttonID")) {
+                    mustDisplayOkMassage = false;
+                    bool ok = ImGuiFs::FileExists(loadDlg.getChosenPath());
+                    ImVector<char> buff;
+                    if (ok && ImGuiHelper::GetFileContent(loadDlg.getChosenPath(),buff,true,strType==1 ? "r":"rb") && buff.size()>0)   {
+                        ok = false;ImVector<char> buff2;
+                        switch (strType)    {
+                        case SupportedTypes::TYPE_RAW_BINARY:   ok = ImGui::BinaryStringify(&buff[0],buff.size(),buff2);break;
+                        case SupportedTypes::TYPE_RAW_TEXT:     ok = ImGui::TextStringify(&buff[0],buff2);break;
+                        case SupportedTypes::TYPE_BASE64:       ok = ImGui::Base64Encode(&buff[0],buff.size(),buff2,true);break;    // This method has an argument that stringify the output layout for us
+                        case SupportedTypes::TYPE_BASE85:       ok = ImGui::Base85Encode(&buff[0],buff.size(),buff2,true);break;    // This method has an argument that stringify the output layout for us
+#                       ifdef YES_IMGUIBZ2
+                        case SupportedTypes::TYPE_BZ2:          {
+                            ok = ImGui::Bz2CompressFromMemory(&buff[0],buff.size(),buff2);
+                            if (ok) ok = ImGui::BinaryStringify(&buff2[0],buff2.size(),buff);
+                            if (ok) buff.swap(buff2);
+                        }
+                        break;
+                        case SupportedTypes::TYPE_BZ2BASE64:    ok = ImGui::Bz2Base64Encode(&buff[0],buff.size(),buff2,true);break;
+                        case SupportedTypes::TYPE_BZ2BASE85:    ok = ImGui::Bz2Base85Encode(&buff[0],buff.size(),buff2,true);break;
+#                       endif //YES_IMGUIBZ2
+                        default: IM_ASSERT(true);break;
+                        }
+
+                        if (ok) {
+#                           ifndef __EMSCRIPTEN__
+                            ImGui::SetClipboardText(&buff2[0]);
+#                           else //__EMSCRIPTEN__
+                            ImGui::LogToTTY();
+                            char filename[ImGuiFs::MAX_FILENAME_BYTES]="";
+                            ImGuiFs::PathGetFileName(loadDlg.getChosenPath(),filename);
+                            ImGui::LogText("\n\n// \"%s%s\":\n",filename,SupportedTypes::GetExtensions()[strType]);
+                            ImGui::LogText("%s",&buff2[0]);
+                            ImGui::LogFinish();
+#                           endif //__EMSCRIPTEN__
+                            mustDisplayOkMassage = true;
+                        }
+                    }
+                }
+            }
+
+            if (mustDisplayOkMassage) {
+#               ifndef __EMSCRIPTEN__
+                ImGui::Text("File stringified successfully and placed in the clipboard.");
+#               else // __EMSCRIPTEN__
+                ImGui::Text("File stringified successfully and placed in the terminal.");
+#               endif //__EMSCRIPTEN__
+                ImGui::Text("You can copy it inside your code\nor in a file with extension \"%s\".",SupportedTypes::GetExtensions()[strType]);
+            }
+
+
+            //------------------------------------------------
+            ImGui::TreePop(); // Mandatory
+        }
+#       endif //YES_IMGUISTRINGIFIER
 
 #       ifdef YES_IMGUISDF
         // The following check is to ensure ImGui::SdfAddCharsetFromFile(...) can be called (some users don't like to use FILE* in <stdio.h>, and prefer loading stuff from memory only)

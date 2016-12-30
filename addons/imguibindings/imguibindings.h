@@ -157,12 +157,27 @@ struct ImImpl_InitParams	{
         const unsigned char* pMemoryData;
         size_t memoryDataSize;
         enum Compression {
-            COMP_NONE=0,
-            COMP_STB,
-            COMP_STBBASE85
+            COMP_NONE=0
+#ifdef      YES_IMGUISTRINGIFIER
+            ,COMP_BASE64
+            ,COMP_BASE85
+#endif      //YES_IMGUISTRINGIFIER
+            ,COMP_STB
+            ,COMP_STBBASE85
 #if         (!defined(NO_IMGUIHELPER) && defined(IMGUI_USE_ZLIB))
             ,COMP_GZ
+#           ifdef   YES_IMGUISTRINGIFIER
+            ,COMP_GZBASE64
+            ,COMP_GZBASE85
+#           endif   //YES_IMGUISTRINGIFIER
 #           endif   //IMGUI_USE_ZLIB
+#if         (defined(YES_IMGUIBZ2))
+            ,COMP_BZ2
+#   ifdef   YES_IMGUISTRINGIFIER
+            ,COMP_BZ2BASE64
+            ,COMP_BZ2BASE85
+#   endif   //YES_IMGUISTRINGIFIER
+#           endif   //YES_IMGUIBZ2
         };
         Compression memoryDataCompression;
         float sizeInPixels;//=15.0f,

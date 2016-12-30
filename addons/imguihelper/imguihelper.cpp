@@ -1375,6 +1375,18 @@ bool GzDecompressFromFile(const char* filePath,ImVector<char>& rv,bool clearRvBe
     return GzDecompressFromMemory(&f_data[0],f_data.size(),rv,clearRvBeforeUsage);
     //----------------------------------------------------
 }
+#   ifdef YES_IMGUISTRINGIFIER
+bool GzBase64DecompressFromFile(const char* filePath,ImVector<char>& rv)    {
+    ImVector<char> f_data;
+    if (!ImGuiHelper::GetFileContent(filePath,f_data,true,"r",true)) return false;
+    return ImGui::GzBase64DecompressFromMemory(&f_data[0],rv);
+}
+bool GzBase85DecompressFromFile(const char* filePath,ImVector<char>& rv)    {
+    ImVector<char> f_data;
+    if (!ImGuiHelper::GetFileContent(filePath,f_data,true,"r",true)) return false;
+    return ImGui::GzBase85DecompressFromMemory(&f_data[0],rv);
+}
+#   endif //#YES_IMGUISTRINGIFIER
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #endif //NO_IMGUIHELPER_SERIALIZATION
 
@@ -1412,7 +1424,71 @@ const int startRv = rv.size();
   return done;
 
 }
-
+#   ifdef YES_IMGUISTRINGIFIER
+bool GzBase64DecompressFromMemory(const char* input,ImVector<char>& rv) {
+    rv.clear();ImVector<char> v;
+    if (ImGui::Base64Decode(input,v)) return false;
+    if (v.size()==0) return false;
+    return GzDecompressFromMemory(&v[0],v.size(),rv);
+}
+bool GzBase85DecompressFromMemory(const char* input,ImVector<char>& rv) {
+    rv.clear();ImVector<char> v;
+    if (ImGui::Base85Decode(input,v)) return false;
+    if (v.size()==0) return false;
+    return GzDecompressFromMemory(&v[0],v.size(),rv);
+}
+#   endif //#YES_IMGUISTRINGIFIER
 
 } // namespace ImGui
 #endif //IMGUI_USE_ZLIB
+
+#   ifdef YES_IMGUIBZ2
+//#include "../imguiyesaddons/imguibz2.h"   // This should be already included
+namespace ImGui {
+// Two methods that fill rv and return true on success
+#       ifndef NO_IMGUIHELPER_SERIALIZATION
+#           ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+bool Bz2DecompressFromFile(const char* filePath,ImVector<char>& rv,bool clearRvBeforeUsage) {
+    if (clearRvBeforeUsage) rv.clear();
+    ImVector<char> f_data;
+    if (!ImGuiHelper::GetFileContent(filePath,f_data,true,"rb",false)) return false;
+    //----------------------------------------------------
+    return ImGui::Bz2DecompressFromMemory(&f_data[0],f_data.size(),rv,clearRvBeforeUsage);
+    //----------------------------------------------------
+}
+#   ifdef YES_IMGUISTRINGIFIER
+bool Bz2Base64DecompressFromFile(const char* filePath,ImVector<char>& rv)   {
+    ImVector<char> f_data;
+    if (!ImGuiHelper::GetFileContent(filePath,f_data,true,"r",true)) return false;
+    return ImGui::Bz2Base64Decode(&f_data[0],rv);
+}
+bool Bz2Base85DecompressFromFile(const char* filePath, ImVector<char>& rv)   {
+    ImVector<char> f_data;
+    if (!ImGuiHelper::GetFileContent(filePath,f_data,true,"r",true)) return false;
+    return ImGui::Bz2Base85Decode(&f_data[0],rv);
+}
+#   endif //#YES_IMGUISTRINGIFIER
+#           endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#       endif //NO_IMGUIHELPER_SERIALIZATION
+} // namespace ImGui
+#   endif //YES_IMGUIBZ2
+
+#   ifdef YES_IMGUISTRINGIFIER
+namespace ImGui {
+// Two methods that fill rv and return true on success
+#       ifndef NO_IMGUIHELPER_SERIALIZATION
+#           ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
+bool Base64DecodeFromFile(const char* filePath,ImVector<char>& rv)  {
+    ImVector<char> f_data;
+    if (!ImGuiHelper::GetFileContent(filePath,f_data,true,"r",true)) return false;
+    return ImGui::Base64Decode(&f_data[0],rv);
+}
+bool Base85DecodeFromFile(const char* filePath,ImVector<char>& rv)  {
+    ImVector<char> f_data;
+    if (!ImGuiHelper::GetFileContent(filePath,f_data,true,"r",true)) return false;
+    return ImGui::Base85Decode(&f_data[0],rv);
+}
+#           endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
+#       endif //NO_IMGUIHELPER_SERIALIZATION
+} // namespace ImGui
+#   endif //YES_IMGUISTRINGIFIER
