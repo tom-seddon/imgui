@@ -1063,9 +1063,8 @@ void DrawGL()	// Mandatory
         ImGui::Text("imguistringifier (yes_addon)");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","It should allow users to make files\nembeddable in their source code.");
         ImGui::Separator();
-        if (ImGui::TreeNode("imguistringifier tests:")) {
-            ImGui::Text("%s","--> No testing for this addon. Expect errors! <--");
-            typedef struct _SupportedTypes {
+	if (ImGui::TreeNode("Stringify files for embedded usage:")) {
+	    typedef struct _SupportedTypes {
                 enum Type {
                     TYPE_RAW_BINARY=0
                     ,TYPE_RAW_TEXT
@@ -1679,6 +1678,7 @@ int main(int argc, char** argv)
 
     // Basic
     ImImpl_Main(NULL,argc,argv);
+
 
 #   else //USE_ADVANCED_SETUP
     // Advanced

@@ -404,7 +404,7 @@ template <typename VectorChar> static bool Base85Encode(const char* input,int in
         unsigned int d = *(unsigned int*)(input + src_i);
         for (unsigned int n5 = 0; n5 < 5; n5++, d /= 85)	{
             char c = Encode85Byte(d);
-            if (outputStringifiedMode && c == '?' && prev_c == '?') output.push_back('\\');	// Not sure about outputStringifiedMode here...  This is made a little more complicated by the fact that ??X sequences are interpreted as trigraphs by old C/C++ compilers. So we need to escape pairs of ??.
+            if (outputStringifiedMode && c == '?' && prev_c == '?') output.push_back('\\');	// This is made a little more complicated by the fact that ??X sequences are interpreted as trigraphs by old C/C++ compilers. So we need to escape pairs of ??.
             output.push_back(c);
             prev_c = c;
         }
@@ -481,7 +481,7 @@ bool TextStringify(const char* input,ImVector<char>& output,int numCharsPerLineI
     output.reserve(inputSize*1.25f);
     // --------------------------------------------------------------
     output.push_back('"');
-    char c='\n';int cnt=0;
+    char c='\n';int cnt=0;bool endFile = false;
     for (int i=0;i<inputSize;i++) {
         c = input[i];
         switch (c) {
@@ -498,19 +498,24 @@ bool TextStringify(const char* input,ImVector<char>& output,int numCharsPerLineI
             //---------------------
             output.push_back('\\');
             output.push_back(c=='\n' ? 'n' : 'r');
-            /*
-            output.push_back('"');
-            if (i==inputSize-1) {
-                output.push_back(';');
-                output.push_back('\n');
-            }
-            else {
-                output.push_back('\t');
-                output.push_back('\\');
-                output.push_back('\n');
+            if (numCharsPerLineInStringifiedMode<=0)    {
+                // Break at newline to ease reading:
                 output.push_back('"');
+
+                if (i==inputSize-1) {
+                    endFile = true;
+                    output.push_back(';');
+                    output.push_back('\n');
+                }
+                else {
+                    output.push_back('\t');
+                    output.push_back('\\');
+                    output.push_back('\n');
+                    output.push_back('"');
+                }
+                cnt = 0;
+                //--------------------
             }
-            cnt = 0;*/
             //--------------------
             break;
         default:
@@ -522,6 +527,7 @@ bool TextStringify(const char* input,ImVector<char>& output,int numCharsPerLineI
                 output.push_back('"');
 
                 if (i==inputSize-1) {
+                    endFile = true;
                     output.push_back(';');
                     output.push_back('\n');
                 }
@@ -538,16 +544,15 @@ bool TextStringify(const char* input,ImVector<char>& output,int numCharsPerLineI
 
         }
     }
-    //if (c!='\n') {
-        //---------------------
-        //output.push_back('\\');
-        //output.push_back('n');
+
+    if (!endFile)   {
         output.push_back('"');
 
         output.push_back(';');
         output.push_back('\n');
         //--------------------
-    //}
+    }
+
     output.push_back('\0');	// End character
     //-------------------------------------------------------------
     return true;

@@ -5090,16 +5090,15 @@ bool Bz2DecompressFromMemory(const char* buffer,int buffer_size,ImVector<char>& 
 if (clear_output_before_usage) output.clear();
 if (!buffer || buffer_size<=0) return false;
 const int start_size = output.size();
-unsigned int dest_len = buffer_size*15.f;
+const unsigned int allocatedBufferSize = buffer_size*15.f;
+unsigned int dest_len = allocatedBufferSize;
 output.resize(start_size+dest_len);
 const int rv = BZ2_bzBuffToBuffDecompress(&output[start_size],&dest_len,(char*) buffer,buffer_size,0,0);
 if (rv!=BZ_OK)  {
     const char* errorCode = BzErrorString(rv);
     if (errorCode) fprintf(stderr,"Error in ImGui::Bz2Decompress(...): %s.\n",errorCode);
 }
-const int used_len = output.size()-start_size-(int)dest_len;
-IM_ASSERT(used_len>=0);
-output.resize(start_size+used_len);
+output.resize(start_size+dest_len);
 return true;
 }
 

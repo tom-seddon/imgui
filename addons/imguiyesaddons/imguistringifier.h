@@ -43,24 +43,29 @@ conceived.
 
 // USAGE
 /*
-// HOW DO I EMBED Base64/85 INSIDE MY SOURCE CODE ?
+// HOW DO I EMBED Base64/85 INSIDE MY SOURCE CODE ? (OTHER FORMATS WORK IN A SIMILIAR WAY)
 
-Hp) const char* input;int inputSize;	// They contain my binary stuff
+Hp) const char* input;int inputSize;	// They contain my binary stuff (e.g. in imguihelper.h: ImGuiHelper::GetFileContent(...))
 ImVector<char>& encodedText;
-if (ImGui::Base64Encode(input,inputSize,encodedText,true))	{
+if (ImGui::Base64Encode(input,inputSize,encodedText,true))	// 'true' is mandatory if we want to embed the output
+{
 	// Write &encodedText[0] to a file (e.g. "encodedOutput.inl")
 }
 
 // To load it back inside another project: 
 
-const char* source =
-#include "encodedOutput.inl"								// generated with Base64Encode(...) or similiar
-const int sourceSize = sizeof(source)/sizeof(source[0]);	// should be equal to strlen(source)
+const char source[] =
+#include "encodedOutput.inl"								// generated with Base64Encode(... , true) or similiar
 
 ImVector<char> decodedBin;
-if (ImGui::Base64Decode(source,sourceSize,decodedBin)) {
+if (ImGui::Base64Decode(source,decodedBin)) {
 	// Now &decodedBin[0] should be what we need
 }
+// If we need the source_size we can just use:
+// a) sizeof(source) if binary (= the inline file contains numbers).
+// b) strlen(source) or sizeof(source)-1 if text-based (= the inline file contains a long string, so there is an implicit '\0' termination).
+
+Also see imguibz2.h and imguihelper.h (the latter has methods to decode directly from a file path).
 */
 
 namespace ImGui {
@@ -73,7 +78,7 @@ IMGUI_API bool Base85Encode(const char* input,int inputSize,ImVector<char>& outp
 IMGUI_API bool Base85Decode(const char* input,ImVector<char>& output);
 
 IMGUI_API bool BinaryStringify(const char* input,int inputSize,ImVector<char>& output,int numInputBytesPerLineInStringifiedMode=80);
-IMGUI_API bool TextStringify(const char* input,ImVector<char>& output,int numCharsPerLineInStringifiedMode=112,int inputSize=0);
+IMGUI_API bool TextStringify(const char* input,ImVector<char>& output,int numCharsPerLineInStringifiedMode=0,int inputSize=0);
 
 #ifdef YES_IMGUIBZ2
 #ifndef BZ_DECOMPRESS_ONLY
