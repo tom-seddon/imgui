@@ -1665,9 +1665,13 @@ void DrawGL()	// Mandatory
 
 //#   define USE_ADVANCED_SETUP   // in-file definition (see below). For now it just adds custom fonts and different FPS settings (please read below).
 
+
 // Application code
 #ifndef IMGUI_USE_AUTO_BINDING_WINDOWS  // IMGUI_USE_AUTO_ definitions get defined automatically (e.g. do NOT touch them!)
 int main(int argc, char** argv)
+#else //IMGUI_USE_AUTO_BINDING_WINDOWS
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine, int iCmdShow)
+#endif //IMGUI_USE_AUTO_BINDING_WINDOWS
 {
 
 #   ifndef USE_ADVANCED_SETUP
@@ -1677,7 +1681,11 @@ int main(int argc, char** argv)
 //#endif //YES_IMGUIFREETYPE
 
     // Basic
+#   ifndef IMGUI_USE_AUTO_BINDING_WINDOWS  // IMGUI_USE_AUTO_ definitions get defined automatically (e.g. do NOT touch them!)
     ImImpl_Main(NULL,argc,argv);
+#   else //IMGUI_USE_AUTO_BINDING_WINDOWS
+    ImImpl_WinMain(NULL,hInstance,hPrevInstance,lpCmdLine,iCmdShow);
+#   endif //IMGUI_USE_AUTO_BINDING_WINDOWS
 
 
 #   else //USE_ADVANCED_SETUP
@@ -1704,94 +1712,48 @@ int main(int argc, char** argv)
 	//ImImpl_SdfShaderSetParams(ImVec4(0.460f,0.365f,0.120f,0.04f));	// (optional) Sets sdf params
 #   endif //IMIMPL_BUILD_SDF
 
-    // These lines load an embedded font. [However these files are way too big... inside <imgui.cpp> they used a better format storing bytes at groups of 4, so the files are more concise (1/4?) than mine]
+
+    // These lines load an embedded font (with no compression).
     const unsigned char ttfMemory[] =
 #   include "./fonts/DejaVuSerifCondensed-Bold.ttf.inl"
 //#   include "./fonts/DroidSerif-Bold.ttf.inl"
-
-;
+;   // tip: If you have signed chars (e.g. const char ttfMemory[] = ...) you can still cast ttfMemory as (const unsigned char*) later.
 
     ImImpl_InitParams gImGuiInitParams(
     -1,-1,NULL,                                                         // optional window width, height, title
-
+    //------------------------------------------------------------------------------------------------------------------------
     NULL,
     //"./fonts/DejaVuSerifCondensed-Bold.ttf",                          // optional custom font from file (main custom font)
-    //"./fonts/DroidSerif-Bold.ttf",                                       // optional custom font from file (main custom font)                                                              // optional white spot in font texture (returned by the console if not set)
-
+    //------------------------------------------------------------------------------------------------------------------------
     //NULL,0,
-    &ttfMemory[0],sizeof(ttfMemory)/sizeof(ttfMemory[0]),               // optional custom font from memory (secondary custom font) WARNING (licensing problem): e.g. embedding a GPL font in your code can make your code GPL as well.
-
+    (const unsigned char*) ttfMemory,sizeof(ttfMemory)/sizeof(ttfMemory[0]),    // optional custom font from memory (secondary custom font) WARNING (licensing problem): e.g. embedding a GPL font in your code can make your code GPL as well.
+    //------------------------------------------------------------------------------------------------------------------------
     fontSizeInPixels,
     &ranges[0],
     &cfg,                                                               // optional ImFontConfig* (useful for merging glyph to the default font, according to ImGui)
     false                                                               // true = addDefaultImGuiFontAsFontZero
-    ); // If you need to add more than one TTF file, there's another ctr (TO TEST).
+    );
+    // IMPORTANT: If you need to add more than one TTF file,
+    // or you need to load embedded font data encoded with a different ImImpl_InitParams::Compression type,
+    // there's a second ctr that takes a ImVector<ImImpl_InitParams::FontData> (see imguibindings.h).
+    // For a single compressed font loaded from an extern file, the first constructor should work (the file extension is used to detect the compression type).
+    // In all cases, to use compressed/encoded data some additional definitions are necessary (for example: YES_IMGUIBZ2 and/or YES_IMGUISTRINGIFIER and/or IMGUI_USE_ZLIB).
+
     // Here are some optional tweaking of the desired FPS settings (they can be changed at runtime if necessary, but through some global values defined in imguibindinds.h)
     gImGuiInitParams.gFpsClampInsideImGui = 30.0f;  // Optional Max allowed FPS (!=0, default -1 => unclamped). Useful for editors and to save GPU and CPU power.
     gImGuiInitParams.gFpsDynamicInsideImGui = false; // If true when inside ImGui, the FPS is not constant (at gFpsClampInsideImGui), but goes from a very low minimum value to gFpsClampInsideImGui dynamically. Useful for editors and to save GPU and CPU power.
     gImGuiInitParams.gFpsClampOutsideImGui = 10.f;  // Optional Max allowed FPS (!=0, default -1 => unclamped). Useful for setting a different FPS for your main rendering.
 
+#   ifndef IMGUI_USE_AUTO_BINDING_WINDOWS  // IMGUI_USE_AUTO_ definitions get defined automatically (e.g. do NOT touch them!)
     ImImpl_Main(&gImGuiInitParams,argc,argv);
+#   else //IMGUI_USE_AUTO_BINDING_WINDOWS
+    ImImpl_WinMain(&gImGuiInitParams,hInstance,hPrevInstance,lpCmdLine,iCmdShow);
+#   endif //IMGUI_USE_AUTO_BINDING_WINDOWS
+
 #   endif //USE_ADVANCED_SETUP
 
 	return 0;
 }
-#else //IMGUI_USE_AUTO_BINDING_WINDOWS
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine, int iCmdShow)   // This branch has made my code less concise (I will consider stripping it)
-{
-#   ifndef USE_ADVANCED_SETUP
-    // Basic
-    ImImpl_WinMain(NULL,hInstance,hPrevInstance,lpCmdLine,iCmdShow);
-#   else //USE_ADVANCED_SETUP
-    // Advanced
-        static const ImWchar ranges[] =
-        {
-            0x0020, 0x00FF, // Basic Latin + Latin Supplement
-            0x20AC, 0x20AC,	// €
-            0x2122, 0x2122,	// ™
-            0x2196, 0x2196, // ↖
-            0x21D6, 0x21D6, // ⇖
-            0x2B01, 0x2B01, // ⬁
-            0x2B09, 0x2B09, // ⬉
-            0x2921, 0x2922, // ⤡ ⤢
-            0x263A, 0x263A, // ☺
-            0x266A, 0x266A, // ♪
-            0, // € ™ ↖ ⇖ ⬁ ⬉ ⤡ ⤢ ☺ ♪
-        };
-    const float fontSizeInPixels = 18.f;
-
-
-    // These lines load an embedded font. [However these files are way too big... inside <imgui.cpp> they used a better format storing bytes at groups of 4, so the files are more concise (1/4?) than mine]
-    const unsigned char ttfMemory[] =
-#   include "./fonts/DejaVuSerifCondensed-Bold.ttf.inl"
-//#   include "./fonts/DroidSerif-Bold.ttf.inl"
-
-;
-
-    ImImpl_InitParams gImGuiInitParams(
-    -1,-1,NULL,                                                         // optional window width, height, title
-
-    NULL,
-    //"./fonts/DejaVuSerifCondensed-Bold.ttf",                          // optional custom font from file (main custom font)
-    //"./fonts/DroidSerif-Bold.ttf",                                       // optional custom font from file (main custom font)                                                              // optional white spot in font texture (returned by the console if not set)
-
-    //NULL,0,
-    &ttfMemory[0],sizeof(ttfMemory)/sizeof(ttfMemory[0]),               // optional custom font from memory (secondary custom font) WARNING (licensing problem): e.g. embedding a GPL font in your code can make your code GPL as well.
-
-    fontSizeInPixels,
-    &ranges[0]
-    );
-    gImGuiInitParams.gFpsClampInsideImGui = 30.0f;  // Optional Max allowed FPS (default -1 => unclamped). Useful for editors and to save GPU and CPU power.
-    gImGuiInitParams.gFpsDynamicInsideImGui = true; // If true when inside ImGui, the FPS is not constant (at gFpsClampInsideImGui), but goes from a very low minimum value to gFpsClampInsideImGui dynamically. Useful for editors and to save GPU and CPU power.
-    gImGuiInitParams.gFpsClampOutsideImGui = 10.f;  // Optional Max allowed FPS (default -1 => unclamped). Useful for setting a different FPS for your main rendering.
-
-    ImImpl_WinMain(&gImGuiInitParams,hInstance,hPrevInstance,lpCmdLine,iCmdShow);
-#   endif //#   USE_ADVANCED_SETUP
-
-    return 0;
-}
-#endif //IMGUI_USE_AUTO_BINDING_WINDOWS
-
 
 
 
