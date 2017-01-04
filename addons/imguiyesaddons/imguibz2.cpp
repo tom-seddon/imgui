@@ -5074,6 +5074,7 @@ if (!buffer || buffer_size<=0) return false;
 const int start_size = output.size();
 unsigned int dest_len = buffer_size*1.2f;
 output.resize(start_size+dest_len); // Valgrind here: "Unitialized value was created by a heap allocation". Should we worry ?
+for (int i=start_size;i<output.size();i++) output[i]='\0';  // Just to silence Valgrind (should I use memset ?)
 const int rv = BZ2_bzBuffToBuffCompress(&output[start_size],&dest_len,(char*)buffer,buffer_size,9,0,0);
 if (rv!=BZ_OK)  {
     const char* errorCode = BzErrorString(rv);

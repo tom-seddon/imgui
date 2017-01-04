@@ -466,9 +466,9 @@ bool BinaryStringify(const char* input, int inputSize, ImVector<char>& output, i
     int cnt=1;
     for (int i=1;i<inputSize;i++) {
         if (cnt++>=numInputBytesPerLineInStringifiedMode) {cnt=0;b.append("\n");}
-        b.append(",%d",(int)input[i]);  // Valgring here:
-                                        // "Conditional jump or move depends on uninitialized value" and
-                                        // "Use of uninitialized value of size 8". Should we worry ?
+        b.append(",%d",(int)input[i]);  // Yes, saving as unsigned char would have taken less header space,
+                                        // but being consistent with all the other compressions, that take signed chars
+                                        // is better.
     }
     b.append("};\n");
     //-------------------------------------------------------------
