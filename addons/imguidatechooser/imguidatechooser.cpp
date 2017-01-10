@@ -191,7 +191,9 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
 
     if (label_size.x > 0) RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
-    static bool isOpen = false;
+    ImGuiStorage* storage = ImGui::GetStateStorage();
+    const bool isOpenStored = storage->GetBool(id,false);
+    bool isOpen = isOpenStored;
 
     ImGui::PushID((int)id);
     //bool menu_toggled = false;
@@ -367,6 +369,7 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
 
     }
 
+    if (isOpen!=isOpenStored) storage->SetBool(id,isOpen);
     ImGui::PopID();
 
     //if (value_changed) d.tm_mday=0;    //reset d
