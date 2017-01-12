@@ -1,3 +1,12 @@
+//- Common Code For All Addons needed just to ease inclusion as separate files in user code ----------------------
+#include <imgui.h>
+#undef IMGUI_DEFINE_PLACEMENT_NEW
+#define IMGUI_DEFINE_PLACEMENT_NEW
+#undef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include <imgui_internal.h>
+//-----------------------------------------------------------------------------------------------------------------
+
 
 #include "imguinodegrapheditor.h"
 
@@ -265,7 +274,7 @@ bool NodeGraphEditor::Style::Edit(NodeGraphEditor::Style& s) {
     return changed;
 }
 
-#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 #include "../imguihelper/imguihelper.h"
 bool NodeGraphEditor::Style::Save(const NodeGraphEditor::Style &style,ImGuiHelper::Serializer& s)    {
@@ -512,7 +521,7 @@ void NodeGraphEditor::render()
                 ImGui::ColorEditMode(colorEditMode);
                 Style::Edit(this->style);
                 ImGui::Separator();
-#if             (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#if             (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
                 const char* saveName = "nodeGraphEditor.nge.style";
                 const char* saveNamePersistent = "/persistent_folder/nodeGraphEditor.nge.style";
                 const char* pSaveName = saveName;
@@ -546,7 +555,7 @@ void NodeGraphEditor::render()
             }
             ImGui::Separator();
         }
-#if	(!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#if	(defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 	if (show_load_save_buttons) {
 	    ImGui::Spacing();
 	    ImGui::Separator();
@@ -1890,7 +1899,7 @@ bool FieldInfo::copyPDataValueFrom(const FieldInfo &f) {
     }
     return true;
 }
-#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 bool FieldInfo::serialize(ImGuiHelper::Serializer& s) const   {
     const char* fieldName = label;    
@@ -2053,7 +2062,7 @@ FieldInfo &FieldInfoVector::addFieldColor(float *pdata, bool useAlpha, const cha
 }
 FieldInfo &FieldInfoVector::addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,FieldInfo::CopyFieldDelegate copyFieldDelegate, void *userData
 //-------------------------------------------------------------------------------
-#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 	,FieldInfo::SerializeFieldDelegate serializeFieldDelegate,
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
@@ -2071,7 +2080,7 @@ FieldInfo &FieldInfoVector::addFieldCustom(FieldInfo::RenderFieldDelegate render
     f.copyFieldDelegate=copyFieldDelegate;
     f.userData = userData;
 //-------------------------------------------------------------------------------
-#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
     f.serializeFieldDelegate=serializeFieldDelegate;
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
@@ -2320,7 +2329,7 @@ bool FieldInfo::render(int nodeWidth)   {
 }
 
 //-------------------------------------------------------------------------------
-#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 bool NodeGraphEditor::save(ImGuiHelper::Serializer& s)    {
     if (!s.isValid()) return false;

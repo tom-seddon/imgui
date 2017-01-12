@@ -1,10 +1,5 @@
 /* 	Refactoring from https://github.com/ocornut/imgui/issues/306
     It's basically the same exact code with a few modifications (and tons of additions)
-
-    As many others, this addon depends on imguihelper for serialization,
-    but can be compiled without it using:
-    #define NO_IMGUIHELPER
-    at the project level, of at the top of this file when used as stand-alone (see README_FIRST.txt).
 */
 
 #ifndef IMGUINODEGRAPHEDITOR_H_
@@ -46,7 +41,7 @@
 
 
 namespace ImGui	{
-#   ifdef NO_IMGUIHELPER
+#   ifndef IMGUIHELPER_H_
 // To make it compatible without serialization, we must still
 // clone the FieldType enum from imguihelper.h...
 // (Mmmh, this might be a problem if another addons will do the same in the future...)
@@ -66,7 +61,7 @@ enum FieldType {
     FT_CUSTOM,      // a custom type that is served like FT_TEXTLINE (=one line at a time).
     FT_COUNT
 };
-#   endif //NO_IMGUIHELPER
+#   endif //IMGUIHELPER_H_
 
     class FieldInfo {
     protected:
@@ -102,7 +97,7 @@ enum FieldType {
         CopyFieldDelegate copyFieldDelegate;
 
 //-------------------------------------------------------------------------------
-#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
         typedef bool (*SerializeFieldDelegate)(ImGuiHelper::Serializer& s,const FieldInfo& src);
         SerializeFieldDelegate serializeFieldDelegate;
@@ -146,7 +141,7 @@ enum FieldType {
         //bool copyFrom(const FieldInfo& f);
         bool copyPDataValueFrom(const FieldInfo& f);
 //-------------------------------------------------------------------------------
-#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
         bool serialize(ImGuiHelper::Serializer& s) const;
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
@@ -185,7 +180,7 @@ enum FieldType {
 
     FieldInfo& addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,FieldInfo::CopyFieldDelegate copyFieldDelegate,void* userData
 //------WIP----------------------------------------------------------------------
-#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
         ,FieldInfo::SerializeFieldDelegate serializeFieldDelegate=NULL,
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
@@ -205,7 +200,7 @@ enum FieldType {
     }
 
 //------WIP----------------------------------------------------------------------
-#   if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#   if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #    ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
     bool serialize(ImGuiHelper::Serializer& s) const {
         bool rt = true;
@@ -448,7 +443,7 @@ struct NodeGraphEditor	{
         static bool Edit(Style& style);
         static void Reset(Style& style) {style = Style();}
 
-#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
         static bool Save(const Style& style,ImGuiHelper::Serializer& s);
         static inline bool Save(const Style &style, const char *filename)    {
@@ -631,7 +626,7 @@ struct NodeGraphEditor	{
     void setNodeEditedCallbackTimeThreshold(int seconds) {nodeEditedTimeThreshold=seconds;}
 
 //-------------------------------------------------------------------------------
-#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
         bool save(ImGuiHelper::Serializer& s);
         inline bool save(const char *filename)    {

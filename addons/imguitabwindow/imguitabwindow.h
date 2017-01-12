@@ -9,8 +9,6 @@
 // and is bundled in the "ImGui Addons Branch" here:    https://github.com/Flix01/imgui/tree/2015-10-Addons
 // Wiki about the "ImGui Addons Branch" is here:        https://github.com/Flix01/imgui/wiki/ImGui-Addons-Branch-Home
 
-// COMPILATION: if you use imguitabwindow.h/cpp alone, please define:
-//#define NO_IMGUIHELPER
 
 // USAGE:
 /*
@@ -232,7 +230,7 @@ static void LightenBackground(TabLabelStyle& style=TabLabelStyle::Get(),float am
 static void DarkenBackground(TabLabelStyle& style=TabLabelStyle::Get(),float amount=0.15f);
 
 
-#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 static bool Save(const TabLabelStyle& style,ImGuiHelper::Serializer& s);
 static inline bool Save(const TabLabelStyle &style, const char *filename)    {
@@ -474,7 +472,7 @@ mutable void* userPtr;
 static ImGuiWindowFlags ExtraWindowFlags;
 
 //-------------------------------------------------------------------------------
-#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 public:
         bool save(ImGuiHelper::Serializer& s);
@@ -524,7 +522,7 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
 
 // Untested attempt to provide serialization for ImGui::TabLabels(...): only "selectedIndex" and "pOptionalItemOrdering" are serialized.
 //-------------------------------------------------------------------------------
-#   if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#   if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
         bool TabLabelsSave(ImGuiHelper::Serializer& s,int selectedIndex,const int* pOptionalItemOrdering=NULL,int numTabs=0);
         bool TabLabelsSave(const char* filename,int selectedIndex,const int* pOptionalItemOrdering=NULL,int numTabs=0);
@@ -537,13 +535,13 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
 //--------------------------------------------------------------------------------
 
 
-#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_DRAW_METHODS) && !defined(NO_IMGUIHELPER_VERTICAL_TEXT_METHODS))
+#if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS) && !defined(NO_IMGUIHELPER_VERTICAL_TEXT_METHODS))
 // Tip: IMGUIHELPER_HAS_VERTICAL_TEXT_SUPPORT is a read-only definition that summarizes the definitions above
 
 // ImGui::TabLabelsVertical() are similiar to ImGui::TabLabels(), but they do not support WrapMode.
 bool TabLabelsVertical(bool textIsRotatedCCW,int numTabs, const char** tabLabels, int& selectedIndex, const char** tabLabelTooltips=NULL, int* pOptionalHoveredIndex=NULL, int* pOptionalItemOrdering=NULL, bool allowTabReorder=false, bool allowTabClosing=false, int* pOptionalClosedTabIndex=NULL,int * pOptionalClosedTabIndexInsideItemOrdering=NULL,bool invertRounding=false);
 float CalcVerticalTabLabelsWidth();
-#endif // (!defined(NO_IMGUIHELPER) && ...)
+#endif // (defined(IMGUIHELPER_H_) && ...)
 
 } // namespace ImGui
 

@@ -1,6 +1,14 @@
-#include "imguitabwindow.h"
+//- Common Code For All Addons needed just to ease inclusion as separate files in user code ----------------------
+#include <imgui.h>
+#undef IMGUI_DEFINE_PLACEMENT_NEW
+#define IMGUI_DEFINE_PLACEMENT_NEW
+#undef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui_internal.h>
-#include <imgui.h>  // intellisense
+//-----------------------------------------------------------------------------------------------------------------
+
+#include "imguitabwindow.h"
+
 
 // TODO: Clean this code, it's a mess!
 
@@ -545,7 +553,7 @@ static const char* DefaultTabLabelStyleNames[ImGuiTabLabelStyle_Count]={"Default
 const char** GetDefaultTabLabelStyleNames() {return &DefaultTabLabelStyleNames[0];}
 
 
-#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 #include "../imguihelper/imguihelper.h"
 bool TabLabelStyle::Save(const TabLabelStyle &style, ImGuiHelper::Serializer& s) {
@@ -1058,7 +1066,7 @@ struct TabWindowNode  {
 
     void render(const ImVec2& windowSize,struct MyTabWindowHelperStruct *ptr);
 
-#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
     void serialize(ImGuiHelper::Serializer& s,TabWindow* tabWindow) {
         if (name) s.save(name,"name");
@@ -2300,7 +2308,7 @@ bool TabWindow::startCloseAllDialog(ImVector<TabWindow::TabLabel *> *ptabs, bool
 
 
 //-------------------------------------------------------------------------------
-#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 bool TabWindow::save(ImGuiHelper::Serializer &s)    {
     if (!s.isValid()) return false;
@@ -2636,7 +2644,7 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
 }
 
 //-------------------------------------------------------------------------------
-#   if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#   if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
         bool TabLabelsSave(ImGuiHelper::Serializer& s,int selectedIndex,const int* pOptionalItemOrdering,int numTabs)   {
             if (!s.isValid()) return false;

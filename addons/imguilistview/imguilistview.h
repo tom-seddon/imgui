@@ -125,7 +125,7 @@ TODO: Header columns with type HT_CUSTOM have never been tested.
 #include <imgui.h>
 #endif //IMGUI_API
 
-#include <stdio.h>
+//#include <stdio.h>
 
 // TODO: move to the .cpp files together with all its references
 #if (defined(_MSC_VER) && !defined(snprintf))

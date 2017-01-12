@@ -667,7 +667,7 @@ public:
     void setTextColorForStateColor(int aStateColorFlag,const ImVec4& textColor,float disabledTextColorAlphaFactor=0.5f) const;
 
 //-------------------------------------------------------------------------------
-#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 public:
         bool save(ImGuiHelper::Serializer& s);

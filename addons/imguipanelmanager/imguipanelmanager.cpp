@@ -1,3 +1,13 @@
+//- Common Code For All Addons needed just to ease inclusion as separate files in user code ----------------------
+#include <imgui.h>
+#undef IMGUI_DEFINE_PLACEMENT_NEW
+#define IMGUI_DEFINE_PLACEMENT_NEW
+#undef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include <imgui_internal.h>
+//-----------------------------------------------------------------------------------------------------------------
+
+
 #include "imguipanelmanager.h"
 //#include <stdio.h> // fprintf
 
@@ -413,7 +423,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             }
             else
             {
-                SetActiveID(0);
+                ClearActiveID();
                 g.MovedWindow = NULL;   // Not strictly necessary but doing it for sanity.
             }
         }
@@ -500,7 +510,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                     window->SizeFull = size_auto_fit;
                     if (!(flags & ImGuiWindowFlags_NoSavedSettings))
                         MarkSettingsDirty();
-                    SetActiveID(0);
+                    ClearActiveID();
                 }
                 else if (held)
                 {
@@ -582,7 +592,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
             // Title bar
             if (!(flags & ImGuiWindowFlags_NoTitleBar)) {
-#               if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
+#               if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
                 if (gImGuiDockpanelManagerExtendedStyle)    {
                     ImU32 col = GetColorU32((g.FocusedWindow && window->RootNonPopupWindow == g.FocusedWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
                     ImGui::ImDrawListAddRectWithVerticalGradient(window->DrawList,
@@ -591,7 +601,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                     );
                 }
                 else
-#               endif // (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
+#               endif // (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
                 {
                     window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32((g.FocusedWindow && window->RootNonPopupWindow == g.FocusedWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, ImGuiCorner_TopLeft|ImGuiCorner_TopRight);
                 }
@@ -1628,7 +1638,7 @@ void ImGui::PanelManager::calculateInnerBarQuadPlacement() const {
 
 
 
-#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 #include "../imguihelper/imguihelper.h"
 bool ImGui::PanelManager::Save(const PanelManager &mgr, ImGuiHelper::Serializer& s) {

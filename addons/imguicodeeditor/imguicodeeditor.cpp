@@ -24,6 +24,17 @@
 #   include "utf8helper.h"         // not sure if it's necessary to count UTF8 chars
 #endif //IMGUICODEEDITOR_USE_UTF8HELPER_H
 
+
+//- Common Code For All Addons needed just to ease inclusion as separate files in user code ----------------------
+#include <imgui.h>
+#undef IMGUI_DEFINE_PLACEMENT_NEW
+#define IMGUI_DEFINE_PLACEMENT_NEW
+#undef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include <imgui_internal.h>
+//-----------------------------------------------------------------------------------------------------------------
+
+
 #define IMGUI_NEW(type)         IM_PLACEMENT_NEW (ImGui::MemAlloc(sizeof(type) ) ) type
 #define IMGUI_DELETE(type, obj) reinterpret_cast<type*>(obj)->~type(), ImGui::MemFree(obj)
 
@@ -492,7 +503,7 @@ bool CodeEditor::Style::Edit(CodeEditor::Style& s) {
     ImGui::PopID();
     return changed;
 }
-#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 #include "../imguihelper/imguihelper.h"
 bool CodeEditor::Style::Save(const CodeEditor::Style &style,ImGuiHelper::Serializer& s)    {
@@ -2141,7 +2152,7 @@ void CodeEditor::render()   {
                 ImGui::ColorEditMode(colorEditMode);
                 Style::Edit(this->style);
                 ImGui::Separator();
-#if             (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#if             (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
                 const char* saveName = "codeEditor.ce.style";
                 const char* saveNamePersistent = "/persistent_folder/codeEditor.ce.style";
                 const char* pSaveName = saveName;
@@ -3624,7 +3635,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     {
         // Release focus when we click outside
         if (g.ActiveId == id)
-            SetActiveID(0);
+            ClearActiveID();
     }
 
     bool value_changed = false;
@@ -3708,7 +3719,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             bool ctrl_enter_for_new_line = (flags & ImGuiInputTextFlags_CtrlEnterForNewLine) != 0;
             if ((ctrl_enter_for_new_line && !is_ctrl_down) || (!ctrl_enter_for_new_line && is_ctrl_down))
             {
-                SetActiveID(0);
+                ClearActiveID();
                 enter_pressed = true;
             }
             else if (is_editable)
@@ -3744,7 +3755,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             if (InputTextFilterCharacter(&c, flags, callback, user_data))
                 edit_state.OnKeyPressed((int)c);
         }
-        else if (IsKeyPressedMap(ImGuiKey_Escape))                              { SetActiveID(0); cancel_edit = true; }
+        else if (IsKeyPressedMap(ImGuiKey_Escape))                              { SetActiveID(0,NULL); cancel_edit = true; }
         else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Z) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); edit_state.ClearSelection(); }
         else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Y) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); edit_state.ClearSelection(); }
         else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_A))                   { edit_state.SelectAll(); edit_state.CursorFollow = true; }
@@ -4238,5 +4249,6 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 } // namespace ImGuiCe
 
 
-#undef IMGUI_NEW
-#undef IMGUI_DELETE
+#undef IMGUI_NEW    // cleanup
+#undef IMGUI_DELETE // cleanup
+

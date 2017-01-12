@@ -28,6 +28,8 @@
 #error imguistring is required for imguicodeeditor to work
 #endif //NO_IMGUISTRING
 
+#include "../imguistring/imguistring.h" // TODO: see if it's possible to hide ImString,ImVectorEx and ImHashMaps instances in the cpp file
+
 // ImGui::InputTextWithSyntaxHighlighting(..):
 /*
   Since ImGuiCe::CodeEditor is far from being usable (read the comment block below),
@@ -71,13 +73,16 @@ https://github.com/ocornut/imgui/issues/108
 https://github.com/ocornut/imgui/issues/200
 */
 
- //#include "imhashmap.h" // TODO: move to .cpp
-
+// COMPILATION NOTES FOR PEOPLE WANTING TO EXTRACT THIS ADDON:
+/*
+-> It's not possible to compile codeeditor.cpp separately (i.e. it must be included with IMGUI_INCLUDE_IMGUI_USER_H / IMGUI_INCLUDE_IMGUI_USER_INL).
+-> It depends on imguistring.h (ATM it's header-only, but please check).
+-> The cpp file currently depends on "utf8helper.h" (it's header-only).
+*/
 
 namespace ImGuiCe {
 
 // TODO: Hide 65% of the stuff of this header file in the cpp file (e.g.FoldingTag classes)
-// TODO: see if it's possible to hide ImString,ImVectorEx and ImHashMaps instances in the cpp file too
 
 enum FontStyle {
     FONT_STYLE_NORMAL=0,
@@ -259,7 +264,7 @@ public:
         static bool Edit(Style& style);
         static void Reset(Style& style) {style = Style();}
 
-#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
         static bool Save(const Style& style,ImGuiHelper::Serializer& s);
         static inline bool Save(const Style &style, const char *filename)    {

@@ -201,7 +201,7 @@ struct PanelManager {
     void setDisplayPortion(const ImVec4& _displayPortion);
 
 
-#   if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#   if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 //  Warning: load and save mathods here just load and save the selected buttons and the associated window sizes: nothing else.
 //  Thus these methods cannot construct a PanelManager for you!
 //  Hp) ImGui::GetIO().displaySize must be valid on both load and save

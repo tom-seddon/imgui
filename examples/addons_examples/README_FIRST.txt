@@ -229,18 +229,8 @@ If you just want to add a single addon (a pair of addonName.h/.cpp files) to an 
 add the include folders: $IMGUI_HOME and $IMGUI_HOME/addons/addonName to your project (where $IMGUI_HOME is the path where imgui.h/.cpp are located)
 and compile the file $IMGUI_HOME/addons/addonName/addonName.cpp, where "addonName" is the name of the addon you want to use.
 Be warned that some addons might depend on others: e.g. imguipanelmanager depends on imguitoolbar: so you may need to include both addons.
-Other addons may need some special definitions at the top of their .h file to be used as stand-alone (usually #define NO_IMGUIHELPER).
 
-However I'm not sure this approach works for all the addons, since some .cpp files need to be included after imgui.cpp to access its internals.
-As a workaround in case of failure, you can try adding at the top of the .cpp file/s:
-
-#include "imgui.h"
-#define IMGUI_DEFINE_PLACEMENT_NEW
-#define IMGUI_DEFINE_MATH_OPERATORS
-#include "imgui_internal.h"
-
-so that most imgui internals are accessible.
-
+However I'm not sure this approach works for all the addons, since some .cpp files (like imguicodeeditor.cpp) need to be included after imgui.cpp to access its internals.
 There's no guarantee this approach will work for all the addons, but it should in most cases.
 
 -----------------------------------------------------------------------------------------------------------------------------------

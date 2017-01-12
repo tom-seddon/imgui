@@ -1,7 +1,16 @@
+//- Common Code For All Addons needed just to ease inclusion as separate files in user code ----------------------
+#include <imgui.h>
+#undef IMGUI_DEFINE_PLACEMENT_NEW
+#define IMGUI_DEFINE_PLACEMENT_NEW
+#undef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include <imgui_internal.h>
+//-----------------------------------------------------------------------------------------------------------------
+
+
 #include "imguidatechooser.h"
 #include <time.h>               // very simple and common plain C header file (it's NOT the c++ <sys/time.h>). If not available it's probably better to implement it yourself rather than modifying this file.
 //#include <ctype.h>  // toupper()
-
 
 namespace ImGui {
 
@@ -321,7 +330,7 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
                     if (cday<9) sprintf(curDayStr," %d",cday+1);
                     else sprintf(curDayStr,"%d",cday+1);
                     if (ImGui::SmallButton(curDayStr)) {
-                        ImGui::SetActiveID(0);
+                        ClearActiveID();
                         //-------------------------
                         value_changed = true;
                         dateOut = d;
@@ -369,8 +378,9 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
 
     }
 
-    if (isOpen!=isOpenStored) storage->SetBool(id,isOpen);
     ImGui::PopID();
+
+    if (isOpen!=isOpenStored) storage->SetBool(id,isOpen);
 
     //if (value_changed) d.tm_mday=0;    //reset d
     return value_changed;

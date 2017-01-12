@@ -23,10 +23,16 @@
 // But It's too much work for me for now to make it work like it should (these two files could be a stand-alone git repository by themselves!).
 
 
-#include "imguipdfviewer.h"
-
+//- Common Code For All Addons needed just to ease inclusion as separate files in user code ----------------------
+#include <imgui.h>
+#undef IMGUI_DEFINE_PLACEMENT_NEW
+#define IMGUI_DEFINE_PLACEMENT_NEW
+#undef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui_internal.h>
-#include <imgui.h>  // intellisense
+//-----------------------------------------------------------------------------------------------------------------
+
+#include "imguipdfviewer.h"
 
 #include <poppler/glib/poppler-document.h>
 #include <poppler/glib/poppler-page.h>
@@ -1116,11 +1122,11 @@ bool PdfPagePanel::imageZoomAndPan(const ImVec2& size)
                         break;
                         case POPPLER_ACTION_URI:
                         if (aw.uri && strlen(aw.uri)>0) {
-#                           ifndef NO_IMGUIHELPER
+#                           ifdef IMGUIHELPER_H_
                             ImGui::OpenWithDefaultApplication((const char*) aw.uri);
-#                           else //NO_IMGUIHELPER
+#                           else //IMGUIHELPER_H_
                             fprintf(stderr,"Must open URI: \"%s\"\n",aw.uri);
-#                           endif //NO_IMGUIHELPER
+#                           endif //IMGUIHELPER_H_
                         }
                         break;
                         default:

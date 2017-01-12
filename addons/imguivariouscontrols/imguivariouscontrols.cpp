@@ -1,6 +1,13 @@
-#include "imguivariouscontrols.h"
+//- Common Code For All Addons needed just to ease inclusion as separate files in user code ----------------------
+#include <imgui.h>
+#undef IMGUI_DEFINE_PLACEMENT_NEW
+#define IMGUI_DEFINE_PLACEMENT_NEW
+#undef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include <imgui_internal.h>
+//-----------------------------------------------------------------------------------------------------------------
 
-#include <imgui_internal.h> // intellisense
+#include "imguivariouscontrols.h"
 
 #ifndef NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
 #ifndef IMGUI_USE_AUTO_BINDING
@@ -497,7 +504,7 @@ bool ColorCombo(const char* label,ImVec4 *pColorOut,bool supportsAlpha,float wid
         SetHoveredID(id);
         if (g.IO.MouseClicked[0])
         {
-            SetActiveID(0);
+            ClearActiveID();
             if (IsPopupOpen(id))
             {
                 ClosePopup(id);
@@ -2011,7 +2018,7 @@ struct MyTreeViewHelperStruct {
         return n1->data.userId-n2->data.userId;
     }
     // Serialization
-#if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
     static void Serialize(ImGuiHelper::Serializer& s,TreeViewNode* n) {
         if (n->parentNode)  {
@@ -2760,7 +2767,7 @@ void TreeView::setTextColorForStateColor(int aStateColorFlag, const ImVec4 &text
 }
 
 //-------------------------------------------------------------------------------
-#       if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
+#       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
         bool TreeView::save(ImGuiHelper::Serializer& s) {
             if (!s.isValid()) return false;
