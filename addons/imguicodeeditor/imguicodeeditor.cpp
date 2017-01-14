@@ -25,16 +25,6 @@
 #endif //IMGUICODEEDITOR_USE_UTF8HELPER_H
 
 
-//- Common Code For All Addons needed just to ease inclusion as separate files in user code ----------------------
-#include <imgui.h>
-#undef IMGUI_DEFINE_PLACEMENT_NEW
-#define IMGUI_DEFINE_PLACEMENT_NEW
-#undef IMGUI_DEFINE_MATH_OPERATORS
-#define IMGUI_DEFINE_MATH_OPERATORS
-#include <imgui_internal.h>
-//-----------------------------------------------------------------------------------------------------------------
-
-
 #define IMGUI_NEW(type)         IM_PLACEMENT_NEW (ImGui::MemAlloc(sizeof(type) ) ) type
 #define IMGUI_DELETE(type, obj) reinterpret_cast<type*>(obj)->~type(), ImGui::MemFree(obj)
 

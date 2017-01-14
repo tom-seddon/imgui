@@ -462,10 +462,71 @@ bool ColorChooser(bool* open,ImVec4 *pColorOut,bool supportsAlpha)   {
 
 }
 
+
+
+
 // Based on the code from: https://github.com/benoitjacquier/imgui
 bool ColorCombo(const char* label,ImVec4 *pColorOut,bool supportsAlpha,float width,bool closeWhenMouseLeavesIt)    {
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     if (window->SkipItems) return false;
+
+    typedef struct _ImGuiCppDuply {
+        // The meaning of this struct is to expose some internal imgui.cpp methods (not exposed by imgui_internal.h),
+        // so that this .cpp file can be used directly (even without the IMGUI_INCLUDE_IMGUI_USER_H / IMGUI_INCLUDE_IMGUI_USER_INL mechanism).
+
+        // I know it's a bit crazy... but this addon is huge and it's a pity to prevent free usage just because of ColorCombo()...
+
+        static bool IsPopupOpen(ImGuiID id) {
+            ImGuiContext& g = *GImGui;
+            return g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].PopupId == id;
+        }
+        static void ClosePopupToLevel(int remaining)    {
+            ImGuiContext& g = *GImGui;
+            if (remaining > 0)
+                ImGui::FocusWindow(g.OpenPopupStack[remaining-1].Window);
+            else
+                ImGui::FocusWindow(g.OpenPopupStack[0].ParentWindow);
+            g.OpenPopupStack.resize(remaining);
+        }
+        static void ClosePopup(ImGuiID id)  {
+            if (!IsPopupOpen(id))
+                return;
+            ImGuiContext& g = *GImGui;
+            ClosePopupToLevel(g.OpenPopupStack.Size - 1);
+        }
+        static inline void ClearSetNextWindowData() {
+            ImGuiContext& g = *GImGui;
+            g.SetNextWindowPosCond = g.SetNextWindowSizeCond = g.SetNextWindowContentSizeCond = g.SetNextWindowCollapsedCond = 0;
+            g.SetNextWindowSizeConstraint = g.SetNextWindowFocus = false;
+        }
+        static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)  {
+            ImGuiContext& g = *GImGui;
+            ImGuiWindow* window = g.CurrentWindow;
+            const ImGuiID id = window->GetID(str_id);
+            if (!IsPopupOpen(id))
+            {
+                ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
+                return false;
+            }
+
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+            ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
+
+            char name[20];
+            if (flags & ImGuiWindowFlags_ChildMenu)
+                ImFormatString(name, IM_ARRAYSIZE(name), "##menu_%d", g.CurrentPopupStack.Size);    // Recycle windows based on depth
+            else
+                ImFormatString(name, IM_ARRAYSIZE(name), "##popup_%08x", id); // Not recycling, so we can close/open during the same frame
+
+            bool is_open = ImGui::Begin(name, NULL, flags);
+            if (!(window->Flags & ImGuiWindowFlags_ShowBorders))
+                g.CurrentWindow->Flags &= ~ImGuiWindowFlags_ShowBorders;
+            if (!is_open) // NB: is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
+                ImGui::EndPopup();
+
+            return is_open;
+        }
+    } ImGuiCppDuply;
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
@@ -505,9 +566,9 @@ bool ColorCombo(const char* label,ImVec4 *pColorOut,bool supportsAlpha,float wid
         if (g.IO.MouseClicked[0])
         {
             ClearActiveID();
-            if (IsPopupOpen(id))
+            if (ImGuiCppDuply::IsPopupOpen(id))
             {
-                ClosePopup(id);
+                ImGuiCppDuply::ClosePopup(id);
             }
             else
             {
@@ -533,7 +594,7 @@ bool ColorCombo(const char* label,ImVec4 *pColorOut,bool supportsAlpha,float wid
     }
 
     bool value_changed = false;
-    if (IsPopupOpen(id))
+    if (ImGuiCppDuply::IsPopupOpen(id))
     {
         ImRect popup_rect(ImVec2(frame_bb.Min.x, frame_bb.Max.y), ImVec2(frame_bb.Max.x, frame_bb.Max.y));
         //popup_rect.Max.y = ImMin(popup_rect.Max.y, g.IO.DisplaySize.y - style.DisplaySafeAreaPadding.y); // Adhoc height limit for Combo. Ideally should be handled in Begin() along with other popups size, we want to have the possibility of moving the popup above as well.
@@ -545,7 +606,7 @@ bool ColorCombo(const char* label,ImVec4 *pColorOut,bool supportsAlpha,float wid
 
         bool mustCloseCombo = false;
         const ImGuiWindowFlags flags =  ImGuiWindowFlags_ComboBox;
-        if (BeginPopupEx(label, flags))
+        if (ImGuiCppDuply::BeginPopupEx(label, flags))
         {
             bool comboItemActive = false;
             value_changed = ColorChooserInternal(pColorOut,supportsAlpha,false,flags,&comboItemActive,windowWidth);
@@ -565,7 +626,7 @@ bool ColorCombo(const char* label,ImVec4 *pColorOut,bool supportsAlpha,float wid
             }
             ImGui::EndPopup();
         }
-        if (mustCloseCombo && IsPopupOpen(id)) ClosePopup(id);
+        if (mustCloseCombo && ImGuiCppDuply::IsPopupOpen(id)) ImGuiCppDuply::ClosePopup(id);
         ImGui::PopStyleVar(3);
     }
     return value_changed;
@@ -882,7 +943,9 @@ struct AnimatedImageInternal {
         ag.persistentTexIdIsNotOwned = false;
         bool ok = false;
 
-        if (!(f = stbi__fopen(filename, "rb"))) {
+        //if (!(f = stbi__fopen(filename, "rb")))   // Here filename is ASCII on Windows
+        if (!(f = ImFileOpen(filename, "rb")))      // Here filename is UTF8 on Windows
+        {
             stbi__errpuc("can't fopen", "Unable to open file");
             return false;
         }
@@ -1511,6 +1574,24 @@ struct ImGuiPlotMultiArrayGetterData    {
         const bool negative = (fillColorGradientDeltaIn0_05<0);
         if (negative) fillColorGradientDeltaIn0_05=-fillColorGradientDeltaIn0_05;
         if (fillColorGradientDeltaIn0_05>0.5f) fillColorGradientDeltaIn0_05=0.5f;
+
+        // New code:
+        //#define IM_COL32(R,G,B,A)    (((ImU32)(A)<<IM_COL32_A_SHIFT) | ((ImU32)(B)<<IM_COL32_B_SHIFT) | ((ImU32)(G)<<IM_COL32_G_SHIFT) | ((ImU32)(R)<<IM_COL32_R_SHIFT))
+        const int fcgi = fillColorGradientDeltaIn0_05*255.0f;
+        const int R = (unsigned char) (c>>IM_COL32_R_SHIFT);    // The cast should reset upper bits (as far as I hope)
+        const int G = (unsigned char) (c>>IM_COL32_G_SHIFT);
+        const int B = (unsigned char) (c>>IM_COL32_B_SHIFT);
+        const int A = (unsigned char) (c>>IM_COL32_A_SHIFT);
+
+        int r = R+fcgi, g = G+fcgi, b = B+fcgi;
+        if (r>255) r=255;if (g>255) g=255;if (b>255) b=255;
+        if (negative) bc = IM_COL32(r,g,b,A); else tc = IM_COL32(r,g,b,A);
+
+        r = R-fcgi; g = G-fcgi; b = B-fcgi;
+        if (r<0) r=0;if (g<0) g=0;if (b<0) b=0;
+        if (negative) tc = IM_COL32(r,g,b,A); else bc = IM_COL32(r,g,b,A);
+
+        /* // Old legacy code (to remove)... [However here we lerp alpha too...]
         // Can we do it without the double conversion ImU32 -> ImVec4 -> ImU32 ?
         const ImVec4 cf = ColorConvertU32ToFloat4(c);
         ImVec4 tmp(cf.x+fillColorGradientDeltaIn0_05,cf.y+fillColorGradientDeltaIn0_05,cf.z+fillColorGradientDeltaIn0_05,cf.w+fillColorGradientDeltaIn0_05);
@@ -1518,7 +1599,7 @@ struct ImGuiPlotMultiArrayGetterData    {
         if (negative) bc = ColorConvertFloat4ToU32(tmp); else tc = ColorConvertFloat4ToU32(tmp);
         tmp=ImVec4(cf.x-fillColorGradientDeltaIn0_05,cf.y-fillColorGradientDeltaIn0_05,cf.z-fillColorGradientDeltaIn0_05,cf.w-fillColorGradientDeltaIn0_05);
         if (tmp.x<0.f) tmp.x=0.f;if (tmp.y<0.f) tmp.y=0.f;if (tmp.z<0.f) tmp.z=0.f;if (tmp.w<0.f) tmp.w=0.f;
-        if (negative) tc = ColorConvertFloat4ToU32(tmp); else bc = ColorConvertFloat4ToU32(tmp);
+        if (negative) tc = ColorConvertFloat4ToU32(tmp); else bc = ColorConvertFloat4ToU32(tmp);*/
     }
     // Same as default ImSaturate, but overflowOut can be -1,0 or 1 in case of clamping:
     inline static float ImSaturate(float f,short& overflowOut)	{

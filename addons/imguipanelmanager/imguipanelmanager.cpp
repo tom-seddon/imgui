@@ -1,15 +1,9 @@
-//- Common Code For All Addons needed just to ease inclusion as separate files in user code ----------------------
-#include <imgui.h>
-#undef IMGUI_DEFINE_PLACEMENT_NEW
-#define IMGUI_DEFINE_PLACEMENT_NEW
-#undef IMGUI_DEFINE_MATH_OPERATORS
-#define IMGUI_DEFINE_MATH_OPERATORS
-#include <imgui_internal.h>
-//-----------------------------------------------------------------------------------------------------------------
-
-
 #include "imguipanelmanager.h"
 //#include <stdio.h> // fprintf
+
+#ifndef NO_IMGUITABWINDOW
+#include "../imguitabwindow/imguitabwindow.h"
+#endif //NO_IMGUITABWINDOW
 
 
 bool gImGuiDockpanelManagerExtendedStyle = true;
@@ -35,11 +29,6 @@ static ImVec4 ColorDockButtonIcon(0.80f, 0.90f, 0.70f, 1.00f);
 static ImVec4 ColorDockButtonIconHovered(0.85f, 1.f, 0.65f, 1.00f);
 
 
-#ifndef NO_IMGUITABWINDOW
-#include "../imguitabwindow/imguitabwindow.h"
-#endif //NO_IMGUITABWINDOW
-
-
 // Upper-right button to close a window.
 static bool DockWindowButton(bool* p_undocked,bool *p_open=NULL)
 {
@@ -55,7 +44,7 @@ static bool DockWindowButton(bool* p_undocked,bool *p_open=NULL)
     bool pressed = ButtonBehavior(bb, id, &hovered, &held);//, true);
 
     if (p_undocked) {
-#       ifndef NO_IMGUITABWINDOW
+#       ifdef IMGUITABWINDOW_H_
         if (gImGuiDockpanelManagerExtendedStyle && ImGui::TabWindow::DockPanelIconTextureID)    {
             // Render
             ImU32 col = GetColorU32((held && hovered) ? ColorDockButtonIconBgActive : hovered ? ColorDockButtonIconBgHovered : ColorDockButtonIconBg);
@@ -70,7 +59,7 @@ static bool DockWindowButton(bool* p_undocked,bool *p_open=NULL)
             }
         }
         else
-#       endif //NO_IMGUITABWINDOW
+#       endif //IMGUITABWINDOW_H_
         {
             // Render
             ImU32 col = GetColorU32((held && hovered) ? ColorDockButtonActive : hovered ? ColorDockButtonHovered : ColorDockButton);

@@ -16,8 +16,8 @@
 #include <imgui.h>
 #undef IMGUI_DEFINE_PLACEMENT_NEW
 #define IMGUI_DEFINE_PLACEMENT_NEW
-#undef IMGUI_DEFINE_MATH_OPERATORS
-#define IMGUI_DEFINE_MATH_OPERATORS
+/*#undef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS*/
 #include <imgui_internal.h>
 //-----------------------------------------------------------------------------------------------------------------
 
@@ -99,6 +99,9 @@ enum Sorting {
 #include <sys/stat.h>
 #include <ctype.h>  // tolower,...
 #include <string.h> // strcmp
+#ifndef _WIN32
+#include <stdlib.h> // realpath getenv
+#endif //_WIN32
 
 
 #if (defined(_MSC_VER) && !defined(strcasecmp))

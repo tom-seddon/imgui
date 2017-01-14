@@ -259,7 +259,7 @@ public:
             if (noItemHovered) hoverButtonIndex = -1;
             ImGui::PopStyleColor();                             // Hack not needed in previous ImGui versions (see above)
         }
-        if (!inWindowMode) ImGui::End();                
+        if (!inWindowMode) ImGui::End();
         // restore old sizes
         Style.ItemSpacing = oldItemSpacing;     // Hack to fix vertical layout
         if (!inWindowMode) Style.WindowPadding = oldWindowPadding;

@@ -3,6 +3,14 @@
 
 #include "../imguitoolbar/imguitoolbar.h"
 
+
+// STAND-ALONE COMPILATION OF THIS ADDON
+/*
+If you want to include this addon in your code without using the IMGUI_INCLUDE_IMGUI_USER_H / IMGUI_INCLUDE_IMGUI_USER_INL mechanism,
+you can't because imguitoolbar.cpp includes some methods that are static inside imgui.cpp, and are not exposed by imgui_internal.h.
+*/
+
+
 namespace ImGui {
 
 

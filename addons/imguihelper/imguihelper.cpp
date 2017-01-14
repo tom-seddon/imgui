@@ -14,6 +14,7 @@
 #include <objbase.h>    // CoInitializeEx(...)  - ole32.lib
 #else //_WIN32
 #include <unistd.h>
+#include <stdlib.h> // system
 #endif //_WIN32
 
 #include <imgui_internal.h>
@@ -154,14 +155,34 @@ inline static void GetVerticalGradientTopAndBottomColors(ImU32 c,float fillColor
     const bool negative = (fillColorGradientDeltaIn0_05<0);
     if (negative) fillColorGradientDeltaIn0_05=-fillColorGradientDeltaIn0_05;
     if (fillColorGradientDeltaIn0_05>0.5f) fillColorGradientDeltaIn0_05=0.5f;
-    // Can we do it without the double conversion ImU32 -> ImVec4 -> ImU32 ?
+
+
+    // New code:
+    //#define IM_COL32(R,G,B,A)    (((ImU32)(A)<<IM_COL32_A_SHIFT) | ((ImU32)(B)<<IM_COL32_B_SHIFT) | ((ImU32)(G)<<IM_COL32_G_SHIFT) | ((ImU32)(R)<<IM_COL32_R_SHIFT))
+    const int fcgi = fillColorGradientDeltaIn0_05*255.0f;
+    const int R = (unsigned char) (c>>IM_COL32_R_SHIFT);    // The cast should reset upper bits (as far as I hope)
+    const int G = (unsigned char) (c>>IM_COL32_G_SHIFT);
+    const int B = (unsigned char) (c>>IM_COL32_B_SHIFT);
+    const int A = (unsigned char) (c>>IM_COL32_A_SHIFT);
+
+    int r = R+fcgi, g = G+fcgi, b = B+fcgi;
+    if (r>255) r=255;if (g>255) g=255;if (b>255) b=255;
+    if (negative) bc = IM_COL32(r,g,b,A); else tc = IM_COL32(r,g,b,A);
+
+    r = R-fcgi; g = G-fcgi; b = B-fcgi;
+    if (r<0) r=0;if (g<0) g=0;if (b<0) b=0;
+    if (negative) tc = IM_COL32(r,g,b,A); else bc = IM_COL32(r,g,b,A);
+
+    // Old legacy code (to remove)... [However here we lerp alpha too...]
+    /*// Can we do it without the double conversion ImU32 -> ImVec4 -> ImU32 ?
     const ImVec4 cf = ColorConvertU32ToFloat4(c);
     ImVec4 tmp(cf.x+fillColorGradientDeltaIn0_05,cf.y+fillColorGradientDeltaIn0_05,cf.z+fillColorGradientDeltaIn0_05,cf.w+fillColorGradientDeltaIn0_05);
     if (tmp.x>1.f) tmp.x=1.f;if (tmp.y>1.f) tmp.y=1.f;if (tmp.z>1.f) tmp.z=1.f;if (tmp.w>1.f) tmp.w=1.f;
     if (negative) bc = ColorConvertFloat4ToU32(tmp); else tc = ColorConvertFloat4ToU32(tmp);
     tmp=ImVec4(cf.x-fillColorGradientDeltaIn0_05,cf.y-fillColorGradientDeltaIn0_05,cf.z-fillColorGradientDeltaIn0_05,cf.w-fillColorGradientDeltaIn0_05);
     if (tmp.x<0.f) tmp.x=0.f;if (tmp.y<0.f) tmp.y=0.f;if (tmp.z<0.f) tmp.z=0.f;if (tmp.w<0.f) tmp.w=0.f;
-    if (negative) tc = ColorConvertFloat4ToU32(tmp); else bc = ColorConvertFloat4ToU32(tmp);
+    if (negative) tc = ColorConvertFloat4ToU32(tmp); else bc = ColorConvertFloat4ToU32(tmp);*/
+
 
     cacheTopColorOut=tc;cacheBottomColorOut=bc;
 }
@@ -793,8 +814,9 @@ void RenderTextVerticalClipped(const ImVec2& pos_min, const ImVec2& pos_max, con
     {
         AddTextVertical(window->DrawList,g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_display_end, 0.0f, NULL,rotateCCW);
     }
-    if (g.LogEnabled)
-        LogRenderedText(pos, text, text_display_end);
+#   ifdef YES_IMGUIHELPER_LOGVERTICALTEXT   // LogRenderedText(...) is static in imgui.cpp and not exposed by imgui_internal.h: people that don't use IMGUI_INCLUDE_IMGUI_USER_INL to get here can't find it.
+    if (g.LogEnabled) LogRenderedText(pos, text, text_display_end);
+#   endif //YES_IMGUIHELPER_LOGVERTICALTEXT
 }
 #endif //NO_IMGUIHELPER_VERTICAL_TEXT_METHODS
 #endif //NO_IMGUIHELPER_DRAW_METHODS

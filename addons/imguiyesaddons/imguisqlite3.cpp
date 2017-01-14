@@ -34,6 +34,7 @@
 #include "imguisqlite3.h"
 #include <stdlib.h>
 #include <sqlite3.h>
+#include <string.h> // strlen memcpy memset
 
 namespace CppSQLite3 {
 

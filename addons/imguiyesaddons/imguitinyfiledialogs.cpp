@@ -81,7 +81,7 @@ misrepresented as being the original software.
 #include "imguitinyfiledialogs.h"
 
 #ifdef __EMSCRIPTEN__
-#error YES_IMGUITINYFILEDIALOGS doesn't work with emscripten (even if it compiles flawlessly).
+#error YES_IMGUITINYFILEDIALOGS does not work with emscripten (even if it compiles flawlessly).
 #endif //__EMSCRIPTEN__
 
 

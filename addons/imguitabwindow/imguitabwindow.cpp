@@ -29,8 +29,7 @@ namespace DrawListHelper {
 
 // Two main additions:
 // 1) PathFillAndStroke in the same method (so that we don't have to build the path twice)
-// 2) VerticalGradient: looks good but must be very slow (I keep converting ImU32 <-> ImVec4 hundreds of times to lerp values)
-// TODO: speed up gradient code [If possible use ImU32 everywhere (even if it looks worse and is not endian-independent)]
+// 2) VerticalGradient: looks good
 inline static void GetVerticalGradientTopAndBottomColors(ImU32 c,float fillColorGradientDeltaIn0_05,ImU32& tc,ImU32& bc)  {
     if (fillColorGradientDeltaIn0_05==0) {tc=bc=c;return;}
 
@@ -47,14 +46,32 @@ inline static void GetVerticalGradientTopAndBottomColors(ImU32 c,float fillColor
     const bool negative = (fillColorGradientDeltaIn0_05<0);
     if (negative) fillColorGradientDeltaIn0_05=-fillColorGradientDeltaIn0_05;
     if (fillColorGradientDeltaIn0_05>0.5f) fillColorGradientDeltaIn0_05=0.5f;
-    // Can we do it without the double conversion ImU32 -> ImVec4 -> ImU32 ?
+
+    // New code:
+    //#define IM_COL32(R,G,B,A)    (((ImU32)(A)<<IM_COL32_A_SHIFT) | ((ImU32)(B)<<IM_COL32_B_SHIFT) | ((ImU32)(G)<<IM_COL32_G_SHIFT) | ((ImU32)(R)<<IM_COL32_R_SHIFT))
+    const int fcgi = fillColorGradientDeltaIn0_05*255.0f;
+    const int R = (unsigned char) (c>>IM_COL32_R_SHIFT);    // The cast should reset upper bits (as far as I hope)
+    const int G = (unsigned char) (c>>IM_COL32_G_SHIFT);
+    const int B = (unsigned char) (c>>IM_COL32_B_SHIFT);
+    const int A = (unsigned char) (c>>IM_COL32_A_SHIFT);
+
+    int r = R+fcgi, g = G+fcgi, b = B+fcgi;
+    if (r>255) r=255;if (g>255) g=255;if (b>255) b=255;
+    if (negative) bc = IM_COL32(r,g,b,A); else tc = IM_COL32(r,g,b,A);
+
+    r = R-fcgi; g = G-fcgi; b = B-fcgi;
+    if (r<0) r=0;if (g<0) g=0;if (b<0) b=0;
+    if (negative) tc = IM_COL32(r,g,b,A); else bc = IM_COL32(r,g,b,A);
+
+    // Old legacy code (to remove)... [However here we lerp alpha too...]
+    /*// Can we do it without the double conversion ImU32 -> ImVec4 -> ImU32 ?
     const ImVec4 cf = ColorConvertU32ToFloat4(c);
     ImVec4 tmp(cf.x+fillColorGradientDeltaIn0_05,cf.y+fillColorGradientDeltaIn0_05,cf.z+fillColorGradientDeltaIn0_05,cf.w+fillColorGradientDeltaIn0_05);
     if (tmp.x>1.f) tmp.x=1.f;if (tmp.y>1.f) tmp.y=1.f;if (tmp.z>1.f) tmp.z=1.f;if (tmp.w>1.f) tmp.w=1.f;
     if (negative) bc = ColorConvertFloat4ToU32(tmp); else tc = ColorConvertFloat4ToU32(tmp);
     tmp=ImVec4(cf.x-fillColorGradientDeltaIn0_05,cf.y-fillColorGradientDeltaIn0_05,cf.z-fillColorGradientDeltaIn0_05,cf.w-fillColorGradientDeltaIn0_05);
     if (tmp.x<0.f) tmp.x=0.f;if (tmp.y<0.f) tmp.y=0.f;if (tmp.z<0.f) tmp.z=0.f;if (tmp.w<0.f) tmp.w=0.f;
-    if (negative) tc = ColorConvertFloat4ToU32(tmp); else bc = ColorConvertFloat4ToU32(tmp);
+    if (negative) tc = ColorConvertFloat4ToU32(tmp); else bc = ColorConvertFloat4ToU32(tmp);*/
 
 #   ifdef CACHE_LAST_GRADIENT
     cacheTopColorOut=tc;cacheBottomColorOut=bc;

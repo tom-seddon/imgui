@@ -2,13 +2,15 @@
 #include <imgui.h>
 #undef IMGUI_DEFINE_PLACEMENT_NEW
 #define IMGUI_DEFINE_PLACEMENT_NEW
-#undef IMGUI_DEFINE_MATH_OPERATORS
-#define IMGUI_DEFINE_MATH_OPERATORS
-#include <imgui_internal.h>
+/*#undef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS*/
+#include <imgui_internal.h> // Just for IM_PLACEMENT_NEW
 //-----------------------------------------------------------------------------------------------------------------
 
 
 #include "imguilistview.h"
+
+#include <stdlib.h> // qsort
 
 namespace ImGui {
 
@@ -532,7 +534,7 @@ void TestListView() {
         MyListViewTestItem* item;
         for (int i=0,isz=(int)lv.items.size();i<isz;i++) {
             item = (MyListViewTestItem*) ImGui::MemAlloc(sizeof(MyListViewTestItem));                       // MANDATORY (ImGuiListView::~ImGuiListView() will delete these with ImGui::MemFree(...))
-            IMIMPL_PLACEMENT_NEW(item) MyListViewTestItem(
+            IM_PLACEMENT_NEW(item) MyListViewTestItem(
                         i,
                         "My '  ' Dummy Path",
                         i*3,

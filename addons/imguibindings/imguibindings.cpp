@@ -500,7 +500,7 @@ ImTextureID ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory,i
 ImTextureID ImImpl_LoadTexture(const char* filename, int req_comp, bool useMipmapsIfPossible, bool wraps, bool wrapt)  {
     // We avoid using stbi_load(...), because we support UTF8 paths under Windows too.
     int file_size = 0;
-    unsigned char* file = (unsigned char*) ImLoadFileToMemory(filename,"rb",&file_size,0);
+    unsigned char* file = (unsigned char*) ImFileLoadToMemory(filename,"rb",&file_size,0);
     ImTextureID texId = NULL;
     if (file)   {
         texId = ImImpl_LoadTextureFromMemory(file,file_size,req_comp,useMipmapsIfPossible,wraps,wrapt);
