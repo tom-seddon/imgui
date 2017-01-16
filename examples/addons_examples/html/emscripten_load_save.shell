@@ -182,7 +182,18 @@
       };
     </script>
 <script>
+      function fileExistsInMemoryFS(path) {
+        var statbuf = FS.stat(path);
+        if (!statbuf) return false;
+		return FS.isFile(statbuf.mode);
+      }
       function saveFileToMemoryFS(e) {
+       try {
+           if (fileExistsInMemoryFS('/'+e.target.current_file_name)) FS.unlink('/'+e.target.current_file_name);          
+       }
+	   catch(err) {
+	    //document.getElementById("saveFileToMemoryFS").innerHTML = err.message;
+		}
           var data=e.target.result;
           FS.createDataFile(
              '/', 	// thr root folder can be changed here
