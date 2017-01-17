@@ -332,6 +332,8 @@ struct NodeLink
 struct NodeGraphEditor	{
     public:
     typedef Node* (*NodeFactoryDelegate)(int nodeType,const ImVec2& pos);
+    enum NodeState {NS_ADDED,NS_DELETED,NS_EDITED};
+    enum LinkState {LS_ADDED,LS_DELETED};
 
     protected:
     ImVector<Node*> nodes;          // used as a garbage collector too
@@ -361,9 +363,7 @@ struct NodeGraphEditor	{
     ImVector<AvailableNodeInfo> availableNodesInfo;     // These will appear in the "add node menu"
     ImVector<int> availableNodesInfoInverseMap;         // map: absolute node type -> availableNodesInfo index. Must be size() = totalNumberOfNodeTypes.
 
-    enum NodeState {NS_ADDED,NS_DELETED,NS_EDITED};
     typedef void (*NodeCallback)(Node*& node,NodeState state,NodeGraphEditor& editor);
-    enum LinkState {LS_ADDED,LS_DELETED};
     typedef void (*LinkCallback)(const NodeLink& link,LinkState state,NodeGraphEditor& editor);
     LinkCallback linkCallback;// called after a link is added and before it's deleted
     NodeCallback nodeCallback;// called after a node is added, after it's edited and before it's deleted
