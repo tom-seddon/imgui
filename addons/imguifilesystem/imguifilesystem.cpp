@@ -12,6 +12,10 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
+#ifdef _WIN32
+#	include <windows.h>
+#endif //_WIN32
+
 //- Common Code For All Addons needed just to ease inclusion as separate files in user code ----------------------
 #include <imgui.h>
 #undef IMGUI_DEFINE_PLACEMENT_NEW
@@ -24,6 +28,10 @@
 
 #include "imguifilesystem.h"
 
+
+#ifdef DIRENT_USES_UTF8_CHARS
+#	warning DIRENT_USES_UTF8_CHARS is deprecated and has become the default. (IMGUIFILESYSTEM_USE_ASCII_SHORT_PATHS_ON_WINDOWS can be used to disable it).
+#endif //IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON
 
 #ifdef _WIN32
 #include <shlobj.h> // Known Directory locations
@@ -66,7 +74,7 @@
 
 namespace ImGuiFs {
 
-#   if (!defined(IMGUIFS_MEMORY_USES_CHARS_AS_BYTES) || defined(DIRENT_USES_UTF8_CHARS))
+#   if (!defined(IMGUIFS_MEMORY_USES_CHARS_AS_BYTES) || !defined(IMGUIFILESYSTEM_USE_ASCII_SHORT_PATHS_ON_WINDOWS))
 const int MAX_FILENAME_BYTES = FILENAME_MAX*4;  // Worst case: 4 bytes per char, but huge waste of memory [we SHOULD have used imguistring.h!]
 const int MAX_PATH_BYTES = DIRENT_MAX_PATH*4;
 #else //IMGUIFS_MEMORY_USES_CHARS_AS_BYTES
@@ -95,6 +103,12 @@ enum Sorting {
 } // namespace ImGuiFs
 #endif //IMGUIFS_NO_EXTRA_METHODS
 
+
+
+#ifdef IMGUIFILESYSTEM_USE_ASCII_SHORT_PATHS_ON_WINDOWS
+#undef DIRENT_USE_ASCII_SHORT_PATHS_ON_WINDOWS
+#define DIRENT_USE_ASCII_SHORT_PATHS_ON_WINDOWS
+#endif //IMGUIFILESYSTEM_USE_ASCII_SHORT_PATHS_ON_WINDOWS
 #include "dirent_portable.h"
 #include <sys/stat.h>
 #include <ctype.h>  // tolower,...
@@ -578,7 +592,7 @@ public:
 
     // e.g. ".txt;.jpg;.png". To use unwantedExtensions, set wantedExtensions="".
     static void GetFiles(const char* path,PathStringVector& files,const char* wantedExtensions,const char* unwantedExtensions=NULL,FilenameStringVector* pOptionalNamesOut=NULL,Sorting sorting= SORT_ORDER_ALPHABETIC)    {
-	PathStringVector filesIn;
+    PathStringVector filesIn;
 	FilenameStringVector namesIn;
         GetFiles(path,filesIn,&namesIn,sorting);
         if ((wantedExtensions==0 || strlen(wantedExtensions)==0) && (unwantedExtensions==0 || strlen(unwantedExtensions)==0)) {files = filesIn;return;}

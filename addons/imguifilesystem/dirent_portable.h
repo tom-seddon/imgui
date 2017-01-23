@@ -40,8 +40,8 @@
  * Added:
  * -> some undefs to prevent possible compiler warnings
  * -> the scandir(...) and alphasort(...) methods
- * -> the optional DIRENT_USES_UTF8_CHARS definition (needed for browsing with long UTF8 paths, instead of short ASCII paths).
- *    WARNING: in my tests the usage of the DIRENT_USES_UTF8_CHARS is not fully functional (patches are welcome)
+ * -> the optional DIRENT_USE_ASCII_SHORT_PATHS_ON_WINDOWS definition (needed for browsing with short ASCII paths instead of long UTF8 paths).
+ *    WARNING: in my tests the usage of the long UTF8 paths is not fully functional (patches are welcome)
  * All these additions have been made to made <dirent_portable.h> usage for Windows consistent
  * with what I get using <direct.h> under my Ubuntu Linux OS.
  * =========================================================================
@@ -88,7 +88,7 @@
 #endif //(!defined(SIZE_MAX) && !defined(INT_MAX))
 
 
-//#define DIRENT_USES_UTF8_CHARS // Test only [Better setting it globally, not just here]
+//#define DIRENT_USE_ASCII_SHORT_PATHS_ON_WINDOWS  // set it globally, not just here]
 
 /* Indicates that d_type field is available in dirent structure */
 #define _DIRENT_HAVE_D_TYPE
@@ -156,11 +156,11 @@
 #   ifndef MAX_PATH
 #       define MAX_PATH PATH_MAX    // it should be in <limits.h> AFAIK
 #   endif //MAX_PATH
-#   ifdef DIRENT_USES_UTF8_CHARS    // utf8 strings can have up to 4 bytes per char
+#   ifndef DIRENT_USE_ASCII_SHORT_PATHS_ON_WINDOWS    // utf8 strings can have up to 4 bytes per char
 #       define DIRENT_MAX_PATH (MAX_PATH*4)
-#   else //DIRENT_USES_UTF8_CHARS
+#   else //DIRENT_USE_ASCII_SHORT_PATHS_ON_WINDOWS
 #       define DIRENT_MAX_PATH (MAX_PATH)
-#   endif //DIRENT_USES_UTF8_CHARS
+#   endif //DIRENT_USE_ASCII_SHORT_PATHS_ON_WINDOWS
 #endif //DIRENT_MAX_PATH
 
 /* File type flags for d_type */
@@ -767,7 +767,7 @@ dirent_mbstowcs_s(
     size_t count)
 {
     int error;
-#ifdef DIRENT_USES_UTF8_CHARS
+#ifndef DIRENT_USE_ASCII_SHORT_PATHS_ON_WINDOWS
     // we don't use "count" at all: we assume mstr is zero terminated:
     size_t n = (size_t) MultiByteToWideChar (CP_UTF8, 0, mbstr, -1, wcstr, 0);//sizeInWords);
     if (n==0) {
@@ -814,7 +814,7 @@ dirent_mbstowcs_s(
 
     }
     */
-#else //DIRENT_USES_UTF8_CHARS
+#else //DIRENT_USE_ASCII_SHORT_PATHS_ON_WINDOWS
 #if defined(_MSC_VER)  &&  _MSC_VER >= 1400
 
     /* Microsoft Visual Studio 2005 or later */
@@ -853,7 +853,7 @@ dirent_mbstowcs_s(
     }
 
 #endif
-#endif //DIRENT_USES_UTF8_CHARS
+#endif //DIRENT_USE_ASCII_SHORT_PATHS_ON_WINDOWS
 
     return error;
 }
@@ -869,7 +869,7 @@ dirent_wcstombs_s(
 {
     int error;
 
-#ifdef DIRENT_USES_UTF8_CHARS
+#ifndef DIRENT_USE_ASCII_SHORT_PATHS_ON_WINDOWS
     // we don't use "count" at all: we assume wcstr is zero terminated:
     size_t n = (size_t) WideCharToMultiByte (CP_UTF8, 0, wcstr, -1, mbstr, 0,NULL,NULL);//sizeInBytes, NULL, NULL);
     if (n==0) {
@@ -917,7 +917,7 @@ dirent_wcstombs_s(
 
     }
     */
-#else //DIRENT_USES_UTF8_CHARS
+#else //DIRENT_USE_ASCII_SHORT_PATHS_ON_WINDOWS
 #if defined(_MSC_VER)  &&  _MSC_VER >= 1400
 
     /* Microsoft Visual Studio 2005 or later */
@@ -956,7 +956,7 @@ dirent_wcstombs_s(
     }
 
 #endif
-#endif //DIRENT_USES_UTF8_CHARS
+#endif //DIRENT_USE_ASCII_SHORT_PATHS_ON_WINDOWS
     return error;
 }
 

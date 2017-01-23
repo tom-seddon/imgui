@@ -219,6 +219,13 @@ SOURCES+= $$GL3W_BASE_PATH/GL/gl3w.c
 !use_winapi {
 !use_direct3d9	{
 LIBS+= -lpthread  -lGL -lX11 -ldl  #-static-libstdc++ -static-libgcc
+
+# Please remove these 3 lines-------------------
+#DEFINES+=IMGUIFILESYSTEM_USES_STD_FILESYSTEM
+#QT_CXXFLAGS+=--std=c++11
+#LIBS+=-lstdc++fs
+# ---------------------------------------------
+
 }
 }
 use_winapi    {
@@ -247,4 +254,5 @@ LIBS+= -L"/usr/i686-w64-mingw32/lib" \
 LIBS+= -ld3d9 -luser32 -lkernel32 -static-libgcc -static-libstdc++
 QT_CXXFLAGS+=--std=c++0x
 }
+
 

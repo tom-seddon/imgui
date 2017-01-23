@@ -53,6 +53,10 @@ ImImplVoidDelegate gImGuiPostDrawGLSwapBuffersCallback = NULL;
 #endif //IMIMPL_USE_SDF_SHADER
 #endif //IMGUI_USE_DIRECT3D9_BINDING
 
+#ifdef IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON
+#	warning IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON is deprecated and has become the default. (IMGUIBINDINGS_DONT_CLEAR_INPUT_DATA_SOON can be used to disable it).
+#endif //IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON
+
 struct ImImpl_PrivateParams  {
 #if (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
 
@@ -414,11 +418,11 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     // Store our identifier
     io.Fonts->TexID = gImImplPrivateParams.fontTex;
 
-#   ifdef IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON
+#   ifndef IMGUIBINDINGS_DONT_CLEAR_INPUT_DATA_SOON
     // Cleanup (don't clear the input data if you want to append new fonts later)    
     io.Fonts->ClearInputData();
     io.Fonts->ClearTexData();
-#   endif //IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON
+#   endif //IMGUIBINDINGS_DONT_CLEAR_INPUT_DATA_SOON
 
     //fprintf(stderr,"Loaded font texture\n");
 
@@ -435,12 +439,12 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
 
 void DestroyImGuiFontTexture()	{
     if (gImImplPrivateParams.fontTex)	{
-#       ifndef IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON
+#       ifdef IMGUIBINDINGS_DONT_CLEAR_INPUT_DATA_SOON
         ImGuiIO& io = ImGui::GetIO();
         // Cleanup (don't clear the input data if you want to append new fonts later)
         if (io.Fonts) io.Fonts->ClearInputData();
         if (io.Fonts) io.Fonts->ClearTexData();
-#       endif //IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON
+#       endif //IMGUIBINDINGS_DONT_CLEAR_INPUT_DATA_SOON
         ImImpl_FreeTexture(gImImplPrivateParams.fontTex);
         gImImplPrivateParams.fontTex = 0;
     }

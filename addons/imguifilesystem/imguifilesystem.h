@@ -55,10 +55,11 @@ x> Never compiled on any other compiler (Visual C++'s cl.exe included).
 x> Never tested on a real Windows OS and on MacOS.
 */
 
-//#define DIRENT_USES_UTF8_CHARS  // Optional. Affects Windows users only. Needs recompilation of imguifilesystem.cpp. Enables long UTF8 paths instead of short ASCII paths.
-                                // Unfortunately it's NOT 100% functional (in my tests some folders can't be browsed). Patches are welcome. See "dirent_portable.h" for further info.
-                                // When experiencing problems on Windows, trying commenting this definition out is a good start.
-                                // On a second thought, I think we should leave this definition commented out (Windows users can always define it at the project level, if needed).
+//#define IMGUIFILESYSTEM_USE_ASCII_SHORT_PATHS_ON_WINDOWS
+                                // Optional. Affects Windows users only. Needs recompilation of imguifilesystem.cpp. Disables long UTF8 paths in favour of short ASCII paths.
+                                // Unfortunately long paths are NOT 100% functional (in my tests some folders can't be browsed). Patches are welcome. See "dirent_portable.h" for further info.
+                                // When experiencing problems on Windows, trying defining this definition is a good start.
+                                // Windows users can always define it at the project level, if needed.
 
 #ifndef IMGUI_API
 #include <imgui.h>
@@ -91,7 +92,7 @@ x> Never tested on a real Windows OS and on MacOS.
 namespace ImGuiFs {
 
 #ifndef IMGUIFS_NO_EXTRA_METHODS
-#   if (!defined(IMGUIFS_MEMORY_USES_CHARS_AS_BYTES) || defined(DIRENT_USES_UTF8_CHARS))
+#   if (!defined(IMGUIFS_MEMORY_USES_CHARS_AS_BYTES) || !defined(IMGUIFILESYSTEM_USE_ASCII_SHORT_PATHS_ON_WINDOWS))
     const int MAX_FILENAME_BYTES = FILENAME_MAX*4;  // Worst case: 4 bytes per char, but huge waste of memory [we SHOULD have used imguistring.h!]
     const int MAX_PATH_BYTES = DIRENT_MAX_PATH*4;
 #   else //IMGUIFS_MEMORY_USES_CHARS_AS_BYTES

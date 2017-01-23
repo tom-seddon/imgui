@@ -27,15 +27,15 @@ and report the results here: https://github.com/Flix01/imgui/issues
 
 [The current directory must be: imgui/examples/addons_examples]
 # With GLUT + GLEW static: [GLEW is necessary for all Windows bindings except Direct3D9: here we use the static version to save one .dll]
-cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLUT_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe glut32.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
+cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLUT_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /link /out:imgui_addons_example1.exe glut32.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # With GLEW static only:
-cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_WINAPI_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
+cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_WINAPI_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /link /out:imgui_addons_example1.exe glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # With bundled GL3W only (and using shaders from GL3: /D"IMIMPL_SHADER_GL3"):	-> This should work with no dependencies <-
-cl /O2 /MT /I"../../" /I"../libs/gl3w/" ../libs/gl3w/GL/gl3w.c main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_WINAPI_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUI_USE_GL3W" /D"IMIMPL_SHADER_GL3" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
+cl /O2 /MT /I"../../" /I"../libs/gl3w/" ../libs/gl3w/GL/gl3w.c main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_WINAPI_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUI_USE_GL3W" /D"IMIMPL_SHADER_GL3" /link /out:imgui_addons_example1.exe opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # With DIRECT3D9:	-> This should work with no dependencies <-
-cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_DIRECT3D9_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe d3d9.lib d3dx9.lib gdi32.lib Shell32.lib advapi32.lib user32.lib kernel32.lib
+cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_DIRECT3D9_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /link /out:imgui_addons_example1.exe d3d9.lib d3dx9.lib gdi32.lib Shell32.lib advapi32.lib user32.lib kernel32.lib
 # With GLFW3 + GLEW static:
-cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLEW_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON" /link /out:imgui_addons_example1.exe glfw3.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
+cl /nologo /O2 /MT /I"../../" main.cpp ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLEW_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /link /out:imgui_addons_example1.exe glfw3.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # TODO: Add the last command-line for SDL2
 
 P.S. currently GLEW is required to compile all the Windows bindings except Direct3D9.
@@ -72,6 +72,7 @@ Currently the extra imgui widgets that are available are:
 							-> ImageButtonWithText and ImageWithZoomAndPan.
 							-> The ImageAnimation struct, that can be used to display animated images or animated buttons from frames in a texture or from a .gif image.
 							-> TreeView (a generic TreeView implementation).
+							-> Other stuff (like an overloaded PlotHistogram, PlotCurve). Please see main.cpp.
 -> imguinodegrapheditor:	-> Based on the code posted by Omar, the creator of ImGui.
 -> imguicodeeditor (WIP, UNUSABLE)	this is an attempt to develop a code editor using ImGui only (without direct STL support).
 					However, developing such a control is a huge challange, and I'm not sure when and if it will eventually be functional.
@@ -83,7 +84,8 @@ Currently the extra imgui widgets that are available are:
 And in addition:
 -> imguistring:				this addon file contains some classes that can be used to replace some STL equivalents (STL is not accepted inside ImGui code):
 							-> a string class based on ImVector<char>. It does not support iterators, but has many methods that std::string has: thus it can be used to replace std::string in many algorithms.
-							-> ImVectorExt<T>. An extended version of ImVector<T> that supports C++ classes as items. The version of ImVector<T> that comes with ImGui is not a suitable replacement to std::vector<T>, because it does not call constructors and destructors on items.
+							-> ImVectorEx<T>. An extended version of ImVector<T> that supports C++ classes as items. The version of ImVector<T> that comes with ImGui is not a suitable replacement to std::vector<T>, because it does not call constructors and destructors on items.
+							-> Other struct / classes like ImPair<T,U> and ImHashMap<T,...> mainly for internal usage (they're used by some other addon).
 -> imguihelper:				this addon file contains: 
 							-> ImGui::OpenWithDefaultApplication(...) that should work with urls, folders and files
 							-> two serialization helper classes (mainly for internal usage, to provide serialization support to other addons) in a dedicated ImGuiHelper namespace.
@@ -127,7 +129,7 @@ Currently "yes addons" are:
 -> imguifreetype.h/cpp:		depends on freetype2 (-lfreetype). License: MIT. It allows better font hinting, and Bold and Oblique variations of the .ttf font. Link: [https://github.com/Vuhdo/imgui_freetype]
 -> imguiminigames.h/cpp:	no dependencies. For a list of minigames and their own license, please read addons/yes_addons/imguiminigames.h.
 -> imguibz2.h/cpp:		no dependencies. It's libbzip2 (http://www.bzip.org/), inlined and made a bit more ImGui-friendly. License: BSD-style. It allows loading .ttf.bz2 font files when using some imguibinding. [You can define BZ_DECOMPRESS_ONLY to reduce memory impact a bit].
--> imguistringifier.h/cpp:	W.I.P. No dependencies. It includes libb64 (libb64.sourceforge.net). License: Public Domain. It makes easier to embed files inside source code (e.g. ttf fonts, shader source code, and so on).
+-> imguistringifier.h/cpp:	no dependencies. It includes libb64 (libb64.sourceforge.net License: Public Domain). It makes easier to embed files inside source code (e.g. ttf fonts, shader source code, and so on).
 
 Tip: If you used the NO_IMGUI_ADDONS definition to disable all the "normal" addons, then all your addons behave like yes_addons!
      That means that you can define, for example, YES_IMGUISTYLESERIALIZER to re-enable the "normal" imguistyleserializer addon.
@@ -183,17 +185,19 @@ IMIMPL_BUILD_SDF				# builds Signed Distance Fonts for ImGui. To display them co
 						# -> IMIMPL_BUILD_SDF defines IMIMPL_USE_SDF_SHADER internally, but IMIMPL_USE_SDF_OUTLINE_SHADER can be defined too. (They force GL_LINEAR filtering for the font texture, unless IMIMPL_USE_FONT_TEXTURE_NEAREST_FILTERING is defined by the user, and it shouldn't).
 						# -> set the font's ImFontConfig::OversampleH==ImFontConfig::OversampleV (tested with 1 only. Note that this is NOT the default for custom fonts [it's 3,1]).
 						# -> if you use the outline shader, don't use too thin fonts (like the default one).
-						# -> you can tune the values in the shader using the glabal functions: const ImVec4* ImImpl_SdfShaderGetParams();bool ImImpl_SdfShaderSetParams(const ImVec4& sdfParams);bool ImImpl_EditSdfParams(). See main.cpp for further info.
+						# -> you can tune the values in the shader using the global functions: const ImVec4* ImImpl_SdfShaderGetParams();bool ImImpl_SdfShaderSetParams(const ImVec4& sdfParams);bool ImImpl_EditSdfParams(). See main.cpp for further info.
 
-IMGUIBINDINGS_CLEAR_INPUT_DATA_SOON:		# when defined ImGui::GetIO()->Fonts->ClearInputData() and ImGui::GetIO()->Fonts->ClearTexData() are called as soon as possible saving some memory (and allowing you to append new fonts later (e.g. in InitGL())).
-						# it used to be the default, but future ImGui dynamic atlas support will require input data anyway.
-						# The input data is cleaned up before the delation of the font texture when IMGUI_BINDING_CLEAR_INPUT_DATA_SOON is not defined.
+IMGUIBINDINGS_DONT_CLEAR_INPUT_DATA_SOON:	# Normally ImGui::GetIO()->Fonts->ClearInputData() and ImGui::GetIO()->Fonts->ClearTexData() are called as soon as possible saving some memory.
+						# However this prevents you from appending new fonts later (e.g. in InitGL() instead of in the main() method).
+						# This definition fixes this problem.
+						# Possible future ImGui dynamic atlas support will require input data anyway, so this definition will be made enabled by default.
+						# The input data is cleaned up before the delation of the font texture if IMGUIBINDINGS_DONT_CLEAR_INPUT_DATA_SOON is not defined.
 						# This definition is available for the Direct3D binding as well.
 
 4 -> OPTIONALLY you can use other definitions at the project level:
 IMGUI_USE_ZLIB					# requires the library zlib. It currently enables loading ttf.gz fonts (from file or embedded in C++ code) through the ImImpl_Main(...) method (only if you use one of the "bindings" above), 
 						# and two generic Gz decompression methods in imguihelper.
-DIRENT_USES_UTF8_CHARS				# affects imguifilesystem on Windows OS only. It should display UTF8 paths instead of Ascii paths. It's not defined by default because it lacks proper testing.
+IMGUIFILESYSTEM_USE_ASCII_SHORT_PATHS_ON_WINDOWS# affects imguifilesystem on Windows OS only. When not defined it should display UTF8 paths instead of Ascii paths. It's not defined by default but short ascii paths are better tested (i.e. try this definition if something goes wrong).
 IMGUI_USE_MINIZIP				# EXPERIMENTAL. requires the library zlib. It currently affects imguifilesystem only and allows browsing inside zip files (not recursively).
 						# Currently when it's enabled it's not possible to disable this feature, but if this is required by some user, we can implement/fix it.
 NO_ADDONNAMEHERE				# Addon exclusion definitions (e.g. NO_IMGUIFILESYSTEM). I've already addressed this topic above. They can be handy to speed up compilation and to resolve compilation problems.
