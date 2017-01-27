@@ -6,6 +6,19 @@
 
 #pragma once
 
+// b2 branch - SDL
+
+#define ImDrawIdx unsigned int
+
+#define IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT \
+struct ImDrawVert {\
+    ImVec2 pos;\
+    ImU32 col;\
+    ImVec2 uv;\
+}
+
+
+
 //---- Define assertion handler. Defaults to calling assert().
 //#define IM_ASSERT(_EXPR)  MyAssert(_EXPR)
 
