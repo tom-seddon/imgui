@@ -557,22 +557,22 @@ void NodeGraphEditor::render()
                 const char* pSaveName = saveName;
 #               ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
                 if (ImGui::SmallButton("Save##saveGNEStyle")) {
-#                   ifndef NO_IMGUIEMSCRIPTEN
+#                   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     pSaveName = saveNamePersistent;
-#                   endif //NO_IMGUIEMSCRIPTEN
+#                   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     if (Style::Save(this->style,pSaveName)) {
-#                   ifndef NO_IMGUIEMSCRIPTEN
+#                   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                         ImGui::EmscriptenFileSystemHelper::Sync();
-#                   endif //NO_IMGUIEMSCRIPTEN
+#                   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     }
                 }
                 ImGui::SameLine();
 #               endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #               ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
                 if (ImGui::SmallButton("Load##loadGNEStyle")) {
-#                   ifndef NO_IMGUIEMSCRIPTEN
+#                   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
-#                   endif //NO_IMGUIEMSCRIPTEN
+#                   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     Style::Load(this->style,pSaveName);
                 }
                 ImGui::SameLine();
@@ -596,22 +596,22 @@ void NodeGraphEditor::render()
         const char* pSaveName = saveName;
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 		if (ImGui::SmallButton("Save##saveGNE")) {
-#           ifndef NO_IMGUIEMSCRIPTEN
+#           ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
             pSaveName = saveNamePersistent;
-#           endif //NO_IMGUIEMSCRIPTEN
+#           endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
             if (save(pSaveName))    {
-#           ifndef NO_IMGUIEMSCRIPTEN
+#           ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                 ImGui::EmscriptenFileSystemHelper::Sync();
-#           endif //NO_IMGUIEMSCRIPTEN
+#           endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
             }
 		}
 		ImGui::SameLine();
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
 		if (ImGui::SmallButton("Load##loadGNE")) {
-#           ifndef NO_IMGUIEMSCRIPTEN
+#           ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
             if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
-#           endif //NO_IMGUIEMSCRIPTEN
+#           endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
             load(pSaveName);
 		}
 		ImGui::SameLine();
@@ -632,11 +632,14 @@ void NodeGraphEditor::render()
 
         ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(1,1,1,0.2f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(1,1,1,0.35f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(1,1,1,0.5f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(1,1,1,0.5f));        
+        /*bool splitterHovered = false,splitterActive=false;
+        ImGui::ButtonExEx("##hsplitter1",ImVec2(splitterWidth,-1),&splitterHovered,&splitterActive);
+        if (splitterHovered || splitterActive) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);*/
         ImGui::Button("##hsplitter1", ImVec2(splitterWidth,-1));
-        ImGui::PopStyleColor(3);
         const bool splitterActive = ImGui::IsItemActive();
         if (ImGui::IsItemHovered() || splitterActive) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+        ImGui::PopStyleColor(3);
         if (splitterActive)  w += ImGui::GetIO().MouseDelta.x;
         if (splitterActive || windowSizeChanged)  {
             const float minw = ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().FramePadding.x;
@@ -1555,7 +1558,11 @@ void NodeGraphEditor::render()
 
     // Scrolling
     //if (!isSomeNodeMoving && !isaNodeInActiveState && !dragNode.node && ImGui::IsWindowHovered() &&  ImGui::IsMouseDragging(0, 6.0f)) scrolling = scrolling - io.MouseDelta;
-    if (isMouseDraggingForScrolling /*&& ImGui::IsWindowHovered()*/ && (ImGui::IsWindowHovered() || ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused())) scrolling = scrolling - io.MouseDelta;
+    if (isMouseDraggingForScrolling /*&& ImGui::IsWindowHovered()*/ && (ImGui::IsWindowHovered() || ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused())) {
+        scrolling = scrolling - io.MouseDelta;
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
+    }
+    else if (isSomeNodeMoving) ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
 
     if (!io.FontAllowUserScaling)   {
         // Reset the font scale (3 lines)

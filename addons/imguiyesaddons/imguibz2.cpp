@@ -5065,42 +5065,98 @@ static const char* BzErrorString(int bzErrorCode) {
     return NULL;
 }
 
-//TODO: very bad implemmentation: hard-coded max buffer len that can't grow. It can fail. REWRITE!
+
+template <typename uLongType64> inline static uLongType64 GetTotalOut(const bz_stream& myBZStream) {
+    return // (uLongType64) (myBZStream.total_out_hi32 << 32) +  // I know there's a warning here... so I've commented this line out (I don't want to use unsigned long long )
+            (uLongType64) myBZStream.total_out_lo32;
+}
 
 #ifndef BZ_DECOMPRESS_ONLY
-bool Bz2CompressFromMemory(const char* buffer, int buffer_size, ImVector<char>& output, bool clear_output_before_usage)   {
-if (clear_output_before_usage) output.clear();
-if (!buffer || buffer_size<=0) return false;
-const int start_size = output.size();
-unsigned int dest_len = buffer_size*1.2f;
-output.resize(start_size+dest_len); // Valgrind here: "Unitialized value was created by a heap allocation". Should we worry ?
-for (int i=start_size;i<output.size();i++) output[i]='\0';  // Just to silence Valgrind (should I use memset ?)
-const int rv = BZ2_bzBuffToBuffCompress(&output[start_size],&dest_len,(char*)buffer,buffer_size,9,0,0);
-if (rv!=BZ_OK)  {
-    const char* errorCode = BzErrorString(rv);
-    if (errorCode) fprintf(stderr,"Error in ImGui::Bz2Compress(...): %s.\n",errorCode);
-}
-const int used_len = output.size()-start_size-(int)dest_len;
-IM_ASSERT(used_len>=0);
-output.resize(start_size+used_len);
-return true;
+bool Bz2CompressFromMemory(const char* memoryBuffer,int memoryBufferSize,ImVector<char>& rv,bool clearRvBeforeUsage)   {
+    if (clearRvBeforeUsage) rv.clear();
+    const int startRv = rv.size();
+
+    if (memoryBufferSize == 0  || !memoryBuffer) return false;
+    const int memoryChunk = memoryBufferSize/3 > (16*1024) ? (16*1024) : memoryBufferSize/3;
+    rv.resize(startRv + memoryChunk);  // we start using the memoryChunk length
+
+    bz_stream myBZStream;
+    myBZStream.next_in = (char *) memoryBuffer;
+    myBZStream.avail_in = memoryBufferSize;
+    myBZStream.total_out_hi32 = 0;
+    myBZStream.total_out_lo32 = 0;
+    myBZStream.bzalloc = NULL;
+    myBZStream.bzfree = NULL;
+    myBZStream.opaque = NULL;
+    typedef unsigned long uLongType64;	// We can't use unsigned long long, because it needs C++11 (and we'll later cast it to an int in any case!)
+    uLongType64 total_out = GetTotalOut<uLongType64>(myBZStream);
+
+    bool done = false;
+    if (BZ2_bzCompressInit(&myBZStream,9,0,0) == BZ_OK) {
+
+	int err = BZ_OK;
+	while (!done) {
+	    if (total_out >= (unsigned int)(rv.size()-startRv)) rv.resize(rv.size()+memoryChunk);    // not enough space: we add the memoryChunk each step
+
+	    myBZStream.next_out = (char *) (&rv[startRv] + total_out);
+	    myBZStream.avail_out = rv.size() - startRv - total_out;
+
+	    if ((err = BZ2_bzCompress (&myBZStream, BZ_FINISH))==BZ_STREAM_END) done = true;
+	    else if (err < 0) break;
+	    total_out = GetTotalOut<uLongType64>(myBZStream);
+	}
+
+	if ((err=BZ2_bzCompressEnd(&myBZStream)) < 0) done = false;
+    }
+    else done = false;
+
+    rv.resize(startRv+(done ? GetTotalOut<uLongType64>(myBZStream) : 0));
+
+    return done;
 }
 #endif //BZ_DECOMPRESS_ONLY
 
-bool Bz2DecompressFromMemory(const char* buffer,int buffer_size,ImVector<char>& output, bool clear_output_before_usage) {
-if (clear_output_before_usage) output.clear();
-if (!buffer || buffer_size<=0) return false;
-const int start_size = output.size();
-const unsigned int allocatedBufferSize = buffer_size*15.f;
-unsigned int dest_len = allocatedBufferSize;
-output.resize(start_size+dest_len);
-const int rv = BZ2_bzBuffToBuffDecompress(&output[start_size],&dest_len,(char*) buffer,buffer_size,0,0);
-if (rv!=BZ_OK)  {
-    const char* errorCode = BzErrorString(rv);
-    if (errorCode) fprintf(stderr,"Error in ImGui::Bz2Decompress(...): %s.\n",errorCode);
-}
-output.resize(start_size+dest_len);
-return true;
+bool Bz2DecompressFromMemory(const char* memoryBuffer,int memoryBufferSize,ImVector<char>& rv,bool clearRvBeforeUsage) {
+    if (clearRvBeforeUsage) rv.clear();
+    const int startRv = rv.size();
+
+    if (memoryBufferSize == 0  || !memoryBuffer) return false;
+    const int memoryChunk = memoryBufferSize > (16*1024) ? (16*1024) : memoryBufferSize;
+    rv.resize(memoryChunk);  // we start using the memoryChunk length
+
+    bz_stream myBZStream;
+    myBZStream.next_in =  (char *) memoryBuffer;
+    myBZStream.avail_in = memoryBufferSize;
+    myBZStream.total_out_hi32 = 0;
+    myBZStream.total_out_lo32 = 0;
+    myBZStream.bzalloc = NULL;
+    myBZStream.bzfree = NULL;
+    myBZStream.opaque = NULL;
+    typedef unsigned long uLongType64;	// We can't use unsigned long long, because it needs C++11 (and we'll later cast it to an int in any case!)
+    uLongType64 total_out = GetTotalOut<uLongType64>(myBZStream);
+
+    bool done = false;
+    if (BZ2_bzDecompressInit(&myBZStream,0,0) == BZ_OK) {
+
+	int err = BZ_OK;
+	while (!done) {
+	    if (total_out >= (unsigned int)(rv.size()-startRv)) rv.resize(rv.size()+memoryChunk);    // not enough space: we add the full memoryChunk each step
+
+	    myBZStream.next_out = (char *) (&rv[startRv] + total_out);
+	    myBZStream.avail_out = rv.size() - startRv - total_out;
+
+	    if ((err = BZ2_bzDecompress (&myBZStream))==BZ_STREAM_END) done = true;
+	    else if (err < 0)  break;
+	    total_out = GetTotalOut<uLongType64>(myBZStream);
+	}
+
+	if ((err=BZ2_bzDecompressEnd(&myBZStream)) < 0) done = false;
+    }
+    else done = false;
+
+    rv.resize(startRv+(done ? GetTotalOut<uLongType64>(myBZStream) : 0));
+
+    return done;
 }
 
 } //namespace ImGui

@@ -120,8 +120,7 @@ static ImImpl_PrivateParams gImImplPrivateParams;
 #endif //IMGUI_NO_STB_IMAGE_STATIC
 #endif //STBI_INCLUDE_STB_IMAGE_H
 
-static bool gTextureFilteringHintMagFilterNearest = false;  // These internal values can be used by ImImpl_GenerateOrUpdateTexture(...) implementations
-static bool gTextureFilteringHintMinFilterNearest = false;
+
 
 
 #ifdef IMGUI_USE_AUTO_BINDING_OPENGL
@@ -129,27 +128,53 @@ void ImImpl_FreeTexture(ImTextureID& imtexid) {
     GLuint& texid = reinterpret_cast<GLuint&>(imtexid);
     if (texid) {glDeleteTextures(1,&texid);texid=0;}
 }
-void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,int channels,const unsigned char* pixels,bool useMipmapsIfPossible,bool wraps,bool wrapt) {
+inline static bool ImImpl_IsPowerOfTwo(unsigned int n) {return (n & (n - 1)) == 0;}
+void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,int channels,const unsigned char* pixels,bool useMipmapsIfPossible,bool wraps,bool wrapt,bool minFilterNearest,bool magFilterNearest) {
     IM_ASSERT(pixels);
     IM_ASSERT(channels>0 && channels<=4);
     GLuint& texid = reinterpret_cast<GLuint&>(imtexid);
     if (texid==0) glGenTextures(1, &texid);
 
     glBindTexture(GL_TEXTURE_2D, texid);
+
     GLenum clampEnum = 0x2900;    // 0x2900 -> GL_CLAMP; 0x812F -> GL_CLAMP_TO_EDGE
-#   ifndef GL_CLAMP
-#       ifdef GL_CLAMP_TO_EDGE
-        clampEnum = GL_CLAMP_TO_EDGE;
+#   ifdef GL_CLAMP_TO_EDGE
+    clampEnum = GL_CLAMP_TO_EDGE;
 #       else //GL_CLAMP_TO_EDGE
-        clampEnum = 0x812F;
-#       endif // GL_CLAMP_TO_EDGE
-#   else //GL_CLAMP
+#       ifndef GL_CLAMP
+#           ifdef GL_CLAMP_TO_EDGE
+            clampEnum = GL_CLAMP_TO_EDGE;
+#           else //GL_CLAMP_TO_EDGE
+            clampEnum = 0x812F;
+#           endif // GL_CLAMP_TO_EDGE
+#       else //GL_CLAMP
     clampEnum = GL_CLAMP;
 #   endif //GL_CLAMP
+#   endif //GL_CLAMP_TO_EDGE
+
+    // WebGL and OpenGLES2 need this workaround for non-power of two textures (WebGL2 and OpenGLES3 don't need this anymore):
+#   if ((defined(__EMSCRIPTEN__) || defined(IMIMPL_SHADER_GLES)) && !defined(IMIMPL_SHADER_GL3))
+    /*
+    From: https://www.khronos.org/webgl/wiki/WebGL_and_OpenGL_Differences
+    OpenGL ES 2.0 and WebGL have only limited NPOT support. The restrictions are defined in Sections 3.8.2, "Shader Execution", and 3.7.11, "Mipmap Generation", of the OpenGL ES 2.0 specification, and are summarized here:
+
+    -> generateMipmap(target) generates an INVALID_OPERATION error if the level 0 image of the texture currently bound to target has an NPOT width or height.
+    -> Sampling an NPOT texture in a shader will produce the RGBA color (0, 0, 0, 1) if:
+    -> The minification filter is set to anything but NEAREST or LINEAR: in other words, if it uses one of the mipmapped filters.
+    -> The repeat mode is set to anything but CLAMP_TO_EDGE; repeating NPOT textures are not supported.
+    */
+
+    const int wIsPower2 = ImImpl_IsPowerOfTwo(width);
+    const int hIsPower2 = ImImpl_IsPowerOfTwo(height);
+    useMipmapsIfPossible&=(wIsPower2 && hIsPower2);
+    wraps&=wIsPower2;
+    wrapt&=hIsPower2;
+#   endif
+
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,wraps ? GL_REPEAT : clampEnum);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,wrapt ? GL_REPEAT : clampEnum);
     //const GLfloat borderColor[]={0.f,0.f,0.f,1.f};glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR,borderColor);
-    if (gTextureFilteringHintMagFilterNearest) glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    if (magFilterNearest) glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     else glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     if (useMipmapsIfPossible)   {
 #       ifdef NO_IMGUI_OPENGL_GLGENERATEMIPMAP
@@ -160,7 +185,7 @@ void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,in
         glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);    // This call must be done before glTexImage2D(...) // GL_GENERATE_MIPMAP can't be used with NPOT if there are not supported by the hardware of GL_ARB_texture_non_power_of_two.
 #       endif //NO_IMGUI_OPENGL_GLGENERATEMIPMAP
     }
-    if (gTextureFilteringHintMinFilterNearest) glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, useMipmapsIfPossible ? GL_LINEAR_MIPMAP_NEAREST : GL_NEAREST);
+    if (minFilterNearest) glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, useMipmapsIfPossible ? GL_LINEAR_MIPMAP_NEAREST : GL_NEAREST);
     else glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, useMipmapsIfPossible ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -187,7 +212,7 @@ void ImImpl_FreeTexture(ImTextureID& imtexid) {
     LPDIRECT3DTEXTURE9& texid = reinterpret_cast<LPDIRECT3DTEXTURE9&>(imtexid);
     if (texid) {texid->Release();texid=0;}
 }
-void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,int channels,const unsigned char* pixels,bool useMipmapsIfPossible,bool wraps,bool wrapt) {
+void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,int channels,const unsigned char* pixels,bool useMipmapsIfPossible,bool wraps,bool wrapt,bool minFilterNearest,bool magFilterNearest) {
     IM_ASSERT(pixels);
     IM_ASSERT(channels>0 && channels<=4);
     LPDIRECT3DTEXTURE9& texid = reinterpret_cast<LPDIRECT3DTEXTURE9&>(imtexid);
@@ -218,7 +243,7 @@ void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,in
     }
     texid->UnlockRect(0);
 
-    // Sorry, but I've got no idea on how to set wraps and wrapt in Direct3D9....
+    // Sorry, but I've got no idea on how to set wraps and wrapt, minFilterNearest and magFilterNearest in Direct3D9....
 }
 void ImImpl_ClearColorBuffer(const ImVec4& bgColor)  {
     D3DCOLOR clear_col_dx = D3DCOLOR_RGBA((int)(bgColor.x*255.0f), (int)(bgColor.y*255.0f), (int)(bgColor.z*255.0f), (int)(bgColor.w*255.0f));
@@ -406,13 +431,13 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     ImGuiFreeType::GetTexDataAsRGBA32(io.Fonts,&pixels, &width, &height,NULL,ImGuiFreeType::DefaultRasterizationFlags,&ImGuiFreeType::DefaultRasterizationFlagVector);
 #   endif //YES_IMGUIFREETYPE
 
+    bool minFilterNearest = false,magFilterNearest=false;
 #   if ((!defined(IMIMPL_USE_SDF_SHADER) && !defined(IMIMPL_USE_ALPHA_SHARPENER_SHADER) && !defined(IMIMPL_USE_FONT_TEXTURE_LINEAR_FILTERING)) || defined(IMIMPL_USE_FONT_TEXTURE_NEAREST_FILTERING))
-    gTextureFilteringHintMagFilterNearest = true;
+    magFilterNearest = true;
     //printf("Using nearest filtering for ImGui Font Texture\n");
 #   endif // (!defined(IMGUI_USE_SDL_SHADER) && ! !defined(IMGUI_USE_ALPHA_SHARPENER_SHADER))
-    gTextureFilteringHintMinFilterNearest = false;
-    ImImpl_GenerateOrUpdateTexture(gImImplPrivateParams.fontTex,width,height,4,pixels,false,true,true);
-    gTextureFilteringHintMagFilterNearest = gTextureFilteringHintMinFilterNearest = false;
+    ImImpl_GenerateOrUpdateTexture(gImImplPrivateParams.fontTex,width,height,4,pixels,false,true,true,minFilterNearest,magFilterNearest);
+
 
 
     // Store our identifier
@@ -450,6 +475,9 @@ void DestroyImGuiFontTexture()	{
     }
 
 // We overuse this method to delete textures from other imgui addons
+#   ifdef YES_IMGUIIMAGEEDITOR
+    ImGui::ImageEditor::Destroy();
+#   endif //YES_IMGUIIMAGEEDITOR
 #   ifndef NO_IMGUITABWINDOW
     if (ImGui::TabWindow::DockPanelIconTextureID) {
         ImImpl_FreeTexture(ImGui::TabWindow::DockPanelIconTextureID);
@@ -483,7 +511,7 @@ void ImImpl_FlipTexturesVerticallyOnLoad(bool flag_true_if_should_flip)   {
     stbi_set_flip_vertically_on_load(flag_true_if_should_flip);
 }
 
-ImTextureID ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory,int filenameInMemorySize,int req_comp,bool useMipmapsIfPossible,bool wraps,bool wrapt)  {
+ImTextureID ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory,int filenameInMemorySize,int req_comp,bool useMipmapsIfPossible,bool wraps,bool wrapt,bool minFilterNearest,bool magFilterNearest)  {
     int w,h,n;
     unsigned char* pixels = stbi_load_from_memory(filenameInMemory,filenameInMemorySize,&w,&h,&n,req_comp);
     if (!pixels) {
@@ -493,7 +521,7 @@ ImTextureID ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory,i
     if (req_comp>0 && req_comp<=4) n = req_comp;
 
     ImTextureID texId = NULL;
-    ImImpl_GenerateOrUpdateTexture(texId,w,h,n,pixels,useMipmapsIfPossible,wraps,wrapt);
+    ImImpl_GenerateOrUpdateTexture(texId,w,h,n,pixels,useMipmapsIfPossible,wraps,wrapt,minFilterNearest,magFilterNearest);
 
     stbi_image_free(pixels);
 
@@ -501,13 +529,13 @@ ImTextureID ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory,i
 }
 
 
-ImTextureID ImImpl_LoadTexture(const char* filename, int req_comp, bool useMipmapsIfPossible, bool wraps, bool wrapt)  {
+ImTextureID ImImpl_LoadTexture(const char* filename, int req_comp, bool useMipmapsIfPossible, bool wraps, bool wrapt,bool minFilterNearest,bool magFilterNearest)  {
     // We avoid using stbi_load(...), because we support UTF8 paths under Windows too.
     int file_size = 0;
     unsigned char* file = (unsigned char*) ImFileLoadToMemory(filename,"rb",&file_size,0);
     ImTextureID texId = NULL;
     if (file)   {
-        texId = ImImpl_LoadTextureFromMemory(file,file_size,req_comp,useMipmapsIfPossible,wraps,wrapt);
+        texId = ImImpl_LoadTextureFromMemory(file,file_size,req_comp,useMipmapsIfPossible,wraps,wrapt,minFilterNearest,magFilterNearest);
         ImGui::MemFree(file);file=NULL;
     }
     return texId;

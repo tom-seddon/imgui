@@ -2148,22 +2148,22 @@ void CodeEditor::render()   {
                 const char* pSaveName = saveName;
 #               ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
                 if (ImGui::SmallButton("Save##saveGNEStyle")) {
-#                   ifndef NO_IMGUIEMSCRIPTEN
+#                   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     pSaveName = saveNamePersistent;
-#                   endif //NO_IMGUIEMSCRIPTEN
+#                   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     if (Style::Save(this->style,pSaveName)) {
-#                   ifndef NO_IMGUIEMSCRIPTEN
+#                   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     ImGui::EmscriptenFileSystemHelper::Sync();
-#                   endif //NO_IMGUIEMSCRIPTEN
+#                   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     }
                 }
                 ImGui::SameLine();
 #               endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #               ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
                 if (ImGui::SmallButton("Load##loadGNEStyle")) {
-#                   ifndef NO_IMGUIEMSCRIPTEN
+#                   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
-#                   endif //NO_IMGUIEMSCRIPTEN
+#                   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     Style::Load(this->style,pSaveName);
                 }
                 ImGui::SameLine();

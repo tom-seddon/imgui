@@ -86,6 +86,7 @@ bool IsItemJustReleased()   {
     return IsItemActiveLastFrame() && !ImGui::IsItemActive();
 }
 
+
 #ifndef NO_IMGUIHELPER_FONT_METHODS
 const ImFont *GetFont(int fntIndex) {return (fntIndex>=0 && fntIndex<ImGui::GetIO().Fonts->Fonts.size()) ? ImGui::GetIO().Fonts->Fonts[fntIndex] : NULL;}
 void PushFont(int fntIndex)    {
@@ -1131,7 +1132,7 @@ bool GetFileContent(const char *filePath, ImVector<char> &contentOut, bool clear
         return false;
     }
     f_data.resize(f_size+(appendTrailingZero?1:0));
-    const size_t f_size_read = fread(&f_data[0], 1, f_size, f);
+    const size_t f_size_read = f_size>0 ? fread(&f_data[0], 1, f_size, f) : 0;
     fclose(f);
     if (f_size_read == 0 || f_size_read!=f_size)    return false;
     if (appendTrailingZero) f_data[f_size] = '\0';
@@ -1147,6 +1148,15 @@ bool FileExists(const char *filePath)   {
 }
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+bool SetFileContent(const char *filePath, const unsigned char* content, int contentSize,const char* modes)	{
+    if (!filePath || !content) return false;
+    FILE* f;
+    if ((f = ImFileOpen(filePath, modes)) == NULL) return false;
+    fwrite(content, contentSize, 1, f);
+    fclose(f);f=NULL;
+    return true;
+}
+
 class ISerializable {
 public:
     ISerializable() {}
@@ -1165,7 +1175,7 @@ public:
     ~SerializeToFile() {close();}
     bool saveToFile(const char* filename) {
         close();
-        f = ImFileOpen(filename,"wt");
+        f = ImFileOpen(filename,"w");
         return (f);
     }
     void close() {if (f) fclose(f);f=NULL;}
@@ -1186,11 +1196,7 @@ public:
     ~SerializeToBuffer() {close();}
     bool saveToFile(const char* filename) {
         if (!isValid()) return false;
-        FILE* f = ImFileOpen(filename,"wt");
-        if (!f) return false;
-        fwrite((void*) &b[0],b.size(),1,f);
-        fclose(f);f=NULL;
-        return true;
+        return SetFileContent(filename,(unsigned char*)&b[0],b.size(),"w");
     }
     void close() {b.clear();ImVector<char> o;b.swap(o);b.resize(1);b[0]='\0';}
     bool isValid() const {return b.size()>0;}
@@ -1225,7 +1231,7 @@ int Serializer::getBufferSize() const {
 }
 bool Serializer::WriteBufferToFile(const char* filename,const char* buffer,int bufferSize)   {
     if (!buffer) return false;
-    FILE* f = ImFileOpen(filename,"wt");
+    FILE* f = ImFileOpen(filename,"w");
     if (!f) return false;
     fwrite((void*) buffer,bufferSize,1,f);
     fclose(f);
@@ -1422,38 +1428,70 @@ bool GzBase85DecompressFromFile(const char* filePath,ImVector<char>& rv)    {
 #endif //NO_IMGUIHELPER_SERIALIZATION
 
 bool GzDecompressFromMemory(const char* memoryBuffer,int memoryBufferSize,ImVector<char>& rv,bool clearRvBeforeUsage)    {
-if (clearRvBeforeUsage) rv.clear();
-const int startRv = rv.size();
+    if (clearRvBeforeUsage) rv.clear();
+    const int startRv = rv.size();
 
-  if (memoryBufferSize == 0  || !memoryBuffer) return false;
-  rv.resize(memoryBufferSize);  // we start using the compressed length
+    if (memoryBufferSize == 0  || !memoryBuffer) return false;
+    const int memoryChunk = memoryBufferSize > (16*1024) ? (16*1024) : memoryBufferSize;
+    rv.resize(startRv+memoryChunk);  // we start using the memoryChunk length
 
-  z_stream myZStream;
-  myZStream.next_in = (Bytef *) memoryBuffer;
-  myZStream.avail_in = memoryBufferSize;
-  myZStream.total_out = 0;
-  myZStream.zalloc = Z_NULL;
-  myZStream.zfree = Z_NULL;
+    z_stream myZStream;
+    myZStream.next_in = (Bytef *) memoryBuffer;
+    myZStream.avail_in = memoryBufferSize;
+    myZStream.total_out = 0;
+    myZStream.zalloc = Z_NULL;
+    myZStream.zfree = Z_NULL;
 
-  if (inflateInit2(&myZStream, (16+MAX_WBITS)) != Z_OK) return false;
+    bool done = false;
+    if (inflateInit2(&myZStream, (16+MAX_WBITS)) == Z_OK) {
+        int err = Z_OK;
+        while (!done) {
+            if (myZStream.total_out >= (uLong)(rv.size()-startRv)) rv.resize(rv.size()+memoryChunk);    // not enough space: we add the memoryChunk each step
 
-  bool done = false;  int err = Z_OK;
-  while (!done) {
-    if (myZStream.total_out >= (uLong)(rv.size()-startRv)) rv.resize(rv.size()+memoryBufferSize);    // not enough space: we add the full memoryBufferSize each step
+            myZStream.next_out = (Bytef *) (&rv[startRv] + myZStream.total_out);
+            myZStream.avail_out = rv.size() - startRv - myZStream.total_out;
 
-    myZStream.next_out = (Bytef *) (&rv[startRv] + myZStream.total_out);
-    myZStream.avail_out = rv.size() - startRv - myZStream.total_out;
+            if ((err = inflate (&myZStream, Z_SYNC_FLUSH))==Z_STREAM_END) done = true;
+            else if (err != Z_OK)  break;
+        }
+        if ((err=inflateEnd(&myZStream))!= Z_OK) done = false;
+    }
+    rv.resize(startRv+(done ? myZStream.total_out : 0));
 
-    if ((err = inflate (&myZStream, Z_SYNC_FLUSH))==Z_STREAM_END) done = true;
-    else if (err != Z_OK)  break;
-  }
+    return done;
+}
+bool GzCompressFromMemory(const char* memoryBuffer,int memoryBufferSize,ImVector<char>& rv,bool clearRvBeforeUsage)  {
+    if (clearRvBeforeUsage) rv.clear();
+    const int startRv = rv.size();
 
-  if ((err=inflateEnd(&myZStream))!= Z_OK) return false;
+    if (memoryBufferSize == 0  || !memoryBuffer) return false;
+    const int memoryChunk = memoryBufferSize/3 > (16*1024) ? (16*1024) : memoryBufferSize/3;
+    rv.resize(startRv+memoryChunk);  // we start using the memoryChunk length
 
-  if (done) rv.resize(startRv+myZStream.total_out);
+    z_stream myZStream;
+    myZStream.next_in =  (Bytef *) memoryBuffer;
+    myZStream.avail_in = memoryBufferSize;
+    myZStream.total_out = 0;
+    myZStream.zalloc = Z_NULL;
+    myZStream.zfree = Z_NULL;
 
-  return done;
+    bool done = false;
+    if (deflateInit2(&myZStream,Z_BEST_COMPRESSION,Z_DEFLATED,(16+MAX_WBITS),8,Z_DEFAULT_STRATEGY) == Z_OK) {
+        int err = Z_OK;
+        while (!done) {
+            if (myZStream.total_out >= (uLong)(rv.size()-startRv)) rv.resize(rv.size()+memoryChunk);    // not enough space: we add the full memoryChunk each step
 
+            myZStream.next_out = (Bytef *) (&rv[startRv] + myZStream.total_out);
+            myZStream.avail_out = rv.size() - startRv - myZStream.total_out;
+
+            if ((err = deflate (&myZStream, Z_FINISH))==Z_STREAM_END) done = true;
+            else if (err != Z_OK)  break;
+        }
+        if ((err=deflateEnd(&myZStream))!= Z_OK) done=false;
+    }
+    rv.resize(startRv+(done ? myZStream.total_out : 0));
+
+    return done;
 }
 #   ifdef YES_IMGUISTRINGIFIER
 bool GzBase64DecompressFromMemory(const char* input,ImVector<char>& rv) {
@@ -1467,6 +1505,16 @@ bool GzBase85DecompressFromMemory(const char* input,ImVector<char>& rv) {
     if (ImGui::Base85Decode(input,v)) return false;
     if (v.size()==0) return false;
     return GzDecompressFromMemory(&v[0],v.size(),rv);
+}
+bool GzBase64CompressFromMemory(const char* input,int inputSize,ImVector<char>& output,bool stringifiedMode,int numCharsPerLineInStringifiedMode)   {
+    output.clear();ImVector<char> output1;
+    if (!ImGui::GzCompressFromMemory(input,inputSize,output1)) return false;
+    return ImGui::Base64Encode(&output1[0],output1.size(),output,stringifiedMode,numCharsPerLineInStringifiedMode);
+}
+bool GzBase85CompressFromMemory(const char* input,int inputSize,ImVector<char>& output,bool stringifiedMode,int numCharsPerLineInStringifiedMode) {
+    output.clear();ImVector<char> output1;
+    if (!ImGui::GzCompressFromMemory(input,inputSize,output1)) return false;
+    return ImGui::Base85Encode(&output1[0],output1.size(),output,stringifiedMode,numCharsPerLineInStringifiedMode);
 }
 #   endif //#YES_IMGUISTRINGIFIER
 

@@ -108,7 +108,6 @@ NO_IMGUINODEGRAPHEDITOR
 NO_IMGUICODEEDITOR
 NO_IMGUISTRING
 NO_IMGUIHELPER
-NO_IMGUIEMSCRIPTEN
 Disabling unused addons greatly improves compilation times (any in many cases including <imgui.h> as a "precompiled header" can give a further speed-up).
 Tip: you can use the definition NO_IMGUI_ADDONS to disable all the addons with a single definition! (More on this later)
 
@@ -130,6 +129,8 @@ Currently "yes addons" are:
 -> imguiminigames.h/cpp:	no dependencies. For a list of minigames and their own license, please read addons/yes_addons/imguiminigames.h.
 -> imguibz2.h/cpp:		no dependencies. It's libbzip2 (http://www.bzip.org/), inlined and made a bit more ImGui-friendly. License: BSD-style. It allows loading .ttf.bz2 font files when using some imguibinding. [You can define BZ_DECOMPRESS_ONLY to reduce memory impact a bit].
 -> imguistringifier.h/cpp:	no dependencies. It includes libb64 (libb64.sourceforge.net License: Public Domain). It makes easier to embed files inside source code (e.g. ttf fonts, shader source code, and so on).
+-> imguiemscriptenpersistentfolder: no dependencies. It creates a "/persistent_folder" in the root of the emscripten filesystem (more on this in the emscripten section below).
+-> imguiimageeditor:		no dependencies. License: Please see ./addons/yes_addons/imguiimageeditor.h
 
 Tip: If you used the NO_IMGUI_ADDONS definition to disable all the "normal" addons, then all your addons behave like yes_addons!
      That means that you can define, for example, YES_IMGUISTYLESERIALIZER to re-enable the "normal" imguistyleserializer addon.
@@ -301,13 +302,12 @@ Some notes:
 	I'm pretty new to emscripten and I don't know if there's some easy workaround to persist file changes when you close the browser (but read next point please).
 	Note: Files passed with --preload-file are copied and grouped together in a blob with the .data extension next to the .html file.
 
--> There is an imgui addon named imguiemscripten: it's in charge of adding "/persistent_folder" to the emscripten file system.
+-> There is an imgui yes_addon named imguiemscriptenpersistentfolder: it's in charge of adding "/persistent_folder" to the emscripten file system.
    File saved in this folder should persist somewhere in your browser cache (in form of what is called an "IndexedDB", please search your browser's docs for further info).
-   Emscripten users can define NO_IMGUIEMSCRIPTEN to prevent the creation of the persistent folder (NO_IMGUIEMSCRIPTEN should be defined for you in non-emscripten builds).   
+   Emscripten users can define YES_IMGUIEMSCRIPTENPERSISTENTFOLDER to enable the creation of the persistent folder.
    ATM I have some issue with the persistent folder (basically I don't seem to be able to load something back at init time).
-   UPDATE: I strongly suggest you enable NO_IMGUIEMSCRIPTEN for emscripten builds in case of problems if you experience errors that Firefox "Tools->Web Developer" tells you that are related to IFSDB (or something like that).
-   (Maybe in the future I'll turn this into a "yes_addon", so that it's disabled by default).
-   UPDATE 2: Please ALWAYS define NO_IMGUIEMSCRIPTEN in emscripten builds: programs always crash without it...
+   UPDATE: I strongly suggest you do not define YES_IMGUIEMSCRIPTENPERSISTENTFOLDER for emscripten builds.
+   It can lead to problems: you can experience errors that Firefox "Tools->Web Developer" tells you that are related to IFSDB (or something like that).
 
 (*): To compile the first demo using the GLUT binding, please try:
 em++ -O2 -o main.html main.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -D"IMGUI_USE_GLUT_BINDING" -s LEGACY_GL_EMULATION=0 -s ALLOW_MEMORY_GROWTH=1 -lm -lGL

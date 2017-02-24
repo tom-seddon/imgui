@@ -10,6 +10,7 @@
 #include "imguivariouscontrols.h"
 
 #ifndef NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
+#ifndef STBI_NO_GIF
 #ifndef IMGUI_USE_AUTO_BINDING
 #ifndef STBI_INCLUDE_STB_IMAGE_H
 #define STB_IMAGE_STATIC
@@ -32,9 +33,10 @@ struct gif_result : stbi__gif {
 #ifndef STBI_INCLUDE_STB_IMAGE_WRITE_H
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_STATIC
-#include "./addons/imguibindings/stb_image_write.h"
+#include "./addons/imguiyesaddons/imguiimageeditor_plugins/stb_image_write.h"
 #endif //DEBUG_OUT_TEXTURE
 #endif //STBI_INCLUDE_STB_IMAGE_WRITE_H
+#endif //STBI_NO_GIF
 #endif //NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
 
 
@@ -916,7 +918,9 @@ struct AnimatedImageInternal {
     public:
     AnimatedImageInternal()  {persistentTexIdIsNotOwned=false;texId=persistentTexId=NULL;clear();}
     ~AnimatedImageInternal()  {texId=persistentTexId=NULL;clear();persistentTexIdIsNotOwned=false;}
+#	ifndef STBI_NO_GIF
     AnimatedImageInternal(char const *filename,bool useHoverModeIfSupported=false)  {persistentTexIdIsNotOwned = false;texId=persistentTexId=NULL;load(filename,useHoverModeIfSupported);}
+#	endif //STBI_NO_GIF
     AnimatedImageInternal(ImTextureID myTexId,int animationImageWidth,int animationImageHeight,int numFrames,int numFramesPerRowInTexture,int numFramesPerColumnInTexture,float delayDetweenFramesInCs,bool useHoverMode=false) {
         persistentTexIdIsNotOwned = false;texId=persistentTexId=NULL;
         create(myTexId,animationImageWidth,animationImageHeight,numFrames,numFramesPerRowInTexture,numFramesPerColumnInTexture,delayDetweenFramesInCs,useHoverMode);
@@ -930,7 +934,7 @@ struct AnimatedImageInternal {
         if (texId) {if (texId!=persistentTexId) AnimatedImage::FreeTextureCb(texId);texId=NULL;}
         if (persistentTexId)  {if (!persistentTexIdIsNotOwned) AnimatedImage::FreeTextureCb(persistentTexId);persistentTexId=NULL;}
     }
-
+#	ifndef STBI_NO_GIF
     bool load(char const *filename,bool useHoverModeIfSupported=false)  {
         ImGui::AnimatedImageInternal& ag = *this;
 
@@ -1081,6 +1085,7 @@ struct AnimatedImageInternal {
         fclose(f);
         return ok;
     }
+#	endif //STBI_NO_GIF
     bool create(ImTextureID myTexId,int animationImageWidth,int animationImageHeight,int numFrames,int numFramesPerRowInTexture,int numFramesPerColumnInTexture,float delayDetweenFramesInCs,bool useHoverMode=false)   {
         clear();
         persistentTexIdIsNotOwned = false;
@@ -1299,10 +1304,12 @@ AnimatedImage::GenerateOrUpdateTextureDelegate AnimatedImage::GenerateOrUpdateTe
 
 ImVec2 AnimatedImage::MaxPersistentTextureSize(2048,2048);
 
+#ifndef STBI_NO_GIF
 AnimatedImage::AnimatedImage(const char *filename, bool useHoverModeIfSupported)    {
     ptr = (AnimatedImageInternal*) ImGui::MemAlloc(sizeof(AnimatedImageInternal));
     IM_PLACEMENT_NEW(ptr) AnimatedImageInternal(filename,useHoverModeIfSupported);
 }
+#endif //STBI_NO_GIF
 AnimatedImage::AnimatedImage(ImTextureID myTexId, int animationImageWidth, int animationImageHeight, int numFrames, int numFramesPerRowInTexture, int numFramesPerColumnInTexture, float delayBetweenFramesInCs, bool useHoverMode) {
     ptr = (AnimatedImageInternal*) ImGui::MemAlloc(sizeof(AnimatedImageInternal));
     IM_PLACEMENT_NEW(ptr) AnimatedImageInternal(myTexId,animationImageWidth,animationImageHeight,numFrames,numFramesPerRowInTexture,numFramesPerColumnInTexture,delayBetweenFramesInCs,useHoverMode);
@@ -1319,7 +1326,9 @@ AnimatedImage::~AnimatedImage() {
 void AnimatedImage::clear() {ptr->clear();}
 void AnimatedImage::render(ImVec2 size, const ImVec2 &uv0, const ImVec2 &uv1, const ImVec4 &tint_col, const ImVec4 &border_col) const   {ptr->render(size,uv0,uv1,tint_col,border_col);}
 bool AnimatedImage::renderAsButton(const char *label, ImVec2 size, const ImVec2 &uv0, const ImVec2 &uv1, int frame_padding, const ImVec4 &bg_col, const ImVec4 &tint_col)   {return ptr->renderAsButton(label,size,uv0,uv1,frame_padding,bg_col,tint_col);}
+#ifndef STBI_NO_GIF
 bool AnimatedImage::load(const char *filename, bool useHoverModeIfSupported)    {return ptr->load(filename,useHoverModeIfSupported);}
+#endif //STBI_NO_GIF
 bool AnimatedImage::create(ImTextureID myTexId, int animationImageWidth, int animationImageHeight, int numFrames, int numFramesPerRowInTexture, int numFramesPerColumnInTexture, float delayBetweenFramesInCs, bool useHoverMode)   {return ptr->create(myTexId,animationImageWidth,animationImageHeight,numFrames,numFramesPerRowInTexture,numFramesPerColumnInTexture,delayBetweenFramesInCs,useHoverMode);}
 int AnimatedImage::getWidth() const {return ptr->getWidth();}
 int AnimatedImage::getHeight() const    {return ptr->getHeight();}

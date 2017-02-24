@@ -929,7 +929,7 @@ struct SdfCharset {
             return false;
         }
         f_data.resize(f_size+(appendTrailingZero?1:0));
-        const size_t f_size_read = fread(&f_data[0], 1, f_size, f);
+        const size_t f_size_read = f_size>0 ? fread(&f_data[0], 1, f_size, f) : 0;
         fclose(f);
         if (f_size_read == 0 || f_size_read!=f_size)    return false;
         if (appendTrailingZero) f_data[f_size] = '\0';

@@ -1456,9 +1456,11 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mhs.splitterColorHovered);
             ImGui::PushStyleColor(ImGuiCol_ButtonActive,mhs.splitterColorActive);
             ImGui::PushID(this);
+
             ImGui::Button("##splitter0", ImVec2(ws.x,splitterSize));
-            if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
             splitterActive = !mhs.isASplitterActive && ImGui::IsItemActive();
+            if (splitterActive || ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+
             mhs.isASplitterActive |= splitterActive;
             if (splitterActive)  splitterDelta = ImGui::GetIO().MouseDelta.y;
             else splitterDelta = 0.f;
@@ -1488,9 +1490,11 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
             ImGui::PushStyleColor(ImGuiCol_ButtonActive,mhs.splitterColorActive);
             ImGui::PushID(this);
             ImGui::SameLine(0,0);
+
             ImGui::Button("##splitter1", ImVec2(splitterSize,ws.y));
-            if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
             splitterActive = !mhs.isASplitterActive && ImGui::IsItemActive();
+            if (splitterActive || ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+
             mhs.isASplitterActive |= splitterActive;
             if (splitterActive)  splitterDelta = ImGui::GetIO().MouseDelta.x;
             else splitterDelta = 0.f;

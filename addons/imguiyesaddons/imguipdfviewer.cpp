@@ -1684,7 +1684,7 @@ bool PdfViewer::render(const ImVec2 &size)  {
     return pagePanel->render(size,true);
 }
 
-
+const double PdfViewer::IMAGE_DPI = 150;
 
 
 } // namespace ImGui

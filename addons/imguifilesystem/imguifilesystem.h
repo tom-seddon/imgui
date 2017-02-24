@@ -65,6 +65,7 @@ x> Never tested on a real Windows OS and on MacOS.
 #include <imgui.h>
 #endif //IMGUI_API
 
+// TODO: Remove this definition: it doesn't work on some systems (= Windows AFAIK)
 //#define IMGUIFS_NO_EXTRA_METHODS    // optional, but it makes this header lighter...
 #ifndef IMGUIFS_NO_EXTRA_METHODS
 #   include <stdint.h>             // this is included by imgui.cpp, and the following headers might redefine incorrectly some types otherwise.
@@ -146,6 +147,8 @@ struct Dialog {
     const char* getChosenPath() const;
     // returns the last directory browsed by the user using this class (internally stored). Can be passed as "directory" parameter in the methods above to reuse last used directory.
     const char* getLastDirectory() const;
+    // returns "true" the exact frame a user has clicked "cancel" or the "dialog close button".
+    bool hasUserJustCancelledDialog() const;
 
     // static variables that are usually OK as they are
     static bool WrapMode;           // (true)
@@ -178,7 +181,9 @@ extern bool PathExists(const char* path);
 extern void PathGetAbsolute(const char *path, char *rv);
 extern void PathGetDirectoryName(const char *filePath, char *rv);
 extern void PathGetFileName(const char *filePath, char *rv);
+extern void PathGetFileNameWithoutExtension(const char *filePath, char *rv);
 extern void PathGetExtension(const char* filePath,char *rv);
+extern void PathChangeExtension(const char* filePath, const char *newExtension, char *rv);
 extern void PathAppend(const char* directory,char* rv);
 extern void PathSplit(const char* path,FilenameStringVector& rv,bool leaveIntermediateTrailingSlashes=true);
 

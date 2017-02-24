@@ -61,6 +61,9 @@ IMGUI_BASE_PATH=../..
 #DEFINES+= IMIMPL_SHADER_NONE
 #DEFINES+=YES_IMGUIBZ2
 #DEFINES+=YES_IMGUISTRINGIFIER
+#DEFINES+=STBI_NO_GIF
+#DEFINES+=NO_IMGUITOOLBAR
+#DEFINES+=YES_IMGUIIMAGEEDITOR
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 
@@ -95,7 +98,6 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguicodeeditor/imguicodeeditor.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguicodeeditor/utf8helper.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguitabwindow/imguitabwindow.h"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiemscripten/imguiemscripten.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguidock/imguidock.h"			    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imgui*.h"
 
@@ -165,7 +167,6 @@ OTHER_FILES+= $$IMGUI_BASE_PATH"/addons/imgui_user.inl"				    \
 	   $$IMGUI_BASE_PATH"/addons/imguinodegrapheditor/imguinodegrapheditor.cpp" \
 	   $$IMGUI_BASE_PATH"/addons/imguicodeeditor/imguicodeeditor.cpp"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguitabwindow/imguitabwindow.cpp"		    \
-	   $$IMGUI_BASE_PATH"/addons/imguiemscripten/imguiemscripten.cpp"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguidock/imguidock.h"			    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imgui*.cpp"			    \
 	   README_FIRST.txt

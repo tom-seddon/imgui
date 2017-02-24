@@ -58,14 +58,14 @@ ImGui::TabWindow tabWindows[5]; // 0 = center, 1 = left, 2 = right, 3 = top, 4 =
 
 // Static methods to load/save all the tabWindows (done mainly to avoid spreading too many definitions around)
 static const char tabWindowsSaveName[]           = "myTabWindow.layout";
-static const char tabWindowsSaveNamePersistent[] = "/persistent_folder/myTabWindow.layout";  // Used by emscripten only, and only if NO_IMGUIEMSCRIPTEN is not defined (and furthermore it's buggy...).
+static const char tabWindowsSaveNamePersistent[] = "/persistent_folder/myTabWindow.layout";  // Used by emscripten only, and only if YES_IMGUIEMSCRIPTENPERSISTENTFOLDER is defined (and furthermore it's buggy...).
 static bool LoadTabWindowsIfSupported() {
     bool loadedFromFile = false;
 #   if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
     const char* pSaveName = tabWindowsSaveName;
-#   ifndef NO_IMGUIEMSCRIPTEN
+#   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
     if (ImGuiHelper::FileExists(tabWindowsSaveNamePersistent)) pSaveName = tabWindowsSaveNamePersistent;
-#   endif //NO_IMGUIEMSCRIPTEN
+#   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
     //loadedFromFile = tabWindow.load(pSaveName);   // This is good for a single TabWindow
     loadedFromFile = ImGui::TabWindow::Load(pSaveName,&tabWindows[0],sizeof(tabWindows)/sizeof(tabWindows[0]));  // This is OK for a multiple TabWindows
 #   endif //!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && ...
@@ -74,15 +74,15 @@ static bool LoadTabWindowsIfSupported() {
 static bool SaveTabWindowsIfSupported() {
 #   if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_SAVE))
     const char* pSaveName = tabWindowsSaveName;
-#   ifndef NO_IMGUIEMSCRIPTEN
+#   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
     pSaveName = tabWindowsSaveNamePersistent;
-#   endif //NO_IMGUIEMSCRIPTEN
+#   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
     //if (parent.save(pSaveName))   // This is OK for a single TabWindow
     if (ImGui::TabWindow::Save(pSaveName,&tabWindows[0],sizeof(tabWindows)/sizeof(tabWindows[0])))  // This is OK for a multiple TabWindows
     {
-#   ifndef NO_IMGUIEMSCRIPTEN
+#   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
     ImGui::EmscriptenFileSystemHelper::Sync();
-#   endif //NO_IMGUIEMSCRIPTEN
+#   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
     return true;
     }
 #   endif //!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && ...
@@ -123,22 +123,22 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             const char* pSaveName = saveName;
 #               ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
             if (ImGui::SmallButton("Save##saveGNEStyle1")) {
-#               ifndef NO_IMGUIEMSCRIPTEN
+#               ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                 pSaveName = saveNamePersistent;
-#               endif //NO_IMGUIEMSCRIPTEN
+#               endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                 ImGui::TabLabelStyle::Save(ImGui::TabLabelStyle::Get(),pSaveName);
-#               ifndef NO_IMGUIEMSCRIPTEN
+#               ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                 ImGui::EmscriptenFileSystemHelper::Sync();
-#               endif //NO_IMGUIEMSCRIPTEN
+#               endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                 changed = false;tab->setModified(false);
             }
             ImGui::SameLine();
 #               endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #               ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
             if (ImGui::SmallButton("Load##loadGNEStyle1")) {
-#               ifndef NO_IMGUIEMSCRIPTEN
+#               ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                 if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
-#               endif //NO_IMGUIEMSCRIPTEN
+#               endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                 ImGui::TabLabelStyle::Load(ImGui::TabLabelStyle::Get(),pSaveName);
                 changed = false;tab->setModified(false);
             }
@@ -163,20 +163,33 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
             ImGui::EndChild();
         }*/
-#       ifdef YES_IMGUIMINIGAMES
-#       ifndef NO_IMGUIMINIGAMES_MINE
         else if (tab->matchLabel("ImGuiMineGame"))  {
+#           if (defined(YES_IMGUIMINIGAMES) && defined(NO_IMGUIMINIGAMES_MINE))
             static ImGuiMiniGames::Mine mineGame;
             mineGame.render();
+#           else //NO_IMGUIMINIGAMES_MINE
+            ImGui::Text("Disabled for this build.");
+#           endif // NO_IMGUIMINIGAMES_MINE
         }
-#       endif // NO_IMGUIMINIGAMES_MINE
-#       ifndef NO_IMGUIMINIGAMES_SUDOKU
         else if (tab->matchLabel("ImGuiSudokuGame"))  {
+#           if (defined(YES_IMGUIMINIGAMES) && defined(NO_IMGUIMINIGAMES_SUDOKU))
             static ImGuiMiniGames::Sudoku sudokuGame;
             sudokuGame.render();
+#           else // NO_IMGUIMINIGAMES_SUDOKU
+            ImGui::Text("Disabled for this build.");
+#           endif // NO_IMGUIMINIGAMES_SUDOKU
         }
-#       endif // NO_IMGUIMINIGAMES_SUDOKU
-#       endif // YES_IMGUIMINIGAMES
+        else if (tab->matchLabel("ImGuiImageEditor"))   {
+#           ifdef YES_IMGUIIMAGEEDITOR
+            static ImGui::ImageEditor imageEditor;
+            if (!imageEditor.isInited() && !imageEditor.loadFromFile("./blankImage.png")) {
+                //fprintf(stderr,"Loading \"./blankImage.png\" Failed.\n");
+            }
+            imageEditor.render();
+            tab->setModified(imageEditor.getModified());    // actually this should be automatic if we use the TabLabel extension approach inside our TabWindows (ImageEditor derives from TabLabel by default, but it's not tested)
+            ImGui::Text("Disabled for this build.");
+#           endif //YES_IMGUIIMAGEEDITOR
+        }
         else ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
         ImGui::PopID();
     }
@@ -300,14 +313,14 @@ inline static void SetPanelManagerBoundsToIncludeMainMenuIfPresent(int displayX=
 // Here are refactored the load/save methods of the ImGui::PanelManager (mainly the hover and docked sizes of all windows and the button states of the 4 toolbars)
 // Please note that it should be possible to save settings this in the same as above ("myTabWindow.layout"), but the API is more complex.
 static const char panelManagerSaveName[] = "myPanelManager.layout";
-static const char panelManagerSaveNamePersistent[] = "/persistent_folder/myPanelManager.layout";  // Used by emscripten only, and only if NO_IMGUIEMSCRIPTEN is not defined (and furthermore it's buggy...).
+static const char panelManagerSaveNamePersistent[] = "/persistent_folder/myPanelManager.layout";  // Used by emscripten only, and only if YES_IMGUIEMSCRIPTENPERSISTENTFOLDER is defined (and furthermore it's buggy...).
 static bool LoadPanelManagerIfSupported() {
     bool loadingOk=false;
 #   if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
     const char* pSaveName = panelManagerSaveName;
-#   ifndef NO_IMGUIEMSCRIPTEN
+#   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
     if (ImGuiHelper::FileExists(panelManagerSaveNamePersistent)) pSaveName = panelManagerSaveNamePersistent;
-#   endif //NO_IMGUIEMSCRIPTEN
+#   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
     loadingOk=ImGui::PanelManager::Load(mgr,pSaveName);
 #   endif //!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !...
     return loadingOk;
@@ -315,13 +328,13 @@ static bool LoadPanelManagerIfSupported() {
 static bool SavePanelManagerIfSupported() {
 #   if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_SAVE))
     const char* pSaveName = panelManagerSaveName;
-#   ifndef NO_IMGUIEMSCRIPTEN
+#   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
     pSaveName = panelManagerSaveNamePersistent;
-#   endif //NO_IMGUIEMSCRIPTEN
+#   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
     if (ImGui::PanelManager::Save(mgr,pSaveName))   {
-#	ifndef NO_IMGUIEMSCRIPTEN
+#	ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
 	ImGui::EmscriptenFileSystemHelper::Sync();
-#	endif //NO_IMGUIEMSCRIPTEN
+#	endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
     return true;
     }
 #   endif //!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !...
@@ -820,8 +833,10 @@ void DrawGL()	// Mandatory
                             tabWindow.addTabLabel("ImGuiSudokuGame","a mini-game",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 #                           endif // NO_IMGUIMINIGAMES_SUDOKU
 #                           endif // YES_IMGUIMINIGAMES
+#                           ifdef YES_IMGUIIMAGEEDITOR
+                            tabWindow.addTabLabel("ImGuiImageEditor","a tiny image editor",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+#                           endif //YES_IMGUIIMAGEEDITOR
                         }
-
                     }
                     tabWindow.render(); // Must be called inside "its" window (and sets isInited() to false). [ ChildWindows can't be used here (but can be used inside Tab Pages). Basically all the "Central Window" must be given to 'tabWindow'. ]                    
 #                    else // NO_IMGUITABWINDOW

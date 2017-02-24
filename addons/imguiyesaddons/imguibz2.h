@@ -65,10 +65,10 @@ bzip2/libbzip2 version 1.0.5 of 10 December 2007
 namespace ImGui {
 
 #ifndef BZ_DECOMPRESS_ONLY
-    IMGUI_API bool Bz2CompressFromMemory(const char* buffer,int buffer_size,ImVector<char>& output,bool clear_output_before_usage=true);
+    IMGUI_API bool Bz2CompressFromMemory(const char* memoryBuffer, int memoryBufferSize, ImVector<char>& rv, bool clearRvBeforeUsage=true);
 #endif //BZ_DECOMPRESS_ONLY
 
-    IMGUI_API bool Bz2DecompressFromMemory(const char* buffer,int buffer_size,ImVector<char>& output,bool clear_output_before_usage=true);
+    IMGUI_API bool Bz2DecompressFromMemory(const char* memoryBuffer, int memoryBufferSize, ImVector<char>& rv, bool clearRvBeforeUsage=true);
 
 } //namespace ImGui
 

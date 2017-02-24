@@ -73,9 +73,6 @@
 #   if (!defined(YES_IMGUIHELPER) && !defined(NO_IMGUIHELPER))
 #       define NO_IMGUIHELPER
 #   endif //YES_IMGUIHELPER
-#   if (!defined(YES_IMGUIEMSCRIPTEN) && !defined(NO_IMGUIEMSCRIPTEN))
-#       define NO_IMGUIEMSCRIPTEN
-#   endif //YES_IMGUIEMSCRIPTEN
 #endif // NO_IMGUI_ADDONS
 
 // Defining a custom placement new() with a dummy parameter allows us to bypass including <new> which on some platforms complains when user has disabled exceptions.
@@ -113,12 +110,14 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #endif //YES_IMGUISTRINGIFIER
 
 #ifdef __EMSCRIPTEN__
-#   ifndef NO_IMGUIEMSCRIPTEN
-#       include "./imguiemscripten/imguiemscripten.h"
-#   endif //NO_IMGUIEMSCRIPTEN
+#	ifdef NO_IMGUIEMSCRIPTEN
+#		warning NO_IMGUIEMSCRIPTEN is deprecated (it is defined by default). YES_IMGUIEMSCRIPTENPERSISTENTFOLDER can be used to enable the yes_addon.
+#	endif //NO_IMGUIEMSCRIPTEN
+#   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
+#       include "./imguiyesaddons/imguiemscriptenpersistentfolder.h"
+#   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
 #else //__EMSCRIPTEN__
-#   undef NO_IMGUIEMSCRIPTEN
-#   define NO_IMGUIEMSCRIPTEN
+#   undef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
 #endif //__EMSCRIPTEN__
 
 #ifndef NO_IMGUISTRING
@@ -222,6 +221,10 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #		undef YES_IMGUISQLITE3
 #		define YES_IMGUISQLITE3
 #	endif //NO_IMGUISQLITE3
+#	ifndef NO_IMGUIIMAGEEDITOR
+#		undef YES_IMGUIIMAGEEDITOR
+#		define YES_IMGUIIMAGEEDITOR
+#	endif //NO_IMGUIIMAGEEDITOR
 #	ifndef NO_IMGUISOLOUD
 #		undef YES_IMGUISOLOUD
 #		define YES_IMGUISOLOUD
@@ -256,6 +259,9 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #define YES_IMGUISQLITE
 #include "./imguiyesaddons/imguisqlite3.h"
 #endif //YES_IMGUISQLITE3
+#ifdef YES_IMGUIIMAGEEDITOR
+#include "./imguiyesaddons/imguiimageeditor.h"
+#endif //YES_IMGUIIMAGEEDITOR
 #ifdef YES_IMGUIFREETYPE
 #include "./imguiyesaddons/imguifreetype.h"
 #endif //YES_IMGUIFREETYPE

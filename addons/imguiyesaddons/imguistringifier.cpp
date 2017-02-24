@@ -455,20 +455,28 @@ bool Base85Encode(const char* input,int inputSize,ImVector<char>& output,bool st
 bool Base85Decode(const char* input,ImVector<char>& output)	{
     return Stringifier::Base85Decode<ImVector<char> >(input,output);
 }
-bool BinaryStringify(const char* input, int inputSize, ImVector<char>& output, int numInputBytesPerLineInStringifiedMode) {
+bool BinaryStringify(const char* input, int inputSize, ImVector<char>& output, int numInputBytesPerLineInStringifiedMode,bool serializeUnsignedBytes) {
     output.clear();
     if (!input || inputSize<=0) return false;
     ImGuiTextBuffer b;
     b.clear();
     b.Buf.reserve(inputSize*7.5f);
     // -----------------------------------------------------------
-    b.append("{%d",(int)input[0]);  // start byte
-    int cnt=1;
-    for (int i=1;i<inputSize;i++) {
-        if (cnt++>=numInputBytesPerLineInStringifiedMode) {cnt=0;b.append("\n");}
-        b.append(",%d",(int)input[i]);  // Yes, saving as unsigned char would have taken less header space,
-                                        // but being consistent with all the other compressions, that take signed chars
-                                        // is better.
+    if (serializeUnsignedBytes) {
+        b.append("{%d",(int) (*((unsigned char*) &input[0])));  // start byte
+        int cnt=1;
+        for (int i=1;i<inputSize;i++) {
+            if (cnt++>=numInputBytesPerLineInStringifiedMode) {cnt=0;b.append("\n");}
+            b.append(",%d",(int) (*((unsigned char*) &input[i])));
+        }
+    }
+    else {
+        b.append("{%d",(int)input[0]);  // start byte
+        int cnt=1;
+        for (int i=1;i<inputSize;i++) {
+            if (cnt++>=numInputBytesPerLineInStringifiedMode) {cnt=0;b.append("\n");}
+            b.append(",%d",(int)input[i]);
+        }
     }
     b.append("};\n");
     //-------------------------------------------------------------

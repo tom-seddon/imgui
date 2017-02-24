@@ -134,7 +134,7 @@ namespace ImGuiMiniGames {
                 Character_Flag,
                 Character_Count
             };
-            char characters[Character_Count][4];
+            char characters[Character_Count][5];
             int keyPause;                       // This depends on your key-mapping in ImGui. (default == 'p')
             static Style style;
             inline static Style& Get() {return style;}

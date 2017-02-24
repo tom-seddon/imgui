@@ -189,17 +189,18 @@ static const char* styleFileNamePersistent = "/persistent_folder/myimgui.style";
 
 void InitGL()	// Mandatory
 {
+
     if (!myImageTextureId2) myImageTextureId2 = ImImpl_LoadTexture("./myNumbersTexture.png");
 
 //  Optional: loads a style
 #   if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_LOAD_STYLE))
     const char* pStyleFileName = styleFileName;
-#   if (!defined(NO_IMGUIEMSCRIPTEN) && !defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
+#   if (defined(YES_IMGUIEMSCRIPTENPERSISTENTFOLDER) && !defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
     //ImGui::EmscriptenFileSystemHelper::Init();
     //while (!ImGui::EmscriptenFileSystemHelper::IsInSync()) {WaitFor(1500);}   // No way this ends...
     //if (ImGuiHelper::FileExists(styleFileNamePersistent)) pStyleFileName = styleFileNamePersistent; // Never...
     //else {printf("\"%s\" does not exist yet\n",styleFileNamePersistent);fflush(stdout);}
-#   endif //NO_IMGUIEMSCRIPTEN & C
+#   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER & C
     if (!ImGui::LoadStyle(pStyleFileName,ImGui::GetStyle()))   {
         printf("Warning: \"%s\" not present.\n",pStyleFileName);fflush(stdout);
     }
@@ -288,6 +289,7 @@ void DrawGL()	// Mandatory
     static bool show_performance = false;
     static bool show_mine_game = false;
     static bool show_sudoku_game = false;
+    static bool show_image_editor = false;
 
     // 1. Show a simple window
     {
@@ -332,6 +334,9 @@ void DrawGL()	// Mandatory
             show_sudoku_game ^= ImGui::Button("Show Sudoku Game");
 #           endif //NO_IMGUIMINIGAMES_SUDOKU
 #       endif //YES_IMGUIMINIGAMES
+#       ifdef YES_IMGUIIMAGEEDITOR
+            show_image_editor ^= ImGui::Button("Show Image Editor");
+#       endif //YES_IMGUIIMAGEEDITOR
 
         // Calculate and show framerate
         ImGui::Text("\n");ImGui::Separator();ImGui::Text("Frame rate options");
@@ -429,24 +434,24 @@ void DrawGL()	// Mandatory
 
         const char* pStyleFileName =  styleFileName;    // defined globally
         if (loadCurrentStyle)   {
-#               if (!defined(NO_IMGUIEMSCRIPTEN) && !defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
+#               if (defined(YES_IMGUIEMSCRIPTENPERSISTENTFOLDER) && !defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
             if (ImGuiHelper::FileExists(styleFileNamePersistent)) pStyleFileName = styleFileNamePersistent;
-#               endif //NO_IMGUIEMSCRIPTEN & C
+#               endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER & C
             if (!ImGui::LoadStyle(pStyleFileName,ImGui::GetStyle()))   {
                 fprintf(stderr,"Warning: \"%s\" not present.\n",pStyleFileName);
             }
         }
         if (saveCurrentStyle)   {
-#               ifndef NO_IMGUIEMSCRIPTEN
+#               ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
             pStyleFileName = styleFileNamePersistent;
-#               endif //NO_IMGUIEMSCRIPTEN
+#               endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
             if (!ImGui::SaveStyle(pStyleFileName,ImGui::GetStyle()))   {
                 fprintf(stderr,"Warning: \"%s\" cannot be saved.\n",pStyleFileName);
             }
             else {
-#                   ifndef NO_IMGUIEMSCRIPTEN
+#                   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                 ImGui::EmscriptenFileSystemHelper::Sync();
-#                   endif //NO_IMGUIEMSCRIPTEN
+#                   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
             }
         }
         if (resetCurrentStyle)  {
@@ -930,22 +935,22 @@ void DrawGL()	// Mandatory
             const char* pSaveName = saveName;
 #           ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
             if (ImGui::Button("Save")) {
-#               ifndef NO_IMGUIEMSCRIPTEN
+#               ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                 pSaveName = saveNamePersistent;
-#               endif //NO_IMGUIEMSCRIPTEN
+#               endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                 if (tv.save(pSaveName))   {
-#                   ifndef NO_IMGUIEMSCRIPTEN
+#                   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     ImGui::EmscriptenFileSystemHelper::Sync();
-#                   endif //NO_IMGUIEMSCRIPTEN
+#                   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                 }
             }
             ImGui::SameLine();
 #           endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #           ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
             if (ImGui::Button("Load")) {
-#               ifndef NO_IMGUIEMSCRIPTEN
+#               ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                 if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
-#               endif //NO_IMGUIEMSCRIPTEN
+#               endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                 tv.load(pSaveName);
             }
             ImGui::SameLine();
@@ -1070,6 +1075,11 @@ void DrawGL()	// Mandatory
                     ,TYPE_RAW_TEXT
                     ,TYPE_BASE64
                     ,TYPE_BASE85
+#                   ifdef IMGUI_USE_ZLIB
+                    ,TYPE_GZ
+                    ,TYPE_GZBASE64
+                    ,TYPE_GZBASE85
+#                   endif //IMGUI_USE_ZLIB
 #                   ifdef YES_IMGUIBZ2
                     ,TYPE_BZ2
                     ,TYPE_BZ2BASE64
@@ -1080,6 +1090,9 @@ void DrawGL()	// Mandatory
                 inline static const char** GetNames() {
                     static const char* Names[] = {
                         "Raw (Binary)","Raw (Text-Based)","Base64","Base85"
+#                       ifdef IMGUI_USE_ZLIB
+                        ,"Gz (Raw)","GzBase64","GzBase85"
+#                       endif //IMGUI_USE_ZLIB
 #                       ifdef YES_IMGUIBZ2
                         ,"Bz2 (Raw)","Bz2Base64","Bz2Base85"
 #                       endif //YES_IMGUIBZ2
@@ -1090,6 +1103,9 @@ void DrawGL()	// Mandatory
                 inline static const char** GetExtensions() {
                     static const char* Names[] = {
                         ".bin.inl",".inl",".b64.inl",".b85.inl"
+#                       ifdef IMGUI_USE_ZLIB
+                        ,".gz.inl",".gz.b64.inl",".gz.b85.inl"
+#                       endif //IMGUI_USE_ZLIB
 #                       ifdef YES_IMGUIBZ2
                         ,".bz2.inl",".bz2.b64.inl",".bz2.b85.inl"
 #                       endif //YES_IMGUIBZ2
@@ -1099,7 +1115,8 @@ void DrawGL()	// Mandatory
                 }
             } SupportedTypes;
 
-            static bool mustDisplayOkMassage = false;
+            static bool mustDisplayOkMessage = false;
+            static bool useUnsignedByteMode = false;
 
             // Load dialog
             static ImGuiFs::Dialog loadDlg;
@@ -1109,33 +1126,49 @@ void DrawGL()	// Mandatory
             ImGui::PopItemWidth();
             ImGui::SameLine();
             const bool browseButton = ImGui::Button("...##FiletostringifyloadbuttonID");
-            if (browseButton) mustDisplayOkMassage=false;
+            if (browseButton) mustDisplayOkMessage=false;
             loadDlg.chooseFileDialog(browseButton,loadDlg.getLastDirectory());
+            const bool filePathToStringifyIsValid = strlen(loadDlg.getChosenPath())>0;
 
             // Load combo
             static int strType = 0;
+            ImGui::BeginGroup();
             ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.25f);
-            if (ImGui::Combo("Stringified Type",&strType,SupportedTypes::GetNames(),(int) SupportedTypes::NUM_TYPES,(int)SupportedTypes::NUM_TYPES)) mustDisplayOkMassage = false;
+            if (ImGui::Combo("Stringified Type",&strType,SupportedTypes::GetNames(),(int) SupportedTypes::NUM_TYPES,(int)SupportedTypes::NUM_TYPES)) mustDisplayOkMessage = false;
             ImGui::PopItemWidth();
+            if (filePathToStringifyIsValid && (strType==0 || strType==4 || strType==7)) {
+                ImGui::Checkbox("Serialize UNSIGNED bytes###FiletostringifyunsignedByteChb",&useUnsignedByteMode);
+            }
+            ImGui::EndGroup();
 
             // Action Button
-            if (strlen(loadDlg.getChosenPath())>0)  {
+            if (filePathToStringifyIsValid)  {
                 ImGui::SameLine();
                 if (ImGui::Button("STRINGIFY###FiletostringifygobuttonID")) {
-                    mustDisplayOkMassage = false;
+                    mustDisplayOkMessage = false;
                     bool ok = ImGuiFs::FileExists(loadDlg.getChosenPath());
                     ImVector<char> buff;
                     if (ok && ImGuiHelper::GetFileContent(loadDlg.getChosenPath(),buff,true,strType==1 ? "r":"rb") && buff.size()>0)   {
                         ok = false;ImVector<char> buff2;
                         switch (strType)    {
-                        case SupportedTypes::TYPE_RAW_BINARY:   ok = ImGui::BinaryStringify(&buff[0],buff.size(),buff2);break;
+                        case SupportedTypes::TYPE_RAW_BINARY:   ok = ImGui::BinaryStringify(&buff[0],buff.size(),buff2,80,useUnsignedByteMode);break;
                         case SupportedTypes::TYPE_RAW_TEXT:     ok = ImGui::TextStringify(&buff[0],buff2);break;
                         case SupportedTypes::TYPE_BASE64:       ok = ImGui::Base64Encode(&buff[0],buff.size(),buff2,true);break;    // This method has an argument that stringify the output layout for us
                         case SupportedTypes::TYPE_BASE85:       ok = ImGui::Base85Encode(&buff[0],buff.size(),buff2,true);break;    // This method has an argument that stringify the output layout for us
+#                       ifdef IMGUI_USE_ZLIB
+                        case SupportedTypes::TYPE_GZ:          {
+                            ok = ImGui::GzCompressFromMemory(&buff[0],buff.size(),buff2);
+                            if (ok) ok = ImGui::BinaryStringify(&buff2[0],buff2.size(),buff,80,useUnsignedByteMode);
+                            if (ok) buff.swap(buff2);
+                        }
+                        break;
+                        case SupportedTypes::TYPE_GZBASE64:    ok = ImGui::GzBase64CompressFromMemory(&buff[0],buff.size(),buff2,true);break;
+                        case SupportedTypes::TYPE_GZBASE85:    ok = ImGui::GzBase85CompressFromMemory(&buff[0],buff.size(),buff2,true);break;
+#                       endif //IMGUI_USE_ZLIB
 #                       ifdef YES_IMGUIBZ2
                         case SupportedTypes::TYPE_BZ2:          {
                             ok = ImGui::Bz2CompressFromMemory(&buff[0],buff.size(),buff2);
-                            if (ok) ok = ImGui::BinaryStringify(&buff2[0],buff2.size(),buff);
+                            if (ok) ok = ImGui::BinaryStringify(&buff2[0],buff2.size(),buff,80,useUnsignedByteMode);
                             if (ok) buff.swap(buff2);
                         }
                         break;
@@ -1156,13 +1189,13 @@ void DrawGL()	// Mandatory
                             ImGui::LogText("%s",&buff2[0]);
                             ImGui::LogFinish();
 #                           endif //__EMSCRIPTEN__
-                            mustDisplayOkMassage = true;
+                            mustDisplayOkMessage = true;
                         }
                     }
                 }
             }
 
-            if (mustDisplayOkMassage) {
+            if (mustDisplayOkMessage) {
 #               ifndef __EMSCRIPTEN__
                 ImGui::Text("File stringified successfully and placed in the clipboard.");
 #               else // __EMSCRIPTEN__
@@ -1497,22 +1530,22 @@ void DrawGL()	// Mandatory
                 const char* pSaveName = saveName;
 #               ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
                 if (ImGui::Button("Save")) {
-#                   ifndef NO_IMGUIEMSCRIPTEN
+#                   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     pSaveName = saveNamePersistent;
-#                   endif //NO_IMGUIEMSCRIPTEN
+#                   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     if (ImGui::SaveDock(pSaveName))   {
-#                       ifndef NO_IMGUIEMSCRIPTEN
+#                       ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                         ImGui::EmscriptenFileSystemHelper::Sync();
-#                       endif //NO_IMGUIEMSCRIPTEN
+#                       endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     }
                 }
                 ImGui::SameLine();
 #               endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #               ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
                 if (ImGui::Button("Load")) {
-#                   ifndef NO_IMGUIEMSCRIPTEN
+#                   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
-#                   endif //NO_IMGUIEMSCRIPTEN
+#                   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                     ImGui::LoadDock(pSaveName);
                 }
                 ImGui::SameLine();
@@ -1568,7 +1601,6 @@ void DrawGL()	// Mandatory
             show_tab_windows = false;
         }
     }
-
 #   endif //NO_IMGUITABWINDOW
     if (show_performance)   {
         if (ImGui::Begin("Performance Window",&show_performance,ImVec2(0,0),0.9f,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoResize))   {
@@ -1598,6 +1630,20 @@ void DrawGL()	// Mandatory
     }
 #   endif //NO_IMGUIMINIGAMES_SUDOKU
 #   endif //YES_IMGUIMINIGAMES
+#   ifdef YES_IMGUIIMAGEEDITOR
+    if (show_image_editor)  {
+        if (ImGui::Begin("Image Editor",&show_image_editor,ImVec2(750,600),0.95f))   {
+            static ImGui::ImageEditor imageEditor;
+            if (!imageEditor.isInited()) 	{
+                if (!imageEditor.loadFromFile("./blankImage.png")) {
+                    //fprintf(stderr,"Loading \"./blankImage.png\" Failed.\n");
+                }
+            }
+            imageEditor.render();
+        }
+        ImGui::End();
+    }
+#   endif //YES_IMGUIIMAGEEDITOR
 
     // imguitoolbar test 2: two global toolbars one at the top and one at the left
 #   ifndef NO_IMGUITOOLBAR
@@ -1665,6 +1711,9 @@ void DrawGL()	// Mandatory
 
 //#   define USE_ADVANCED_SETUP   // in-file definition (see below). For now it just adds custom fonts and different FPS settings (please read below).
 
+#ifndef __EMSCRIPTEN__
+#include <locale.h> // setlocale(...), optional, see below
+#endif //__EMSCRIPTEN__ // I'd save emscripten from this (but it might be used)
 
 // Application code
 #ifndef IMGUI_USE_AUTO_BINDING_WINDOWS  // IMGUI_USE_AUTO_ definitions get defined automatically (e.g. do NOT touch them!)
@@ -1673,6 +1722,14 @@ int main(int argc, char** argv)
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine, int iCmdShow)
 #endif //IMGUI_USE_AUTO_BINDING_WINDOWS
 {
+
+#   ifndef __EMSCRIPTEN__
+    // [Optional] Here we just set some fields in the C locale to native (""). The default C locale is ("C"), which is ASCII English AFAIK.
+    setlocale(LC_CTYPE, "");        // This might affect the encoding of the imguifilesystem paths (but I'm not sure about it...) [Docs say: selects the character classification category of the C locale]
+    //setlocale(LC_COLLATE, "");    // ??? This probably affects the way items are sorted
+    setlocale(LC_TIME, "");         // This affects imguidatechooser (the language of the names of the months)
+#   endif //__EMSCRIPTEN__
+
 
 #   ifndef USE_ADVANCED_SETUP
 

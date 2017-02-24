@@ -16,6 +16,7 @@ void CloseAllPopupMenus();  // Never Tested
 bool IsItemActiveLastFrame();
 bool IsItemJustReleased();
 
+
 #ifndef NO_IMGUIHELPER_FONT_METHODS
 const ImFont* GetFont(int fntIndex);
 void PushFont(int fntIndex);    // using the index of the font instead of a ImFont* is easier (you can set up an enum).
@@ -89,9 +90,12 @@ bool GzBase85DecompressFromFile(const char* filePath,ImVector<char>& rv);
 #           endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 bool GzDecompressFromMemory(const char* memoryBuffer,int memoryBufferSize,ImVector<char>& rv,bool clearRvBeforeUsage=true);
+bool GzCompressFromMemory(const char* memoryBuffer,int memoryBufferSize,ImVector<char>& rv,bool clearRvBeforeUsage=true);
 #   ifdef YES_IMGUISTRINGIFIER
 bool GzBase64DecompressFromMemory(const char* input,ImVector<char>& rv);
 bool GzBase85DecompressFromMemory(const char* input,ImVector<char>& rv);
+bool GzBase64CompressFromMemory(const char* input,int inputSize,ImVector<char>& output,bool stringifiedMode=false,int numCharsPerLineInStringifiedMode=112);
+bool GzBase85CompressFromMemory(const char* input,int inputSize,ImVector<char>& output,bool stringifiedMode=false,int numCharsPerLineInStringifiedMode=112);
 #   endif //#YES_IMGUISTRINGIFIER
 #   endif //IMGUI_USE_ZLIB
 
@@ -180,6 +184,8 @@ protected:
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
+bool SetFileContent(const char *filePath, const unsigned char* content, int contentSize,const char* modes="wb");
+
 class ISerializable;
 class Serializer {
 

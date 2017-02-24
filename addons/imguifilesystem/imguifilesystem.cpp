@@ -332,6 +332,24 @@ public:
         strcpy(rv,filePath);
         return;
     }
+    static void GetFileNameWithoutExtension(const char *filePath, char *rv)  {
+        int beg=String::FindLastOf(filePath,'\\');
+        int beg2=String::FindLastOf(filePath,'/');
+        int beg3=String::FindLastOf(filePath,'.');
+        beg=(beg>beg2?beg:beg2);
+        if (beg!=-1) {
+            if (beg3<beg) {
+                String::Substr(filePath,rv,beg+1,(beg3<beg+1)?-1:(beg3-beg+1));
+                return;
+            }
+        }
+        if (beg3!=-1) {
+            String::Substr(filePath,rv,0,beg3);
+            return;
+        }
+        strcpy(rv,filePath);
+        return;
+    }
     static void GetExtension(const char* filePath,char *rv) {
         int beg=String::FindLastOf(filePath,'.');
         int beg2=String::FindLastOf(filePath,'/');
@@ -356,6 +374,30 @@ public:
             }
         }
         rv[0]='\0';
+        return;
+    }
+    static void ChangeExtension(const char* filePath,const char* newExtension,char *rv) {
+        strcpy(rv,filePath);
+        int beg=String::FindLastOf(rv,'.');
+        int beg2=String::FindLastOf(rv,'/');
+        int beg3=String::FindLastOf(rv,'\\');
+        if (beg2!=-1)	{
+            if (beg3!=-1) beg2 = beg3;
+            else beg2 = beg2 > beg3 ? beg2 : beg3;
+        }
+        else if (beg3!=-1) beg2 = beg3;
+        else {
+            if (beg!=-1)  {
+                strcpy(&rv[beg],newExtension);
+                return;
+            }
+        }
+        if (beg>beg2)  {
+            if (beg!=-1)  {
+                strcpy(&rv[beg],newExtension);
+                return;
+            }
+        }
         return;
     }
     static inline bool HasZipExtension(const char* filePath) {
@@ -1602,6 +1644,7 @@ struct Internal {
     ImVec2 wndSize;
     char wndTitle[MAX_PATH_BYTES];
     int sortingMode;
+    bool userHasJustCancelledDialog;
 
     History history;
 #   ifdef IMGUI_USE_MINIZIP
@@ -1694,6 +1737,7 @@ struct Internal {
         strcpy(editLocationInputText,"\0");
 
         forceSetWindowPositionAndSize = true;
+        userHasJustCancelledDialog = false;
 
 #       ifdef IMGUI_USE_MINIZIP
         unz.close();
@@ -1783,6 +1827,7 @@ Dialog::~Dialog()   {
 }
 const char* Dialog::getChosenPath() const {return internal->chosenPath;}
 const char* Dialog::getLastDirectory() const {return internal->currentFolder;}
+bool Dialog::hasUserJustCancelledDialog() const {return internal->userHasJustCancelledDialog;}
 
 // -- from imgui.cpp --
 static size_t ImFormatString(char* buf, size_t buf_size, const char* fmt, ...)
@@ -2587,6 +2632,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
         if (isSaveFileDialog)   {
             ImGui::AlignFirstTextHeightToWidgets();
             ImGui::Text("File:");ImGui::SameLine();
+            if (ImGui::IsItemHovered() && I.mustFilterSaveFilePathWithFileFilterExtensionString && fileFilterExtensionString && strlen(fileFilterExtensionString)>0) ImGui::SetTooltip("%s",fileFilterExtensionString);
             lastTwoButtonsWidth = ImGui::CalcTextSize("Save Cancel").x+2.0f*(style.FramePadding.x+style.ItemSpacing.x)+style.WindowPadding.x;
             ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth()-lastTwoButtonsWidth);
             ImGui::InputText("##saveFileNameDialog",&I.saveFileName[0],MAX_FILENAME_BYTES);
@@ -2667,6 +2713,8 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
             I.unz.close();
 #           endif // IMGUI_USE_MINIZIP
             I.freeMemory();
+
+            I.userHasJustCancelledDialog = true;
         }
         //ImGui::Separator();
         //ImGui::Spacing();
@@ -2685,11 +2733,12 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
 }
 
 const char* Dialog::chooseFileDialog(bool dialogTriggerButton,const char* directory,const char* fileFilterExtensionString,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha) {
-    if (dialogTriggerButton)    {internal->open = internal->rescan = internal->forceSetWindowPositionAndSize = true;internal->chosenPath[0]='\0';}
+    if (dialogTriggerButton)    {internal->open = internal->rescan = internal->forceSetWindowPositionAndSize = true;internal->chosenPath[0]='\0';internal->userHasJustCancelledDialog = false;}
     if (dialogTriggerButton || (!internal->rescan && internal->open && strlen(getChosenPath())==0)) {
 	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,false,false,"",fileFilterExtensionString,windowTitle,windowSize,windowPos,windowAlpha);
         if (!internal->open) {  // AFAIK this should happen only when user clicks the close button (but not when he clicks cancel)
+            internal->userHasJustCancelledDialog = true;
 #           ifdef IMGUI_USE_MINIZIP
             internal->unz.close();
 #           endif // IMGUI_USE_MINIZIP
@@ -2700,11 +2749,12 @@ const char* Dialog::chooseFileDialog(bool dialogTriggerButton,const char* direct
     return "";
 }
 const char* Dialog::chooseFolderDialog(bool dialogTriggerButton,const char* directory,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha)  {
-    if (dialogTriggerButton) {internal->open = internal->rescan = internal->forceSetWindowPositionAndSize = true;internal->chosenPath[0]='\0';}
+    if (dialogTriggerButton) {internal->open = internal->rescan = internal->forceSetWindowPositionAndSize = true;internal->chosenPath[0]='\0';internal->userHasJustCancelledDialog = false;}
     if (dialogTriggerButton || (!internal->rescan && internal->open && strlen(getChosenPath())==0)) {
 	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,true,false,"","",windowTitle,windowSize,windowPos,windowAlpha);
         if (!internal->open) {
+            internal->userHasJustCancelledDialog = true;
 #           ifdef IMGUI_USE_MINIZIP
             internal->unz.close();
 #           endif // IMGUI_USE_MINIZIP
@@ -2715,11 +2765,12 @@ const char* Dialog::chooseFolderDialog(bool dialogTriggerButton,const char* dire
     return "";
 }
 const char* Dialog::saveFileDialog(bool dialogTriggerButton,const char* directory,const char* startingFileNameEntry,const char* fileFilterExtensionString,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha)    {
-    if (dialogTriggerButton) {internal->open = internal->rescan = internal->forceSetWindowPositionAndSize = true;internal->chosenPath[0]='\0';}
+    if (dialogTriggerButton) {internal->open = internal->rescan = internal->forceSetWindowPositionAndSize = true;internal->chosenPath[0]='\0';internal->userHasJustCancelledDialog = false;}
     if (dialogTriggerButton || (!internal->rescan && internal->open && strlen(getChosenPath())==0)) {
 	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,false,true,startingFileNameEntry,fileFilterExtensionString,windowTitle,windowSize,windowPos,windowAlpha);
         if (!internal->open) {
+            internal->userHasJustCancelledDialog = true;
 #           ifdef IMGUI_USE_MINIZIP
             internal->unz.close();
 #           endif // IMGUI_USE_MINIZIP
@@ -2738,7 +2789,9 @@ const char* Dialog::saveFileDialog(bool dialogTriggerButton,const char* director
 void PathGetAbsolute(const char *path, char *rv) {Path::GetAbsolutePath(path,rv);}
 void PathGetDirectoryName(const char *filePath, char *rv)    {Path::GetDirectoryName(filePath,rv);}
 void PathGetFileName(const char *filePath, char *rv) {Path::GetFileName(filePath,rv);}
+void PathGetFileNameWithoutExtension(const char *filePath, char *rv) {Path::GetFileNameWithoutExtension(filePath,rv);}
 void PathGetExtension(const char* filePath,char *rv) {Path::GetExtension(filePath,rv);}
+void PathChangeExtension(const char* filePath,const char* newExtension,char *rv) {Path::ChangeExtension(filePath,newExtension,rv);}
 void PathAppend(const char* directory,char* rv) {Path::Append(directory,rv);}
 void PathSplit(const char* path,FilenameStringVector& rv,bool leaveIntermediateTrailingSlashes) {Path::Split(path,rv,leaveIntermediateTrailingSlashes);}
 void DirectoryGetDirectories(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut,Sorting sorting) {Directory::GetDirectories(directoryName,result,pOptionalNamesOut,sorting);}

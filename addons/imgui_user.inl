@@ -6,6 +6,7 @@
 #ifndef IMGUI_USER_ADDONS_INL_
 #define IMGUI_USER_ADDONS_INL_
 
+
 #ifndef NO_IMGUISTRING
 #include "./imguistring/imguistring.cpp"
 #endif //NO_IMGUISTRING
@@ -45,12 +46,11 @@
 #endif //IMGUI_USE_MINIZIP
 
 #ifdef __EMSCRIPTEN__
-#   ifndef NO_IMGUIEMSCRIPTEN
-#       include "./imguiemscripten/imguiemscripten.cpp"
-#   endif //NO_IMGUIEMSCRIPTEN
+#   ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
+#       include "./imguiyesaddons/imguiemscriptenpersistentfolder.cpp"
+#   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
 #else //__EMSCRIPTEN__
-#   undef NO_IMGUIEMSCRIPTEN
-#   define NO_IMGUIEMSCRIPTEN
+#	undef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
 #endif //__EMSCRIPTEN__
 
 
@@ -106,6 +106,9 @@
 #ifdef YES_IMGUISQLITE3
 #include "./imguiyesaddons/imguisqlite3.cpp"
 #endif //YES_IMGUIsQLITE3
+#ifdef YES_IMGUIIMAGEEDITOR
+#include "./imguiyesaddons/imguiimageeditor.cpp"
+#endif //YES_IMGUIIMAGEEDITOR
 #ifdef YES_IMGUIFREETYPE
 #include "./imguiyesaddons/imguifreetype.cpp"
 #endif //YES_IMGUIFREETYPE

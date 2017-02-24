@@ -315,12 +315,15 @@ extern void ImImpl_RenderDrawLists(ImDrawData* draw_data);
 
 extern void WaitFor(unsigned int ms);
 extern void ImImpl_FreeTexture(ImTextureID& imtexid);
-extern void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,int channels,const unsigned char* pixels,bool useMipmapsIfPossible=false,bool wraps=true,bool wrapt=true);
+extern void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,int channels,const unsigned char* pixels,bool useMipmapsIfPossible,bool wraps,bool wrapt,bool minFilterNearest,bool magFilterNearest=false);
+inline void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,int channels,const unsigned char* pixels,bool useMipmapsIfPossible=false,bool wraps=true,bool wrapt=true) {ImImpl_GenerateOrUpdateTexture(imtexid,width,height,channels,pixels,useMipmapsIfPossible,wraps,wrapt,false,false);}
 extern void ImImpl_ClearColorBuffer(const ImVec4& bgColor=ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
 
 extern void ImImpl_FlipTexturesVerticallyOnLoad(bool flag_true_if_should_flip);
-extern ImTextureID ImImpl_LoadTexture(const char* filename,int req_comp=0,bool useMipmapsIfPossible=false,bool wraps=true,bool wrapt=true);
-extern ImTextureID ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory, int filenameInMemorySize, int req_comp=0, bool useMipmapsIfPossible=false,bool wraps=true,bool wrapt=true);
+extern ImTextureID ImImpl_LoadTexture(const char* filename,int req_comp,bool useMipmapsIfPossible,bool wraps,bool wrapt,bool minFilterNearest,bool magFilterNearest=false);
+inline ImTextureID ImImpl_LoadTexture(const char* filename,int req_comp=0,bool useMipmapsIfPossible=false,bool wraps=true,bool wrapt=true)  {return ImImpl_LoadTexture(filename,req_comp,useMipmapsIfPossible,wraps,wrapt,false,false);}
+extern ImTextureID ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory, int filenameInMemorySize, int req_comp, bool useMipmapsIfPossible,bool wraps,bool wrapt,bool minFilterNearest,bool magFilterNearest=false);
+inline ImTextureID ImImpl_LoadTextureFromMemory(const unsigned char* filenameInMemory, int filenameInMemorySize, int req_comp=0,bool useMipmapsIfPossible=false,bool wraps=true,bool wrapt=true)  {return ImImpl_LoadTextureFromMemory(filenameInMemory,filenameInMemorySize,req_comp,useMipmapsIfPossible,wraps,wrapt,false,false);}
 
 #ifdef IMGUI_USE_AUTO_BINDING_OPENGL
 

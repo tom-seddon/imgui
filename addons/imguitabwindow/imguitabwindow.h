@@ -312,7 +312,7 @@ public:
         else modified = false;
     }
     inline bool getModified() const {return modified;}
-    void setModified(bool flag) {
+    inline void setModified(bool flag) {
         if (modified == flag) return;
         modified = flag;int sz = strlen(label);
         if (modified)   {if (sz==0 || label[sz-1]!='*') strcat(label,"*");}

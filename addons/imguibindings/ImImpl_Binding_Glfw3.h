@@ -74,7 +74,7 @@
 
 //static
 GLFWwindow* window;
-//static bool mousePressed[2] = { false, false };
+static bool g_MousePressed[5] = {false, false, false, false, false };
 static ImVec2 mousePosScale(1.0f, 1.0f);
 
 
@@ -131,10 +131,11 @@ static void glfw_window_size_callback(GLFWwindow* /*window*/,int w,int h)  {
 static void glfw_mouse_button_callback(GLFWwindow* /*window*/, int button, int action, int mods)	{
     ImGuiIO& io = ImGui::GetIO();
     if (button >= 0 && button < 5) {
-        io.MouseDown[button] = (action == GLFW_PRESS);
+        //io.MouseDown[button] = (action == GLFW_PRESS);
         // Manual double click handling:
         static double dblClickTimes[6]={-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX};  // seconds
         if (action == GLFW_PRESS)   {
+            //g_MousePressed[button] = true;
             double time = glfwGetTime();
             double& oldTime = dblClickTimes[button];
             bool& mouseDoubleClicked = gImGuiBindingMouseDblClicked[button];
@@ -442,7 +443,10 @@ static void ImImplMainLoopFrame(void* userPtr)	{
     // Start the frame
     {
         io.DeltaTime = (float) deltaTime;
-        for (size_t i = 0; i < 5; i++) io.MouseDown[i]=(glfwGetMouseButton(window, i)!=GLFW_RELEASE);
+        for (size_t i = 0; i < 5; i++) {
+            io.MouseDown[i]= g_MousePressed[i] || glfwGetMouseButton(window, i); // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+            g_MousePressed[i] = false;
+        }
         if (!gImGuiPaused) ImGui::NewFrame();
         else {
             ImImpl_NewFramePaused();    // Enables some ImGui queries regardless ImGui::NewFrame() not being called.

@@ -77,7 +77,7 @@ IMGUI_API bool Base64Decode(const char* input,ImVector<char>& output);
 IMGUI_API bool Base85Encode(const char* input,int inputSize,ImVector<char>& output,bool stringifiedMode=false,int numCharsPerLineInStringifiedMode=112);
 IMGUI_API bool Base85Decode(const char* input,ImVector<char>& output);
 
-IMGUI_API bool BinaryStringify(const char* input,int inputSize,ImVector<char>& output,int numInputBytesPerLineInStringifiedMode=80);
+IMGUI_API bool BinaryStringify(const char* input, int inputSize, ImVector<char>& output, int numInputBytesPerLineInStringifiedMode=80, bool serializeUnsignedBytes=false);
 IMGUI_API bool TextStringify(const char* input,ImVector<char>& output,int numCharsPerLineInStringifiedMode=0,int inputSize=0);
 
 #ifdef YES_IMGUIBZ2

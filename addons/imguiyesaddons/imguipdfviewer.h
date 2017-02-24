@@ -31,10 +31,20 @@ namespace ImGui {
 
 class PdfPagePanel;
 
-class PdfViewer {
+class PdfViewer 
+#if (defined(IMGUITABWINDOW_H_) && !defined(IMGUIPDFVIEWER_NO_TABLABEL))
+: public TabWindow::TabLabel
+#endif //IMGUITABWINDOW_H_
+{
 public:
     PdfViewer();
-    ~PdfViewer();
+#	if (defined(IMGUITABWINDOW_H_) && !defined(IMGUIPDFVIEWER_NO_TABLABEL))
+	virtual	~PdfViewer();
+    bool saveAs(const char* savePath=NULL) {return true;}	// A viewer does not use this, nor the setModified(...) flag.
+#	else  //IMGUITABWINDOW_H_
+	~PdfViewer();	
+#	endif //IMGUITABWINDOW_H_
+    
 
     bool isInited() const {return init;}
 
@@ -43,9 +53,10 @@ public:
     void destroy();
 
     // returns true if some user action has been processed
-    bool render(const ImVec2 &size=ImVec2(0,0));    // to be called inside an ImGui::Window. Makes isInited() return true;
+    bool render(const ImVec2 &size);    // to be called inside an ImGui::Window. Makes isInited() return true;
+	void render() {render(ImVec2(0,0));} // changed the return value to void, so that it matches the TabLabel contract too
 
-    static const double IMAGE_DPI = 150;
+    static const double IMAGE_DPI;// = 150;	(moved definition to .cpp file)
     typedef void (*FreeTextureDelegate)(ImTextureID& texid);
     typedef void (*GenerateOrUpdateTextureDelegate)(ImTextureID& imtexid,int width,int height,int channels,const unsigned char* pixels,bool useMipmapsIfPossible,bool wraps,bool wrapt);
     static void SetFreeTextureCallback(FreeTextureDelegate freeTextureCb) {FreeTextureCb=freeTextureCb;}
@@ -65,3 +76,4 @@ protected:
 } // namespace ImGui
 
 #endif //IMGUIPDFVIEWER_H_
+

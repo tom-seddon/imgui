@@ -161,13 +161,14 @@ public:
         bgColor = _bg_col;
     }
 
-    int render(bool allowdHoveringWhileMouseDragging=false) const {
+    int render(bool allowdHoveringWhileMouseDragging=false,int limitNumberOfToolButtonsToDisplay=-1) const {
         int pressedItem = -1;
-        const int numberToolbuttons = (int)buttons.size();
+        const int numberToolbuttons = (limitNumberOfToolButtonsToDisplay>=0 && limitNumberOfToolButtonsToDisplay<=buttons.size())?limitNumberOfToolButtonsToDisplay:(int)buttons.size();
         if (numberToolbuttons==0 || !visible) return pressedItem;
         const bool inWindowMode = name[0]=='\0';
         if (!inWindowMode && (toolbarWindowSize.x==0 || toolbarWindowSize.y==0)) updatePositionAndSize();
 
+        if (inWindowMode) ImGui::PushID(this);
         // override sizes:
         ImGuiStyle& Style = ImGui::GetStyle();
         const ImVec2 oldWindowPadding = Style.WindowPadding;
@@ -263,6 +264,8 @@ public:
         // restore old sizes
         Style.ItemSpacing = oldItemSpacing;     // Hack to fix vertical layout
         if (!inWindowMode) Style.WindowPadding = oldWindowPadding;
+        if (inWindowMode) ImGui::PopID(); // this
+
         return pressedItem;
     }
 
