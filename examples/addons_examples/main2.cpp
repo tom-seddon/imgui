@@ -164,7 +164,7 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             ImGui::EndChild();
         }*/
         else if (tab->matchLabel("ImGuiMineGame"))  {
-#           if (defined(YES_IMGUIMINIGAMES) && defined(NO_IMGUIMINIGAMES_MINE))
+#           if (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
             static ImGuiMiniGames::Mine mineGame;
             mineGame.render();
 #           else //NO_IMGUIMINIGAMES_MINE
@@ -172,7 +172,7 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
 #           endif // NO_IMGUIMINIGAMES_MINE
         }
         else if (tab->matchLabel("ImGuiSudokuGame"))  {
-#           if (defined(YES_IMGUIMINIGAMES) && defined(NO_IMGUIMINIGAMES_SUDOKU))
+#           if (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_SUDOKU))
             static ImGuiMiniGames::Sudoku sudokuGame;
             sudokuGame.render();
 #           else // NO_IMGUIMINIGAMES_SUDOKU
@@ -187,6 +187,7 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             }
             imageEditor.render();
             tab->setModified(imageEditor.getModified());    // actually this should be automatic if we use the TabLabel extension approach inside our TabWindows (ImageEditor derives from TabLabel by default, but it's not tested)
+#           else //YES_IMGUIIMAGEEDITOR
             ImGui::Text("Disabled for this build.");
 #           endif //YES_IMGUIIMAGEEDITOR
         }
