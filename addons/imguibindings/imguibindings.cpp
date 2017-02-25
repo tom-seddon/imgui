@@ -121,14 +121,71 @@ static ImImpl_PrivateParams gImImplPrivateParams;
 #endif //STBI_INCLUDE_STB_IMAGE_H
 
 
+// Helper Stuff used to make non-power of two textures work in WebGL and OpenGLES2
+inline static bool ImImpl_IsPowerOfTwo(unsigned int n) {return (n & (n - 1)) == 0;}
+inline static unsigned ImImpl_PreviousPowerOfTwo( unsigned x ) {
+    // http://stackoverflow.com/questions/2679815/previous-power-of-2
+    if (x == 0) return 0;
+    // x--; Uncomment this, if you want a strictly less than 'x' result.
+    x |= (x >> 1);
+    x |= (x >> 2);
+    x |= (x >> 4);
+    x |= (x >> 8);
+    x |= (x >> 16);
+    return x - (x >> 1);
+}
+inline static unsigned ImImpl_NextPowerOfTwo( unsigned x ) {
+    // http://stackoverflow.com/questions/1322510/given-an-integer-how-do-i-find-the-next-largest-power-of-two-using-bit-twiddlin
+    if (x == 0) return 0;
+    x--;
+    x |= x >> 1;   // Divide by 2^k for consecutive doublings of k up to 32,
+    x |= x >> 2;   // and then or the results.
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    x++;           // The result is a number of 1 bits equal to the number
+    // of bits in the original number, plus 1. That's the
+    // next highest power of 2.
+    return x;
+}
+inline static unsigned ImImpl_NearestPowerOfTwo( unsigned x ,unsigned max_value_allowed=2024,unsigned min_value_allowed=4) {
+    if (ImImpl_IsPowerOfTwo(x)) return x;
+    const unsigned prev = ImImpl_PreviousPowerOfTwo(x);
+    const unsigned next = ImImpl_NextPowerOfTwo(x);
+    unsigned best = (x-prev<next-x) ? prev : next;
+    if (best>max_value_allowed) best = max_value_allowed;
+    else if (best<=min_value_allowed) best = min_value_allowed;
+    return best;
+}
+// caller must free it with STBI_FREE(...):
+inline static unsigned char* ImImpl_ResizeImageWithNearestFiltering(int dstW,int dstH,const unsigned char* im,int w,int h,int c) {
+    // http://tech-algorithm.com/articles/nearest-neighbor-image-scaling/
+    unsigned char* nim = (unsigned char*) STBI_MALLOC(dstW*dstH*c);
+    unsigned char* pni = nim;
+    const unsigned char* pim = im;
 
+    int x_ratio = (int)((w<<16)/dstW) +1;
+    int y_ratio = (int)((h<<16)/dstH) +1;
+    int x2=0, y2=0;
+    for (int i=0;i<dstH;i++) {
+        for (int j=0;j<dstW;j++) {
+            x2 = ((j*x_ratio)>>16);
+            y2 = ((i*y_ratio)>>16);
+
+            pni = &nim[(i*dstW+j)*c];
+            pim = &im[(y2*w+x2)*c];
+            for (int ch=0;ch<c;ch++) {*pni++ = *pim++;}
+        }
+    }
+    return nim;
+}
+// End Helper Stuff ---------------------------------------------------------------
 
 #ifdef IMGUI_USE_AUTO_BINDING_OPENGL
 void ImImpl_FreeTexture(ImTextureID& imtexid) {
     GLuint& texid = reinterpret_cast<GLuint&>(imtexid);
     if (texid) {glDeleteTextures(1,&texid);texid=0;}
 }
-inline static bool ImImpl_IsPowerOfTwo(unsigned int n) {return (n & (n - 1)) == 0;}
 void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,int channels,const unsigned char* pixels,bool useMipmapsIfPossible,bool wraps,bool wrapt,bool minFilterNearest,bool magFilterNearest) {
     IM_ASSERT(pixels);
     IM_ASSERT(channels>0 && channels<=4);
@@ -138,22 +195,24 @@ void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,in
     glBindTexture(GL_TEXTURE_2D, texid);
 
     GLenum clampEnum = 0x2900;    // 0x2900 -> GL_CLAMP; 0x812F -> GL_CLAMP_TO_EDGE
-#   ifdef GL_CLAMP_TO_EDGE
-    clampEnum = GL_CLAMP_TO_EDGE;
+#   ifndef GL_CLAMP
+#       ifdef GL_CLAMP_TO_EDGE
+        clampEnum = GL_CLAMP_TO_EDGE;
 #       else //GL_CLAMP_TO_EDGE
-#       ifndef GL_CLAMP
-#           ifdef GL_CLAMP_TO_EDGE
-            clampEnum = GL_CLAMP_TO_EDGE;
-#           else //GL_CLAMP_TO_EDGE
-            clampEnum = 0x812F;
-#           endif // GL_CLAMP_TO_EDGE
-#       else //GL_CLAMP
+        clampEnum = 0x812F;
+#       endif // GL_CLAMP_TO_EDGE
+#   else //GL_CLAMP
     clampEnum = GL_CLAMP;
 #   endif //GL_CLAMP
-#   endif //GL_CLAMP_TO_EDGE
 
+    unsigned char* potImageBuffer = NULL;
+
+#   if (defined(__EMSCRIPTEN__) || defined(IMIMPL_SHADER_GLES))
+#       ifdef GL_CLAMP_TO_EDGE
+        clampEnum = GL_CLAMP_TO_EDGE;   // Well, WebGL2, OpenGLES2 and upper should have this
+#       endif //GL_CLAMP_TO_EDGE
     // WebGL and OpenGLES2 need this workaround for non-power of two textures (WebGL2 and OpenGLES3 don't need this anymore):
-#   if ((defined(__EMSCRIPTEN__) || defined(IMIMPL_SHADER_GLES)) && !defined(IMIMPL_SHADER_GL3))
+#   ifndef IMIMPL_SHADER_GL3
     /*
     From: https://www.khronos.org/webgl/wiki/WebGL_and_OpenGL_Differences
     OpenGL ES 2.0 and WebGL have only limited NPOT support. The restrictions are defined in Sections 3.8.2, "Shader Execution", and 3.7.11, "Mipmap Generation", of the OpenGL ES 2.0 specification, and are summarized here:
@@ -164,12 +223,32 @@ void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,in
     -> The repeat mode is set to anything but CLAMP_TO_EDGE; repeating NPOT textures are not supported.
     */
 
-    const int wIsPower2 = ImImpl_IsPowerOfTwo(width);
-    const int hIsPower2 = ImImpl_IsPowerOfTwo(height);
+    int wIsPower2 = ImImpl_IsPowerOfTwo(width);
+    int hIsPower2 = ImImpl_IsPowerOfTwo(height);
+    // OPTIONAL: but makes texture wrapping possible ---------------------------------------------------------------------
+    if ((wraps && !wIsPower2) || (wrapt && !hIsPower2)
+        // || (useMipmapsIfPossible && ((!wIsPower2) || (!hIsPower2)))     // Optional if we think mipmaps are essential
+    )
+    {
+        // scale the image to the nearest power of two in both dimensions
+        const unsigned minDimAllowed = 4;
+        const unsigned maxDimAllowed = 2048;    // 4096 ?
+        const int dstW = wIsPower2 ? width : ImImpl_NearestPowerOfTwo((unsigned)width,maxDimAllowed,minDimAllowed);
+        const int dstH = hIsPower2 ? height : ImImpl_NearestPowerOfTwo((unsigned)height,maxDimAllowed,minDimAllowed);
+        potImageBuffer = ImImpl_ResizeImageWithNearestFiltering(dstW,dstH,pixels,width,height,channels);
+        printf("Warning: texture Internally resized to POT: %dx%d from %dx%d\n",dstW,dstH,width,height);fflush(stdout);
+        //---------------------------
+        if (potImageBuffer) {
+            width = dstW;height = dstH;
+            wIsPower2 = hIsPower2 = true;
+        }
+    }
+    //----------------------------------------------------------------------------------------------------------------------
     useMipmapsIfPossible&=(wIsPower2 && hIsPower2);
     wraps&=wIsPower2;
     wrapt&=hIsPower2;
-#   endif
+#   endif // IMIMPL_SHADER_GL3
+#   endif // (defined(__EMSCRIPTEN__) || defined(IMIMPL_SHADER_GLES))
 
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,wraps ? GL_REPEAT : clampEnum);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,wrapt ? GL_REPEAT : clampEnum);
@@ -197,7 +276,9 @@ void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,in
 
     const GLenum ifmt = channels==1 ? GL_ALPHA : channels==2 ? luminanceAlphaEnum : channels==3 ? GL_RGB : GL_RGBA;  // channels == 1 could be GL_LUMINANCE, GL_ALPHA, GL_RED ...
     const GLenum fmt = ifmt;
-    glTexImage2D(GL_TEXTURE_2D, 0, ifmt, width, height, 0, fmt, GL_UNSIGNED_BYTE, pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, ifmt, width, height, 0, fmt, GL_UNSIGNED_BYTE, potImageBuffer ? potImageBuffer : pixels);
+
+    if (potImageBuffer) {STBI_FREE(potImageBuffer);potImageBuffer=NULL;}
 
 #       ifndef NO_IMGUI_OPENGL_GLGENERATEMIPMAP
     if (useMipmapsIfPossible) glGenerateMipmap(GL_TEXTURE_2D);

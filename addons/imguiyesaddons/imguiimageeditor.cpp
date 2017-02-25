@@ -1955,9 +1955,7 @@ namespace ImGui {
 
 struct StbImage {
 
-    inline static bool IsPowerOfTwo(unsigned int n) {return (n & (n - 1)) == 0;}
-    // We wrap our callback, because we wat to force one channel images to be fed as RGB, and we take care
-    // of making this work in WebGL (see __EMSCRIPTEN__ definition):
+    // We wrap our callback, because we want to force one channel images to be fed as RGB
     static void GenerateOrUpdateTextureCb(ImTextureID& texID,int w,int h,int c,const unsigned char* image,bool useMipmaps,bool wraps,bool wrapt,bool minFilterNearest,bool magFilterNearest) {
         if (image) {
             IM_ASSERT(ImGui::ImageEditor::GenerateOrUpdateTextureCb);   // Please call ImGui::ImageEditor::SetGenerateOrUpdateTextureCallback(...) at InitGL() time.
@@ -1970,25 +1968,6 @@ struct StbImage {
                 im = imageRGB;c=3;
             }
             ImGuiIE::ImageScopedDeleter scopedDeleter(imageRGB);
-
-            // WebGL and OpenGLES2 need this workaround for non-power of two textures (WebGL2 and OpenGLES3 don't need this anymore):
-#           if ((defined(__EMSCRIPTEN__) || defined(IMIMPL_SHADER_GLES)) && !defined(IMIMPL_SHADER_GL3))
-            /*
-            From: https://www.khronos.org/webgl/wiki/WebGL_and_OpenGL_Differences
-            OpenGL ES 2.0 and WebGL have only limited NPOT support. The restrictions are defined in Sections 3.8.2, "Shader Execution", and 3.7.11, "Mipmap Generation", of the OpenGL ES 2.0 specification, and are summarized here:
-
-            -> generateMipmap(target) generates an INVALID_OPERATION error if the level 0 image of the texture currently bound to target has an NPOT width or height.
-            -> Sampling an NPOT texture in a shader will produce the RGBA color (0, 0, 0, 1) if:
-            -> The minification filter is set to anything but NEAREST or LINEAR: in other words, if it uses one of the mipmapped filters.
-            -> The repeat mode is set to anything but CLAMP_TO_EDGE; repeating NPOT textures are not supported.
-            */
-
-            const int wIsPower2 = IsPowerOfTwo(w);
-            const int hIsPower2 = IsPowerOfTwo(h);
-            useMipmaps&=(wIsPower2 && hIsPower2);
-            wraps&=wIsPower2;
-            wrapt&=hIsPower2;
-#           endif
 
             ImGui::ImageEditor::GenerateOrUpdateTextureCb(texID,w,h,c,im,useMipmaps,wraps,wrapt,minFilterNearest,magFilterNearest);
         }
@@ -3425,8 +3404,10 @@ struct StbImage {
 
                 }
 
-                if (mrs.mustSave) {
-                    if (modified && fileExtCanBeSaved) saveAs();
+                if (mrs.mustSave && image) {
+                    if (modified)   {
+                        if(fileExtCanBeSaved) saveAs();
+                    }
                 }
                 if (mrs.mustUndo) undo();
                 else if (mrs.mustRedo) redo();
@@ -4155,8 +4136,27 @@ struct StbImage {
 
             if (image)  {
                 if (fileExtCanBeSaved) {
-                    if (ImGui::Button("Save")) {mrs.mustSave=true;}
-                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Ctrl+S");
+                    bool canDownload = false;
+#                   if (defined(__EMSCRIPTEN__) && defined(EMSCRIPTEN_SAVE_SHELL))
+                    canDownload = !modified && filePath && filePathName;
+#                   endif // EMSCRIPTEN_SAVE_SHELL
+                    const bool pressed = canDownload ? ImGui::Button("Download###save2") : ImGui::Button("Save###save1");
+                    if (pressed) {
+                        if (!canDownload) mrs.mustSave=true;
+                        else {
+#                           if (defined(__EMSCRIPTEN__) && defined(EMSCRIPTEN_SAVE_SHELL))
+                            if (ImGuiIE::FileExists(filePath)) {
+                                // The easiest way to download a file locally (an emscripten save shell is required, see README_FIRST.txt), is:
+                                // ImGuiFs::FileDownload(filePath,filePathName);
+                                // But it requires IMGUI_FILESYSTEM_H_. Alternative:
+                                ImGuiTextBuffer buffer;
+                                buffer.append("saveFileFromMemoryFSToDisk('%s','%s')",filePath,filePathName);
+                                emscripten_run_script(&buffer.Buf[0]);
+                            }
+#                           endif // EMSCRIPTEN_SAVE_SHELL
+                        }
+                    }
+                    if (!canDownload && ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Ctrl+S");
                     ImGui::SameLine();
                 }
                 if (ImGui::Button("Reload")) {loadFromFile(filePath);}

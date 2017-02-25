@@ -377,6 +377,14 @@ if (!myImageTextureId2) myImageTextureId2 = ImImpl_LoadTexture("./myNumbersTextu
 #   endif //if (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_MINE))
 #endif //TEST_ICONS_INSIDE_TTF
 
+#ifdef YES_IMGUIIMAGEEDITOR
+ImGui::ImageEditor::Style& ies = ImGui::ImageEditor::Style::Get();
+strcpy(&ies.arrowsChars[0][0],"◀");
+strcpy(&ies.arrowsChars[1][0],"▶");
+strcpy(&ies.arrowsChars[2][0],"▲");
+strcpy(&ies.arrowsChars[3][0],"▼");
+#endif //YES_IMGUIIMAGEEDITOR
+
 // Here we setup mgr (our ImGui::PanelManager)
 if (mgr.isEmpty()) {
     // Hp) All the associated windows MUST have an unique name WITHOUT using the '##' chars that ImGui supports
