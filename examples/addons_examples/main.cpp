@@ -173,7 +173,7 @@ static void MyTreeViewNodeCreationDelationCallback(ImGui::TreeViewNode* n, ImGui
 }
 #endif //NO_IMGUIVARIOUSCONTROLS
 #ifdef YES_IMGUISQLITE3
-static void PerformCppSQLiteTest(ImVector<char> &rv, int nRowsToCreate=50000);
+static void PerformCppSQLiteTest(ImGuiTextBuffer &rv, int nRowsToCreate=50000);
 #endif //YES_IMGUISQLITE3
 
 // These are only needed if you need to modify them at runtime (almost never).
@@ -292,55 +292,68 @@ void DrawGL()	// Mandatory
     static bool show_image_editor = false;
 
     // 1. Show a simple window
-    {
-        // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
-        // Me: However I've discovered that when I clamp the FPS to a low value (e.g.10), I have to catch double clicks manually in my binding to make them work.
-        // They work, but for some strange reasons only with windows properly set up through ImGui::Begin(...) and ImGui::End(...) (and whose name is NOT 'Debug').
-        // [Please remember that double clicking the titlebar of a window minimizes it]
-        // No problem with full frame rates.
-        static bool open = true;static bool no_border = false;static float bg_alpha = -1.f;
-        ImGui::Begin("Debug ", &open, ImVec2(450,300),bg_alpha,no_border ? 0 : ImGuiWindowFlags_ShowBorders);  // Try using 10 FPS and replacing the title with "Debug"...
+    static bool open = true;static bool no_border = false;static float bg_alpha = -1.f;
+    if (ImGui::Begin("ImGui Addons", &open, ImVec2(450,300),bg_alpha,no_border ? 0 : ImGuiWindowFlags_ShowBorders))   {
 
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("Pause/Resume ImGui and process input as usual");ImGui::Separator();
+        if (ImGui::TreeNodeEx("Pause/Resume ImGui and process input as usual",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        //ImGui::Text("\n");ImGui::Separator();ImGui::Text("Pause/Resume ImGui and process input as usual");ImGui::Separator();
         ImGui::Text("Press F1 (or lowercase 'h') to turn ImGui on and off.");
         ImVec4 halfTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];halfTextColor.w*=0.5f;
         ImGui::TextColored(halfTextColor,"(Please read the code for further tips about input processing).");
+        //ImGui::Spacing();
+        ImGui::TreePop();
+        }
 
-
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("Test Windows");ImGui::Separator();
+        if (ImGui::TreeNodeEx("Other Windows",ImGuiTreeNodeFlags_CollapsingHeader|ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::BeginGroup();
 #       if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_SAVE_STYLE))
         show_test_window ^= ImGui::Button("Test Window");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","The default ImGui\n\"Test Window\"\n(useful for making\ncustom styles)");
 #       endif //NO_IMGUISTYLESERIALIZER
 #       ifndef NO_IMGUITOOLBAR
-        show_another_window ^= ImGui::Button("Another Window With Toolbar Test");
+        show_another_window ^= ImGui::Button("Toolbar Test");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","An example of the imguitoolbar addon\nused inside a window");
 #       endif //NO_IMGUITOOLBAR
 #       ifndef NO_IMGUINODEGRAPHEDITOR
-        show_node_graph_editor_window ^= ImGui::Button("Another Window With NodeGraphEditor");
+        show_node_graph_editor_window ^= ImGui::Button("ImGui Node Graph Editor");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","From the imguinodegrapheditor addon");
 #       endif //NO_IMGUINODEGRAPHEDITOR
-        show_splitter_test_window ^= ImGui::Button("Show splitter test window");
+        show_splitter_test_window ^= ImGui::Button("Splitter Test");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","This is just some reference code to make\nsplitters without using the ImGui Columns API");
 #       ifndef NO_IMGUIDOCK
-        show_dock_window ^= ImGui::Button("Another Window With ImGuiDock");
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","LumixEngine Dock system test.");
+        show_dock_window ^= ImGui::Button("ImGui Dock");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","An exaple of imguidock\n(LumixEngine's Docking System)");
 #       endif //NO_IMGUIDOCK
+        ImGui::EndGroup();
+        ImGui::SameLine();
+        ImGui::BeginGroup();
 #       ifndef NO_IMGUITABWINDOW
-        show_tab_windows ^= ImGui::Button("Show TabWindow Test");
+        show_tab_windows ^= ImGui::Button("ImGui Tab Window");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","An (incomplete) example of using\nthe imguitabwindow addon.\nMore on this in the second demo (main2.cpp)");
 #       endif //NO_IMGUITABWINDOW
         show_performance ^= ImGui::Button("Show performance");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Performance Window.\nShows the frame rate and the\n number of texture switches per frame");
 #       ifdef YES_IMGUIMINIGAMES
 #           ifndef NO_IMGUIMINIGAMES_MINE
-            show_mine_game ^= ImGui::Button("Show Mine Game");
+            show_mine_game ^= ImGui::Button("ImGui Mine Game");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","An example from the\nimguiminigames yes_addon");
 #           endif //NO_IMGUIMINIGAMES_MINE
 #           ifndef NO_IMGUIMINIGAMES_SUDOKU
-            show_sudoku_game ^= ImGui::Button("Show Sudoku Game");
+            show_sudoku_game ^= ImGui::Button("ImGui Sudoku Game");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Another example from the\nimguiminigames yes_addon");
 #           endif //NO_IMGUIMINIGAMES_SUDOKU
 #       endif //YES_IMGUIMINIGAMES
 #       ifdef YES_IMGUIIMAGEEDITOR
-            show_image_editor ^= ImGui::Button("Show Image Editor");
+            show_image_editor ^= ImGui::Button("ImGui Image Editor");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","An example window using the\nimguiimageeditor yes_addon");
 #       endif //YES_IMGUIIMAGEEDITOR
+        ImGui::EndGroup();
+        ImGui::TreePop();
+        }
 
         // Calculate and show framerate
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("Frame rate options");
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","It might be necessary to move the mouse \"outside\" and \"inside\" ImGui for these options to update properly.");
+        if (ImGui::TreeNodeEx("Frame rate options",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        ImGui::TextWrapped("%s","It might be necessary to move the mouse \"outside\" and \"inside\" ImGui for these options to update properly.");
         ImGui::Separator();
         ImGui::Text("Frame rate %.1f FPS (average %.3f ms/frame)",ImGui::GetIO().Framerate,1000.0f / ImGui::GetIO().Framerate);
         bool clampFPSOutsideImGui = gImGuiInverseFPSClampOutsideImGui > 0;
@@ -360,8 +373,10 @@ void DrawGL()	// Mandatory
         }
         else gImGuiInverseFPSClampInsideImGui = -1.f;
         ImGui::Checkbox("Use dynamic FPS when \"inside\" ImGui.",&gImGuiDynamicFPSInsideImGui);
+        ImGui::TreePop();
+        }
 
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("Font options");ImGui::Separator();
+        if (ImGui::TreeNodeEx("Font options",ImGuiTreeNodeFlags_CollapsingHeader)) {
         //ImGui::Checkbox("Font Allow User Scaling", &ImGui::GetIO().FontAllowUserScaling);
         //if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","If true, CTRL + mouse wheel scales the window\n(or just its font size if child window).");
         ImGui::PushItemWidth(275);
@@ -372,9 +387,11 @@ void DrawGL()	// Mandatory
             if (ImGui::SmallButton("Reset##glFontGlobalScale")) ImGui::GetIO().FontGlobalScale = 1.f;
         }
         ImImpl_EditSdfParams(); // This lets you edit signed distance font params ONLY when they are used
+        ImGui::TreePop();
+        }
 
         // Some options ported from imgui_demo.cpp
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("Window options");ImGui::Separator();
+        if (ImGui::TreeNodeEx("Window options",ImGuiTreeNodeFlags_CollapsingHeader)) {
         ImGui::Checkbox("No border", &no_border);
         ImGui::SameLine(0,25);
         ImGui::PushItemWidth(100);
@@ -387,9 +404,11 @@ void DrawGL()	// Mandatory
             ImGui::SameLine(0,10);
             if (ImGui::SmallButton("Reset##glClearColorReset")) clearColor = defaultClearColor;
         }
+        ImGui::TreePop();
+        }
 
         // imguistyleserializer test
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguistyleserializer");ImGui::Separator();
+        if (ImGui::TreeNodeEx("imguistyleserializer",ImGuiTreeNodeFlags_CollapsingHeader)) {
 #       if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_SAVE_STYLE))
         ImGui::Text("Please modify the current style in:");
         ImGui::Text("ImGui Demo->Window Options->Style Editor");
@@ -461,10 +480,11 @@ void DrawGL()	// Mandatory
 #       else //NO_IMGUISTYLESERIALIZER
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUISTYLESERIALIZER
-
+        ImGui::TreePop();
+        }
 
         // imguifilesystem tests:
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguifilesystem");ImGui::Separator();
+        if (ImGui::TreeNodeEx("imguifilesystem",ImGuiTreeNodeFlags_CollapsingHeader)) {
 #       ifndef NO_IMGUIFILESYSTEM
         const char* startingFolder = "./";
         const char* optionalFileExtensionFilterString = "";//".jpg;.jpeg;.png;.tiff;.bmp;.gif;.txt";
@@ -518,11 +538,13 @@ void DrawGL()	// Mandatory
 #       else //NO_IMGUIFILESYSTEM
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUIFILESYSTEM
+        ImGui::TreePop();
+        }
 
         // imguitinyfiledialogs tests (-->> not portable to emscripten and mobile platforms I guess <<--):
 #       ifdef YES_IMGUITINYFILEDIALOGS
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguitinyfiledialogs (yes_addon)");ImGui::Separator();
-        {
+        if (ImGui::TreeNodeEx("imguitinyfiledialogs (yes_addon)",ImGuiTreeNodeFlags_CollapsingHeader)) {
+
             const char* startingFolder = "./";
             const char* optionalFileFilterPatterns[7] = {"*.jpg","*.jpeg","*.png","*.tiff","*.bmp","*.gif","*.txt"};
             static ImVector<char> path0;  // The vector is necessary for "aAllowMultipleSelects".
@@ -603,12 +625,12 @@ void DrawGL()	// Mandatory
             }
             ImGui::PopID();
             ImGui::SameLine();ImGui::TextDisabled(" (Does this work or not?)");
-
+            ImGui::TreePop();
         }
 #       endif //YES_IMGUITINYFILEDIALOGS
 
         // DateChooser Test:
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguidatechooser");ImGui::Separator();
+        if (ImGui::TreeNodeEx("imguidatechooser",ImGuiTreeNodeFlags_CollapsingHeader)) {
 #       ifndef NO_IMGUIDATECHOOSER
         /*struct tm {
   int tm_sec;			 Seconds.	[0-60] (1 leap second)
@@ -632,9 +654,11 @@ void DrawGL()	// Mandatory
 #       else       //NO_IMGUIDATECHOOSER
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif      //NO_IMGUIDATECHOOSER
+        ImGui::TreePop();
+        }
 
         // imguivariouscontrols
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguivariouscontrols");ImGui::Separator();
+        if (ImGui::TreeNodeEx("imguivariouscontrols",ImGuiTreeNodeFlags_CollapsingHeader)) {
 #       ifndef NO_IMGUIVARIOUSCONTROLS
         // ProgressBar Test:
         ImGui::TestProgressBar();
@@ -976,9 +1000,12 @@ void DrawGL()	// Mandatory
 #       else //NO_IMGUIVARIOUSCONTROLS
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUIVARIOUSCONTROLS
+        ImGui::TreePop();
+        }
 
         // TabLabels Test:
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguitabwindow");ImGui::Separator();
+        if (ImGui::TreeNodeEx("imguitabwindow",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        ImGui::TreePop();
 #       ifndef NO_IMGUITABWINDOW
         // Based on the code by krys-spectralpixel (https://github.com/krys-spectralpixel), posted here: https://github.com/ocornut/imgui/issues/261
         ImGui::Spacing();
@@ -1044,12 +1071,12 @@ void DrawGL()	// Mandatory
 #       else //NO_IMGUITABWINDOW
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUITABWINDOW
-
+    }
 
         // BadCodeEditor Test:
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguicodeeditor");ImGui::Separator();
+    if (ImGui::TreeNodeEx("imguicodeeditor",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        ImGui::TreePop();
 #       ifndef NO_IMGUITABWINDOW
-        ImGui::Spacing();
         ImGui::Text("ImGui::InputTextWithSyntaxHighlighting(...) [Experimental] (CTRL+MW: zoom):");
         ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.35f);
         static int languageIndex = (int) ImGuiCe::LANG_CPP;
@@ -1062,11 +1089,11 @@ void DrawGL()	// Mandatory
 #       else //NO_IMGUICODEEDITOR
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUICODEEDITOR
+        }
 
 #       if (defined(YES_IMGUISTRINGIFIER) && !defined(NO_IMGUIFILESYSTEM) && !defined(NO_IMGUIHELPER)  && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
-        ImGui::Text("\n");ImGui::Separator();
-        ImGui::Text("imguistringifier (yes_addon)");
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","It should allow users to make files\nembeddable in their source code.");
+    if (ImGui::TreeNodeEx("imguistringifier (yes_addon)",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        ImGui::TextWrapped("%s","It should allow users to make files embeddable in their source code.");
         ImGui::Separator();
 	if (ImGui::TreeNode("Stringify files for embedded usage:")) {
 	    typedef struct _SupportedTypes {
@@ -1208,12 +1235,14 @@ void DrawGL()	// Mandatory
             //------------------------------------------------
             ImGui::TreePop(); // Mandatory
         }
+    ImGui::TreePop();
+    }
 #       endif //YES_IMGUISTRINGIFIER
 
 #       ifdef YES_IMGUISDF
         // The following check is to ensure ImGui::SdfAddCharsetFromFile(...) can be called (some users don't like to use FILE* in <stdio.h>, and prefer loading stuff from memory only)
 #       if (!defined(NO_IMGUISDF_LOAD) || (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD)))
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguisdf (yes_addon)");ImGui::Separator();
+        if (ImGui::TreeNodeEx("imguisdf (yes_addon)",ImGuiTreeNodeFlags_CollapsingHeader)) {
         // Well, we should move the init stuff to InitGL(), clean up textures, etc. (all skipped to avoid multiple preprocessor branches around this file)
         static ImTextureID sdfTexture = 0;
         static ImGui::SdfTextChunk* sdfTextChunk = NULL;
@@ -1254,11 +1283,13 @@ void DrawGL()	// Mandatory
                 ImGui::SdfRender(); // This should be moved at the top of DrawGL(), to work when ImGui is not active too. [or after ImGui::Render(), but that spot is not supported at the moment here...]
             }
          }
+         ImGui::TreePop();
+         }
 #       endif // (!defined(NO_IMGUISDF_LOAD) ...)
 #       endif //YES_IMGUISDF
 
 #       ifdef YES_IMGUISOLOUD
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguisoloud (yes_addon)");ImGui::Separator();
+        if (ImGui::TreeNodeEx("imguisoloud (yes_addon)",ImGuiTreeNodeFlags_CollapsingHeader)) {
 
         // Code dirty-copied from the SoLoud Welcome example (I'm a newbie...)
         static SoLoud::Soloud soloud; // Engine core
@@ -1358,10 +1389,12 @@ void DrawGL()	// Mandatory
 #           endif
             ImGui::TreePop();
         }
+        ImGui::TreePop();
+        }
 #       endif //YES_IMGUISOLOUD
 
 #       ifdef YES_IMGUISQLITE3
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguisqlite3 (yes_addon)");ImGui::Separator();
+        if (ImGui::TreeNodeEx("imguisqlite3 (yes_addon)",ImGuiTreeNodeFlags_CollapsingHeader)) {
         // Just a simple test here (based on http://www.codeproject.com/Articles/6343/CppSQLite-C-Wrapper-for-SQLite)
         static bool testDone = false;
         static bool performSQLiteTest = false;
@@ -1369,36 +1402,38 @@ void DrawGL()	// Mandatory
 	    ImGui::Checkbox("Perform CppSQLite test##SQLiteTest",&performSQLiteTest);
 	    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","It might take some time...");
 	}
-        static ImVector<char> rv;
+        static ImGuiTextBuffer rv;
         if (!testDone && performSQLiteTest) {
 	    testDone = true;
 	    PerformCppSQLiteTest(rv,50000);
         }
 	if (testDone && ImGui::TreeNode("SQLite3 Test Result")) {
-            ImGui::TextUnformatted(&rv[0]);
+            ImGui::TextUnformatted(&rv.Buf[0]);
 	    ImGui::TreePop();
+        }
+        ImGui::TreePop();
         }
 #       endif //YES_IMGUISQLITE3
 
         // ListView Test:
-        ImGui::Text("\n");ImGui::Separator();ImGui::Text("imguilistview");ImGui::Separator();
+    if (ImGui::TreeNodeEx("imguilistview",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        ImGui::TreePop();
 #       ifndef NO_IMGUILISTVIEW
         MyTestListView();
 #       else //NO_IMGUILISTVIEW
         ImGui::Text("%s","Excluded from this build.\n");
-#       endif //NO_IMGUILISTVIEW
-
-
-        ImGui::Separator();
-
-        ImGui::End();
+#       endif //NO_IMGUILISTVIEW        
     }
+
+    }
+    ImGui::End();   // ImGui::Begin("ImGui Addons");
+
 
     // 2. Show another simple window, this time using an explicit Begin/End pair
 #   ifndef NO_IMGUITOOLBAR
     if (show_another_window)
     {
-        ImGui::Begin("Another Window", &show_another_window, ImVec2(500,100));
+        ImGui::Begin("Another Window", &show_another_window, ImVec2(500,100),bg_alpha,no_border ? 0 : ImGuiWindowFlags_ShowBorders);
         {
             // imguitoolbar test (note that it can be used both inside and outside windows (see below)
             ImGui::Separator();ImGui::Text("imguitoolbar");ImGui::Separator();
@@ -1439,7 +1474,7 @@ void DrawGL()	// Mandatory
 #   endif // NO_IMGUISTYLESERIALIZER
 #   ifndef NO_IMGUINODEGRAPHEDITOR
     if (show_node_graph_editor_window) {
-        if (ImGui::Begin("Example: Custom Node Graph", &show_node_graph_editor_window,ImVec2(700,600),0.95f,ImGuiWindowFlags_NoScrollbar)){
+        if (ImGui::Begin("Example: Custom Node Graph", &show_node_graph_editor_window,ImVec2(700,600),0.95f,ImGuiWindowFlags_NoScrollbar | (no_border ? 0 : ImGuiWindowFlags_ShowBorders))){
 #           ifndef IMGUINODEGRAPHEDITOR_NOTESTDEMO
             ImGui::TestNodeGraphEditor();   // see its code for further info
 #           endif //IMGUINODEGRAPHEDITOR_NOTESTDEMO            
@@ -1504,7 +1539,7 @@ void DrawGL()	// Mandatory
     }
 #   ifndef NO_IMGUIDOCK
     if (show_dock_window)   {
-        if (ImGui::Begin("imguidock window (= lumix engine's dock system)",&show_dock_window,ImVec2(500, 500),0.95f,ImGuiWindowFlags_NoScrollbar)) {
+        if (ImGui::Begin("imguidock window (= lumix engine's dock system)",&show_dock_window,ImVec2(500, 500),0.95f,ImGuiWindowFlags_NoScrollbar | (no_border ? 0 : ImGuiWindowFlags_ShowBorders))) {
             ImGui::BeginDockspace();
             static char tmp[128];
             for (int i=0;i<10;i++)  {
@@ -1572,7 +1607,7 @@ void DrawGL()	// Mandatory
         static bool showTabWindow[2] = {true,true};
 
         if (showTabWindow[0])   {
-            if (ImGui::Begin("TabWindow1", &showTabWindow[0], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar))  {
+            if (ImGui::Begin("TabWindow1", &showTabWindow[0], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar | (no_border ? 0 : ImGuiWindowFlags_ShowBorders)))  {
                 ImGui::TabWindow&  tabWindow = tabWindows[0];
                 if (!tabWindow.isInited()) {
                     static const char* tabNames[] = {"Test","Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
@@ -1588,7 +1623,7 @@ void DrawGL()	// Mandatory
         }
 
         if (showTabWindow[1])   {
-            if (ImGui::Begin("TabWindow2", &showTabWindow[1], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar))  {
+            if (ImGui::Begin("TabWindow2", &showTabWindow[1], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar | (no_border ? 0 : ImGuiWindowFlags_ShowBorders)))  {
                 ImGui::TabWindow&  tabWindow2 = tabWindows[1];
                 tabWindow2.render();
             }
@@ -1603,7 +1638,7 @@ void DrawGL()	// Mandatory
     }
 #   endif //NO_IMGUITABWINDOW
     if (show_performance)   {
-        if (ImGui::Begin("Performance Window",&show_performance,ImVec2(0,0),0.9f,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoResize))   {
+        if (ImGui::Begin("Performance Window",&show_performance,ImVec2(0,0),0.9f,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoResize | (no_border ? 0 : ImGuiWindowFlags_ShowBorders)))   {
             ImGui::Text("Frame rate %.1f FPS",ImGui::GetIO().Framerate);
             ImGui::Text("Num texture bindings per frame: %d",gImGuiNumTextureBindingsPerFrame);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Consider that we're using\njust a single extra texture\nwith all the icons (numbers).");
@@ -1613,7 +1648,7 @@ void DrawGL()	// Mandatory
 #   ifdef YES_IMGUIMINIGAMES
 #   ifndef NO_IMGUIMINIGAMES_MINE
     if (show_mine_game) {
-        if (ImGui::Begin("Mine Game",&show_mine_game,ImVec2(600,400),.95f,ImGuiWindowFlags_NoScrollbar))  {
+        if (ImGui::Begin("Mine Game",&show_mine_game,ImVec2(600,400),.95f,ImGuiWindowFlags_NoScrollbar | (no_border ? 0 : ImGuiWindowFlags_ShowBorders)))  {
             static ImGuiMiniGames::Mine mineGame;
             mineGame.render();
         }
@@ -1622,7 +1657,7 @@ void DrawGL()	// Mandatory
 #   endif //NO_IMGUIMINIGAMES_MINE
 #   ifndef NO_IMGUIMINIGAMES_SUDOKU
     if (show_sudoku_game) {
-        if (ImGui::Begin("Sdoku Game",&show_sudoku_game,ImVec2(600,400),.95f,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))  {
+        if (ImGui::Begin("Sdoku Game",&show_sudoku_game,ImVec2(600,400),.95f,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse|(no_border ? 0 : ImGuiWindowFlags_ShowBorders)))  {
             static ImGuiMiniGames::Sudoku sudokuGame;
             sudokuGame.render();
         }
@@ -1632,7 +1667,7 @@ void DrawGL()	// Mandatory
 #   endif //YES_IMGUIMINIGAMES
 #   ifdef YES_IMGUIIMAGEEDITOR
     if (show_image_editor)  {
-        if (ImGui::Begin("Image Editor",&show_image_editor,ImVec2(750,600),0.95f))   {
+        if (ImGui::Begin("Image Editor",&show_image_editor,ImVec2(750,600),0.95f,(no_border ? 0 : ImGuiWindowFlags_ShowBorders)))   {
             static ImGui::ImageEditor imageEditor;
             if (!imageEditor.isInited()) 	{
                 if (!imageEditor.loadFromFile("./blankImage.png")) {
@@ -1818,41 +1853,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
 
 
 #ifdef YES_IMGUISQLITE3	// yes_addon
-// Actually I've just discovered that imgui.h has a struct named ImGuiTextBuffer,
-// that can be used instead of ImVector<char>.
-// Its ImGuiTextBuffer::append(...) method is implemented
-// in a way similar to AppendString(...) below.
-
-#ifdef _MSC_VER
-#   ifndef va_copy
-#       define va_copy(dest, src) (dest = src)
-#   endif //va_copy
-#   ifndef vsnprintf
-#       define vsnprintf _vsnprintf
-#   endif //vsnprintf
-#endif //_MSC_VER
-
-inline static int AppendString(ImVector<char>& v,const char* fmt, ...) {
-    va_list args,args2;
-
-    va_start(args, fmt);
-    va_copy(args2,args);				    // since C99 (MANDATORY! otherwise we must reuse va_start(args2,fmt): slow)
-    const int additionalSize = vsnprintf(NULL,0,fmt,args);  // since C99
-    va_end(args);
-    IM_ASSERT(additionalSize>0);
-
-    const int startSz = v.size();
-    v.resize(startSz+additionalSize);
-    const int rv = vsprintf(&v[startSz-1],fmt,args2);
-    va_end(args2);
-    IM_ASSERT(additionalSize==rv);
-    IM_ASSERT(v[startSz+additionalSize-1]=='\0');
-
-    return rv;
-}
 #include <time.h>   // just for time mesuring...
-void PerformCppSQLiteTest(ImVector<char>& rv,int nRowsToCreate) {
-    rv.reserve(2048);rv.resize(1);rv[0]='\0';
+void PerformCppSQLiteTest(ImGuiTextBuffer& rv,int nRowsToCreate) {
+    rv.Buf.reserve(2048);
     if (nRowsToCreate<=0) nRowsToCreate = 50000;
 
     using namespace CppSQLite3;
@@ -1860,20 +1863,20 @@ void PerformCppSQLiteTest(ImVector<char>& rv,int nRowsToCreate) {
     try {
 	int i,fld,nRows;
 	DB db;
-	AppendString(rv,"SQLite Version: %s\n",db.SQLiteVersion());
+    rv.append("SQLite Version: %s\n",db.SQLiteVersion());
 	remove(dbFileName);     // from stdio.h (I must admit I've never used it: does it delete the file ?)
 
-	AppendString(rv,"Performed test at http://www.codeproject.com/Articles/6343/CppSQLite-C-Wrapper-for-SQLite.\n\n");
+    rv.append("Performed test at http://www.codeproject.com/Articles/6343/CppSQLite-C-Wrapper-for-SQLite.\n\n");
 
 	db.open(dbFileName);    // it opens or creates the db
 	db.execDML("create table emp(empno int, empname char(20));");   // Creates emp table with a int (empno) and a char(20) (empname)
-	nRows = db.execDML("insert into emp values (7, 'David Beckham');");                 AppendString(rv,"nRows = %d\n",nRows);
-	nRows = db.execDML("update emp set empname = 'Christiano Ronaldo' where empno = 7;");   AppendString(rv,"%d rows updated\n",nRows);
-	nRows = db.execDML("delete from emp where empno = 7;");                                 AppendString(rv,"%d rows deleted\n",nRows);
+    nRows = db.execDML("insert into emp values (7, 'David Beckham');");                 rv.append("nRows = %d\n",nRows);
+    nRows = db.execDML("update emp set empname = 'Christiano Ronaldo' where empno = 7;");   rv.append("%d rows updated\n",nRows);
+    nRows = db.execDML("delete from emp where empno = 7;");                                 rv.append("%d rows deleted\n",nRows);
 
 	// Transaction Demo [The transaction could just as easily have been rolled back]
 	clock_t ckStart,ckEnd;
-	AppendString(rv,"\nTransaction test, creating %d rows please wait...\n",nRowsToCreate);
+    rv.append("\nTransaction test, creating %d rows please wait...\n",nRowsToCreate);
 	ckStart = clock();
 	db.execDML("begin transaction;");
 	for (i = 0; i < nRowsToCreate; i++) {
@@ -1884,12 +1887,12 @@ void PerformCppSQLiteTest(ImVector<char>& rv,int nRowsToCreate) {
 	db.execDML("commit transaction;");
 	ckEnd = clock();
 	// Demonstrate CppSQLite::DB::execScalar()
-	AppendString(rv,"%d rows in emp table in %1.3f seconds (it was fast!)\n",db.execScalar("select count(*) from emp;"),(float)(ckEnd-ckStart)/(float)CLOCKS_PER_SEC);
+    rv.append("%d rows in emp table in %1.3f seconds (it was fast!)\n",db.execScalar("select count(*) from emp;"),(float)(ckEnd-ckStart)/(float)CLOCKS_PER_SEC);
 
 	// Pre-compiled Statements Demo
 	db.execDML("drop table emp;");	// SQLITE_LOCKED[6]: database table is locked.
 	db.execDML("create table emp(empno int, empname char(20));");
-	AppendString(rv,"\nTransaction test with pre-compiled statements, creating %d rows please wait...\n",nRowsToCreate);
+    rv.append("\nTransaction test with pre-compiled statements, creating %d rows please wait...\n",nRowsToCreate);
 	ckStart = clock();
 	db.execDML("begin transaction;");
 	Statement stmt = db.compileStatement("insert into emp values (?, ?);");
@@ -1903,10 +1906,10 @@ void PerformCppSQLiteTest(ImVector<char>& rv,int nRowsToCreate) {
 	}
 	db.execDML("commit transaction;");
 	ckEnd = clock();
-	AppendString(rv,"%d rows in emp table in %1.3f seconds (that was even faster!)\n",db.execScalar("select count(*) from emp;"),(float)(ckEnd-ckStart)/(float)CLOCKS_PER_SEC);
+    rv.append("%d rows in emp table in %1.3f seconds (that was even faster!)\n",db.execScalar("select count(*) from emp;"),(float)(ckEnd-ckStart)/(float)CLOCKS_PER_SEC);
 
 	// Re-create emp table with auto-increment field
-	AppendString(rv,"\nAuto increment test\n");
+    rv.append("\nAuto increment test\n");
 	db.execDML("drop table emp;");
 	db.execDML("create table emp(empno integer primary key, empname char(20));");
 
@@ -1914,53 +1917,53 @@ void PerformCppSQLiteTest(ImVector<char>& rv,int nRowsToCreate) {
 	    char buf[128];
 	    sprintf(buf,"insert into emp (empname) values ('Empname%06d');", i+1);
 	    db.execDML(buf);
-	    AppendString(rv," primary key: %d\n",db.lastRowId());
+        rv.append(" primary key: %ld\n",(long)db.lastRowId());
 	}
 
 	// Query data and also show results of inserts into auto-increment field
-	AppendString(rv,"\nSelect statement test\n");
+    rv.append("\nSelect statement test\n");
 	Query q = db.execQuery("select * from emp order by 1;");
 	for (fld = 0; fld < q.numFields(); fld++)   {
-	    AppendString(rv,"%s(%s)|",q.fieldName(fld),q.fieldDeclType(fld));   // It was fieldType(fld)...
+        rv.append("%s(%s)|",q.fieldName(fld),q.fieldDeclType(fld));   // It was fieldType(fld)...
 	}
-	AppendString(rv,"\n");
+    rv.append("\n");
 	while (!q.eof())    {
-	    AppendString(rv,"	%s	|   %s	    |\n",q.fieldValue(0),q.fieldDeclType(1));   // It was fieldType(fld)...
+        rv.append("	%s	|   %s	    |\n",q.fieldValue(0),q.fieldDeclType(1));   // It was fieldType(fld)...
 	    q.nextRow();
 	}
 
 	// SQLite's printf() functionality. Handles embedded quotes and NULLs
-	AppendString(rv,"\nSQLite sprintf test\n");
+    rv.append("\nSQLite sprintf test\n");
 	Buffer bufSQL;
 	bufSQL.format("insert into emp (empname) values (%Q);", "He's bad");
-	AppendString(rv,"%s\n",(const char*)bufSQL);
+    rv.append("%s\n",(const char*)bufSQL);
 	db.execDML(bufSQL);
 
 	bufSQL.format("insert into emp (empname) values (%Q);", NULL);
-	AppendString(rv,"%s\n",(const char*)bufSQL);
+    rv.append("%s\n",(const char*)bufSQL);
 	db.execDML(bufSQL);
 
 	// Fetch table at once, and also show how to
 	// use CppSQLite::Table::setRow() method
-	AppendString(rv,"\ngetTable() test\n");
+    rv.append("\ngetTable() test\n");
 	Table t = db.getTable("select * from emp order by 1;");
 
 	for (fld = 0; fld < t.numFields(); fld++)   {
-	    AppendString(rv,"%s	|",t.fieldName(fld));
+        rv.append("%s	|",t.fieldName(fld));
 	}
-	AppendString(rv,"\n");
+    rv.append("\n");
 	for (int row = 0; row < t.numRows(); row++) {
 	    t.setRow(row);
 	    for (int fld = 0; fld < t.numFields(); fld++)   {
-		if (!t.fieldIsNull(fld))    AppendString(rv,"	%s	|",t.fieldValue(fld));
-		else AppendString(rv,"	NULL			|");
+        if (!t.fieldIsNull(fld))    rv.append("	%s	|",t.fieldValue(fld));
+        else rv.append("	NULL			|");
 	    }
-	    AppendString(rv,"\n");
+        rv.append("\n");
 	}
 
 	// Test CppSQLite::Binary by storing/retrieving some binary data, checking
 	// it afterwards to make sure it is the same
-	AppendString(rv,"\nBinary data test\n");
+    rv.append("\nBinary data test\n");
 	db.execDML("create table bindata(desc char(10), data blob);");
 
 	unsigned char bin[256];
@@ -1971,27 +1974,27 @@ void PerformCppSQLiteTest(ImVector<char>& rv,int nRowsToCreate) {
 	bufSQL.format("insert into bindata values ('testing', %Q);",
 		      blob.getEncoded());
 	db.execDML(bufSQL);
-	AppendString(rv,"Stored binary Length: %d\n",sizeof bin);
+    rv.append("Stored binary Length: %d\n",sizeof bin);
 
 	q = db.execQuery("select data from bindata where desc = 'testing';");
 	if (!q.eof())   {
 	    blob.setEncoded((unsigned char*)q.fieldValue("data"));
-	    AppendString(rv,"Retrieved binary Length: %d\n",blob.getBinaryLength());
+        rv.append("Retrieved binary Length: %d\n",blob.getBinaryLength());
 	}
 
 	const unsigned char* pbin = blob.getBinary();
 	for (i = 0; i < (int) sizeof bin; i++)
 	{
 	    if (pbin[i] != i)   {
-		AppendString(rv,"Problem: i: ,%d bin[i]: %s\n",i,pbin[i]);
+        rv.append("Problem: i: ,%d bin[i]: %c\n",i,pbin[i]);
 	    }
 	}
 
-	AppendString(rv,"\nEnd of tests\n");
+    rv.append("\nEnd of tests\n");
     }
     catch (CppSQLite3::Exception& e)
     {
-	AppendString(rv,"Exception thrown. Code: %d. Message: %s.\n",e.errorCode(),e.errorMessage());
+    rv.append("Exception thrown. Code: %d. Message: %s.\n",e.errorCode(),e.errorMessage());
     }
 }
 #endif //YES_IMGUISQLITE3

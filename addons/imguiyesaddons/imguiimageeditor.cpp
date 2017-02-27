@@ -2213,7 +2213,7 @@ struct StbImage {
         else if (G>0) {strcpy(ch,"Gpxl");pxls=G+(float)M/1000.f;}
         else if (M>0) {strcpy(ch,"Mpxl");pxls=M+(float)K/1000.f;}
         else if (K>0) {strcpy(ch,"Kpxl");pxls=K+(float)B/1000.f;}
-        else {strcpy(ch,"b");pxls=B;}
+        else {strcpy(ch,"pxl");pxls=B;}
         ImFormatString(buffer,buffer_size,"%dx%d = %1.3f %s",w,h,pxls,ch);
     }
     struct FileExtensionHelper {
@@ -3238,14 +3238,16 @@ struct StbImage {
         //ImGuiStyle& style = ImGui::GetStyle();
 
         ImVec2 labelSize(0,0);
-        if (texID && filePathName) {
+        {
             // Set the correct font scale (2 lines)
             g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize*2;
             g.FontSize = window->CalcFontSize();
 
             static const char* typeNames[5]={"NONE","A","LA","RGB","RGBA"};
+            static const char* noImageString = "NO IMAGE";
+            const char* displayName = filePathName?filePathName:noImageString;
             IM_ASSERT(c>=0 && c<=4);
-            labelSize.x = ImGui::CalcTextSize(filePathName).x+ImGui::CalcTextSize("\t").x+ImGui::CalcTextSize(typeNames[c]).x+(modified?ImGui::CalcTextSize("*").x:0.f);
+            labelSize.x = ImGui::CalcTextSize(displayName).x+ImGui::CalcTextSize("\t").x+ImGui::CalcTextSize(typeNames[c]).x+(modified?ImGui::CalcTextSize("*").x:0.f);
             labelSize.y = g.FontSize;
             if (labelSize.x<window->Size.x) ImGui::SetCursorPosX((window->Size.x-labelSize.x)*0.5f);
             else {
@@ -3256,25 +3258,34 @@ struct StbImage {
                 if (labelSize.x<window->Size.x) ImGui::SetCursorPosX((window->Size.x-labelSize.x)*0.5f);
                 else ImGui::SetCursorPosX(0);
             }
-            ImGui::Text("%s%s\t%s",filePathName,modified?"*":"",typeNames[c]);
+            ImGui::Text("%s%s\t%s",displayName,modified?"*":"",typeNames[c]);
 
             // Reset the font scale (2 lines)
             g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize;
             g.FontSize = window->CalcFontSize();
 
-            if (imageDimString[0]!='\0' || fileSizeString[0]!='\0') {
-                labelSize.x = ImGui::CalcTextSize((imageDimString[0]!='\0' && fileSizeString[0]!='\0') ? "(\t)" : "()").x+ImGui::CalcTextSize(imageDimString).x+ImGui::CalcTextSize(fileSizeString).x;
+            if (texID && image)  {
+                if (imageDimString[0]!='\0' || fileSizeString[0]!='\0') {
+                    labelSize.x = ImGui::CalcTextSize((imageDimString[0]!='\0' && fileSizeString[0]!='\0') ? "(\t)" : "()").x+ImGui::CalcTextSize(imageDimString).x+ImGui::CalcTextSize(fileSizeString).x;
+                    labelSize.y+=g.FontSize;
+                    if (labelSize.x<window->Size.x) ImGui::SetCursorPosX((window->Size.x-labelSize.x)*0.5f);
+                    else ImGui::SetCursorPosX(0);
+                    ImGui::Text("(%s",imageDimString);
+                    if (imageDimString[0]!='\0' && fileSizeString[0]!='\0') {ImGui::SameLine(0,0);ImGui::Text("%s","\t");}
+                    ImGui::SameLine(0,0);
+                    ImGui::Text("%s)",fileSizeString);
+                }
+            }
+            else {
+                labelSize.x = ImGui::CalcTextSize(noImageString).x;
                 labelSize.y+=g.FontSize;
                 if (labelSize.x<window->Size.x) ImGui::SetCursorPosX((window->Size.x-labelSize.x)*0.5f);
                 else ImGui::SetCursorPosX(0);
-                ImGui::Text("(%s",imageDimString);
-                if (imageDimString[0]!='\0' && fileSizeString[0]!='\0') {ImGui::SameLine(0,0);ImGui::Text("%s","\t");}
-                ImGui::SameLine(0,0);
-                ImGui::Text("%s)",fileSizeString);
+                ImGui::Text("%s",noImageString);
             }
 
-            ImGui::Separator();
-            labelSize.y+=1.0f;
+            //ImGui::Separator();
+            //labelSize.y+=1.0f;
         }
 
         //ImGui::PushStyleColor(ImGuiCol_ChildWindowBg,ImVec4(1.f,1.f,1.f,0.25f));
@@ -3669,9 +3680,18 @@ struct StbImage {
 
                 static int numChannels = 0; // Hope static is OK
                 bool anyPressed = false;
-                if (canSaveRGBA && !anyPressed) {if (ImGui::Button("Save RGBA Image As...")) {numChannels=4;anyPressed=true;}}
-                if (canSaveRGB && !anyPressed) {if (ImGui::Button("Save RGB Image As...")) {numChannels=3;anyPressed=true;}}
-                if (canSaveAlpha && !anyPressed) {if (ImGui::Button("Save ALPHA Image As...")) {numChannels=1;anyPressed=true;}}
+                if (canSaveRGBA && !anyPressed) {
+                    if (ImGui::Button("Save RGBA Image As...")) {numChannels=4;anyPressed=true;}
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s",ImGuiIE::SupportedSaveExtensions[4]);
+                }
+                if (canSaveRGB && !anyPressed) {
+                    if (ImGui::Button("Save RGB Image As...")) {numChannels=3;anyPressed=true;}
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s",ImGuiIE::SupportedSaveExtensions[3]);
+                }
+                if (canSaveAlpha && !anyPressed) {
+                    if (ImGui::Button("Save ALPHA Image As...")) {numChannels=1;anyPressed=true;}
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s",ImGuiIE::SupportedSaveExtensions[1]);
+                }
 
                 const char* path = SaveDialog.saveFileDialog(anyPressed,SaveDialog.getLastDirectory(),filePathName,ImGuiIE::SupportedSaveExtensions[numChannels]);
                 // const char* startingFileNameEntry=NULL,const char* fileFilterExtensionString=NULL,const char* windowTitle=NULL,const ImVec2& windowSize=ImVec2(-1,-1),const ImVec2& windowPos=ImVec2(-1,-1),const float windowAlpha=0.875f);
@@ -4150,7 +4170,7 @@ struct StbImage {
                                 // ImGuiFs::FileDownload(filePath,filePathName);
                                 // But it requires IMGUI_FILESYSTEM_H_. Alternative:
                                 ImGuiTextBuffer buffer;
-                                buffer.append("saveFileFromMemoryFSToDisk('%s','%s')",filePath,filePathName);
+				buffer.append("saveFileFromMemoryFSToDisk(\"%s\",\"%s\")",filePath,filePathName);
                                 emscripten_run_script(&buffer.Buf[0]);
                             }
 #                           endif // EMSCRIPTEN_SAVE_SHELL
@@ -4162,15 +4182,19 @@ struct StbImage {
                 if (ImGui::Button("Reload")) {loadFromFile(filePath);}
             }
 #       ifdef IMGUI_FILESYSTEM_H_
-            ImGui::PushItemWidth(-1);
-            const bool loadNewImage = ImGui::Button("Load New Image");
-            ImGui::PopItemWidth();
-            const char* path = LoadDialog.chooseFileDialog(loadNewImage,
-                                                           //LoadDialog.getLastDirectory(),
-                                                           filePath,
-                                                           ImGuiIE::SupportedLoadExtensions
-                                                           );
-            if (strlen(path)>0) loadFromFile(path);
+            bool loadNewImage = false;
+            if (ImGuiIE::SupportedLoadExtensions[0]!='\0')  {
+                ImGui::PushItemWidth(-1);
+                loadNewImage = ImGui::Button("Load New Image");
+                ImGui::PopItemWidth();
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s",ImGuiIE::SupportedLoadExtensions);
+                const char* path = LoadDialog.chooseFileDialog(loadNewImage,
+                                                               //LoadDialog.getLastDirectory(),
+                                                               filePath,
+                                                               ImGuiIE::SupportedLoadExtensions
+                                                               );
+                if (strlen(path)>0) loadFromFile(path);
+            }
 #       endif //IMGUI_FILESYSTEM_H_
 
             ImGui::PopID();

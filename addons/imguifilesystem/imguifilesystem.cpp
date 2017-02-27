@@ -1427,7 +1427,15 @@ void FileGetExtensionTypesFromFilenames(ImVector<int>& fileExtensionTypesOut,con
 #if (defined(__EMSCRIPTEN__) && defined(EMSCRIPTEN_SAVE_SHELL))
 bool FileDownload(const char* path,const char* optionalSaveFileName)    {
     if (!path || !FileExists(path)) return false;
-    static char tmpString[ImGuiFs::MAX_PATH_BYTES*2]="";    // Better use static here...
+    ImGuiTextBuffer buffer;
+    if (optionalSaveFileName) buffer.append("saveFileFromMemoryFSToDisk(\"%s\",\"%s\")",path,optionalSaveFileName);
+    else {
+        char fileName[ImGuiFs::MAX_FILENAME_BYTES]="";
+        ImGuiFs::PathGetFileName(path,fileName);
+        buffer.append("saveFileFromMemoryFSToDisk(\"%s\",\"%s\")",path,fileName);
+    }
+    emscripten_run_script(&buffer.Buf[0]);
+    /*static char tmpString[ImGuiFs::MAX_PATH_BYTES*2]="";    // Better use static here...
     strcpy(tmpString,"saveFileFromMemoryFSToDisk('");
     strcat(tmpString,path);strcat(tmpString,"','");
     if (optionalSaveFileName) strcat(tmpString,optionalSaveFileName);
@@ -1437,7 +1445,7 @@ bool FileDownload(const char* path,const char* optionalSaveFileName)    {
         strcat(tmpString,fileName);
     }
     strcat(tmpString,"')");
-    emscripten_run_script(tmpString);
+    emscripten_run_script(tmpString);*/
     return true;
 }
 #endif // (defined(__EMSCRIPTEN__) && defined(EMSCRIPTEN_SAVE_SHELL))
@@ -2632,10 +2640,10 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
         if (isSaveFileDialog)   {
             ImGui::AlignFirstTextHeightToWidgets();
             ImGui::Text("File:");ImGui::SameLine();
-            if (ImGui::IsItemHovered() && I.mustFilterSaveFilePathWithFileFilterExtensionString && fileFilterExtensionString && strlen(fileFilterExtensionString)>0) ImGui::SetTooltip("%s",fileFilterExtensionString);
             lastTwoButtonsWidth = ImGui::CalcTextSize("Save Cancel").x+2.0f*(style.FramePadding.x+style.ItemSpacing.x)+style.WindowPadding.x;
             ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth()-lastTwoButtonsWidth);
             ImGui::InputText("##saveFileNameDialog",&I.saveFileName[0],MAX_FILENAME_BYTES);
+            if (ImGui::IsItemHovered() && I.mustFilterSaveFilePathWithFileFilterExtensionString && fileFilterExtensionString && strlen(fileFilterExtensionString)>0) ImGui::SetTooltip("%s",fileFilterExtensionString);
             ImGui::PopItemWidth();
             ImGui::SameLine();
         }
