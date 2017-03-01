@@ -1986,7 +1986,7 @@ void PerformCppSQLiteTest(ImGuiTextBuffer& rv,int nRowsToCreate) {
 	for (i = 0; i < (int) sizeof bin; i++)
 	{
 	    if (pbin[i] != i)   {
-        rv.append("Problem: i: ,%d bin[i]: %c\n",i,pbin[i]);
+        rv.append("Problem: i: ,%d bin[i]: %d\n",i,(int)pbin[i]);
 	    }
 	}
 

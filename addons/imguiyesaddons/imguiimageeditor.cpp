@@ -31,9 +31,10 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui_internal.h>
 
-//#define IMGUIIMAGEEDITOR_DEV_ONLY   // TO COMMENT OUT (mandatory)
+#define IMGUIIMAGEEDITOR_DEV_ONLY   // TO COMMENT OUT (mandatory)
 #ifdef IMGUIIMAGEEDITOR_DEV_ONLY
 #define IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS
+#define IMGUI_USE_LIBTIFF
 //-----------------------------------------------------------------------------------------------------------------
 // TO REMOVE! (used to force intellisense on Qt Creator)--
 #include "../../imgui.h"
@@ -242,6 +243,15 @@
 #endif //TINY_ICO_H
 #endif //IMGUIIMAGEEDITOR_NO_TINY_ICO_PLUGIN
 
+#ifdef IMGUI_USE_LIBTIFF    // This needs libtiff
+extern "C" {
+#include <tiffio.h>
+}
+#endif //IMGUI_USE_LIBTIFF
+/* _TIFF_
+
+*/
+
 #endif //IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS
 
 #endif //IMGUIIMAGEEDITOR_NO_PLUGINS
@@ -252,6 +262,164 @@
 
 
 namespace ImGuiIE {
+
+#ifdef _TIFF_
+struct my_tiff_memory_stream {
+    ImVector<char>& buf;
+    tsize_t pos;
+    my_tiff_memory_stream(ImVector<char>& b) : buf(b),pos(0) {}
+};
+static tsize_t my_tiff_read_proc( thandle_t handle, tdata_t buffer, tsize_t size )  {
+    //return fread((void*)buffer, size,(FILE*)handle);
+    my_tiff_memory_stream& s = *((my_tiff_memory_stream*)handle);
+    IM_ASSERT(s.pos+size<=(tsize_t)s.buf.size());
+    _TIFFmemcpy(buffer,&s.buf[s.pos],size);
+    s.pos+=size;
+    return size;
+}
+static tsize_t my_tiff_write_proc( thandle_t handle, tdata_t buffer, tsize_t size ) {
+    //return fwrite((const void*)buffer,size,(FILE*)handle);
+    my_tiff_memory_stream& s = *((my_tiff_memory_stream*)handle);
+    if (s.pos+size>s.buf.size()) s.buf.resize(s.pos+size);
+    memcpy(&s.buf[s.pos],buffer,size);
+    s.pos+=size;
+    return size;
+}
+static toff_t my_tiff_seek_proc( thandle_t handle, toff_t offset, int origin )  {
+    //return fseek((FILE*)handle,offset,origin);
+    my_tiff_memory_stream& s = *((my_tiff_memory_stream*)handle);
+    if (origin==SEEK_SET) {
+
+        s.pos = offset;
+        return s.pos;
+    }
+    else if (origin==SEEK_CUR) {
+
+        s.pos+=offset;
+        return s.pos;
+    }
+    else if (origin==SEEK_END) {
+
+        s.pos=(toff_t)s.buf.size()+offset;
+        return s.pos;
+    }
+    else return 0;
+}
+static int my_tiff_close_proc( thandle_t )   {
+    //return fclose((FILE*)handle);
+    return 0;
+}
+static toff_t my_tiff_size_proc(thandle_t handle) {
+    my_tiff_memory_stream& s = *((my_tiff_memory_stream*)handle);
+    return (toff_t) s.buf.size();
+}
+static int my_tiff_map_file_proc(thandle_t, void** , toff_t* ) {return 0;}
+static void my_tiff_unmap_file_proc(thandle_t, void* , toff_t ) {}
+static void my_tiff_extend_proc(TIFF*) {}
+
+static bool tiff_save_to_memory(const unsigned char* pixels,int w,int h,int c,ImVector<char>& rv) {
+    rv.clear();
+    my_tiff_memory_stream s(rv);
+    TIFF* tif = TIFFClientOpen( "MyMemFs","w",(thandle_t)&s,my_tiff_read_proc,my_tiff_write_proc,my_tiff_seek_proc,my_tiff_close_proc,
+                    my_tiff_size_proc,my_tiff_map_file_proc,my_tiff_unmap_file_proc);
+    if (tif) {
+        // From: http://research.cs.wisc.edu/graphics/Courses/638-f1999/libtiff_tutorial.htm
+        TIFFSetField (tif, TIFFTAG_IMAGEWIDTH, w);      // set the width of the image
+        TIFFSetField(tif, TIFFTAG_IMAGELENGTH, h);      // set the height of the image
+        TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, c);  // set number of channels per pixel
+        TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, 8);    // set the size of the channels
+        TIFFSetField(tif, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);    // set the origin of the image.
+        //   Some other essential fields to set that you do not have to understand for now.
+        TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+        TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
+
+        const tsize_t linebytes = c * w;     // length in memory of one row of pixel in the image.
+
+        unsigned char *buf = NULL;        // buffer used to store the row of pixel information for writing to file
+        //    Allocating memory to store the pixels of current row
+        buf = (unsigned char *)_TIFFmalloc(TIFFScanlineSize(tif));
+
+        // We set the strip size of the file to be size of one row of pixels
+        TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tif, w*c));
+
+        //fprintf(stderr,"tiff_save_to_memory(...): w=%d,h=%d,c=%d linebytes=%u TIFFDefaultStripSize(tif, w*c)=%u\n",w,h,c,linebytes,TIFFDefaultStripSize(tif, w*c));
+
+        //Now writing image to the file one strip at a time
+        for (int row = 0; row < h; row++)   {
+            memcpy(buf, &pixels[/*(h-row-1)*/row*linebytes], linebytes);    // check the index here, and figure out why not using h*linebytes
+            if (TIFFWriteScanline(tif, buf, row, 0)< 0)    break;
+        }
+
+        TIFFClose(tif);tif=NULL;
+        if (buf) {_TIFFfree(buf);buf=NULL;}
+        return true;
+    }
+    //else fprintf(stderr,"Error: tiff_save_to_memory...): !tif.\n");
+
+    return false;
+}
+static unsigned char* tiff_load_from_memory(const char* buffer,int size,int& w,int& h,int &c) {
+    if (!buffer || size<=0) return NULL;
+    w=h=0;c=4;
+    ImVector<char> rv;rv.resize(size);memcpy(&rv[0],buffer,size);
+    my_tiff_memory_stream s(rv);
+    unsigned char* data = NULL;
+
+    TIFF* tif = TIFFClientOpen( "MyMemFs","r",(thandle_t)&s,my_tiff_read_proc,my_tiff_write_proc,my_tiff_seek_proc,my_tiff_close_proc,
+                my_tiff_size_proc,my_tiff_map_file_proc,my_tiff_unmap_file_proc);
+    if (tif) {
+        /*int dircount = 0;
+        do {
+            dircount++;
+        } while (TIFFReadDirectory(tif));
+        printf("%d directories in tif.\n", dircount);*/
+
+        uint32 W, H, C;
+        size_t npixels;
+        uint32* raster;
+
+        TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &W);
+        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &H);
+        //TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &C);   // This does not work...
+        C=4;
+        npixels = W * H;
+
+        raster = (uint32*) _TIFFmalloc(npixels * sizeof (uint32));
+        if (raster != NULL) {
+            if (TIFFReadRGBAImage(tif, W, H, raster, 0)) {
+                w=(int)W;h=(int)H;c=(int)C;
+                //fprintf(stderr,"tiff_load_from_memory: w=%d h=%d c=%d\n",w,h,c);
+                data=(unsigned char*)STBI_MALLOC(w*h*c);
+
+/*
+char X=(char )TIFFGetX(raster[i]);  // where X can be the channels R, G, B, and A.
+// i is the index of the pixel in the raster.
+
+Important: Remember that the origin of the raster is at the lower left corner.
+You should be able to figure out the how the image is stored in the raster given
+that the pixel information is stored a row at a time!
+*/
+
+                unsigned char* pIm = data;
+                const unsigned char* pRasterBase = (const unsigned char*) raster;
+                const unsigned char* pRaster = pRasterBase;
+                for (unsigned y=0;y<H;y++)  {
+                    pIm = &data[y*W*C];
+                    pRaster = &pRasterBase[(H-1-y)*W*c];
+                    for (unsigned ic=0,icSz=W*C;ic<icSz;ic++)    {
+                        *pIm++ = *pRaster++;
+                    }
+                }
+            }
+            _TIFFfree(raster);raster=NULL;
+        }
+        TIFFClose(tif);tif=NULL;
+    }
+    //else fprintf(stderr,"Error: tiff_load_from_memory(...): !tif.\n");
+
+    return data;
+}
+#endif //_TIFF_
 
 // Some old compilers don't have round
 static float round(float x) {return x >= 0.0f ? floor(x + 0.5f) : ceil(x - 0.5f);}
@@ -443,6 +611,9 @@ inline static const char** GetLightEffectNames() {
 
 
 static bool GetFileContent(const char *filePath, ImVector<char> &contentOut, bool clearContentOutBeforeUsage=true,const char* modes="rb",bool appendTrailingZeroIfModesIsNotBinary=true)	{
+#   if (defined(IMGUI_USE_MINIZIP) && defined(IMGUI_FILESYSTEM_H_) && !defined(IMGUIFS_NO_EXTRA_METHODS))
+    return ImGuiFs::FileGetContent(filePath,contentOut);    // This gets the content inside a zip file too (if filePath is like: "C://MyDocuments/myzipfile.zip/myzipFile/something.png")
+#   endif //IMGUI_USE_MINIZIP
     ImVector<char>& f_data = contentOut;
     if (clearContentOutBeforeUsage) f_data.clear();
 //----------------------------------------------------
@@ -475,6 +646,9 @@ static bool GetFileContent(const char *filePath, ImVector<char> &contentOut, boo
 
 static bool SetFileContent(const char *filePath, const unsigned char* content, int contentSize,const char* modes="wb")	{
     if (!filePath || !content) return false;
+#   if (defined(IGUI_USE_MINIZIP) && defined(IMGUI_FILESYSTEM_H_) && !defined(IMGUIFS_NO_EXTRA_METHODS))
+    if (ImGuiFs::PathIsInsideAZipFile(filePath)) return false;  // Not supported
+#   endif //IMGUI_USE_MINIZIP
     FILE* f;
     if ((f = ImFileOpen(filePath, modes)) == NULL) return false;
     fwrite(content,contentSize, 1, f);
@@ -485,6 +659,9 @@ static bool SetFileContent(const char *filePath, const unsigned char* content, i
 
 static bool FileExists(const char *filePath)   {
     if (!filePath || strlen(filePath)==0) return false;
+#   if (defined(IMGUI_USE_MINIZIP) && defined(IMGUI_FILESYSTEM_H_) && !defined(IMGUIFS_NO_EXTRA_METHODS))
+    return ImGuiFs::PathExistsWithZipSupport(filePath,true,false);
+#   endif //IMGUI_USE_MINIZIP
     FILE* f = ImFileOpen(filePath, "rb");
     if (!f) return false;
     fclose(f);f=NULL;
@@ -531,6 +708,11 @@ static void InitSupportedFileExtensions() {
         strcat(p[3],".gif;");
         strcat(p[4],".gif;");
 #       endif
+#       ifdef _TIFF_
+        strcat(p[0],".tiff;.tif;");
+        //strcat(p[3],".tiff;.tif;");
+        strcat(p[4],".tiff;.tif;");
+#       endif //_TIFF_
         for (int i=0;i<5;i++)   {
             const int len = strlen(p[i]);
             if (len>0) p[i][len-1]='\0';   // trim last ';'
@@ -561,6 +743,9 @@ static void InitSupportedFileExtensions() {
 #       ifndef STBI_NO_GIF
         strcat(p,".gif;");
 #       endif
+#       ifdef _TIFF_
+        strcat(p,".tiff;.tif;");
+#       endif
 #       ifndef STBI_NO_BMP
         strcat(p,".bmp;");
 #       endif
@@ -573,6 +758,9 @@ static void InitSupportedFileExtensions() {
 #   else //IMGUIIMAGEEDITOR_LOAD_ONLY_SAVABLE_FORMATS
         strcpy(p,&SupportedSaveExtensions[0]);
 #   endif //IMGUIIMAGEEDITOR_LOAD_ONLY_SAVABLE_FORMATS
+#       if (defined(IMGUI_USE_MINIZIP) && defined(IMGUI_FILESYSTEM_H_) && !defined(IMGUIFS_NO_EXTRA_METHODS))
+        strcat(p,".zip;");  // This is a hack. It's just an attempt to allow opening images inside zip files
+#       endif
         const int len = strlen(p);
         if (len>0) p[len-1]='\0';   // trim last ';'
         else {
@@ -631,7 +819,6 @@ template <typename T> static T* ExtractImage(int& dstX,int& dstY,int& dstW,int& 
     int dstW = selection.Max.x - selection.Min.x;int dstH = selection.Max.y-selection.Min.y;
     return ExtractImage<T>(dstX,dstY,dstW,dstH,im,e,h,c);
 }*/
-
 
 template <typename T> static bool PasteImage(int posX,int posY,T* im,int w,int h,int c,const T* im2,int w2,int h2) {
     IM_ASSERT(im && im2 && w>0 && h>0 && c>0 && (c==1 || c==3 || c==4) && w2>0 && h2>0);
@@ -2399,11 +2586,17 @@ struct StbImage {
         filePaths.clear();
         filePathsIndex=-1;
         char parentFolder[ImGuiFs::MAX_PATH_BYTES] = "";
-        ImGuiFs::PathGetDirectoryName(filePath,parentFolder);
         ImGuiFs::PathStringVector allFilePaths;
+#       if (defined(IMGUI_USE_MINIZIP) && defined(IMGUI_FILESYSTEM_H_) && !defined(IMGUIFS_NO_EXTRA_METHODS))
+        ImGuiFs::PathGetDirectoryNameWithZipSupport(filePath,parentFolder);
+        ImGuiFs::DirectoryGetFilesWithZipSupport(parentFolder,allFilePaths);
+#       else //IMGUI_USE_MINIZIP
+        ImGuiFs::PathGetDirectoryName(filePath,parentFolder);
         ImGuiFs::DirectoryGetFiles(parentFolder,allFilePaths);
+#       endif //IMGUI_USE_MINIZIP
         char curFilePathExt[ImGuiFs::MAX_FILENAME_BYTES] = "";
         for (int i=0,isz=allFilePaths.size();i<isz;i++) {
+            //fprintf(stderr,"%d) %s\n",i,allFilePaths[i]);
             const char* curFilePathExtRef = strrchr(allFilePaths[i],(int)'.');
             if (curFilePathExtRef)  {
                 // We need it lowercase
@@ -2428,7 +2621,11 @@ struct StbImage {
 
 #       ifdef IMGUI_FILESYSTEM_H_
         char filePathAbsolute[ImGuiFs::MAX_PATH_BYTES] = "";
+#       if (defined(IMGUI_USE_MINIZIP) && defined(IMGUI_FILESYSTEM_H_) && !defined(IMGUIFS_NO_EXTRA_METHODS))
+        ImGuiFs::PathGetAbsoluteWithZipSupport(path,filePathAbsolute);
+#       else // IMGUI_USE_MINIZIP
         ImGuiFs::PathGetAbsolute(path,filePathAbsolute);
+#       endif //IMGUI_USE_MINIZIP
         ImStrAllocate(filePath,filePathAbsolute);
 #       else //IMGUI_FILESYSTEM_H_
         ImStrAllocate(filePath,path);
@@ -2436,6 +2633,9 @@ struct StbImage {
         filePathName = ImGetFileNameReference(filePath);
         ImStrAllocateFileExtension(fileExt,filePathName);
         fileExtCanBeSaved = (strstr(ImGuiIE::SupportedSaveExtensions[c],fileExt)!=NULL);
+#       if (defined(IMGUI_USE_MINIZIP) && defined(IMGUI_FILESYSTEM_H_) && !defined(IMGUIFS_NO_EXTRA_METHODS))
+        if (ImGuiFs::PathIsInsideAZipFile(path)) fileExtCanBeSaved = false;
+#       endif // IMGUI_USE_MINIZIP
         fileExtHasFullAlpha = !((strcmp(fileExt,".gif")==0) || (strcmp(fileExt,".ico")==0) || (strcmp(fileExt,".cur")==0));
 
 #       ifdef IMGUITABWINDOW_H_
@@ -2993,14 +3193,19 @@ struct StbImage {
         return ok;
     }
 
-    bool loadFromMemory(const unsigned char* buffer,int size,bool reloadMode = false,bool hasIcoFormat=false) {
+    bool loadFromMemory(const unsigned char* buffer,int size,bool reloadMode = false,const char* ext=NULL) {
         clear(reloadMode);
         if (!buffer || size<=0) return false;
         IM_ASSERT(!image);        
-        if (hasIcoFormat)   {
+        if (ext && ((strcmp(ext,".ico")==0) || (strcmp(ext,".cur")==0)))   {
 #           ifdef TINY_ICO_H
             image = tiny_ico_load_from_memory(buffer,size,&w,&h,&c,0);
 #           endif  //TINY_ICO_H
+        }
+        else if (ext && ((strcmp(ext,".tiff")==0) || (strcmp(ext,".tif")==0)))   {
+#           ifdef _TIFF_
+            image = ImGuiIE::tiff_load_from_memory((const char*) buffer,size,w,h,c);
+#           endif //_TIFF_
         }
         else if (!image) image = stbi_load_from_memory(buffer,size,&w,&h,&c,0);
         if (!image) return false;
@@ -3025,25 +3230,28 @@ struct StbImage {
     }
 
     bool loadFromFile(const char* path,bool updateFilePathsList=true) {
-        const bool reloadMode = (path==filePath);
-        clear(reloadMode);
-        ImVector<char> content;
-        if (!ImGuiIE::GetFileContent(path,content)) return false;
-        if (content.size()==0) return false;
-        bool hasIcoFormat = false;
-#       ifdef TINY_ICO_H
+        // Fetch file extension soon, because we could not use stbi_load in loadFromMemory(...):
+        char ext[6] = "";
         if (path) {
             const char* dot = strrchr(path,'.');
             const int len = (int) strlen(path);
-            if (dot && (dot-path)==len-4) {
-                char ext[5] = "";
+            if (dot && ((dot-path)==len-4 || (dot-path)==len-5)) {
                 strcpy(ext,dot);
-                for (int i=0;i<5;i++) ext[i]=tolower(ext[i]);
-                hasIcoFormat = (strcmp(ext,".ico")==0) || (strcmp(ext,".cur")==0);
+                for (int i=0;i<6;i++) ext[i]=tolower(ext[i]);
             }
         }
-#       endif //TINY_ICO_H
-        const bool ok = loadFromMemory((const unsigned char*)&content[0],content.size(),reloadMode,hasIcoFormat);
+        if (strcmp(ext,".zip")==0) return false;    // not an image file
+
+        const bool reloadMode = (path==filePath);
+        clear(reloadMode);
+        ImVector<char> content;
+#       if (defined(IMGUI_USE_MINIZIP) && defined(IMGUI_FILESYSTEM_H_) && !defined(IMGUIFS_NO_EXTRA_METHODS))
+        if (!ImGuiFs::FileGetContent(path,content)) return false;    // supports path inside zip files
+#       else // IMGUI_USE_MINIZIP
+        if (!ImGuiIE::GetFileContent(path,content)) return false;
+#       endif //IMGUI_USE_MINIZIP
+        if (content.size()==0) return false;
+        const bool ok = loadFromMemory((const unsigned char*)&content[0],content.size(),reloadMode,ext);
         if (ok) {
             if (!reloadMode) assignFilePath(path,updateFilePathsList);
             else if (mustUpdateFileListSoon) updateFileList();
@@ -3058,6 +3266,10 @@ struct StbImage {
         bool rv = false;
         if (!path || path[0]=='\0') path = filePath;
         if (!image || !path) return rv;
+#       if (defined(IMGUI_USE_MINIZIP) && defined(IMGUI_FILESYSTEM_H_) && !defined(IMGUIFS_NO_EXTRA_METHODS))
+        if (ImGuiFs::PathIsInsideAZipFile(path)) return false;  // Not supported
+#       endif // IMGUI_USE_MINIZIP
+
         // Get Extension and save it
         FileExtensionHelper feh(path);
         if (numChannels==0) {
@@ -3180,6 +3392,17 @@ struct StbImage {
                 }
             }
 #           endif //TINY_ICO_H
+        }
+        else if (strcmp(feh.ext,".tiff")==0 || strcmp(feh.ext,".tif")==0) {
+            IM_ASSERT(/*c==3 || */c==4);
+#           ifdef _TIFF_
+            if (!rv) {
+                ImVector<char> outBuf;
+                if (ImGuiIE::tiff_save_to_memory(image,w,h,c,outBuf)) {
+                    rv = ImGuiIE::SetFileContent(path,(const unsigned char*)&outBuf[0],outBuf.size());
+                }
+            }
+#           endif //_TIFF_
         }
 
         if (rv) {
@@ -4166,11 +4389,8 @@ struct StbImage {
                         else {
 #                           if (defined(__EMSCRIPTEN__) && defined(EMSCRIPTEN_SAVE_SHELL))
                             if (ImGuiIE::FileExists(filePath)) {
-                                // The easiest way to download a file locally (an emscripten save shell is required, see README_FIRST.txt), is:
-                                // ImGuiFs::FileDownload(filePath,filePathName);
-                                // But it requires IMGUI_FILESYSTEM_H_. Alternative:
                                 ImGuiTextBuffer buffer;
-				buffer.append("saveFileFromMemoryFSToDisk(\"%s\",\"%s\")",filePath,filePathName);
+                                buffer.append("saveFileFromMemoryFSToDisk(\"%s\",\"%s\")",filePath,filePathName);
                                 emscripten_run_script(&buffer.Buf[0]);
                             }
 #                           endif // EMSCRIPTEN_SAVE_SHELL

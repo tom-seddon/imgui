@@ -80,14 +80,23 @@ NOTES:
  * IMGUIIMAGEEDITOR_STBIMAGE_PATH           - (default:"./addons/imguibindings/stb_image.h")
  * IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS  - Enables support for saving .jpg and .gif and for loading/saving .ico files
  *                                            ===>> WARNING <<==
- *                                            These are all proprietary formats that MIGHT contain PATENTED algorithm.
+ *                                            These are all proprietary formats that MIGHT contain PATENTED algorithms.
  *                                            ====>>> USE THEM AT YOUR OWN RISK!!! <<<====
  *                                            You can further filter the non-stb plugins by using:
  *                                            IMGUIIMAGEEDITOR_NO_TINY_JPEG_PLUGIN
  *                                            IMGUIIMAGEEDITOR_NO_JO_GIF_PLUGIN
  *                                            IMGUIIMAGEEDITOR_NO_TINY_ICO_PLUGIN
  *                                            When not used, these plugins can be safely deleted from the plugin folder.
- * IMGUIIMAGEEDITOR_LOAD_ONLY_SAVABLE_FORMATS
+ *                                            [Experimental]: when IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS is defined,
+ *                                            you can further define IMGUI_USE_LIBTIFF (requires libtiff to be installed in your system) to load/save
+ *                                            .tiff files. Still: check out libtiff license and be warned that this
+ *                                            format might contain patented algorithms.
+ * IMGUIIMAGEEDITOR_LOAD_ONLY_SAVABLE_FORMATS - does what it says
+ * stb_image definitions can be used too (for example STBI_NO_GIF,etc.), but please make sure that you can load back
+ * all the savable image formats.
+ *
+ * UPDATE: Added ability to load and browse (but not to save) images inside zip folders,
+ * when IMGUI_USE_MINIZIP is defined and imguifilesystem is used.
 */
 
 // Please post bugs here: https://github.com/Flix01/imgui/issues

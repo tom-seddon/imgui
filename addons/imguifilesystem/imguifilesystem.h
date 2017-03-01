@@ -204,6 +204,7 @@ extern void DirectoryGetDirectories(const char* directoryName,PathStringVector& 
 extern void DirectoryGetFiles(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut=NULL, Sorting sorting= SORT_ORDER_ALPHABETIC);
 extern bool FileExists(const char* path);
 extern bool FileGetContent(const char* path,ImVector<unsigned char>& bufferOut,const char* password=NULL);  // password is used if it's a file inside a zip path when IMGUI_USE_MINIZIP is defined (e.g. path="C://MyDocuments/myzipfile.zip/myzipFile/something.txt")
+extern bool FileGetContent(const char* path,ImVector<char>& bufferOut,const char* password=NULL);  // password is used if it's a file inside a zip path when IMGUI_USE_MINIZIP is defined (e.g. path="C://MyDocuments/myzipfile.zip/myzipFile/something.txt")
 extern int FileGetExtensionType(const char* path);  // returns one of the FileExtensionType enums, or -1. Slow: you'd better cache the result wherever possible.
 extern void FileGetExtensionTypesFromFilenames(ImVector<int>& fileExtensionTypesOut,const FilenameStringVector& fileNames); // Same as above, except that now FilenameStringVector are chars of MAX_FILENAME_BYTES, usually shorter than MAX_PATH_BYTES
 #if (defined(__EMSCRIPTEN__) && defined(EMSCRIPTEN_SAVE_SHELL))
@@ -223,6 +224,7 @@ bool getDirectories(const char* directoryName,PathStringVector& result,FilenameS
 bool getFiles(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut=NULL,Sorting sorting= SORT_ORDER_ALPHABETIC,bool prefixResultWithTheFullPathOfTheZipFile=false) const;
 unsigned int getFileSize(const char* filePath) const;
 bool getFileContent(const char* filePath,ImVector<unsigned char>& bufferOut,const char* password=NULL) const;
+bool getFileContent(const char* filePath,ImVector<char>& bufferOut,const char* password=NULL) const;
 bool exists(const char* pathInsideZip, bool reportOnlyFiles=false, bool reportOnlyDirectories=false) const;
 bool fileExists(const char* pathInsideZip) const;
 bool directoryExists(const char* pathInsideZip) const;
@@ -234,7 +236,14 @@ struct UnZipFileImpl* im;
 // eg: path="C://MyDocuments/myzipfile.zip/myzipFile/something" -> rv1="C://MyDocuments/myzipfile.zip", rv2="myzipFile/something"
 extern bool PathSplitFirstZipFolder(const char* path, char* rv1,char* rv2,bool rv1IsAbsolutePath=true);
 // eg: path="C://MyDocuments/myzipfile.zip/myzipFile/something"
-extern bool PathExistsWithZipSupport(const char* path, bool reportOnlyFiles=false, bool reportOnlyDirectories=false,bool checkAbsolutePath=true);
+extern bool PathExistsWithZipSupport(const char* path, bool reportOnlyFiles=false, bool reportOnlyDirectories=false, bool checkAbsolutePath=true, bool *isInsideAZipFile=NULL);
+// eg: path="C://MyDocuments/myzipfile.zip/myzipFile/something" (regardless if it exists or not)
+extern bool PathIsInsideAZipFile(const char* path);
+// eg: directoryName="C://MyDocuments/myzipfile.zip/myzipFile"
+extern bool DirectoryGetDirectoriesWithZipSupport(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut=NULL,Sorting sorting= SORT_ORDER_ALPHABETIC,bool prefixResultWithTheFullPathOfTheZipFile=true);
+extern bool DirectoryGetFilesWithZipSupport(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut=NULL,Sorting sorting= SORT_ORDER_ALPHABETIC,bool prefixResultWithTheFullPathOfTheZipFile=true);
+extern void PathGetDirectoryNameWithZipSupport(const char* path,char* rv,bool prefixResultWithTheFullPathOfTheZipFile=true);
+extern void PathGetAbsoluteWithZipSupport(const char* path,char* rv);
 #endif //IMGUI_USE_MINIZIP
 #endif //IMGUIFS_NO_EXTRA_METHODS
 

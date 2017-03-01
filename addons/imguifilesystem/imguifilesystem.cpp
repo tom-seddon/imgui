@@ -976,8 +976,8 @@ struct UnZipFileImpl {
         ImVector<unz_file_info64_plus> fileInfos;
 
         // Fill fileInfos
-        char tmp[MAX_PATH_BYTES];char filename_inzip[MAX_PATH_BYTES];const char charCrypt[2]="*";
-        unz_file_info64 file_info;bool ok;
+        char tmp[MAX_PATH_BYTES]="";char filename_inzip[MAX_PATH_BYTES]="";const char charCrypt[2]="*";
+        unz_file_info64 file_info;bool ok=false;
         err = unzGoToFirstFile(uf);
         if (err!=UNZ_OK)  {
             fprintf(stderr,"error %d with zipfile in unzGoToFirstFile",err);
@@ -1135,13 +1135,17 @@ if (fileInfos.size()>0) {
         }
         return false;
     }
-    static bool PathExistsWithZipSupport(const char* path, bool reportOnlyFiles, bool reportOnlyDirectories, bool checkAbsolutePath=true) {
+    static bool PathExistsWithZipSupport(const char* path, bool reportOnlyFiles, bool reportOnlyDirectories, bool checkAbsolutePath=true, bool* isInsideAZipFile=NULL) {
         char rv1[MAX_PATH_BYTES];char rv2[MAX_PATH_BYTES];rv1[0]='\0';rv2[0]='\0';
         if (PathSplitFirstZipFolder(path,rv1,rv2,checkAbsolutePath))    {
+            if (isInsideAZipFile) *isInsideAZipFile = true;
             UnZipFile unz(rv1);
             return unz.exists(rv2,reportOnlyFiles,reportOnlyDirectories);
         }
-        else return PathExists(rv1);
+        else {
+            if (isInsideAZipFile) *isInsideAZipFile = false;
+            return PathExists(rv1);
+        }
     }
 };
 bool UnZipFile::load(const char* zipFilePath,bool reloadIfAlreadyLoaded) {
@@ -1179,42 +1183,44 @@ unsigned int UnZipFile::getFileSize(const char* filePath) const   {
     if (sz==file_info.uncompressed_size) return sz;
     return 0;
 }
-bool UnZipFile::getFileContent(const char* filePath,ImVector<unsigned char>& bufferOut,const char* password) const    {
+template<typename CharType> static bool UnZipFileGetFileContentBase(ImGuiFs::UnZipFileImpl* im,const char* filePath,ImVector<CharType>& bufferOut,const char* password)   {
     bufferOut.clear();
     if (!im->uf || !filePath) return false;
     if (unzLocateFile(im->uf,filePath,0)!=UNZ_OK) return false;
     unz_file_info64 file_info;char filename_inzip[2048];    // it's the filename without path
     int err = unzGetCurrentFileInfo64(im->uf,&file_info,filename_inzip,sizeof(filename_inzip),NULL,0,NULL,0);
-    if (err!=UNZ_OK)  {
+    if (err<0)  {
         fprintf(stderr,"Error while unzipping: \"%s\": %d with zipfile in unzGetCurrentFileInfo\n",filePath,err);
         return false;
     }
     //if (file_info.uncompressed_size>MAX_UNSIGNED_INT) return false; // where is MAX_UNSIGNED_INT ???
     err = unzOpenCurrentFilePassword(im->uf,password);
-    if (err!=UNZ_OK)  {
+    if (err<0)  {
         fprintf(stderr,"Error while unzipping: \"%s\": %d with zipfile in unzOpenCurrentFilePassword\n",filePath,err);
         return false;
     }
     bufferOut.resize(file_info.uncompressed_size);
-    if (bufferOut.size()<file_info.uncompressed_size) {
+    if ((unsigned)bufferOut.size()<file_info.uncompressed_size) {
         fprintf(stderr,"Error while unzipping: \"%s\": file is too big.\n",filePath);
-        ImVector<unsigned char> tmp;bufferOut.swap(tmp);
+        ImVector<CharType> tmp;bufferOut.swap(tmp);
         unzCloseCurrentFile (im->uf);
         return false;
     }
     err = unzReadCurrentFile(im->uf,&bufferOut[0],bufferOut.size());
-    if (err!=UNZ_OK) {
+    if (err<0) {
         fprintf(stderr,"Error while unzipping: \"%s\": %d with zipfile in unzReadCurrentFile\n",filePath,err);
-        ImVector<unsigned char> tmp;bufferOut.swap(tmp);
+        ImVector<CharType> tmp;bufferOut.swap(tmp);
         unzCloseCurrentFile (im->uf);
         return false;
     }
     err = unzCloseCurrentFile (im->uf);
-    if (err!=UNZ_OK) {
+    if (err<0) {
         fprintf(stderr,"Error while unzipping: \"%s\": %d with zipfile in unzCloseCurrentFile\n",filePath,err);
     }
     return true;
 }
+bool UnZipFile::getFileContent(const char* filePath,ImVector<unsigned char>& bufferOut,const char* password) const    {return UnZipFileGetFileContentBase<unsigned char>(im,filePath,bufferOut,password);}
+bool UnZipFile::getFileContent(const char* filePath,ImVector<char>& bufferOut,const char* password) const    {return UnZipFileGetFileContentBase<char>(im,filePath,bufferOut,password);}
 bool UnZipFile::exists(const char* pathInsideZip,bool reportOnlyFiles,bool reportOnlyDirectories) const {
     if (!im->uf || !pathInsideZip) return false;
     char path[MAX_PATH_BYTES];
@@ -1289,11 +1295,69 @@ UnZipFile::~UnZipFile() {
 bool PathSplitFirstZipFolder(const char* path, char* rv1,char* rv2,bool rv1IsAbsolutePath)  {
     return UnZipFileImpl::PathSplitFirstZipFolder(path,rv1,rv2,rv1IsAbsolutePath);
 }
-bool PathExistsWithZipSupport(const char* path, bool reportOnlyFiles, bool reportOnlyDirectories,bool checkAbsolutePath) {
-    return UnZipFileImpl::PathExistsWithZipSupport(path,reportOnlyFiles,reportOnlyDirectories,checkAbsolutePath);
+bool PathExistsWithZipSupport(const char* path, bool reportOnlyFiles, bool reportOnlyDirectories,bool checkAbsolutePath,bool* isInsideAZipFile) {
+    return UnZipFileImpl::PathExistsWithZipSupport(path,reportOnlyFiles,reportOnlyDirectories,checkAbsolutePath,isInsideAZipFile);
 }
+bool PathIsInsideAZipFile(const char* path) {
+    bool isInsideAZipFile = false;
+    UnZipFileImpl::PathExistsWithZipSupport(path,true,true,true,&isInsideAZipFile);
+    return isInsideAZipFile;
+}
+bool DirectoryGetDirectoriesWithZipSupport(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut,Sorting sorting,bool prefixResultWithTheFullPathOfTheZipFile)   {
+    result.clear();if (pOptionalNamesOut) pOptionalNamesOut->clear();
+    char zipRoot[ImGuiFs::MAX_PATH_BYTES]="";
+    char zipFolder[ImGuiFs::MAX_PATH_BYTES]="";
+    if (PathSplitFirstZipFolder(directoryName,zipRoot,zipFolder)) {
+        UnZipFile uzf(zipRoot);
+        if (!uzf.isValid()) return false;
+        return uzf.getDirectories(zipFolder,result,pOptionalNamesOut,sorting,prefixResultWithTheFullPathOfTheZipFile);
+    }
+    ImGuiFs::DirectoryGetDirectories(directoryName,result,pOptionalNamesOut,sorting);
+    return true;
+}
+bool DirectoryGetFilesWithZipSupport(const char* directoryName,PathStringVector& result,FilenameStringVector* pOptionalNamesOut,Sorting sorting,bool prefixResultWithTheFullPathOfTheZipFile) {
+    result.clear();if (pOptionalNamesOut) pOptionalNamesOut->clear();
+    char zipRoot[ImGuiFs::MAX_PATH_BYTES]="";
+    char zipFolder[ImGuiFs::MAX_PATH_BYTES]="";
+    if (PathSplitFirstZipFolder(directoryName,zipRoot,zipFolder)) {
+        UnZipFile uzf(zipRoot);
+        if (!uzf.isValid()) return false;
+        return uzf.getFiles(zipFolder,result,pOptionalNamesOut,sorting,prefixResultWithTheFullPathOfTheZipFile);
+    }
+    ImGuiFs::DirectoryGetFiles(directoryName,result,pOptionalNamesOut,sorting);
+    return true;
+}
+void PathGetDirectoryNameWithZipSupport(const char* path,char* rv,bool prefixResultWithTheFullPathOfTheZipFile)  {
+    char zipRoot[ImGuiFs::MAX_PATH_BYTES]="";
+    char zipRelativePath[ImGuiFs::MAX_PATH_BYTES]="";
+    rv[0]='\0';
+    if (PathSplitFirstZipFolder(path,zipRoot,zipRelativePath)) {
+        char tmp[ImGuiFs::MAX_PATH_BYTES]="";
+        ImGuiFs::PathGetDirectoryName(zipRelativePath,tmp);
+        if (prefixResultWithTheFullPathOfTheZipFile)    {
+            strcpy(rv,zipRoot);
+            if (strlen(tmp)>0 && tmp[0]!='/' && tmp[0]!='\\') strcat(rv,"/");
+        }
+        strcat(rv,tmp);
+    }
+    else ImGuiFs::PathGetDirectoryName(path,rv);
+}
+void PathGetAbsoluteWithZipSupport(const char* path,char* rv)   {
+    char zipRoot[ImGuiFs::MAX_PATH_BYTES]="";
+    char zipRelativePath[ImGuiFs::MAX_PATH_BYTES]="";
+    rv[0]='\0';
+    if (PathSplitFirstZipFolder(path,zipRoot,zipRelativePath)) {
+        char tmp[ImGuiFs::MAX_PATH_BYTES]="";
+        ImGuiFs::PathGetAbsolute(zipRoot,tmp);
+        strcpy(rv,tmp);
+        if (strlen(zipRelativePath)>0 && zipRelativePath[0]!='/' && zipRelativePath[0]!='\\') strcat(rv,"/");
+        strcat(rv,zipRelativePath);
+    }
+    else ImGuiFs::PathGetAbsolute(path,rv);
+}
+
 #endif //IMGUI_USE_MINIZIP
-bool FileGetContent(const char* path,ImVector<unsigned char>& bufferOut,const char* password) {
+template <typename CharType> bool FileGetContentBase(const char* path,ImVector<CharType>& bufferOut,const char* password) {
     bufferOut.clear();
     char mainPath[MAX_PATH_BYTES];
 #   ifdef IMGUI_USE_MINIZIP
@@ -1331,6 +1395,8 @@ bool FileGetContent(const char* path,ImVector<unsigned char>& bufferOut,const ch
     fclose(fin);fin=NULL;
     return true;
 }
+bool FileGetContent(const char* path,ImVector<unsigned char>& bufferOut,const char* password) {return FileGetContentBase<unsigned char>(path,bufferOut,password);}
+bool FileGetContent(const char* path,ImVector<char>& bufferOut,const char* password) {return FileGetContentBase<char>(path,bufferOut,password);}
 #endif // IMGUIFS_NO_EXTRA_METHODS
 // End definitions of some helper classes----------------------------------------------------------------------------------------
 
@@ -1435,17 +1501,6 @@ bool FileDownload(const char* path,const char* optionalSaveFileName)    {
         buffer.append("saveFileFromMemoryFSToDisk(\"%s\",\"%s\")",path,fileName);
     }
     emscripten_run_script(&buffer.Buf[0]);
-    /*static char tmpString[ImGuiFs::MAX_PATH_BYTES*2]="";    // Better use static here...
-    strcpy(tmpString,"saveFileFromMemoryFSToDisk('");
-    strcat(tmpString,path);strcat(tmpString,"','");
-    if (optionalSaveFileName) strcat(tmpString,optionalSaveFileName);
-    else {
-        char fileName[ImGuiFs::MAX_FILENAME_BYTES]="";
-        ImGuiFs::PathGetFileName(path,fileName);
-        strcat(tmpString,fileName);
-    }
-    strcat(tmpString,"')");
-    emscripten_run_script(tmpString);*/
     return true;
 }
 #endif // (defined(__EMSCRIPTEN__) && defined(EMSCRIPTEN_SAVE_SHELL))
