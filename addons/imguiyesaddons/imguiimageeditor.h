@@ -88,7 +88,8 @@ NOTES:
  *                                            IMGUIIMAGEEDITOR_NO_TINY_ICO_PLUGIN
  *                                            When not used, these plugins can be safely deleted from the plugin folder.
  *                                            [Experimental]: when IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS is defined,
- *                                            you can further define IMGUI_USE_LIBTIFF (requires libtiff to be installed in your system) to load/save
+ *                                            you can further define IMGUI_USE_LIBTIFF
+ *                                            (it requires libtiff to be installed in your system) to load/save
  *                                            .tiff files. Still: check out libtiff license and be warned that this
  *                                            format might contain patented algorithms.
  * IMGUIIMAGEEDITOR_LOAD_ONLY_SAVABLE_FORMATS - does what it says
@@ -96,7 +97,7 @@ NOTES:
  * all the savable image formats.
  *
  * UPDATE: Added ability to load and browse (but not to save) images inside zip folders,
- * when IMGUI_USE_MINIZIP is defined and imguifilesystem is used.
+ * when IMGUI_USE_MINIZIP is defined and imguifilesystem is used (this needs linking to zlib).
 */
 
 // Please post bugs here: https://github.com/Flix01/imgui/issues

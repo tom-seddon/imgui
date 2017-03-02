@@ -408,7 +408,7 @@ bool TabLabelStyle::Edit(TabLabelStyle &s)  {
     ImGui::Text("Tab Labels:");
     ImGui::PushItemWidth(50);
     changed|=ImGui::DragFloat("fillColorGradientDeltaIn0_05",&s.fillColorGradientDeltaIn0_05,0.01f,0.f,.5f,"%1.3f");
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Zero gradient renders much faster\nwhen \"rounding\" is positive.");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Zero gradient (render)s much faster\nwhen \"rounding\" is positive.");
     changed|=ImGui::DragFloat("rounding",&s.rounding,dragSpeed,0.0f,16.f,prec);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Small values render faster\nbut to really speed up gradients\nset this to zero.");
     changed|=ImGui::DragFloat("borderWidth",&s.borderWidth,.01f,0.f,5.f,"%1.2f");
@@ -1441,81 +1441,83 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
     if (child[0])   {
         IM_ASSERT(child[1]);
         IM_ASSERT(tabs.size()==0);
-	style.Colors[ImGuiCol_ChildWindowBg] = colorTransparent;
-        ImGui::RevertUpstreamBeginChildCommit::OldBeginChild(name,windowSize,false,ImGuiWindowFlags_NoScrollbar);
-	style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
-        ImVec2 ws = windowSize;
-        float splitterPercToPixels = 0.f,splitterDelta = 0.f;
-        if (horizontal && ws.y>splitterSize) {
-            ws.y-=splitterSize;
-            splitterPercToPixels = ws.y*splitterPerc;
-            child[0]->render(ImVec2(ws.x,splitterPercToPixels),ptr);
-            // Horizontal Splitter ------------------------------------------
-            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
-            ImGui::PushStyleColor(ImGuiCol_Button,mhs.splitterColor);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mhs.splitterColorHovered);
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive,mhs.splitterColorActive);
-            ImGui::PushID(this);
+        const float minSplitSize = 10;  // If size is smaller, the child won't be displayed
+        style.Colors[ImGuiCol_ChildWindowBg] = colorTransparent;
+        if (ImGui::RevertUpstreamBeginChildCommit::OldBeginChild(name,windowSize,false,ImGuiWindowFlags_NoScrollbar))   {
+            style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
+            ImVec2 ws = windowSize;
+            float splitterPercToPixels = 0.f,splitterDelta = 0.f;
+            if (horizontal && ws.y>splitterSize && ws.x>minSplitSize) {
+                ws.y-=splitterSize;
+                splitterPercToPixels = ws.y*splitterPerc;
+                if (splitterPercToPixels>minSplitSize) child[0]->render(ImVec2(ws.x,splitterPercToPixels),ptr);
+                // Horizontal Splitter ------------------------------------------
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
+                ImGui::PushStyleColor(ImGuiCol_Button,mhs.splitterColor);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mhs.splitterColorHovered);
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive,mhs.splitterColorActive);
+                ImGui::PushID(this);
 
-            ImGui::Button("##splitter0", ImVec2(ws.x,splitterSize));
-            splitterActive = !mhs.isASplitterActive && ImGui::IsItemActive();
-            if (splitterActive || ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+                ImGui::Button("##splitter0", ImVec2(ws.x,splitterSize));
+                splitterActive = !mhs.isASplitterActive && ImGui::IsItemActive();
+                if (splitterActive || ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
 
-            mhs.isASplitterActive |= splitterActive;
-            if (splitterActive)  splitterDelta = ImGui::GetIO().MouseDelta.y;
-            else splitterDelta = 0.f;
-            if (splitterActive)  {
-                float& h = splitterPercToPixels;
-                const float minh = splitterSize;
-                const float maxh = ws.y-splitterSize - mhs.textHeightWithSpacing;//20;   Is this correct ?       // Warning: 20.f is hard-coded!
-                if (h+splitterDelta>maxh)           splitterDelta = (h!=maxh) ? (maxh-h) : 0.f;
-                else if (h+splitterDelta<minh)      splitterDelta = (h!=minh) ? (minh-h) : 0.f;
-                h+=splitterDelta;
-                splitterPerc = splitterPercToPixels/ws.y;
+                mhs.isASplitterActive |= splitterActive;
+                if (splitterActive)  splitterDelta = ImGui::GetIO().MouseDelta.y;
+                else splitterDelta = 0.f;
+                if (splitterActive)  {
+                    float& h = splitterPercToPixels;
+                    const float minh = splitterSize;
+                    const float maxh = ws.y-splitterSize - mhs.textHeightWithSpacing;//20;   Is this correct ?       // Warning: 20.f is hard-coded!
+                    if (h+splitterDelta>maxh)           splitterDelta = (h!=maxh) ? (maxh-h) : 0.f;
+                    else if (h+splitterDelta<minh)      splitterDelta = (h!=minh) ? (minh-h) : 0.f;
+                    h+=splitterDelta;
+                    splitterPerc = splitterPercToPixels/ws.y;
+                }
+                ImGui::PopID();
+                ImGui::PopStyleColor(3);
+                ImGui::PopStyleVar();
+                //------------------------------------------------------
+                if (ws.y-splitterPercToPixels>minSplitSize) child[1]->render(ImVec2(ws.x,ws.y-splitterPercToPixels),ptr);
             }
-            ImGui::PopID();
-            ImGui::PopStyleColor(3);
-            ImGui::PopStyleVar();
-            //------------------------------------------------------
-            child[1]->render(ImVec2(ws.x,ws.y-splitterPercToPixels),ptr);
-        }
-        else if (!horizontal && ws.x>splitterSize) {
-            ws.x-=splitterSize;
-            splitterPercToPixels = ws.x*splitterPerc;
-            child[0]->render(ImVec2(splitterPercToPixels,ws.y),ptr);
-            // Vertical Splitter ------------------------------------------
-            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
-            ImGui::PushStyleColor(ImGuiCol_Button,mhs.splitterColor);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mhs.splitterColorHovered);
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive,mhs.splitterColorActive);
-            ImGui::PushID(this);
-            ImGui::SameLine(0,0);
+            else if (!horizontal && ws.x>splitterSize && ws.y>minSplitSize) {
+                ws.x-=splitterSize;
+                splitterPercToPixels = ws.x*splitterPerc;
+                if (splitterPercToPixels>minSplitSize) child[0]->render(ImVec2(splitterPercToPixels,ws.y),ptr);
+                // Vertical Splitter ------------------------------------------
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
+                ImGui::PushStyleColor(ImGuiCol_Button,mhs.splitterColor);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mhs.splitterColorHovered);
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive,mhs.splitterColorActive);
+                ImGui::PushID(this);
+                ImGui::SameLine(0,0);
 
-            ImGui::Button("##splitter1", ImVec2(splitterSize,ws.y));
-            splitterActive = !mhs.isASplitterActive && ImGui::IsItemActive();
-            if (splitterActive || ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+                ImGui::Button("##splitter1", ImVec2(splitterSize,ws.y));
+                splitterActive = !mhs.isASplitterActive && ImGui::IsItemActive();
+                if (splitterActive || ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
 
-            mhs.isASplitterActive |= splitterActive;
-            if (splitterActive)  splitterDelta = ImGui::GetIO().MouseDelta.x;
-            else splitterDelta = 0.f;
-            if (splitterActive)  {
-                float& w = splitterPercToPixels;
-                const float minw = splitterSize;
-                const float maxw = ws.x-splitterSize;
-                if (w + splitterDelta>maxw)         splitterDelta = (w!=maxw) ? (maxw-w) : 0.f;
-                else if (w + splitterDelta<minw)    splitterDelta = (w!=minw) ? (minw-w) : 0.f;
-                w+=splitterDelta;
-                splitterPerc = splitterPercToPixels/ws.x;
+                mhs.isASplitterActive |= splitterActive;
+                if (splitterActive)  splitterDelta = ImGui::GetIO().MouseDelta.x;
+                else splitterDelta = 0.f;
+                if (splitterActive)  {
+                    float& w = splitterPercToPixels;
+                    const float minw = splitterSize;
+                    const float maxw = ws.x-splitterSize;
+                    if (w + splitterDelta>maxw)         splitterDelta = (w!=maxw) ? (maxw-w) : 0.f;
+                    else if (w + splitterDelta<minw)    splitterDelta = (w!=minw) ? (minw-w) : 0.f;
+                    w+=splitterDelta;
+                    splitterPerc = splitterPercToPixels/ws.x;
+                }
+                ImGui::SameLine(0,0);
+                ImGui::PopID();
+                ImGui::PopStyleColor(3);
+                ImGui::PopStyleVar();
+                //------------------------------------------------------
+                if (ws.x-splitterPercToPixels>minSplitSize) child[1]->render(ImVec2(ws.x-splitterPercToPixels,ws.y),ptr);
             }
-            ImGui::SameLine(0,0);
-            ImGui::PopID();
-            ImGui::PopStyleColor(3);
-            ImGui::PopStyleVar();
-            //------------------------------------------------------
-            child[1]->render(ImVec2(ws.x-splitterPercToPixels,ws.y),ptr);
+            //else {/* Window too tiny: better not to draw it, otherwise the splitters overlap and may cause bad stuff */}
         }
-        //else {/* Window too tiny: better not to draw it, otherwise the splitters overlap and may cause bad stuff */}
-
+        else style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
         ImGui::EndChild();  // name
         return;
     }
@@ -1528,194 +1530,196 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
     //----------------------------------------------------------------
     {
         style.Colors[ImGuiCol_ChildWindowBg] = colorTransparent;
-        ImGui::RevertUpstreamBeginChildCommit::OldBeginChild(name,windowSize,false,ImGuiWindowFlags_NoScrollbar);
-        if (tabStyle.tabWindowLabelBackgroundColor.w!=0)    {
-            ImGuiWindow* window = ImGui::GetCurrentWindow();
-            window->DrawList->AddRectFilled(window->Pos, window->Pos+ImVec2(windowSize.x,allTabsSize.y), GetColorU32(tabStyle.tabWindowLabelBackgroundColor), 0);
-        }
-        style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
-        ImGuiContext& g = *GImGui;
-        TabWindowDragData& dd = gDragData;
-        const ImFont* fontOverride = NULL;
-
-
-        ImGui::Spacing();	    // Hack to remove when I'll find out why the top border of the tab labels gets clipped out.
-        ImGui::BeginGroup();
-        const int numTabs = tabs.size();
-        if (numTabs>0 && !selectedTab) selectedTab = tabs[0];
-
-        float windowWidth = 0.f,sumX=0.f;
-        windowWidth = windowSize.x;//ImGui::GetWindowWidth();// - style.WindowPadding.x;// - (ImGui::GetScrollMaxY()>0 ? style.ScrollbarSize : 0.f);
-        TabWindow::TabLabel* newSelectedTab = selectedTab;
-        numClosableTabs = 0;        
-        ImVec2 tabButtonSz(0,0);bool mustCloseTab = false;bool canUseSizeOptimization = false;bool isAItemHovered = false;
-        const bool isDraggingCorrectly = mhs.isMouseDragging && !mhs.LockedDragging && !mhs.isASplitterActive;
-        bool selection_changed = false;
-        for (int i = 0; i < numTabs; i++)
-        {
-            TabWindow::TabLabel& tab = *tabs[i];
-            if (tab.closable) ++numClosableTabs;
-
-            fontOverride = ((selectedTab == &tab) ? (tab.getModified() ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED_MODIFIED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED]]) :
-                (tab.getModified() ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_MODIFIED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_NORMAL]]));
-            if (!fontOverride) {
-                if (selectedTab == &tab) fontOverride = TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED]];
-                else if (tab.getModified())  fontOverride = TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_MODIFIED]];
+        if (ImGui::RevertUpstreamBeginChildCommit::OldBeginChild(name,windowSize,false,ImGuiWindowFlags_NoScrollbar)) {
+            if (tabStyle.tabWindowLabelBackgroundColor.w!=0)    {
+                ImGuiWindow* window = ImGui::GetCurrentWindow();
+                window->DrawList->AddRectFilled(window->Pos, window->Pos+ImVec2(windowSize.x,allTabsSize.y), GetColorU32(tabStyle.tabWindowLabelBackgroundColor), 0);
             }
+            style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
+            ImGuiContext& g = *GImGui;
+            TabWindowDragData& dd = gDragData;
+            const ImFont* fontOverride = NULL;
 
-            if (sumX > 0.f) {
-                sumX+=style.ItemSpacing.x;   // Maybe we can skip it if we use SameLine(0,0) below
-                ImGui::TabButton(NULL,selectedTab == &tab,tab.closable ? &mustCloseTab : NULL,tab.getLabel(),&tabButtonSz,&tabStyle,(ImFont*)fontOverride);
-                sumX+=tabButtonSz.x;
-                if (sumX>windowWidth) sumX = 0.f;
-                else ImGui::SameLine();
-                canUseSizeOptimization = true;
-            }
-            else canUseSizeOptimization = false;
 
-            // Draw the button
-            mustCloseTab = false;
-            ImGui::PushID(&tab);   // otherwise two tabs with the same name would clash.
-            if (tab.mustSelectNextFrame || ImGui::TabButton("",(selectedTab == &tab),tab.closable ? &mustCloseTab : NULL,tab.getLabel(),NULL,&tabStyle,(ImFont*)fontOverride,NULL,NULL,canUseSizeOptimization))   {
-                selection_changed = (selectedTab != &tab);
-                newSelectedTab = &tab;
-                tab.mustSelectNextFrame = false;
-            }
-            ImGui::PopID();
+            ImGui::Spacing();	    // Hack to remove when I'll find out why the top border of the tab labels gets clipped out.
+            ImGui::BeginGroup();
+            const int numTabs = tabs.size();
+            if (numTabs>0 && !selectedTab) selectedTab = tabs[0];
 
-            if (sumX==0.f) sumX = style.WindowPadding.x + ImGui::GetItemRectSize().x; // First element of a line
+            float windowWidth = 0.f,sumX=0.f;
+            windowWidth = windowSize.x;//ImGui::GetWindowWidth();// - style.WindowPadding.x;// - (ImGui::GetScrollMaxY()>0 ? style.ScrollbarSize : 0.f);
+            TabWindow::TabLabel* newSelectedTab = selectedTab;
+            numClosableTabs = 0;
+            ImVec2 tabButtonSz(0,0);bool mustCloseTab = false;bool canUseSizeOptimization = false;bool isAItemHovered = false;
+            const bool isDraggingCorrectly = mhs.isMouseDragging && !mhs.LockedDragging && !mhs.isASplitterActive;
+            bool selection_changed = false;
+            for (int i = 0; i < numTabs; i++)
+            {
+                TabWindow::TabLabel& tab = *tabs[i];
+                if (tab.closable) ++numClosableTabs;
 
-            if (tab.mustCloseNextFrame || mustCloseTab) {
-                tab.mustCloseNextFrame = false;
-		if (!tab.getModified())	{
-		    mhs.TabsToClose.push_back(&tab);
-		    mhs.TabsToCloseParents.push_back(mhs.tabWindow);
-		}
-		else {
-		    mhs.TabsToAskForClosing.push_back(&tab);
-		    mhs.TabsToAskForClosingParents.push_back(mhs.tabWindow);
-            mhs.MustOpenAskForClosingPopup = true;
-		}
-            }
-	    else if (ImGui::IsItemHoveredRect()) {
-                isAItemHovered = true;
-                //hoveredTab = &tab;
-                if (tab.tooltip && mhs.isWindowHovered && strlen(tab.tooltip)>0 && (&tab!=mhs.tabLabelPopup || GImGui->OpenPopupStack.size()==0) )  ImGui::SetTooltip("%s",tab.tooltip);
-
-                if (isDraggingCorrectly) {
-                    if (!dd.draggingTabSrc) {
-                        if (mhs.isWindowHovered)    {
-                            if (!tab.draggable) mhs.LockedDragging = true;
-                            else    {
-                                dd.draggingTabSrc = &tab;
-                                dd.draggingTabNodeSrc = this;
-                                dd.draggingTabImGuiWindowSrc = g.HoveredWindow;
-                                dd.draggingTabWindowSrc = mhs.tabWindow;
-                                dd.draggingTabSrcIsSelected = (selectedTab == &tab);
-
-                                dd.draggingTabSrcSize = ImGui::GetItemRectSize();
-                                const ImVec2& mp = ImGui::GetIO().MousePos;
-                                const ImVec2 draggingTabCursorPos = ImGui::GetCursorPos();
-                                dd.draggingTabSrcOffset=ImVec2(
-                                            mp.x+dd.draggingTabSrcSize.x*0.5f-sumX+ImGui::GetScrollX(),
-                                            mp.y+dd.draggingTabSrcSize.y*0.5f-draggingTabCursorPos.y+ImGui::GetScrollY()
-                                            );
-
-                                //fprintf(stderr,"Hovered Start Window:%s\n",g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
-                            }
-                        }
-                    }
-                    else if (dd.draggingTabSrc && (!tab.draggable || !mhs.allowExchangeTabLabels)) {
-                        // Prohibition sign-------
-                        const ImVec2& itemSize = ImGui::GetItemRectSize();
-                        const ImVec2 itemPos =ImVec2(
-                                    sumX-itemSize.x*0.5f-ImGui::GetScrollX(),
-                                    ImGui::GetCursorPos().y-itemSize.y*0.5f-ImGui::GetScrollY()
-                                    );
-                        ImDrawList* drawList = ImGui::GetWindowDrawList();  // main problem is that the sign is covered by the dragging tab (even if the latter is semi-transparent...)
-                        const ImVec2 wp = g.HoveredWindow->Pos;
-                        dd.drawProhibitionSign(drawList,wp,itemPos,dd.draggingTabSrcSize.y*1.2f);
-                    }
-                }
-                else if (dd.draggingTabSrc && dd.draggingTabSrc!=&tab && g.HoveredRootWindow && g.CurrentWindow) {
-                    // This code should execute only on a drop AFAIK
-                    const int len1 = strlen(g.HoveredRootWindow->Name);
-                    const int len2 = strlen(g.CurrentWindow->Name);
-                    if (strncmp(g.HoveredRootWindow->Name,g.CurrentWindow->Name,len1)==0 && (len1<=len2 || g.CurrentWindow->Name[len1]=='.'))    {
-                        //fprintf(stderr,"g.HoveredRootWindow=%s g.CurrentWindow=%s\n",g.HoveredRootWindow?g.HoveredRootWindow->Name:"NULL",g.CurrentWindow?g.CurrentWindow->Name:"NULL");
-                        dd.draggingTabDst = &tab;
-                        dd.draggingTabNodeDst = this;
-                        dd.draggingTabImGuiWindowDst = g.HoveredWindow;
-                        dd.draggingTabWindowDst = mhs.tabWindow;
-                    }
+                fontOverride = ((selectedTab == &tab) ? (tab.getModified() ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED_MODIFIED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED]]) :
+                    (tab.getModified() ? TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_MODIFIED]] : TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_NORMAL]]));
+                if (!fontOverride) {
+                    if (selectedTab == &tab) fontOverride = TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_SELECTED]];
+                    else if (tab.getModified())  fontOverride = TabLabelStyle::ImGuiFonts[tabStyle.fontStyles[TabLabelStyle::TAB_STATE_MODIFIED]];
                 }
 
-                if (mhs.isRMBclicked && mhs.isWindowHovered) {
-                    // select it
+                if (sumX > 0.f) {
+                    sumX+=style.ItemSpacing.x;   // Maybe we can skip it if we use SameLine(0,0) below
+                    ImGui::TabButton(NULL,selectedTab == &tab,tab.closable ? &mustCloseTab : NULL,tab.getLabel(),&tabButtonSz,&tabStyle,(ImFont*)fontOverride);
+                    sumX+=tabButtonSz.x;
+                    if (sumX>windowWidth) sumX = 0.f;
+                    else ImGui::SameLine();
+                    canUseSizeOptimization = true;
+                }
+                else canUseSizeOptimization = false;
+
+                // Draw the button
+                mustCloseTab = false;
+                ImGui::PushID(&tab);   // otherwise two tabs with the same name would clash.
+                if (tab.mustSelectNextFrame || ImGui::TabButton("",(selectedTab == &tab),tab.closable ? &mustCloseTab : NULL,tab.getLabel(),NULL,&tabStyle,(ImFont*)fontOverride,NULL,NULL,canUseSizeOptimization))   {
                     selection_changed = (selectedTab != &tab);
                     newSelectedTab = &tab;
                     tab.mustSelectNextFrame = false;
-                    // see if we need popup menu
-                    if (TabWindow::TabLabelPopupMenuDrawerCb)	{
-                        mhs.tabLabelPopup = &tab;
-                        mhs.tabLabelPopupTabWindow = mhs.tabWindow;
-                        mhs.tabLabelPopupChanged = true;
-                        // fprintf(stderr,"open popup\n");  // This gets actually called...
+                }
+                ImGui::PopID();
+
+                if (sumX==0.f) sumX = style.WindowPadding.x + ImGui::GetItemRectSize().x; // First element of a line
+
+                if (tab.mustCloseNextFrame || mustCloseTab) {
+                    tab.mustCloseNextFrame = false;
+                    if (!tab.getModified())	{
+                        mhs.TabsToClose.push_back(&tab);
+                        mhs.TabsToCloseParents.push_back(mhs.tabWindow);
+                    }
+                    else {
+                        mhs.TabsToAskForClosing.push_back(&tab);
+                        mhs.TabsToAskForClosingParents.push_back(mhs.tabWindow);
+                        mhs.MustOpenAskForClosingPopup = true;
                     }
                 }
+                else if (ImGui::IsItemHoveredRect()) {
+                    isAItemHovered = true;
+                    //hoveredTab = &tab;
+                    if (tab.tooltip && mhs.isWindowHovered && strlen(tab.tooltip)>0 && (&tab!=mhs.tabLabelPopup || GImGui->OpenPopupStack.size()==0) )  ImGui::SetTooltip("%s",tab.tooltip);
+
+                    if (isDraggingCorrectly) {
+                        if (!dd.draggingTabSrc) {
+                            if (mhs.isWindowHovered)    {
+                                if (!tab.draggable) mhs.LockedDragging = true;
+                                else    {
+                                    dd.draggingTabSrc = &tab;
+                                    dd.draggingTabNodeSrc = this;
+                                    dd.draggingTabImGuiWindowSrc = g.HoveredWindow;
+                                    dd.draggingTabWindowSrc = mhs.tabWindow;
+                                    dd.draggingTabSrcIsSelected = (selectedTab == &tab);
+
+                                    dd.draggingTabSrcSize = ImGui::GetItemRectSize();
+                                    const ImVec2& mp = ImGui::GetIO().MousePos;
+                                    const ImVec2 draggingTabCursorPos = ImGui::GetCursorPos();
+                                    dd.draggingTabSrcOffset=ImVec2(
+                                                mp.x+dd.draggingTabSrcSize.x*0.5f-sumX+ImGui::GetScrollX(),
+                                                mp.y+dd.draggingTabSrcSize.y*0.5f-draggingTabCursorPos.y+ImGui::GetScrollY()
+                                                );
+
+                                    //fprintf(stderr,"Hovered Start Window:%s\n",g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
+                                }
+                            }
+                        }
+                        else if (dd.draggingTabSrc && (!tab.draggable || !mhs.allowExchangeTabLabels)) {
+                            // Prohibition sign-------
+                            const ImVec2& itemSize = ImGui::GetItemRectSize();
+                            const ImVec2 itemPos =ImVec2(
+                                        sumX-itemSize.x*0.5f-ImGui::GetScrollX(),
+                                        ImGui::GetCursorPos().y-itemSize.y*0.5f-ImGui::GetScrollY()
+                                        );
+                            ImDrawList* drawList = ImGui::GetWindowDrawList();  // main problem is that the sign is covered by the dragging tab (even if the latter is semi-transparent...)
+                            const ImVec2 wp = g.HoveredWindow->Pos;
+                            dd.drawProhibitionSign(drawList,wp,itemPos,dd.draggingTabSrcSize.y*1.2f);
+                        }
+                    }
+                    else if (dd.draggingTabSrc && dd.draggingTabSrc!=&tab && g.HoveredRootWindow && g.CurrentWindow) {
+                        // This code should execute only on a drop AFAIK
+                        const int len1 = strlen(g.HoveredRootWindow->Name);
+                        const int len2 = strlen(g.CurrentWindow->Name);
+                        if (strncmp(g.HoveredRootWindow->Name,g.CurrentWindow->Name,len1)==0 && (len1<=len2 || g.CurrentWindow->Name[len1]=='.'))    {
+                            //fprintf(stderr,"g.HoveredRootWindow=%s g.CurrentWindow=%s\n",g.HoveredRootWindow?g.HoveredRootWindow->Name:"NULL",g.CurrentWindow?g.CurrentWindow->Name:"NULL");
+                            dd.draggingTabDst = &tab;
+                            dd.draggingTabNodeDst = this;
+                            dd.draggingTabImGuiWindowDst = g.HoveredWindow;
+                            dd.draggingTabWindowDst = mhs.tabWindow;
+                        }
+                    }
+
+                    if (mhs.isRMBclicked && mhs.isWindowHovered) {
+                        // select it
+                        selection_changed = (selectedTab != &tab);
+                        newSelectedTab = &tab;
+                        tab.mustSelectNextFrame = false;
+                        // see if we need popup menu
+                        if (TabWindow::TabLabelPopupMenuDrawerCb)	{
+                            mhs.tabLabelPopup = &tab;
+                            mhs.tabLabelPopupTabWindow = mhs.tabWindow;
+                            mhs.tabLabelPopupChanged = true;
+                            // fprintf(stderr,"open popup\n");  // This gets actually called...
+                        }
+                    }
+
+                }
 
             }
 
-        }
+            selectedTab = newSelectedTab;
+            if (selection_changed) mhs.tabWindow->activeNode = this;
 
-        selectedTab = newSelectedTab;
-        if (selection_changed) mhs.tabWindow->activeNode = this;
+            if (tabStyle.tabWindowLabelShowAreaSeparator) {
+                ImGui::PushStyleColor(ImGuiCol_Border,ImGui::ColorConvertU32ToFloat4(tabStyle.colors[TabLabelStyle::Col_TabLabelText]));
+                ImGui::Separator();
+                ImGui::PopStyleColor();
+            }
+            ImGui::EndGroup();allTabsSize = ImGui::GetItemRectSize();
 
-        if (tabStyle.tabWindowLabelShowAreaSeparator) {
-            ImGui::PushStyleColor(ImGuiCol_Border,ImGui::ColorConvertU32ToFloat4(tabStyle.colors[TabLabelStyle::Col_TabLabelText]));
-            ImGui::Separator();
-            ImGui::PopStyleColor();
-        }
-        ImGui::EndGroup();allTabsSize = ImGui::GetItemRectSize();
-
-        // tab label group popup menu trigger
-        if (TabWindow::TabLabelGroupPopupMenuDrawerCb && mhs.isRMBclicked && !isAItemHovered)	{
-            ImGuiWindow* window = ImGui::GetCurrentWindow();
-            if (ImGui::IsMouseHoveringRect(window->Pos, window->Pos+ImVec2(windowSize.x,allTabsSize.y)))   {
-                mhs.tabLabelGroupPopupChanged = true;
-                mhs.tabLabelGroupPopup.clear();
-                mhs.tabLabelPopupTabWindow = mhs.tabWindow;
-                mhs.tabLabelGroupPopupNode = this;
-                for (int i = 0; i < numTabs; i++) {
-                    TabWindow::TabLabel* tab = tabs[i];
-                    mhs.tabLabelGroupPopup.push_back(tab);	// should I check against mhs.TabsToClose ?
+            // tab label group popup menu trigger
+            if (TabWindow::TabLabelGroupPopupMenuDrawerCb && mhs.isRMBclicked && !isAItemHovered)	{
+                ImGuiWindow* window = ImGui::GetCurrentWindow();
+                if (ImGui::IsMouseHoveringRect(window->Pos, window->Pos+ImVec2(windowSize.x,allTabsSize.y)))   {
+                    mhs.tabLabelGroupPopupChanged = true;
+                    mhs.tabLabelGroupPopup.clear();
+                    mhs.tabLabelPopupTabWindow = mhs.tabWindow;
+                    mhs.tabLabelGroupPopupNode = this;
+                    for (int i = 0; i < numTabs; i++) {
+                        TabWindow::TabLabel* tab = tabs[i];
+                        mhs.tabLabelGroupPopup.push_back(tab);	// should I check against mhs.TabsToClose ?
+                    }
                 }
             }
-        }
 
-	//----------------------------------------------------------------
-        mhs.restoreStyleVars();     // needs matching
-	const ImGuiWindowFlags childFlags = mhs.flags | (selectedTab ? selectedTab->wndFlags : 0);
-        ImGui::RevertUpstreamBeginChildCommit::OldBeginChild("user",ImVec2(0,0),false,(childFlags&(~ImGuiWindowFlags_ShowBorders)));
-        if (childFlags&ImGuiWindowFlags_ShowBorders) {
-            // This kind of handling the ImGuiWindowFlags_ShowBorders flag on its own is necessary to achieve what we want
-            GImGui->CurrentWindow->Flags|=childFlags;//Changed from ImGui::GetCurrentWindow()-> (faster)
+            //----------------------------------------------------------------
+            mhs.restoreStyleVars();     // needs matching
+            const ImGuiWindowFlags childFlags = mhs.flags | (selectedTab ? selectedTab->wndFlags : 0);
+            if (ImGui::RevertUpstreamBeginChildCommit::OldBeginChild("user",ImVec2(0,0),false,(childFlags&(~ImGuiWindowFlags_ShowBorders))))    {
+                if (childFlags&ImGuiWindowFlags_ShowBorders) {
+                    // This kind of handling the ImGuiWindowFlags_ShowBorders flag on its own is necessary to achieve what we want
+                    GImGui->CurrentWindow->Flags|=childFlags;//Changed from ImGui::GetCurrentWindow()-> (faster)
+                }
+                if (/*selectedTab &&*/ TabWindow::WindowContentDrawerCb) {
+                    TabWindow::WindowContentDrawerCb(selectedTab,*mhs.tabWindow,TabWindow::WindowContentDrawerUserPtr);
+                }
+                else {
+                    if (selectedTab) selectedTab->render();
+                    else {
+                        ImGui::Text("EMPTY TAB LABEL DOCKING SPACE.");
+                        ImGui::Text("PLEASE DRAG AND DROP TAB LABELS HERE!");
+                        ImGui::Separator();
+                        ImGui::Spacing();
+                        ImGui::TextWrapped("And please use ImGui::TabWindow::SetWindowContentDrawerCallback(...) to set a callback to modify this text.");}
+                }
+            }
+            ImGui::EndChild();  // user
+            mhs.storeStyleVars();
         }
-        if (/*selectedTab &&*/ TabWindow::WindowContentDrawerCb) {
-            TabWindow::WindowContentDrawerCb(selectedTab,*mhs.tabWindow,TabWindow::WindowContentDrawerUserPtr);
-        }
-        else {
-            if (selectedTab) selectedTab->render();
-            else {
-                ImGui::Text("EMPTY TAB LABEL DOCKING SPACE.");
-                ImGui::Text("PLEASE DRAG AND DROP TAB LABELS HERE!");
-                ImGui::Separator();
-                ImGui::Spacing();
-                ImGui::TextWrapped("And please use ImGui::TabWindow::SetWindowContentDrawerCallback(...) to set a callback to modify this text.");}
-        }
-        ImGui::EndChild();  // user
-        mhs.storeStyleVars();
-
+        else style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
         ImGui::EndChild();  // "name"
     }
     //----------------------------------------------------------------

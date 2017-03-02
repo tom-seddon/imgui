@@ -31,7 +31,7 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui_internal.h>
 
-#define IMGUIIMAGEEDITOR_DEV_ONLY   // TO COMMENT OUT (mandatory)
+//#define IMGUIIMAGEEDITOR_DEV_ONLY   // TO COMMENT OUT (mandatory)
 #ifdef IMGUIIMAGEEDITOR_DEV_ONLY
 #define IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS
 #define IMGUI_USE_LIBTIFF
@@ -3511,8 +3511,9 @@ struct StbImage {
             //labelSize.y+=1.0f;
         }
 
+        //const ImGuiWindowFlags showBorders = (window->Flags&ImGuiWindowFlags_ShowBorders);
         //ImGui::PushStyleColor(ImGuiCol_ChildWindowBg,ImVec4(1.f,1.f,1.f,0.25f));
-        if (ImGui::BeginChild("ImageEditorChildWindow",size.y>0 ? ImVec2(size.x,size.y-labelSize.y) : size,false,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))  {
+        if (ImGui::BeginChild("ImageEditorChildWindow",size.y>0 ? ImVec2(size.x,size.y-labelSize.y) : size,false,ImGuiWindowFlags_NoScrollbar))  {
             window = GetCurrentWindow();
 
             const ImGui::ImageEditor::Style& ies = ImGui::ImageEditor::Style::Get();
@@ -3529,23 +3530,25 @@ struct StbImage {
             splitterColor.w *= 0.4f;
             splitterColorHovered.w *= 0.55f;
             splitterColorActive.w *= 0.7f;
-
+            const float minSplitSize = 10;  // If size is smaller, the panel won't be displayed
 
             bool isASplitterActive = false;
-
             ImVec2 ws = window->Size;
             float splitterPercToPixels = 0.f,splitterDelta = 0.f;
-            if (ws.x>2.*splitterSize) {
+            if (ws.x>2.*splitterSize+minSplitSize && ws.y>minSplitSize) {
                 MyRenderStruct mrs;
 
                 ws.x-=2.*splitterSize;
                 splitterPercToPixels = ws.x*slidersFraction.x;
-                if (ImGui::BeginChild("ImageEditorChildWindowPanelLeft",ImVec2(splitterPercToPixels,ws.y),true))    {
-                    renderLeftPanel(mrs);
-                    mrs.leftPanelHovered = ImGui::IsWindowHovered() && (ImGui::IsWindowFocused() || !io.WantTextInput);
-                    mrs.anyPanelHovered|=mrs.leftPanelHovered;
+                if (splitterPercToPixels>minSplitSize)  {
+                    if (ImGui::BeginChild("ImageEditorChildWindowPanelLeft",ImVec2(splitterPercToPixels,ws.y),true))    {
+                        renderLeftPanel(mrs);
+                        mrs.leftPanelHovered = ImGui::IsWindowHovered() && (ImGui::IsWindowFocused() || !io.WantTextInput);
+                        mrs.anyPanelHovered|=mrs.leftPanelHovered;
+                    }
+                    ImGui::EndChild();  //"ImageEditorChildWindowPanelLeft"
                 }
-                ImGui::EndChild();  //"ImageEditorChildWindowPanelLeft"
+                else ImGui::SameLine(0,minSplitSize);
                 // Vertical Splitter ------------------------------------------
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
                 ImGui::PushStyleColor(ImGuiCol_Button,splitterColor);

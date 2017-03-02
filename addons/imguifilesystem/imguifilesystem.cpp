@@ -1976,7 +1976,12 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
         else isInsideZipFile = PathSplitFirstZipFolder(I.currentFolder,basePath,zipPath);
         if (isInsideZipFile ? FileExists(basePath) : Directory::Exists(basePath)) {
             strcpy(validDirectory,basePath);
-            if (zipPath[0]!='\0') Path::Append(zipPath,validDirectory);
+            if (zipPath[0]!='\0') {
+                char zipPathDir[MAX_PATH_BYTES];zipPathDir[0]='\0';
+                Path::GetDirectoryName(zipPath,zipPathDir);
+                Path::Append(zipPathDir,validDirectory);
+            }
+            //fprintf(stderr,"basePath=%s zipPath=%s validDirectory=%s\n",basePath,zipPath,validDirectory);
         }
         else {
             Path::GetDirectoryName(directory,validDirectory);
