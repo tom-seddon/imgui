@@ -106,7 +106,13 @@ NOTES:
  * Fix bugs
 */
 
-#define IMGUIIMAGEEDITOR_VERSION 0.1
+/* CHANGELOG: IMGUIIMAGEEDITOR_VERSION 0.11
+ * Added a bunch of booleans in the ImageEditor::ctr()
+ * Added some methods to retrieve some image properties
+ * Added an optional callback SetImageEditorEventCallback(...)
+*/
+
+#define IMGUIIMAGEEDITOR_VERSION 0.11
 
 namespace ImGui {
 
@@ -118,7 +124,13 @@ class ImageEditor
 {
 public:
 
-	ImageEditor();
+    enum EventType {
+        ET_IMAGE_UPDATED=0, // This gets called very frequently, every time the displayed image gets updated
+        ET_IMAGE_LOADED,    // Called when an image is loaded/reloaded and even after an image is successfully saved (because it gets reloaded soon after saving)
+        ET_IMAGE_SAVED      // Called when an image is saved
+    };
+
+    ImageEditor(bool hideImageNamePanel=false,bool forbidLoadingNewImagesIfAvailable=false,bool forbidBrowsingInsideFolderIfAvailable=false,bool forbidSaveAsIfAvailable=false,bool _changeFileNameWhenExtractingSelection=true);
 #if (defined(IMGUITABWINDOW_H_) && !defined(IMGUIIMAGEEDITOR_NO_TABLABEL))
     virtual ~ImageEditor();
     #else //IMGUITABWINDOW_H_
@@ -142,6 +154,9 @@ public:
     static void SetFreeTextureCallback(FreeTextureDelegate freeTextureCb) {FreeTextureCb=freeTextureCb;}
     static void SetGenerateOrUpdateTextureCallback(GenerateOrUpdateTextureDelegate generateOrUpdateTextureCb) {GenerateOrUpdateTextureCb=generateOrUpdateTextureCb;}
 
+    typedef void (*ImageEditorEventDelegate)(ImageEditor& ie,EventType event);
+    static void SetImageEditorEventCallback(ImageEditorEventDelegate imageEditorEventCb) {ImageEditorEventCb=imageEditorEventCb;}
+
     class Style {
         public:
         float splitterSize;      // default: -1
@@ -153,11 +168,26 @@ public:
         inline static Style& Get() {return style;}        
     };
 
+    // The image name panel on the top sometimes is a waste of space, so we can hide it
+    bool getShowImageNamePanel() const {return showImageNamePanel;}
+    void setShowImageNamePanel(bool flag) {showImageNamePanel=flag;}
+
+    const char* getImageFilePath() const;           // gets the current image file path
+    void getImageInfo(int* w,int* h,int* c) const;  // gets image width, height and num channels (1,3 or 4)
+    const unsigned char* getImagePixels() const;    // get the internal data [size is w*h*c]
+    const ImTextureID* getImageTexture() const;     // get a pointer to the texture that is used and owned by the ImageEditor (a bit dangerous...)
+
+    // user must free the returned texture
+    // Warning: this is not usually what user expects (for example when c=1 we get a RGB grayscale texture):
+    // manually creating it using getImagePixels() is usually better
+    ImTextureID getClonedImageTexID(bool useMipmapsIfPossible=false,bool wraps=false,bool wrapt=false,bool minFilterNearest=false, bool magFilterNearest=false) const;
+
+    void* userPtr;                                  // yours
 
 protected:
 	struct StbImage* is;
 
-    bool init;
+    bool init,showImageNamePanel,allowLoadingNewImages,allowBrowsingInsideFolder,allowSaveAs,changeFileNameWhenExtractingSelection;
 
     friend struct StbImage;
 
@@ -167,6 +197,7 @@ public:
 
     static FreeTextureDelegate FreeTextureCb;
     static GenerateOrUpdateTextureDelegate GenerateOrUpdateTextureCb;
+    static ImageEditorEventDelegate ImageEditorEventCb;
 };
 
 } // namespace ImGui

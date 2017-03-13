@@ -2678,6 +2678,8 @@ struct StbImage {
         }
         resetZoomAndPan();
         clearFilePath();
+        modifyImageTopToolbar.clearButtons();
+        modifyImageBottomToolbar.clearButtons();
     }
     void clear(bool keepPath=false) {
         if (image) {STBI_FREE(image);image=NULL;}
@@ -3244,21 +3246,26 @@ struct StbImage {
 
         const bool reloadMode = (path==filePath);
         clear(reloadMode);
+        bool loadingFailed = false;
         ImVector<char> content;
 #       if (defined(IMGUI_USE_MINIZIP) && defined(IMGUI_FILESYSTEM_H_) && !defined(IMGUIFS_NO_EXTRA_METHODS))
-        if (!ImGuiFs::FileGetContent(path,content)) return false;    // supports path inside zip files
+        if (!ImGuiFs::FileGetContent(path,content)) loadingFailed=true;    // supports path inside zip files
 #       else // IMGUI_USE_MINIZIP
-        if (!ImGuiIE::GetFileContent(path,content)) return false;
+        if (!ImGuiIE::GetFileContent(path,content)) loadingFailed=true;
 #       endif //IMGUI_USE_MINIZIP
-        if (content.size()==0) return false;
-        const bool ok = loadFromMemory((const unsigned char*)&content[0],content.size(),reloadMode,ext);
+        if (content.size()==0) loadingFailed=true;
+        bool ok = !loadingFailed;
         if (ok) {
-            if (!reloadMode) assignFilePath(path,updateFilePathsList);
-            else if (mustUpdateFileListSoon) updateFileList();
-            assignModified(false);
+            ok =loadFromMemory((const unsigned char*)&content[0],content.size(),reloadMode,ext);
+            if (ok) {
+                if (!reloadMode) assignFilePath(path,updateFilePathsList);
+                else if (mustUpdateFileListSoon) updateFileList();
+                assignModified(false);
+            }
+            else clearFilePath();
+            if (ok) undoStack.clear();
         }
-        else clearFilePath();
-        if (ok) undoStack.clear();
+        if (ImageEditor::ImageEditorEventCb) ImageEditor::ImageEditorEventCb(*ie,ImageEditor::ET_IMAGE_LOADED);
         return ok;
     }
 
@@ -3406,10 +3413,14 @@ struct StbImage {
         }
 
         if (rv) {
-            if (strstr(ImGuiIE::SupportedLoadExtensions,feh.ext)!=NULL) loadFromFile(path); // Better reload, so that we can see the real saved quality soon.
+            if (strstr(ImGuiIE::SupportedLoadExtensions,feh.ext)!=NULL) {
+                if (ImageEditor::ImageEditorEventCb) ImageEditor::ImageEditorEventCb(*ie,ImageEditor::ET_IMAGE_SAVED);
+                loadFromFile(path); // Better reload, so that we can see the real saved quality soon.
+            }
             else {
                 if (path!=filePath) assignFilePath(path);
                 assignModified(false);
+                if (ImageEditor::ImageEditorEventCb) ImageEditor::ImageEditorEventCb(*ie,ImageEditor::ET_IMAGE_SAVED);
             }
         }
         else fprintf(stderr,"Error: cannot save file: \"%s\"\n",path);
@@ -3452,6 +3463,7 @@ struct StbImage {
             if (image) {
                 IM_ASSERT(ImGui::ImageEditor::GenerateOrUpdateTextureCb);   // Please call ImGui::ImageEditor::SetGenerateOrUpdateTextureCallback(...) at InitGL() time.
                 StbImage::GenerateOrUpdateTextureCb(texID,w,h,c,image,true,false,false,true,true);
+                if (ImageEditor::ImageEditorEventCb) ImageEditor::ImageEditorEventCb(*ie,ImageEditor::ET_IMAGE_UPDATED);
                 if (!texID) return;
             }
         }
@@ -3461,7 +3473,7 @@ struct StbImage {
         //ImGuiStyle& style = ImGui::GetStyle();
 
         ImVec2 labelSize(0,0);
-        {
+        if (ie->showImageNamePanel) {
             // Set the correct font scale (2 lines)
             g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize*2;
             g.FontSize = window->CalcFontSize();
@@ -3663,7 +3675,7 @@ struct StbImage {
         const ImGuiStyle& style(ImGui::GetStyle());
 
 #       ifdef IMGUI_FILESYSTEM_H_
-        if (filePathsIndex>=0 && filePathsIndex<filePaths.size() && filePaths.size()>1)   {
+        if (ie->allowBrowsingInsideFolder && filePathsIndex>=0 && filePathsIndex<filePaths.size() && filePaths.size()>1)   {
             if (ImGui::TreeNodeEx("Browse Directory:",ImGuiTreeNodeFlags_DefaultOpen|ImGuiTreeNodeFlags_Framed)) {
                 ImGui::TreePop();
                 ImGui::PushID("Browse Directory Group");
@@ -3899,7 +3911,7 @@ struct StbImage {
         static const bool canSaveAlpha = ImGuiIE::SupportedSaveExtensions[1][0]!='\0';
         static const bool canSaveRGB = ImGuiIE::SupportedSaveExtensions[3][0]!='\0';
         static const bool canSaveRGBA = ImGuiIE::SupportedSaveExtensions[4][0]!='\0';
-        if (image && (canSaveAlpha || canSaveRGB || canSaveRGBA)) {
+        if (ie->allowSaveAs && image && (canSaveAlpha || canSaveRGB || canSaveRGBA)) {
             if (ImGui::TreeNodeEx("Save As...",ImGuiTreeNodeFlags_DefaultOpen|ImGuiTreeNodeFlags_Framed)) {
                 ImGui::TreePop();
                 ImGui::PushID("Save As...");
@@ -4004,8 +4016,8 @@ struct StbImage {
                             // Extract Image
                             if (extractSelection()) {
                                 assignModified(true);
-                                // Change the file name
-                                {
+                                // Change the file name (better refactor)
+                                if (ie->changeFileNameWhenExtractingSelection) {
                                 const size_t len = strlen(filePath) + 1 + 12; // "Extracted000"
                                 const char* filePathExt = strrchr(filePathName,'.');
                                 char* p = (char*) ImGui::MemAlloc(len);p[0]='\0';
@@ -4201,7 +4213,7 @@ struct StbImage {
 
                 const bool firstTime = (dlgSize.x==0);
                 if (firstTime) {
-                    dlgSize = io.DisplaySize*0.35f;   //TODO: Change if needed
+                    dlgSize = io.DisplaySize*0.4f;   //TODO: Change if needed
                 }
                 dlgPos = ImGui::GetMousePos()-dlgSize*0.5f;
                 if (dlgPos.x+dlgSize.x>io.DisplaySize.x) dlgPos.x = io.DisplaySize.x - dlgSize.x;
@@ -4406,7 +4418,7 @@ struct StbImage {
             }
 #       ifdef IMGUI_FILESYSTEM_H_
             bool loadNewImage = false;
-            if (ImGuiIE::SupportedLoadExtensions[0]!='\0')  {
+            if (ie->allowLoadingNewImages && ImGuiIE::SupportedLoadExtensions[0]!='\0')  {
                 ImGui::PushItemWidth(-1);
                 loadNewImage = ImGui::Button("Load New Image");
                 ImGui::PopItemWidth();
@@ -5034,6 +5046,7 @@ ImageEditor::GenerateOrUpdateTextureDelegate ImageEditor::GenerateOrUpdateTextur
 #else //IMGUI_USE_AUTO_BINDING
 NULL;
 #endif //IMGUI_USE_AUTO_BINDING
+ImageEditor::ImageEditorEventDelegate ImageEditor::ImageEditorEventCb=NULL;
 
 static StbImage* CreateStbImage(ImageEditor& ie) {
     StbImage* is = (StbImage*) ImGui::MemAlloc(sizeof(StbImage));
@@ -5041,7 +5054,11 @@ static StbImage* CreateStbImage(ImageEditor& ie) {
     return is;
 }
 
-ImageEditor::ImageEditor() : is(NULL),init(false) {}
+ImageEditor::ImageEditor(bool hideImageNamePanel,bool forbidLoadingNewImagesIfAvailable,bool forbidBrowsingInsideFolderIfAvailable,bool forbidSaveAsIfAvailable,bool _changeFileNameWhenExtractingSelection)
+: userPtr(NULL),is(NULL),init(false),showImageNamePanel(!hideImageNamePanel)  ,
+allowLoadingNewImages(!forbidLoadingNewImagesIfAvailable),allowBrowsingInsideFolder(!forbidBrowsingInsideFolderIfAvailable),allowSaveAs(!forbidSaveAsIfAvailable),
+changeFileNameWhenExtractingSelection(_changeFileNameWhenExtractingSelection)
+{}
 
 ImageEditor::~ImageEditor() {destroy();}
 
@@ -5072,6 +5089,21 @@ void ImageEditor::render(const ImVec2 &size)  {
 	IM_ASSERT(is);	// You can't call render() after destroy()!    
     init = true;
     is->render(size);
+}
+
+const char* ImageEditor::getImageFilePath() const   {return is ? NULL : is->filePath;}
+void ImageEditor::getImageInfo(int* w,int* h,int* c) const  {
+    if (is) {if (w) *w=is->w;if (h) *h=is->h;if (c) *c=is->c;}
+    else {if (w) *w=0;if (h) *h=0;if (c) *c=0;}
+}
+const unsigned char* ImageEditor::getImagePixels() const {return is ? is->image : NULL;}
+const ImTextureID* ImageEditor::getImageTexture() const {return is ? &is->texID : NULL;}
+
+ImTextureID ImageEditor::getClonedImageTexID(bool useMipmapsIfPossible,bool wraps,bool wrapt,bool minFilterNearest, bool magFilterNearest) const {
+    if (!is || !is->image) return NULL;
+    ImTextureID texID = NULL;
+    StbImage::GenerateOrUpdateTextureCb(texID,is->w,is->h,is->c,is->image,useMipmapsIfPossible,wraps,wrapt,minFilterNearest,magFilterNearest);
+    return texID;
 }
 
 void ImageEditor::Destroy() {StbImage::Destroy();}
