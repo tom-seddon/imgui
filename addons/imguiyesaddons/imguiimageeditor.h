@@ -106,13 +106,23 @@ NOTES:
  * Fix bugs
 */
 
-/* CHANGELOG: IMGUIIMAGEEDITOR_VERSION 0.11
+/* CHANGELOG:
+
+ IMGUIIMAGEEDITOR_VERSION 0.12
+ * Added ability to show/hide the image name panel by pressing key S
+ * Added getImageFileName() and getImageFileFileExtension()
+ * Added a proper empty ctr
+ * Added round pen
+ * Added pen in overlay mode (preview is wrong for RGBA images, but I don't care)
+ * Added fill in overlay mode (it doesn't seem 100% correct to me, but this is what I got so far).
+
+ IMGUIIMAGEEDITOR_VERSION 0.11
  * Added a bunch of booleans in the ImageEditor::ctr()
  * Added some methods to retrieve some image properties
  * Added an optional callback SetImageEditorEventCallback(...)
 */
 
-#define IMGUIIMAGEEDITOR_VERSION 0.11
+#define IMGUIIMAGEEDITOR_VERSION 0.12
 
 namespace ImGui {
 
@@ -130,7 +140,8 @@ public:
         ET_IMAGE_SAVED      // Called when an image is saved
     };
 
-    ImageEditor(bool hideImageNamePanel=false,bool forbidLoadingNewImagesIfAvailable=false,bool forbidBrowsingInsideFolderIfAvailable=false,bool forbidSaveAsIfAvailable=false,bool _changeFileNameWhenExtractingSelection=true);
+    ImageEditor();
+    ImageEditor(bool hideImageNamePanel,bool forbidLoadingNewImagesIfAvailable=false,bool forbidBrowsingInsideFolderIfAvailable=false,bool forbidSaveAsIfAvailable=false,bool _changeFileNameWhenExtractingSelection=true);
 #if (defined(IMGUITABWINDOW_H_) && !defined(IMGUIIMAGEEDITOR_NO_TABLABEL))
     virtual ~ImageEditor();
     #else //IMGUITABWINDOW_H_
@@ -172,7 +183,9 @@ public:
     bool getShowImageNamePanel() const {return showImageNamePanel;}
     void setShowImageNamePanel(bool flag) {showImageNamePanel=flag;}
 
-    const char* getImageFilePath() const;           // gets the current image file path
+    const char* getImageFilePath() const;           // gets the current image file path [e.g. "./myImage.png"]. It's absolute when imguifilesystem is available.
+    const char* getImageFileName() const;           // gets the current image file name [e.g. "myImage.png"]. It's the path suffix withouth slashes.
+    const char* getImageFileFileExtension() const;  // gets the current image file extension [e.g. ".png"]. It's always lowercase.
     void getImageInfo(int* w,int* h,int* c) const;  // gets image width, height and num channels (1,3 or 4)
     const unsigned char* getImagePixels() const;    // get the internal data [size is w*h*c]
     const ImTextureID* getImageTexture() const;     // get a pointer to the texture that is used and owned by the ImageEditor (a bit dangerous...)

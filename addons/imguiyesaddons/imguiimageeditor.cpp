@@ -424,6 +424,50 @@ that the pixel information is stored a row at a time!
 // Some old compilers don't have round
 static float round(float x) {return x >= 0.0f ? floor(x + 0.5f) : ceil(x - 0.5f);}
 
+static void ImDrawListAddImageCircleFilled(ImDrawList* dl,ImTextureID user_texture_id,const ImVec2& uv0, const ImVec2& uv1,const ImVec2& centre, float radius, ImU32 col, int num_segments=8)   {
+    if ((col & IM_COL32_A_MASK) == 0) return;
+
+    const bool push_texture_id = dl->_TextureIdStack.empty() || user_texture_id != dl->_TextureIdStack.back();
+    if (push_texture_id) dl->PushTextureID(user_texture_id);
+
+    const float amin=0.f;
+    const float amax = IM_PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
+    dl->PathArcTo(centre, radius, amin, amax, num_segments);
+
+    const ImVec2 uvh = (uv0+uv1)*0.5f;
+    const ImVec2 uvd = (uv1-uv0)*0.5f;
+
+    // dl->PathFill(col);  // { AddConvexPolyFilled(_Path.Data, _Path.Size, col, true); PathClear(); }
+    // Wrapping of AddConvexPolyFilled(...) for Non Anti-aliased Fill here ---------------
+    {
+        const ImVec2* points = dl->_Path.Data;
+        const int points_count = dl->_Path.Size;
+        const int idx_count = (points_count-2)*3;
+        const int vtx_count = points_count;
+        dl->PrimReserve(idx_count, vtx_count);
+        //IM_ASSERT(vtx_count==1+num_segments);
+        for (int i = 0; i < vtx_count; i++)
+        {
+            dl->_VtxWritePtr[0].pos = points[i];
+            dl->_VtxWritePtr[0].uv = ImVec2(uvh.x+uvd.x*(points[i].x-centre.x)/radius,uvh.y+uvd.y*(points[i].y-centre.y)/radius);
+            dl->_VtxWritePtr[0].col = col;
+            dl->_VtxWritePtr++;
+        }
+        for (int i = 2; i < points_count; i++)
+        {
+            dl->_IdxWritePtr[0] = (ImDrawIdx)(dl->_VtxCurrentIdx);
+            dl->_IdxWritePtr[1] = (ImDrawIdx)(dl->_VtxCurrentIdx+i-1);
+            dl->_IdxWritePtr[2] = (ImDrawIdx)(dl->_VtxCurrentIdx+i);
+            dl->_IdxWritePtr += 3;
+        }
+        dl->_VtxCurrentIdx += (ImDrawIdx)vtx_count;
+    }
+    //-----------------------------------------------------------------------------------
+    dl->PathClear();
+
+    if (push_texture_id) dl->PopTextureID();
+}
+
 // Cloned from imguivariouscontrols.cpp [but modified slightly]
 bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspectRatio,ImTextureID checkersTexID = NULL,float* pzoom=NULL,ImVec2* pzoomCenter=NULL,int panMouseButtonDrag=1,int resetZoomAndPanMouseButton=2,const ImVec2& zoomMaxAndZoomStep=ImVec2(16.f,1.025f))
 {
@@ -1632,6 +1676,12 @@ private:
     static int W;
     static int H;
 
+    static bool overlayMode;
+    static int cc;
+    static int overlayAlpha;
+    static int twoFiveFiveMinusoverlayAlpha;
+
+
 public:
 
 // affects only 4 channels images:
@@ -1662,13 +1712,13 @@ public:
 FillHelperClass()   {}
 
 inline static bool Fill(unsigned char* im,int w,int h,int c,const ImVec2& imagePoint,const ImVec4& fillColor,const ImVec4& tolerance,
-const ImRect* pImageSelection=NULL,bool mirrorX=false,bool mirrorY=false,bool premultiplyAlphaHere=false)   {
+const ImRect* pImageSelection=NULL,bool mirrorX=false,bool mirrorY=false,bool premultiplyAlphaHere=false,bool penOverlayMode=false)   {
     unsigned char fillColorUC[4];unsigned char toleranceUC[4];
     ToByteArray(fillColorUC,fillColor);ToByteArray(toleranceUC,tolerance);
-    return Fill(im,w,h,c, imagePoint, fillColorUC, toleranceUC,pImageSelection,mirrorX,mirrorY,premultiplyAlphaHere);
+    return Fill(im,w,h,c, imagePoint, fillColorUC, toleranceUC,pImageSelection,mirrorX,mirrorY,premultiplyAlphaHere,penOverlayMode);
 }
 inline static bool Fill(unsigned char* im,int w,int h,int c,const ImVec2& imagePoint,const unsigned char fillColor[4],const unsigned char tolerance[4],
-const ImRect* pImageSelection=NULL,bool mirrorX=false,bool mirrorY=false,bool premultiplyAlphaHere=false)   {
+const ImRect* pImageSelection=NULL,bool mirrorX=false,bool mirrorY=false,bool premultiplyAlphaHere=false,bool penOverlayMode=false)   {
     if ((c!=1 && c!=3 && c!=4) || !im || w<=0 || h<=0) return false;
     FillHelperClass::im = im;
     FillHelperClass::w=w;FillHelperClass::h=h;FillHelperClass::c=c;
@@ -1688,6 +1738,10 @@ const ImRect* pImageSelection=NULL,bool mirrorX=false,bool mirrorY=false,bool pr
     int ptx = (int) imagePoint.x;
     int pty = (int) imagePoint.y;
     if (ptx<X || ptx>=X+W || pty<Y || pty>=Y+H) return false;
+    FillHelperClass::overlayMode = c!=1 && RGBA[3]!=255 && penOverlayMode;
+    FillHelperClass::cc = FillHelperClass::overlayMode ? 3 : FillHelperClass::c;
+    FillHelperClass::overlayAlpha = RGBA[3];
+    FillHelperClass::twoFiveFiveMinusoverlayAlpha = 255 - FillHelperClass::overlayAlpha;
 
     for (int i=0;i<4;i++)   {
         if (i==1) {
@@ -1738,10 +1792,10 @@ inline static unsigned char* GetPixelAt(int x,int y) {return &im[(y*w+x)*c];}
 inline static void SetPixelCheckedAt(int x,int y,bool v) {PixelsChecked[(y-Y)*W+(x-X)] = v ? 1 : 0;}
 inline static bool GetPixelCheckedAt(int x,int y) {return PixelsChecked[(y-Y)*W+(x-X)]!=0;}
 
-inline static bool CheckPixel(int x,int y) {
+inline static bool CheckPixel(int x,int y) {    
     bool ret=true;
     const unsigned char* pim = GetPixelAt(x,y);
-    for(unsigned char i=0;i<c;i++)  {
+    for(unsigned char i=0;i<cc;i++)  {
         ret&= ((int)(*pim)>=startColorMinusTolerance[i]) && ((int)(*pim)<=startColorPlusTolerance[i]);
         ++pim;
     }
@@ -1753,7 +1807,15 @@ static void LinearFloodFill(int x,int y)    {
     unsigned char* pim = NULL;
     while (true) {
         pim = GetPixelAt(LFillLoc,y);
-        for (int i=0;i<c;i++) *pim++ = RGBA[i];
+        if (!overlayMode) {for (int i=0;i<c;i++) *pim++ = RGBA[i];}
+        else {
+            for (int i=0;i<cc;i++) {
+                *pim = (unsigned char) ((((int)(*pim)*twoFiveFiveMinusoverlayAlpha + (int)RGBA[i]*overlayAlpha))/255);
+                //*pim = (unsigned char) ((float)(*pim)*(1.f-(float)RGBA[3]/255.f) + (float)RGBA[i]*((float)RGBA[3]/255.f));
+                ++pim;
+            }
+            //if (c==4) ++pim;// we skip next *pim++ (alpha)
+        }
         SetPixelCheckedAt(LFillLoc,y,true);
         LFillLoc--; 		 	 //de-increment counter
         if(LFillLoc<X || !CheckPixel(LFillLoc,y) ||  (GetPixelCheckedAt(LFillLoc,y)))
@@ -1765,7 +1827,15 @@ static void LinearFloodFill(int x,int y)    {
     int RFillLoc=x; //the location to check/fill on the left
     while (true) {
         pim = GetPixelAt(RFillLoc,y);
-        for (int i=0;i<c;i++) *pim++ = RGBA[i];
+        if (!overlayMode) {for (int i=0;i<c;i++) *pim++ = RGBA[i];}
+        else {
+            for (int i=0;i<cc;i++) {
+                *pim = (unsigned char) ((((int)(*pim)*twoFiveFiveMinusoverlayAlpha + (int)RGBA[i]*overlayAlpha))/255);
+                //*pim = (unsigned char) ((float)(*pim)*(1.f-(float)RGBA[3]/255.f) + (float)RGBA[i]*((float)RGBA[3]/255.f));
+                ++pim;
+            }
+            //if (c==4) ++pim;// we skip next *pim++ (alpha)
+        }
         SetPixelCheckedAt(RFillLoc,y,true);
         RFillLoc++; 		 //increment counter
         if(RFillLoc>=(X+W) || !CheckPixel(RFillLoc,y) ||  (GetPixelCheckedAt(RFillLoc,y)))
@@ -1799,7 +1869,10 @@ int FillHelperClass::X=0;
 int FillHelperClass::Y=0;
 int FillHelperClass::W=0;
 int FillHelperClass::H=0;
-
+bool FillHelperClass::overlayMode=false;
+int FillHelperClass::cc=0;
+int FillHelperClass::overlayAlpha=0;
+int FillHelperClass::twoFiveFiveMinusoverlayAlpha=0;
 
 // This class is used for "CopiedImage" (the static image that can be cut/copied/paste.
 // However it has later be enhanced to be the base for "UndoStack" (some methods has been added only for this purpose)
@@ -2320,6 +2393,8 @@ struct StbImage {
     ImVec4 penColor;
     ImRect penSelection;
     ImVector<ImVec2> penPointsInImageCoords;
+    bool penOverlayMode;
+    bool penRoundMode;
 
     ImGui::Toolbar modifyImageTopToolbar;
     ImGui::Toolbar modifyImageBottomToolbar;
@@ -2450,6 +2525,7 @@ struct StbImage {
         penWidth = 1;
         penColor = ImVec4(0,0,0,1);
         penSelection.Min=penSelection.Max=ImVec2(0,0);
+        penOverlayMode = penRoundMode = false;
         tolColor = 32; tolAlpha=0;
         filePath = fileExt = NULL;filePathName = NULL;fileExtCanBeSaved = true;
         fileSizeString[0] = imageDimString[0] = '\0';
@@ -3432,7 +3508,7 @@ struct StbImage {
         ImVec4 CheckButtonHoveredColor;
         ImVec4 CheckButtonActiveColor;
         bool leftPanelHovered,centralPanelHovered,rightPanelHovered,anyPanelHovered;
-        bool mustUndo,mustRedo,mustSave;
+        bool mustUndo,mustRedo,mustSave,mustToggleImageNamePanel;
 
         MyRenderStruct() {
             //const ImGui::ImageEditor::Style& ies(ImGui::ImageEditor::Style::Get());
@@ -3441,7 +3517,7 @@ struct StbImage {
             CheckButtonHoveredColor = style.Colors[ImGuiCol_ButtonHovered];CheckButtonHoveredColor.w*=0.5f;
             CheckButtonActiveColor = style.Colors[ImGuiCol_ButtonActive];CheckButtonActiveColor.w*=0.5f;
             leftPanelHovered=centralPanelHovered=rightPanelHovered=anyPanelHovered=false;
-            mustUndo=mustRedo=mustSave=false;
+            mustUndo=mustRedo=mustSave=mustToggleImageNamePanel=false;
         }
     };
 
@@ -3474,6 +3550,8 @@ struct StbImage {
 
         ImVec2 labelSize(0,0);
         if (ie->showImageNamePanel) {
+            ImGui::BeginGroup();
+
             // Set the correct font scale (2 lines)
             g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize*2;
             g.FontSize = window->CalcFontSize();
@@ -3521,6 +3599,8 @@ struct StbImage {
 
             //ImGui::Separator();
             //labelSize.y+=1.0f;
+            ImGui::EndGroup();
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Press S to show/hide the image name panel");
         }
 
         //const ImGuiWindowFlags showBorders = (window->Flags&ImGuiWindowFlags_ShowBorders);
@@ -3645,12 +3725,16 @@ struct StbImage {
                     ImGui::EndChild();
                 }
 
-                if (mrs.anyPanelHovered && io.KeyCtrl)  {
-                    if (ImGui::IsKeyPressed(ies.keySave,false)) mrs.mustSave=true;
-                    const bool zPressed = ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Z],false);
-                    if ((io.KeyShift && zPressed) || ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Y],false)) mrs.mustRedo=true;
-                    else if (zPressed) mrs.mustUndo=true;
-
+                if (mrs.anyPanelHovered)  {
+                    if (ImGui::IsKeyPressed(ies.keySave,false)) {
+                        if (io.KeyCtrl) mrs.mustSave=true;
+                        else mrs.mustToggleImageNamePanel = true;
+                    }
+                    if (io.KeyCtrl) {
+                        const bool zPressed = ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Z],false);
+                        if ((io.KeyShift && zPressed) || ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Y],false)) mrs.mustRedo=true;
+                        else if (zPressed) mrs.mustUndo=true;
+                    }
                 }
 
                 if (mrs.mustSave && image) {
@@ -3660,6 +3744,7 @@ struct StbImage {
                 }
                 if (mrs.mustUndo) undo();
                 else if (mrs.mustRedo) redo();
+                if (mrs.mustToggleImageNamePanel) ie->showImageNamePanel=!ie->showImageNamePanel;
             }
 
         }
@@ -4082,7 +4167,7 @@ struct StbImage {
                         else if (tolColor>255) tolColor=255;
                     }
                 }
-                if (c!=3)   {
+                if ((c!=3 && !penOverlayMode) || c==1)   {
                     static bool useSlider = false;
                     bool pressed = false;
                     if (useSlider)  pressed = ImGui::SliderInt("Tol.Alpha##2",&tolAlpha,0,255,"%.0f");
@@ -4096,9 +4181,46 @@ struct StbImage {
                         else if (tolAlpha>255) tolAlpha=255;
                     }
                 }
+                if (c!=1)   {
+                    bool tmp = penOverlayMode;
+                    if (tmp) {
+                        ImGui::PushStyleColor(ImGuiCol_Button,mrs.CheckButtonColor);
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
+                        ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
+                    }
+                    if (ImGui::Button("Overlay Mode")) penOverlayMode=!penOverlayMode;
+                    if (tmp) ImGui::PopStyleColor(3);
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","If checked, pen color alpha\nis used as a blending factor");
+                }
             }
             else if (selectedTopItem==2)    {
                 if (ImGui::InputInt("Pen Width",&penWidth)) {if (penWidth<1.f) penWidth=1.f;}
+                if (c!=1)   {
+                    bool tmp = penOverlayMode;
+                    if (tmp) {
+                        ImGui::PushStyleColor(ImGuiCol_Button,mrs.CheckButtonColor);
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
+                        ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
+                    }
+                    if (ImGui::Button("Overlay Mode")) penOverlayMode=!penOverlayMode;
+                    if (tmp) ImGui::PopStyleColor(3);
+                    if (ImGui::IsItemHovered()) {
+                        if (c==4) ImGui::SetTooltip("%s","If checked, pen color alpha\nis used as a blending factor\nWarning: drawing preview\nit's not 100% correct");
+                        else if (c==3) ImGui::SetTooltip("%s","If checked, pen color alpha\nis used as a blending factor");
+                    }
+                    if (penWidth>2) ImGui::SameLine();
+                }
+                if (penWidth>2)
+                {
+                    bool tmp = penRoundMode;
+                    if (tmp) {
+                        ImGui::PushStyleColor(ImGuiCol_Button,mrs.CheckButtonColor);
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
+                        ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
+                    }
+                    if (ImGui::Button("Use Round Pen")) penRoundMode=!penRoundMode;
+                    if (tmp) ImGui::PopStyleColor(3);
+                }
             }
             ImGui::Separator();
 
@@ -4143,21 +4265,21 @@ struct StbImage {
             ImGui::Separator();
             if (c>=3 && (c!=4 || fileExtHasFullAlpha || penColor.w!=0)) {
                 //#       define IMGUIIMAGEEDITOR_NO_COLORCOMBO
-#       if (defined(IMGUIVARIOUSCONTROLS_H_) && !defined(IMGUIIMAGEEDITOR_NO_COLORCOMBO))
+#               if (defined(IMGUIVARIOUSCONTROLS_H_) && !defined(IMGUIIMAGEEDITOR_NO_COLORCOMBO))
                 static bool useColorCombo = true;
-                if (useColorCombo)  ImGui::ColorCombo("Color###PenColorRGB1",&penColor,c!=3,ImGui::GetWindowWidth()*0.85f);
+                if (useColorCombo)  ImGui::ColorCombo("Color###PenColorRGB1",&penColor,c!=1,ImGui::GetWindowWidth()*0.85f);
                 else ImGui::ColorEdit3("Color###PenColorRGB2",&penColor.x);
                 if (ImGui::IsItemHovered()) {
                     if (ImGui::IsMouseReleased(1)) useColorCombo=!useColorCombo;
                     ImGui::SetTooltip("%s","right-click to\nchange widget");
                 }
-#       else //IMGUIVARIOUSCONTROLS_H_
+#               else //IMGUIVARIOUSCONTROLS_H_
                 ImGui::ColorEdit3("Color###PenColorRGB2",&penColor.x);
-#       endif //IMGUIVARIOUSCONTROLS_H_
+#               endif //IMGUIVARIOUSCONTROLS_H_
             }
-            if (c!=3 && c!=0)   {
+            if ((c!=3 || penOverlayMode) && c!=0)   {
                 if (c!=1) {
-                    if (!fileExtHasFullAlpha) {
+                    if (!fileExtHasFullAlpha && !penOverlayMode) {
                         bool transparent = penColor.w<0.5f;
                         if (ImGui::Checkbox("Transparent",&transparent)) penColor.w = transparent ? 0.f : 1;
                     }
@@ -4165,7 +4287,7 @@ struct StbImage {
                 }
                 else ImGui::SliderFloat("Color###PenColorAlpha",&penColor.w,0,1,"%.3f",1.f);
             }
-            else penColor.w=1.f;    // c==3
+            //else penColor.w=1.f;    // c==3
 
             ImGui::PopID();
         }
@@ -4835,14 +4957,15 @@ struct StbImage {
 
                     // Display points
                     if (numPoints>0)    {
+                        const ImVec4 penColorToUse = (c==3 && !penOverlayMode) ? ImVec4(penColor.x,penColor.y,penColor.z,1.f) : penColor;
                         ImVec2 tmp(0,0),tmp2(0,0);
                         const ImVec2* pPenPoints = &penPointsInImageCoords[0];
                         ImU32 penColori = 0;
                         if (c==1)   {
-                            const ImU32 alpha = (ImU32)(penColor.w*255.f);
+                            const ImU32 alpha = (ImU32)(penColorToUse.w*255.f);
                             penColori = ((255<<IM_COL32_A_SHIFT) |(alpha<<IM_COL32_B_SHIFT) | (alpha<<IM_COL32_G_SHIFT) | (alpha<<IM_COL32_R_SHIFT));
                         }
-                        else penColori = ImGui::ColorConvertFloat4ToU32(penColor);
+                        else penColori = ImGui::ColorConvertFloat4ToU32(penColorToUse);
                         const float penThicknessPixel = getImageToMouseCoordsRatio();
                         const float penThicknessTotal = penThicknessPixel*penWidth;
                         const float deltaPenWidth = penThicknessPixel * (int) (penWidth*0.5f);
@@ -4853,28 +4976,59 @@ struct StbImage {
                             penSelectionInMouseCoords.Clip(imageSelectionInMouseCoords);
                         }
                         window->DrawList->PushClipRect(penSelectionInMouseCoords.Min,penSelectionInMouseCoords.Max,false);
-                        const bool mustPaintCheckersBg = (c==4 && penColor.w<1);
-                        // We must avoid alpha blending (without changing the blend function)
-                        // The best way of doing it is to draw the solid background we use for transparency
-                        // under all the pixels we're about to draw
-                        // Please note that to be 100% correct we must fetch the EXACT SAME tex coords we have
-                        // below the image!
+                        const bool mustPaintCheckersBg = penColorToUse.w<1 && (c==4 || (c==3 && penOverlayMode));
                         const ImVec2 cfactor(CheckersRepeatFactor.x/(endPos.x-startPos.x),CheckersRepeatFactor.y/(endPos.y-startPos.y));
+                        const ImVec2 tfactor((uv1.x-uv0.x)/(endPos.x-startPos.x),(uv1.y-uv0.y)/(endPos.y-startPos.y));
                         ImVec2 cuv0(0,0),cuv1(0,0);
                         const ImVec2 puv0(0.1f,0.1f);
                         const ImVec2 puv1(0.4f,0.4f);
+                        const bool mustUseRoundPen = penRoundMode && (penWidth>2);
+                        const float halfPenThicknessTotal = penThicknessTotal*0.5f;
+                        const ImU32 num_segments = 8;
+                        const ImU32 white = IM_COL32_WHITE;
+                        ImVec2 tmp3(0,0);
                         for (int i=0;i<numPoints;i++)  {
                             tmp = imageToMouseCoords(*pPenPoints++);
                             tmp.x-= deltaPenWidth; tmp.y-=deltaPenWidth;
                             tmp2.x = tmp.x+penThicknessTotal;tmp2.y = tmp.y+penThicknessTotal;
                             if (tmp2.x>=startPos.x && tmp.x<endPos.x && tmp2.y>=startPos.y && tmp.y<endPos.y)   {
                                 if (mustPaintCheckersBg)    {
-                                    cuv0.x = (tmp.x-startPos.x)*cfactor.x;
-                                    cuv0.y = (tmp.y-startPos.y)*cfactor.y;
-                                    cuv1.x = (tmp2.x-startPos.x)*cfactor.x;
-                                    cuv1.y = (tmp2.y-startPos.y)*cfactor.y;
-                                    window->DrawList->AddImage(CheckersTexID,tmp,tmp2,cuv0,cuv1);
-                                    window->DrawList->AddImage(CheckersTexID,tmp,tmp2,puv0,puv1,penColori); // we must reuse the same (checker) texture to display the penColor, to prevent hundreds of texture changes
+                                    if (penOverlayMode)  {
+                                        cuv0.x = uv0.x+(tmp.x-startPos.x)*tfactor.x;
+                                        cuv0.y = uv0.y+(tmp.y-startPos.y)*tfactor.y;
+                                        cuv1.x = uv0.x+(tmp2.x-startPos.x)*tfactor.x;
+                                        cuv1.y = uv0.y+(tmp2.y-startPos.y)*tfactor.y;
+                                        if (mustUseRoundPen)    {
+                                            tmp3 = (tmp+tmp2)*0.5f;
+                                            // Unfortunately these couple of lines triggers HUNDREDS of twxture changes!
+                                            ImGuiIE::ImDrawListAddImageCircleFilled(window->DrawList,texID,cuv0,cuv1,tmp3,halfPenThicknessTotal,white,num_segments);
+                                            window->DrawList->AddCircleFilled(tmp3,halfPenThicknessTotal,penColori,num_segments);
+                                        }
+                                        else {
+                                            // Unfortunately these couple of lines triggers HUNDREDS of twxture changes!
+                                            window->DrawList->AddImage(texID,tmp,tmp2,cuv0,cuv1,white);
+                                            window->DrawList->AddRectFilled(tmp,tmp2,penColori);
+                                        }
+                                    }
+                                    else {
+                                        cuv0.x = (tmp.x-startPos.x)*cfactor.x;
+                                        cuv0.y = (tmp.y-startPos.y)*cfactor.y;
+                                        cuv1.x = (tmp2.x-startPos.x)*cfactor.x;
+                                        cuv1.y = (tmp2.y-startPos.y)*cfactor.y;
+                                        if (mustUseRoundPen)    {
+                                            tmp3 = (tmp+tmp2)*0.5f;
+                                            ImGuiIE::ImDrawListAddImageCircleFilled(window->DrawList,CheckersTexID,cuv0,cuv1,tmp3,halfPenThicknessTotal,white,num_segments);
+                                            ImGuiIE::ImDrawListAddImageCircleFilled(window->DrawList,CheckersTexID,cuv0,cuv1,tmp3,halfPenThicknessTotal,penColori,num_segments); // we must reuse the same (checker) texture to display the penColor, to prevent hundreds of texture changes
+                                        }
+                                        else {
+                                            window->DrawList->AddImage(CheckersTexID,tmp,tmp2,cuv0,cuv1);
+                                            window->DrawList->AddImage(CheckersTexID,tmp,tmp2,puv0,puv1,penColori); // we must reuse the same (checker) texture to display the penColor, to prevent hundreds of texture changes
+                                        }
+                                    }
+                                }
+                                else if (mustUseRoundPen) {
+                                    tmp3 = (tmp+tmp2)*0.5f;
+                                    window->DrawList->AddCircleFilled(tmp3,halfPenThicknessTotal,penColori,num_segments);
                                 }
                                 else window->DrawList->AddRectFilled(tmp,tmp2,penColori);
                             }
@@ -4902,14 +5056,15 @@ struct StbImage {
                         }
 
                         // Display points [copied here from above to prevent one frame artifact (it must be exactly the same code)]
+                        const ImVec4 penColorToUse = (c==3 && !penOverlayMode) ? ImVec4(penColor.x,penColor.y,penColor.z,1.f) : penColor;
                         ImVec2 tmp(0,0),tmp2(0,0);
                         const ImVec2* pPenPoints = &penPointsInImageCoords[0];
                         ImU32 penColori = 0;
                         if (c==1)   {
-                            const ImU32 alpha = (ImU32)(penColor.w*255.f);
+                            const ImU32 alpha = (ImU32)(penColorToUse.w*255.f);
                             penColori = ((255<<IM_COL32_A_SHIFT) |(alpha<<IM_COL32_B_SHIFT) | (alpha<<IM_COL32_G_SHIFT) | (alpha<<IM_COL32_R_SHIFT));
                         }
-                        else penColori = ImGui::ColorConvertFloat4ToU32(penColor);
+                        else penColori = ImGui::ColorConvertFloat4ToU32(penColorToUse);
                         const float penThicknessPixel = getImageToMouseCoordsRatio();
                         const float penThicknessTotal = penThicknessPixel*penWidth;
                         const float deltaPenWidth = penThicknessPixel * (int) (penWidth*0.5f);
@@ -4920,28 +5075,59 @@ struct StbImage {
                             penSelectionInMouseCoords.Clip(imageSelectionInMouseCoords);
                         }
                         window->DrawList->PushClipRect(penSelectionInMouseCoords.Min,penSelectionInMouseCoords.Max,false);
-                        const bool mustPaintCheckersBg = (c==4 && penColor.w<1);
-                        // We must avoid alpha blending (without changing the blend function)
-                        // The best way of doing it is to draw the solid background we use for transparency
-                        // under all the pixels we're about to draw
-                        // Please note that to be 100% correct we must fetch the EXACT SAME tex coords we have
-                        // below the image!
+                        const bool mustPaintCheckersBg = penColorToUse.w<1 && (c==4 || (c==3 && penOverlayMode));
                         const ImVec2 cfactor(CheckersRepeatFactor.x/(endPos.x-startPos.x),CheckersRepeatFactor.y/(endPos.y-startPos.y));
+                        const ImVec2 tfactor((uv1.x-uv0.x)/(endPos.x-startPos.x),(uv1.y-uv0.y)/(endPos.y-startPos.y));
                         ImVec2 cuv0(0,0),cuv1(0,0);
                         const ImVec2 puv0(0.1f,0.1f);
                         const ImVec2 puv1(0.4f,0.4f);
+                        const bool mustUseRoundPen = penRoundMode && (penWidth>2);
+                        const float halfPenThicknessTotal = penThicknessTotal*0.5f;
+                        const ImU32 num_segments = 8;
+                        const ImU32 white = IM_COL32_WHITE;
+                        ImVec2 tmp3(0,0);
                         for (int i=0;i<numPoints;i++)  {
                             tmp = imageToMouseCoords(*pPenPoints++);
                             tmp.x-= deltaPenWidth; tmp.y-=deltaPenWidth;
                             tmp2.x = tmp.x+penThicknessTotal;tmp2.y = tmp.y+penThicknessTotal;
                             if (tmp2.x>=startPos.x && tmp.x<endPos.x && tmp2.y>=startPos.y && tmp.y<endPos.y)   {
                                 if (mustPaintCheckersBg)    {
-                                    cuv0.x = (tmp.x-startPos.x)*cfactor.x;
-                                    cuv0.y = (tmp.y-startPos.y)*cfactor.y;
-                                    cuv1.x = (tmp2.x-startPos.x)*cfactor.x;
-                                    cuv1.y = (tmp2.y-startPos.y)*cfactor.y;
-                                    window->DrawList->AddImage(CheckersTexID,tmp,tmp2,cuv0,cuv1);
-                                    window->DrawList->AddImage(CheckersTexID,tmp,tmp2,puv0,puv1,penColori); // we must reuse the same (checker) texture to display the penColor, to prevent hundreds of texture changes
+                                    if (penOverlayMode)  {
+                                        cuv0.x = uv0.x+(tmp.x-startPos.x)*tfactor.x;
+                                        cuv0.y = uv0.y+(tmp.y-startPos.y)*tfactor.y;
+                                        cuv1.x = uv0.x+(tmp2.x-startPos.x)*tfactor.x;
+                                        cuv1.y = uv0.y+(tmp2.y-startPos.y)*tfactor.y;
+                                        if (mustUseRoundPen)    {
+                                            tmp3 = (tmp+tmp2)*0.5f;
+                                            // Unfortunately these couple of lines triggers HUNDREDS of twxture changes!
+                                            ImGuiIE::ImDrawListAddImageCircleFilled(window->DrawList,texID,cuv0,cuv1,tmp3,halfPenThicknessTotal,white,num_segments);
+                                            window->DrawList->AddCircleFilled(tmp3,halfPenThicknessTotal,penColori,num_segments);
+                                        }
+                                        else {
+                                            // Unfortunately these couple of lines triggers HUNDREDS of twxture changes!
+                                            window->DrawList->AddImage(texID,tmp,tmp2,cuv0,cuv1,white);
+                                            window->DrawList->AddRectFilled(tmp,tmp2,penColori);
+                                        }
+                                    }
+                                    else {
+                                        cuv0.x = (tmp.x-startPos.x)*cfactor.x;
+                                        cuv0.y = (tmp.y-startPos.y)*cfactor.y;
+                                        cuv1.x = (tmp2.x-startPos.x)*cfactor.x;
+                                        cuv1.y = (tmp2.y-startPos.y)*cfactor.y;
+                                        if (mustUseRoundPen)    {
+                                            tmp3 = (tmp+tmp2)*0.5f;
+                                            ImGuiIE::ImDrawListAddImageCircleFilled(window->DrawList,CheckersTexID,cuv0,cuv1,tmp3,halfPenThicknessTotal,white,num_segments);
+                                            ImGuiIE::ImDrawListAddImageCircleFilled(window->DrawList,CheckersTexID,cuv0,cuv1,tmp3,halfPenThicknessTotal,penColori,num_segments); // we must reuse the same (checker) texture to display the penColor, to prevent hundreds of texture changes
+                                        }
+                                        else {
+                                            window->DrawList->AddImage(CheckersTexID,tmp,tmp2,cuv0,cuv1);
+                                            window->DrawList->AddImage(CheckersTexID,tmp,tmp2,puv0,puv1,penColori); // we must reuse the same (checker) texture to display the penColor, to prevent hundreds of texture changes
+                                        }
+                                    }
+                                }
+                                else if (mustUseRoundPen) {
+                                    tmp3 = (tmp+tmp2)*0.5f;
+                                    window->DrawList->AddCircleFilled(tmp3,halfPenThicknessTotal,penColori,num_segments);
                                 }
                                 else window->DrawList->AddRectFilled(tmp,tmp2,penColori);
                             }
@@ -4951,18 +5137,20 @@ struct StbImage {
                         // Modify image
                         if (isImageSelectionValid(penSelection))
                         {
+                            const bool mustUseRoundPen = penRoundMode && penWidth>2;
+                            const bool mustUseAlphaBlend = penOverlayMode && mustPaintCheckersBg;
+
                             //IM_ASSERT(isImageSelectionValid(penSelection));
 
-                            /*// extract selection (technically only needed for penWidth>1, penColor.w<1 and c==4):
-                         * // NO WAY! We just want to replace color, not to alpha blend it! Otherwise we could never reset an alpha value to zero!
-                        int dstX = penSelection.Min.x;
-                        int dstY = penSelection.Min.y;
-                        int dstW = penSelection.Max.x-penSelection.Min.x;
-                        int dstH = penSelection.Max.y-penSelection.Min.y;
-                        unsigned char* sim = NULL;
-                        if (penWidth>1 && penColor.w<1 && c==4) sim = ImGuiIE::ExtractImage(dstX,dstY,dstW,dstH,image,w,h,c);
-                        ImGuiIE::ImageScopedDeleter scoped(sim);
-                        const unsigned char* psim = sim;*/
+                            // extract selection (technically only needed for penWidth>1, penColor.w<1 and c==4):
+                            int dstX = penSelection.Min.x;
+                            int dstY = penSelection.Min.y;
+                            int dstW = penSelection.Max.x-penSelection.Min.x;
+                            int dstH = penSelection.Max.y-penSelection.Min.y;
+                            unsigned char* sim = NULL;
+                            if (mustUseAlphaBlend) sim = ImGuiIE::ExtractImage(dstX,dstY,dstW,dstH,image,w,h,c);
+                            ImGuiIE::ImageScopedDeleter scoped(sim);
+                            const unsigned char* psim = sim;
 
                             pushImage(&penSelection);
 
@@ -4970,22 +5158,41 @@ struct StbImage {
                             const ImVec2* pPenPoints = &penPointsInImageCoords[0];
                             unsigned char* pim = image;
                             const int penWidthi = (int) penWidth;
+                            const bool penWidthIsEven = penWidthi%2==0;
                             const int deltaPenWidth = (int) (penWidth*0.5f);
-                            unsigned char penColorUC[4] = {(unsigned char)(penColor.x*255.f),(unsigned char)(penColor.y*255.f),(unsigned char)(penColor.z*255.f),(unsigned char)(penColor.w*255.f)};
+                            unsigned char penColorUC[4] = {(unsigned char)(penColorToUse.x*255.f),(unsigned char)(penColorToUse.y*255.f),(unsigned char)(penColorToUse.z*255.f),(unsigned char)(penColorToUse.w*255.f)};
                             if (c==1) penColorUC[0]=penColorUC[1]=penColorUC[2]=penColorUC[3];
                             int numPixelsSet = 0;
+                            float dx=0,dy=0,deltaPenWidth2=ImGuiIE::round(penWidth*penWidth*0.25f);
                             for (int i=0;i<numPoints;i++)  {
                                 x = (int) pPenPoints->x-deltaPenWidth;y = (int) pPenPoints->y-deltaPenWidth;
                                 pPenPoints++;
                                 for (int yy=y,yySz=y+penWidthi;yy<yySz;yy++) {
                                     if (yy<Y || yy>=Y+H) continue;
+                                    if (mustUseRoundPen) {dy = yy-y-deltaPenWidth+(penWidthIsEven?0.5f:0.f);dy*=dy;dy=ImGuiIE::round(dy);}
                                     for (int xx=x,xxSz=x+penWidthi;xx<xxSz;xx++) {
                                         if (xx<X || xx>=X+W) continue;
-                                        pim = &image[(yy*w+xx)*c];
-                                        if (c>=3) {for (int i=0;i<c;i++) *pim++ = penColorUC[i];}
-                                        else if (c==1) *pim++ = penColorUC[3];
-                                        else IM_ASSERT(true);
+                                        if (mustUseRoundPen) {
+                                            dx = xx-x-deltaPenWidth+(penWidthIsEven?0.5f:0.f);dx*=dx;dx=ImGuiIE::round(dx);
+                                            if (dx+dy>=deltaPenWidth2) continue;
+                                        }
 
+                                        if (mustUseAlphaBlend)  {
+                                            // Here we know that: (c==3 || c==4) and penColor.w<1
+                                            psim = &sim[((yy-dstY)*dstW+(xx-dstX))*c];
+                                            pim = &image[(yy*w+xx)*c];
+
+                                            *pim++ = (unsigned char) (((((float)(*psim++))/255.f) * (1.0f-penColorToUse.w) + penColorToUse.x*penColorToUse.w)*255.f);
+                                            *pim++ = (unsigned char) (((((float)(*psim++))/255.f) * (1.0f-penColorToUse.w) + penColorToUse.y*penColorToUse.w)*255.f);
+                                            *pim++ = (unsigned char) (((((float)(*psim++))/255.f) * (1.0f-penColorToUse.w) + penColorToUse.z*penColorToUse.w)*255.f);
+                                            if (c==4) *pim++ = *psim++;
+                                        }
+                                        else {
+                                            pim = &image[(yy*w+xx)*c];
+                                            if (c>=3) {for (int i=0;i<c;i++) *pim++ = penColorUC[i];}
+                                            else if (c==1) *pim++ = penColorUC[3];
+                                            else IM_ASSERT(true);
+                                        }
 
                                         //fprintf(stderr,"(%d,%d)\n",xx,yy);
                                         ++numPixelsSet;
@@ -5010,8 +5217,9 @@ struct StbImage {
                 if (imagePos.x>=0 && imagePos.y>=0 && imagePos.x<w && imagePos.y<h) {
                     const ImRect* pSelection = (chbSelectionLimit && isImageSelectionValid(imageSelection))? &imageSelection : NULL;
                     pushImage(pSelection);
-                    if (ImGuiIE::FillHelperClass::Fill(image,w,h,c,imagePos,penColor,ImVec4((float)tolColor/255.f,(float)tolColor/255.f,(float)tolColor/255.f,(float)tolAlpha/255.f),
-                    pSelection,chbMirrorX,chbMirrorY,false)) {
+                    const ImVec4 penColorToUse = (c==3 && !penOverlayMode) ? ImVec4(penColor.x,penColor.y,penColor.z,1.f) : penColor;
+                    if (ImGuiIE::FillHelperClass::Fill(image,w,h,c,imagePos,penColorToUse,ImVec4((float)tolColor/255.f,(float)tolColor/255.f,(float)tolColor/255.f,(float)tolAlpha/255.f),
+                    pSelection,chbMirrorX,chbMirrorY,false,penOverlayMode)) {
                         mustInvalidateTexID = true;
                         assignModified(true);
                     }
@@ -5054,8 +5262,14 @@ static StbImage* CreateStbImage(ImageEditor& ie) {
     return is;
 }
 
+ImageEditor::ImageEditor()
+: userPtr(NULL),is(NULL),init(false),showImageNamePanel(true),
+allowLoadingNewImages(true),allowBrowsingInsideFolder(true),allowSaveAs(true),
+changeFileNameWhenExtractingSelection(true)
+{}
+
 ImageEditor::ImageEditor(bool hideImageNamePanel,bool forbidLoadingNewImagesIfAvailable,bool forbidBrowsingInsideFolderIfAvailable,bool forbidSaveAsIfAvailable,bool _changeFileNameWhenExtractingSelection)
-: userPtr(NULL),is(NULL),init(false),showImageNamePanel(!hideImageNamePanel)  ,
+: userPtr(NULL),is(NULL),init(false),showImageNamePanel(!hideImageNamePanel),
 allowLoadingNewImages(!forbidLoadingNewImagesIfAvailable),allowBrowsingInsideFolder(!forbidBrowsingInsideFolderIfAvailable),allowSaveAs(!forbidSaveAsIfAvailable),
 changeFileNameWhenExtractingSelection(_changeFileNameWhenExtractingSelection)
 {}
@@ -5092,6 +5306,8 @@ void ImageEditor::render(const ImVec2 &size)  {
 }
 
 const char* ImageEditor::getImageFilePath() const   {return is ? NULL : is->filePath;}
+const char* ImageEditor::getImageFileName() const   {return is ? NULL : is->filePathName;}
+const char* ImageEditor::getImageFileFileExtension() const  {return is ? NULL : is->fileExt;}
 void ImageEditor::getImageInfo(int* w,int* h,int* c) const  {
     if (is) {if (w) *w=is->w;if (h) *h=is->h;if (c) *c=is->c;}
     else {if (w) *w=0;if (h) *h=0;if (c) *c=0;}
