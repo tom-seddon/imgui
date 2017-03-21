@@ -127,7 +127,7 @@ NOTES:
  * Added an optional callback SetImageEditorEventCallback(...)
 */
 
-#define IMGUIIMAGEEDITOR_VERSION 0.12
+#define IMGUIIMAGEEDITOR_VERSION 0.15
 
 namespace ImGui {
 
