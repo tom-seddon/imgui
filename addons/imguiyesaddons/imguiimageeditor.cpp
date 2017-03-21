@@ -864,11 +864,15 @@ template <typename T> static T* ExtractImage(int& dstX,int& dstY,int& dstW,int& 
     return ExtractImage<T>(dstX,dstY,dstW,dstH,im,e,h,c);
 }*/
 
-template <typename T> static bool PasteImage(int posX,int posY,T* im,int w,int h,int c,const T* im2,int w2,int h2) {
-    IM_ASSERT(im && im2 && w>0 && h>0 && c>0 && (c==1 || c==3 || c==4) && w2>0 && h2>0);
-    if (!(im && im2 && w>0 && h>0 && c>0 && (c==1 || c==3 || c==4) && w2>0 && h2>0)) return NULL;    
+template <typename T> static bool PasteImage(int posX,int posY,T* im,int w,int h,int c,const T* im2,int w2,int h2,int c2=0,bool overlayOrAppendMode=false) {
+    if (c2==0) c2=c;
+    overlayOrAppendMode&=(!(c2==1 && c==1));
+    overlayOrAppendMode&=(!(c2==3 && c==3));
+    IM_ASSERT(!(overlayOrAppendMode && (c2==3 || (c2==1 && c!=4))));    // These combintions should be excluded at a higher level
+    IM_ASSERT(im && im2 && w>0 && h>0 && c>0 && (c==1 || c==3 || c==4) && w2>0 && h2>0 && c2>0 && (c2==1 || c2==3 || c2==4) );
+    if (!(im && im2 && w>0 && h>0 && c>0 && (c==1 || c==3 || c==4) && w2>0 && h2>0 && c2>0 && (c2==1 || c2==3 || c2==4) )) return NULL;
 
-    const int stride2 = w2*c;
+    const int stride2 = w2*c2;
     const int stride = w*c;
 
     const T* pim2 = im2;
@@ -876,22 +880,96 @@ template <typename T> static bool PasteImage(int posX,int posY,T* im,int w,int h
 
     const int yStart = posY;
     const int yEnd = posY+h2;
-    const int xcStart = posX*c;
-    const int xcEnd = (posX+w2)*c;
+    if (!overlayOrAppendMode)   {
+        IM_ASSERT(c==c2);
+        const int xcStart = posX*c;
+        const int xcEnd = (posX+w2)*c;
 
-    for (int y=yStart;y<yEnd;y++)    {
-        if (y<0) continue;
-        if (y>=h || (y-posY)>=h2) break;
-        pim = &im[y*w*c];
-        pim2 = &im2[(y-posY)*stride2];
-        for (int xc=xcStart;xc<xcEnd;xc++)    {
-            if (xc<0) {
-                if (xc-xcStart<0) pim2++;
-                continue;
+        for (int y=yStart;y<yEnd;y++)    {
+            if (y<0) continue;
+            if (y>=h || (y-posY)>=h2) break;
+            pim = &im[y*w*c];
+            pim2 = &im2[(y-posY)*stride2];
+            for (int xc=xcStart;xc<xcEnd;xc++)    {
+                if (xc<0) {
+                    if (xc-xcStart<0) pim2++;
+                    continue;
+                }
+                if (xc>=stride || (xc-xcStart)>=stride2) break;
+                pim[xc] = pim2[xc-xcStart];
             }
-            if (xc>=stride || (xc-xcStart)>=stride2) break;
-            pim[xc] = pim2[xc-xcStart];
         }
+    }
+    else {
+        // OverlayOrAppendMode
+        const int xStart = posX;
+        const int xc2Start = xStart*c2;
+        const int xEnd = (posX+w2);
+        const T* pimg2 = pim2;
+        T* pimg = pim;
+        int xc=0,xc2=0;
+        if (c2==4)  {
+            if (c>=3) {
+                // overlay mode (= blend)
+                unsigned char alpha=0,twoFiveFiveMinusAlpha=0;
+                for (int y=yStart;y<yEnd;y++)    {
+                    if (y<0) continue;
+                    if (y>=h || (y-posY)>=h2) break;
+                    pim = &im[y*w*c];
+                    pim2 = &im2[(y-posY)*stride2];
+                    for (int x=xStart;x<xEnd;x++)    {
+                        if (x<0) {
+                            if (x-xStart<0) pim2+=c2;
+                            continue;
+                        }
+                        xc=x*c;xc2=x*c2;
+                        if (xc>=stride || (xc2-xc2Start)>=stride2) break;
+                        pimg=&pim[xc];pimg2=&pim2[xc2-xc2Start];
+                        alpha = pimg2[3];twoFiveFiveMinusAlpha=255-alpha;
+                        *pimg = (unsigned char) ((((int)(*pimg)*twoFiveFiveMinusAlpha + (int)(*pimg2++)*alpha))/255);++pimg;
+                        *pimg = (unsigned char) ((((int)(*pimg)*twoFiveFiveMinusAlpha + (int)(*pimg2++)*alpha))/255);++pimg;
+                        *pimg = (unsigned char) ((((int)(*pimg)*twoFiveFiveMinusAlpha + (int)(*pimg2++)*alpha))/255);++pimg;
+                        if (c==4) {*pimg = (unsigned char) ((((int)(*pimg)*twoFiveFiveMinusAlpha + (int)(*pimg2++)*alpha))/255);++pimg;}
+                    }
+                }
+            }
+            else if (c==1)  {
+                // append mode (append alpha channel only)
+                for (int y=yStart;y<yEnd;y++)    {
+                    if (y<0) continue;
+                    if (y>=h || (y-posY)>=h2) break;
+                    pim = &im[y*w*c];
+                    pim2 = &im2[(y-posY)*stride2];
+                    for (int x=xStart;x<xEnd;x++)    {
+                        if (x<0) {if (x-xStart<0) pim2+=c2;continue;}
+                        xc=x*c;xc2=x*c2;
+                        if (xc>=stride || (xc2-xc2Start)>=stride2) break;
+                        pim[xc] = pim2[xc2-xc2Start+3];
+                    }
+                }
+            }
+            else IM_ASSERT(true);   // shouldn't happen
+        }
+        else if (c2==1) {
+            if (c==4)   {
+                // Append mode: we must replace the alpha value
+                for (int y=yStart;y<yEnd;y++)    {
+                    if (y<0) continue;
+                    if (y>=h || (y-posY)>=h2) break;
+                    pim = &im[y*w*c];
+                    pim2 = &im2[(y-posY)*stride2];
+                    for (int x=xStart;x<xEnd;x++)    {
+                        if (x<0) {if (x-xStart<0) pim2+=c2;continue;}
+                        xc=x*c;xc2=x*c2;
+                        if (xc>=stride || (xc2-xc2Start)>=stride2) break;
+                        pim[xc+3] = pim2[xc2-xc2Start];
+                    }
+                }
+            }
+            if (c==3) IM_ASSERT(true);   // should be excluded at a higher level
+
+        }
+        else IM_ASSERT(true);   // should be excluded at a higher level
     }
 
     return true;
@@ -926,6 +1004,13 @@ static unsigned char* ConvertColorsTo(int dstC,const unsigned char* im,int w,int
     }
     else if (c==4) {
         if (dstC==1) {
+            if (!assumeThatOneChannelMeansLuminance)    {
+                // We make sure that alpha changes: otherwise we probably want assumeThatOneChannelMeansLuminance=true!
+                const unsigned char value = pim[3];
+                bool alphaChanges = false;
+                for (int_type i=0,isz=wxh*c;i<isz;i+=c)   {if (pim[i+3]!=value) {alphaChanges=true;break;}}
+                if (!alphaChanges) assumeThatOneChannelMeansLuminance=true;
+            }
             if (assumeThatOneChannelMeansLuminance) {for (int_type i=0;i<wxh;i++)   {*pni++ =(unsigned char) (((unsigned short)(pim[0])+(unsigned short)(pim[1])+(unsigned short)(pim[2]))/3);pim+=4;}}
             else {for (int_type i=0;i<wxh;i++)   {pim+=3;*pni++=*pim++;}}
         }
@@ -1815,6 +1900,7 @@ static void LinearFloodFill(int x,int y)    {
                 ++pim;
             }
             //if (c==4) ++pim;// we skip next *pim++ (alpha)
+            if (c==4) *pim = (unsigned char) ((((int)(*pim)*twoFiveFiveMinusoverlayAlpha + (int)RGBA[3]*overlayAlpha))/255);
         }
         SetPixelCheckedAt(LFillLoc,y,true);
         LFillLoc--; 		 	 //de-increment counter
@@ -1835,6 +1921,7 @@ static void LinearFloodFill(int x,int y)    {
                 ++pim;
             }
             //if (c==4) ++pim;// we skip next *pim++ (alpha)
+            //if (c==4) *pim = (unsigned char) ((((int)(*pim)*twoFiveFiveMinusoverlayAlpha + (int)RGBA[3]*overlayAlpha))/255);
         }
         SetPixelCheckedAt(RFillLoc,y,true);
         RFillLoc++; 		 //increment counter
@@ -2408,6 +2495,7 @@ struct StbImage {
     bool mustUpdateFileListSoon;
 
     int shiftImageSelectionMode;
+    bool discardRgbWhenAlphaIsZeroOnSaving;
 
 #   ifdef STBIR_INCLUDE_STB_IMAGE_RESIZE_H
     ImGuiIE::stbir_data_struct myStbirData;
@@ -2542,6 +2630,7 @@ struct StbImage {
         endPos.x=endPos.y=0;
         imageSelection.Min=imageSelection.Max=ImVec2(0,0);
         shiftImageSelectionMode = 0;
+        discardRgbWhenAlphaIsZeroOnSaving = false;
 
         ImGuiIE::InitSupportedFileExtensions(); // can be called multiple times safely
     }
@@ -2878,11 +2967,13 @@ struct StbImage {
         return true;
     }
 
-    bool pasteImage(ImGuiIE::ResizeFilter filter) {
+    bool pasteImage(ImGuiIE::ResizeFilter filter,bool overlayOrAppendMode=false) {
         if (!isImageSelectionValid() || !CopiedImage.isValid()) return false;
         unsigned char *cim = NULL,*cim2 = NULL;
         ImGuiIE::StbImageBuffer::ScopedData copiedImage(CopiedImage);   // This wrapping allow the pixels to be stored inside CopiedImage in a compressed format
-        if (c!=CopiedImage.c) cim = ImGuiIE::ConvertColorsTo(c,copiedImage.getImage(),CopiedImage.w,CopiedImage.h,CopiedImage.c,true);
+        if (overlayOrAppendMode && (CopiedImage.c==3 || (CopiedImage.c==1 && c!=4))) overlayOrAppendMode = false;    // These combintions must be excluded here (at a higher level)
+        const int c2 = overlayOrAppendMode ? CopiedImage.c : c;
+        if (c!=CopiedImage.c && !overlayOrAppendMode) cim = ImGuiIE::ConvertColorsTo(c,copiedImage.getImage(),CopiedImage.w,CopiedImage.h,CopiedImage.c,true);
         ImGuiIE::ImageScopedDeleter scoped(cim);
 
         // we must scale the image
@@ -2895,12 +2986,12 @@ struct StbImage {
 #           ifdef STBIR_INCLUDE_STB_IMAGE_RESIZE_H
             lastArg = (void*)&myStbirData;
 #           endif //STBIR_INCLUDE_STB_IMAGE_RESIZE_H
-            cim2 = ImGuiIE::ResizeImage(W,H,cim ? cim : copiedImage.getImage(),CopiedImage.w,CopiedImage.h,c,filter,lastArg);
+            cim2 = ImGuiIE::ResizeImage(W,H,cim ? cim : copiedImage.getImage(),CopiedImage.w,CopiedImage.h,c2,filter,lastArg);
         }
         ImGuiIE::ImageScopedDeleter scoped2(cim2);
 
         pushImage(&imageSelection);
-        const bool ok = ImGuiIE::PasteImage(X,Y,image,w,h,c,cim2 ? cim2 : (cim ? cim : (copiedImage.getImage())),W,H);
+        const bool ok = ImGuiIE::PasteImage(X,Y,image,w,h,c,cim2 ? cim2 : (cim ? cim : (copiedImage.getImage())),W,H,c2,overlayOrAppendMode);
         if (ok) mustInvalidateTexID = true;
         return ok;
     }
@@ -3379,15 +3470,13 @@ struct StbImage {
         if (numChannels!=c && !convertImageToColorMode(numChannels,assumeThatOneChannelMeansLuminance)) return false;
         IM_ASSERT(c==numChannels);
 
-#       ifndef IMGUIIMAGEEDITOR_KEEP_RGB_WHEN_ALPHA_IS_ZERO
-        if (c==4) {
+        if (c==4 && discardRgbWhenAlphaIsZeroOnSaving) {
             unsigned char* pim = image;
             for (int i=0,isz=w*h;i<isz;i++) {
                 if (pim[3]==0)  {*pim++=255;*pim++=255;*pim++=255;++pim;}
                 else pim+=4;
             }
         }
-#       endif //IMGUIIMAGEEDITOR_KEEP_RGB_WHEN_ALPHA_IS_ZERO
 
         //fprintf(stderr,"Save as \"%s\" [ext: %s Num Channels: %d]\n",path,feh.ext,c);
 
@@ -4006,6 +4095,18 @@ struct StbImage {
                 if (canSaveRGBA && !anyPressed) {
                     if (ImGui::Button("Save RGBA Image As...")) {numChannels=4;anyPressed=true;}
                     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s",ImGuiIE::SupportedSaveExtensions[4]);
+                    ImGui::SameLine();
+                    {
+                        bool tmp = discardRgbWhenAlphaIsZeroOnSaving;
+                        if (tmp) {
+                            ImGui::PushStyleColor(ImGuiCol_Button,mrs.CheckButtonColor);
+                            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
+                            ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
+                        }
+                        if (ImGui::SmallButton("Optimize RGBA")) discardRgbWhenAlphaIsZeroOnSaving=!discardRgbWhenAlphaIsZeroOnSaving;
+                        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","When enabled, on saving RGB is discarded\nwhen ALPHA is zero for better compression");
+                        if (tmp) ImGui::PopStyleColor(3);
+                    }
                 }
                 if (canSaveRGB && !anyPressed) {
                     if (ImGui::Button("Save RGB Image As...")) {numChannels=3;anyPressed=true;}
@@ -4143,7 +4244,7 @@ struct StbImage {
                         }
                         else if (pressedItem==4) {
                             // PASTE
-                            if (CopiedImage.isValid() && pasteImage((ImGuiIE::ResizeFilter)resizeFilter)) assignModified(true);
+                            if (CopiedImage.isValid() && pasteImage((ImGuiIE::ResizeFilter)resizeFilter,true)) assignModified(true);
 
                         }
                         else IM_ASSERT(true);   // we have skipped 1 because it's a separator!
@@ -4534,6 +4635,18 @@ struct StbImage {
                         }
                     }
                     if (!canDownload && ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Ctrl+S");
+                    ImGui::SameLine();
+                }
+                if (fileExtCanBeSaved && c==4) {
+                    bool tmp = discardRgbWhenAlphaIsZeroOnSaving;
+                    if (tmp) {
+                        ImGui::PushStyleColor(ImGuiCol_Button,mrs.CheckButtonColor);
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
+                        ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
+                    }
+                    if (ImGui::SmallButton("Optimize RGBA")) discardRgbWhenAlphaIsZeroOnSaving=!discardRgbWhenAlphaIsZeroOnSaving;
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","When enabled, on saving RGB is discarded\nwhen ALPHA is zero for better compression");
+                    if (tmp) ImGui::PopStyleColor(3);
                     ImGui::SameLine();
                 }
                 if (ImGui::Button("Reload")) {loadFromFile(filePath);}

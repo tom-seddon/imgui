@@ -997,6 +997,27 @@ void DrawGL()	// Mandatory
                 // event.reset();  // optional after processing... (don't call it, why call it?)
             }
         }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Text("Timeline (https://github.com/nem0/LumixEngine/blob/timeline_gui/external/imgui/imgui_user.inl):");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Lumix Engine's Timeline");
+        ImGui::Separator();
+
+
+	if (ImGui::BeginTimeline("MyTimeline",50.f,4,6))  // label, max_value, num_visible_rows, opt_exact_num_rows (for item culling)
+        {
+            static float events[12]={10.f,20.f,0.5f,30.f,40.f,50.f,20.f,40.f,15.f,22.5f,35.f,45.f};
+            if (ImGui::TimelineEvent("Event1",&events[0])) {/*events[0] and/or events[1] modified*/}
+            ImGui::TimelineEvent("Event2",&events[2]);
+            ImGui::TimelineEvent("Event3",&events[4],true);    // Event3 can only be shifted
+            ImGui::TimelineEvent("Event4",&events[6]);
+            ImGui::TimelineEvent("Event5",&events[8]);
+            ImGui::TimelineEvent("Event6",&events[10]);
+        }
+        const float elapsedTime = (float)(((unsigned)(ImGui::GetTime()*1000))%50000)/1000.f;    // So that it's always in [0,50]
+        ImGui::EndTimeline(5,elapsedTime);  // num_vertical_grid_lines, current_time (optional), timeline_running_color (optional)
+
 #       else //NO_IMGUIVARIOUSCONTROLS
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUIVARIOUSCONTROLS

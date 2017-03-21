@@ -107,6 +107,11 @@ NOTES:
 */
 
 /* CHANGELOG:
+ IMGUIIMAGEEDITOR_VERSION 0.15
+ * Now Paste blends the copied image's alpha with the background, or just copies its alpha value (according to the image channels).
+ * Removed a hard-coded definition and added an "Optimize RGBA" check button.
+ * Now "Save As ALPHA", when called on a RGBA image, should do better what the user expects (= save the alpha channel only if it's meaningful, otherwise save luminance).
+ * Basically with this version it should be possible to merge an RGB image with an ALPHA image and split back an RGBA image into an RGB image and an ALPHA image.
 
  IMGUIIMAGEEDITOR_VERSION 0.12
  * Added ability to show/hide the image name panel by pressing key S
