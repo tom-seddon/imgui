@@ -745,10 +745,11 @@ typedef TreeViewNode::Event TreeViewEvent;
 // Timeline (from: https://github.com/nem0/LumixEngine/blob/timeline_gui/external/imgui/imgui_user.h)=
 /* Possible enhancements:
  * Add some kind of "snap to grid" epsilon
- * Add zooming with CTRL+MouseWheel, and a horizontal scrollbar
  * Add different types of TimelineEvent (e.g. multiple ranges in a single line, dot-like markers, etc.)
 */
-IMGUI_API bool BeginTimeline(const char* str_id, float max_value=0.f, int num_visible_rows=0, int opt_exact_num_rows=0); // opt_exact_num_rows, when !=0, enables item culling
+// opt_exact_num_rows: optional, when !=0, enables item culling
+// popt_offset_and_scale: optional reference to a static ImVec2 (CTRL+RMB drag: pan in [0.f,1.f]; CTRL+MW: zoom in [0.25f,4.f]). Thanks @meshula!
+IMGUI_API bool BeginTimeline(const char* str_id, float max_value=0.f, int num_visible_rows=0, int opt_exact_num_rows=0,ImVec2* popt_offset_and_scale=NULL);
 IMGUI_API bool TimelineEvent(const char* str_id, float* values, bool keep_range_constant=false);
 IMGUI_API void EndTimeline(int num_vertical_grid_lines=5.f,float current_time=0.f,ImU32 timeline_running_color=IM_COL32(0,128,0,200));
 // End Timeline ======================================================================================

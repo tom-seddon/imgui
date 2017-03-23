@@ -1010,9 +1010,10 @@ void DrawGL()	// Mandatory
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Text("Timeline (https://github.com/nem0/LumixEngine/blob/timeline_gui/external/imgui/imgui_user.inl):");
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Lumix Engine's Timeline");
+	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Lumix Engine's Timeline\nUse CTRL+MW to zoom\nUse CTRL+RMB drag to pan\nUse CTRL+MMB to reset pan and zoom");
         ImGui::Separator();
-	if (ImGui::BeginTimeline("MyTimeline",50.f,4,6))  // label, max_value, num_visible_rows, opt_exact_num_rows (for item culling)
+	static ImVec2 pan_and_zoom(0.f,1.f);	// optional (CTRL+RMB drag: pan in [0.f,1.f]; CTRL+MW: zoom in [0.25f,4.f]). Thanks @meshula!
+	if (ImGui::BeginTimeline("MyTimeline",50.f,4,6,&pan_and_zoom))  // label, max_value, num_visible_rows, opt_exact_num_rows (for item culling)
 	{
 	    static float events[12]={10.f,20.f,0.5f,30.f,40.f,50.f,20.f,40.f,15.f,22.5f,35.f,45.f};
 	    if (ImGui::TimelineEvent("Event1",&events[0])) {/*events[0] and/or events[1] modified*/}
