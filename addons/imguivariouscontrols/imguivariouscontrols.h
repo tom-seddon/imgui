@@ -34,10 +34,13 @@ ImGui::TestPopupMenuSimple();
 
 namespace ImGui {
 
+IMGUI_API bool CheckButton(const char* label,bool* pvalue);
+IMGUI_API bool SmallCheckButton(const char* label,bool* pvalue);
+
 // Please note that you can tweak the "format" argument if you want to add a prefix (or a suffix) piece of text to the text that appears at the right of the bar.
 // returns the value "fraction" in 0.f-1.f.
 // It does not need any ID.
-float ProgressBar(const char* optionalPrefixText,float value,const float minValue=0.f,const float maxValue=1.f,const char* format="%1.0f%%",const ImVec2& sizeOfBarWithoutTextInPixels=ImVec2(-1,-1),
+IMGUI_API float ProgressBar(const char* optionalPrefixText,float value,const float minValue=0.f,const float maxValue=1.f,const char* format="%1.0f%%",const ImVec2& sizeOfBarWithoutTextInPixels=ImVec2(-1,-1),
                  const ImVec4& colorLeft=ImVec4(0,1,0,0.8),const ImVec4& colorRight=ImVec4(0,0.4,0,0.8),const ImVec4& colorBorder=ImVec4(0.25,0.25,1.0,1));
 
 void TestProgressBar();
@@ -45,10 +48,10 @@ void TestProgressBar();
 // Single column popup menu without icon support. It disappears when the mouse goes away.
 // Returns -1 when no entries has been selected.
 // Optional scrollUpEntryText returns index of -2,scrollDownEntryText -3 (but they must be manually handled by the user)
-int PopupMenuSimple(bool& open, const char** pEntries, int numEntries, const char* optionalTitle=NULL, int* pOptionalHoveredEntryOut=NULL, int startIndex=0, int endIndex=-1, bool reverseItems=false, const char* scrollUpEntryText=NULL, const char* scrollDownEntryText=NULL);
+IMGUI_API int PopupMenuSimple(bool& open, const char** pEntries, int numEntries, const char* optionalTitle=NULL, int* pOptionalHoveredEntryOut=NULL, int startIndex=0, int endIndex=-1, bool reverseItems=false, const char* scrollUpEntryText=NULL, const char* scrollDownEntryText=NULL);
 
 // returns -1 if nothing has been chosen, 0 if copy has been clicked, 1 if cut has been clicked and 2 if paste has been clicked
-int PopupMenuSimpleCopyCutPasteOnLastItem(bool readOnly=false);
+IMGUI_API int PopupMenuSimpleCopyCutPasteOnLastItem(bool readOnly=false);
 
 class PopupMenuSimpleParams {
 public:
@@ -68,7 +71,7 @@ public:
 friend int PopupMenuSimple(PopupMenuSimpleParams& params,const char** pTotalEntries,int numTotalEntries,int numAllowedEntries,bool reverseItems,const char* optionalTitle,const char* scrollUpEntryText,const char* scrollDownEntryText);
 };
 
-int PopupMenuSimple(PopupMenuSimpleParams& params,const char** pTotalEntries,int numTotalEntries,int numAllowedEntries,bool reverseItems=false,const char* optionalTitle=NULL,const char* scrollUpEntryText="   ^   ",const char* scrollDownEntryText="   v   ");
+IMGUI_API int PopupMenuSimple(PopupMenuSimpleParams& params,const char** pTotalEntries,int numTotalEntries,int numAllowedEntries,bool reverseItems=false,const char* optionalTitle=NULL,const char* scrollUpEntryText="   ^   ",const char* scrollDownEntryText="   v   ");
 
 void TestPopupMenuSimple(const char* scrollUpEntryText="   ^   ",const char* scrollDownEntryText="   v   ");
 
@@ -223,9 +226,9 @@ bool isEmpty() const {return entries.size()==0;}
 };
 
 // Based on the code from: https://github.com/benoitjacquier/imgui
-bool ColorChooser(bool* open,ImVec4* pColorOut=NULL, bool supportsAlpha=true);
+IMGUI_API bool ColorChooser(bool* open,ImVec4* pColorOut=NULL, bool supportsAlpha=true);
 // Based on the code from: https://github.com/benoitjacquier/imgui
-bool ColorCombo(const char* label,ImVec4 *pColorOut=NULL,bool supportsAlpha=false,float width=0.f,bool closeWhenMouseLeavesIt=true);
+IMGUI_API bool ColorCombo(const char* label,ImVec4 *pColorOut=NULL,bool supportsAlpha=false,float width=0.f,bool closeWhenMouseLeavesIt=true);
 
 
 // Based on the code from: https://github.com/Roflraging (see https://github.com/ocornut/imgui/issues/383)
@@ -234,7 +237,7 @@ bool ColorCombo(const char* label,ImVec4 *pColorOut=NULL,bool supportsAlpha=fals
     *pOptionalSelectionStartOut; // Out (== to SelectionEnd when no selection)
     *pOptionalSelectionEndOut;   // Out
 */
-bool InputTextMultilineWithHorizontalScrolling(const char* label, char* buf, size_t buf_size, float height, ImGuiInputTextFlags flags = 0, bool* pOptionalIsHoveredOut=NULL, int* pOptionalCursorPosOut=NULL, int* pOptionalSelectionStartOut=NULL, int* pOptionalSelectionEndOut=NULL, float SCROLL_WIDTH=2000.f);
+IMGUI_API bool InputTextMultilineWithHorizontalScrolling(const char* label, char* buf, size_t buf_size, float height, ImGuiInputTextFlags flags = 0, bool* pOptionalIsHoveredOut=NULL, int* pOptionalCursorPosOut=NULL, int* pOptionalSelectionStartOut=NULL, int* pOptionalSelectionEndOut=NULL, float SCROLL_WIDTH=2000.f);
 
 // Based on the code from: https://github.com/Roflraging (see https://github.com/ocornut/imgui/issues/383)
 /*
@@ -242,11 +245,11 @@ bool InputTextMultilineWithHorizontalScrolling(const char* label, char* buf, siz
   The three integers represent the cursorPos, the selectionStart and the selectionEnd position.
   Must be static and be in an array.
 */
-bool InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu(const char* label, char* buf, int buf_size, float height,bool& staticBoolVar, int* staticArrayOfThreeIntegersHere, ImGuiInputTextFlags flags=0, bool*pOptionalHoveredOut=NULL,float SCROLL_WIDTH=2000.f,const char* copyName=NULL, const char* cutName=NULL, const char *pasteName=NULL);
+IMGUI_API bool InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu(const char* label, char* buf, int buf_size, float height,bool& staticBoolVar, int* staticArrayOfThreeIntegersHere, ImGuiInputTextFlags flags=0, bool*pOptionalHoveredOut=NULL,float SCROLL_WIDTH=2000.f,const char* copyName=NULL, const char* cutName=NULL, const char *pasteName=NULL);
 
 // label is used as id
 // <0 frame_padding uses default frame padding settings. 0 for no padding
-bool ImageButtonWithText(ImTextureID texId,const char* label,const ImVec2& imageSize=ImVec2(0,0), const ImVec2& uv0 = ImVec2(0,0),  const ImVec2& uv1 = ImVec2(1,1), int frame_padding = -1, const ImVec4& bg_col = ImVec4(0,0,0,0), const ImVec4& tint_col = ImVec4(1,1,1,1));
+IMGUI_API bool ImageButtonWithText(ImTextureID texId,const char* label,const ImVec2& imageSize=ImVec2(0,0), const ImVec2& uv0 = ImVec2(0,0),  const ImVec2& uv1 = ImVec2(1,1), int frame_padding = -1, const ImVec4& bg_col = ImVec4(0,0,0,0), const ImVec4& tint_col = ImVec4(1,1,1,1));
 
 #ifndef NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
 // One instance per image can feed multiple widgets
@@ -294,7 +297,7 @@ struct AnimatedImage {
 
 // zoomCenter is panning in [(0,0),(1,1)]
 // returns true if some user interaction have been processed
-bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspectRatio,float& zoom,ImVec2& zoomCenter,int panMouseButtonDrag=1,int resetZoomAndPanMouseButton=2,const ImVec2& zoomMaxAndZoomStep=ImVec2(16.f,1.025f));
+IMGUI_API bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspectRatio,float& zoom,ImVec2& zoomCenter,int panMouseButtonDrag=1,int resetZoomAndPanMouseButton=2,const ImVec2& zoomMaxAndZoomStep=ImVec2(16.f,1.025f));
 
 // USAGE:
 /*
@@ -331,20 +334,20 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
             else if (ImGui::Button("Reset collapsable header##AppendTreeNodeHeaderButtonsReset")) closed = false;
 */
 // Return value rv can be: -1 => No button is hovered or clicked | [0,numButtons-1] => buttons[rv] has been clicked | [numButtons,2*numButtons-1] => buttons[rv-numButtons] is hovered
-int AppendTreeNodeHeaderButtons(const void* ptr_id, float startWindowCursorXForClipping, int numButtons, ...);
+IMGUI_API int AppendTreeNodeHeaderButtons(const void* ptr_id, float startWindowCursorXForClipping, int numButtons, ...);
 
 // Returns the hovered value index WITH 'values_offset' ( (hovered_index+values_offset)%values_offset or -1). The index of the hovered histogram can be retrieved through 'pOptionalHoveredHistogramIndexOut'.
-int PlotHistogram(const char* label, const float** values,int num_histograms,int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), int stride = sizeof(float),float histogramGroupSpacingInPixels=0.f,int* pOptionalHoveredHistogramIndexOut=NULL,float fillColorGradientDeltaIn0_05=0.05f,const ImU32* pColorsOverride=NULL,int numColorsOverride=0);
-int PlotHistogram(const char* label, float (*values_getter)(void* data, int idx,int histogramIdx), void* data,int num_histograms, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0),float histogramGroupSpacingInPixels=0.f,int* pOptionalHoveredHistogramIndexOut=NULL,float fillColorGradientDeltaIn0_05=0.05f,const ImU32* pColorsOverride=NULL,int numColorsOverride=0);
+IMGUI_API int PlotHistogram(const char* label, const float** values,int num_histograms,int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), int stride = sizeof(float),float histogramGroupSpacingInPixels=0.f,int* pOptionalHoveredHistogramIndexOut=NULL,float fillColorGradientDeltaIn0_05=0.05f,const ImU32* pColorsOverride=NULL,int numColorsOverride=0);
+IMGUI_API int PlotHistogram(const char* label, float (*values_getter)(void* data, int idx,int histogramIdx), void* data,int num_histograms, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0),float histogramGroupSpacingInPixels=0.f,int* pOptionalHoveredHistogramIndexOut=NULL,float fillColorGradientDeltaIn0_05=0.05f,const ImU32* pColorsOverride=NULL,int numColorsOverride=0);
 // Shortcut for a single histogram to ease user code a bit (same signature as one of the 2 default Dear ImGui PlotHistogram(...) methods):
-int PlotHistogram2(const char* label, const float* values,int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), int stride = sizeof(float),float fillColorGradientDeltaIn0_05=0.05f,const ImU32* pColorsOverride=NULL,int numColorsOverride=0);
+IMGUI_API int PlotHistogram2(const char* label, const float* values,int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), int stride = sizeof(float),float fillColorGradientDeltaIn0_05=0.05f,const ImU32* pColorsOverride=NULL,int numColorsOverride=0);
 
 // This one plots a generic function (or multiple functions together) of a float single variable.
 // Returns the index of the hovered curve (or -1).
 // Passing rangeX.y = FLT_MAX should ensure that the aspect ratio between axis is correct.
 // By doubling 'precisionInPixels', we halve the times 'values_getter' gets called.
 // 'numGridLinesHint' is currently something we must still fix. Set it to zero to hide lines.
-int PlotCurve(const char* label, float (*values_getter)(void* data, float x,int numCurve), void* data,int num_curves,const char* overlay_text,const ImVec2 rangeY,const ImVec2 rangeX=ImVec2(-.1f,FLT_MAX), ImVec2 graph_size=ImVec2(0,0),ImVec2* pOptionalHoveredValueOut=NULL,float precisionInPixels=1.f,float numGridLinesHint=4.f,const ImU32* pColorsOverride=NULL,int numColorsOverride=0);
+IMGUI_API int PlotCurve(const char* label, float (*values_getter)(void* data, float x,int numCurve), void* data,int num_curves,const char* overlay_text,const ImVec2 rangeY,const ImVec2 rangeX=ImVec2(-.1f,FLT_MAX), ImVec2 graph_size=ImVec2(0,0),ImVec2* pOptionalHoveredValueOut=NULL,float precisionInPixels=1.f,float numGridLinesHint=4.f,const ImU32* pColorsOverride=NULL,int numColorsOverride=0);
 
 
 // Basic tree view implementation
@@ -745,7 +748,7 @@ typedef TreeViewNode::Event TreeViewEvent;
  * Add zooming with CTRL+MouseWheel, and a horizontal scrollbar
  * Add different types of TimelineEvent (e.g. multiple ranges in a single line, dot-like markers, etc.)
 */
-IMGUI_API bool BeginTimeline(const char* str_id, float max_value=0.f, int num_visible_rows=0,int opt_exact_num_rows=0); // last arg, when !=0, enables item culling
+IMGUI_API bool BeginTimeline(const char* str_id, float max_value=0.f, int num_visible_rows=0, int opt_exact_num_rows=0); // opt_exact_num_rows, when !=0, enables item culling
 IMGUI_API bool TimelineEvent(const char* str_id, float* values, bool keep_range_constant=false);
 IMGUI_API void EndTimeline(int num_vertical_grid_lines=5.f,float current_time=0.f,ImU32 timeline_running_color=IM_COL32(0,128,0,200));
 // End Timeline ======================================================================================
