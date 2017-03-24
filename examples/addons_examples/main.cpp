@@ -1023,8 +1023,46 @@ void DrawGL()	// Mandatory
 	    ImGui::TimelineEvent("Event5",&events[8]);
 	    ImGui::TimelineEvent("Event6",&events[10]);
 	}
-	const float elapsedTime = (float)(((unsigned)(ImGui::GetTime()*1000))%50000)/1000.f;    // So that it's always in [0,50]
-	ImGui::EndTimeline(5,elapsedTime);  // num_vertical_grid_lines, current_time (optional), timeline_running_color (optional)
+	static float timeline_elapsed_time = 0.f;
+	ImGui::EndTimeline(5,timeline_elapsed_time);  // num_vertical_grid_lines, current_time (optional), timeline_running_color (optional)
+
+	// COMPLETELY Optional (And Manual): Timeline Start/Pause Buttons:-------
+	static ImU32 timeline_state = 0;    // Manually handled by us (0 = stopped, 1 = playing, 2 = paused)
+	static float timeline_begin_time = ImGui::GetTime();
+	if (timeline_state==1) {
+	    // It's playing
+	    timeline_elapsed_time = ImGui::GetTime()-timeline_begin_time;
+	    if (timeline_elapsed_time>50.f) {
+		// We reset the timer after 50.f seconds here
+		timeline_state=0;   // Stopped
+		timeline_elapsed_time=0.f;
+	    }
+	}
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY()-ImGui::GetTextLineHeightWithSpacing()); // Go up one line
+	if (ImGui::Button(timeline_state==1 ?  " || ###timeline_play" : " > ###timeline_play")) {
+	    if (timeline_state==1) timeline_state=2;	// Paused
+	    else if (timeline_state==0)  {
+		// Was stopped
+		timeline_state=1;   // Now playing
+		timeline_begin_time = ImGui::GetTime();	// From zero time
+	    }
+	    else {
+		// Was paused
+		timeline_state=1;   // Now playing
+		const float pausedTime = ImGui::GetTime() - timeline_begin_time - timeline_elapsed_time;
+		timeline_begin_time+= pausedTime;	// From last time
+	    }
+	}
+	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s",timeline_state==1 ? "Pause" : "Play");
+	if (timeline_state!=0)	{
+	    ImGui::SameLine(0,0);
+	    if (ImGui::Button(" O ###timeline_stop")) {
+		timeline_state=0;   // Stopped
+		timeline_elapsed_time=0.f;  // We reset the timer
+	    }
+	    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Stop");
+	}
+	// End COMPLETELY Optional (And Manual) Stuff-----------------------------
 
 #       else //NO_IMGUIVARIOUSCONTROLS
         ImGui::Text("%s","Excluded from this build.\n");

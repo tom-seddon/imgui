@@ -3039,7 +3039,7 @@ bool TimelineEvent(const char* str_id, float* values,bool keep_range_constant)
         pos.y += row_height_offset+TIMELINE_RADIUS;
         posx[i] = pos.x;
         if (pos.x+TIMELINE_RADIUS < cursor_pos.x ||
-            pos.x-TIMELINE_RADIUS > cursor_pos.x+columnWidth) continue;   // culling
+            pos.x-2.f*TIMELINE_RADIUS > cursor_pos.x+columnWidth) continue;   // culling
 
         SetCursorScreenPos(pos - ImVec2(TIMELINE_RADIUS, TIMELINE_RADIUS));
         PushID(i);
@@ -3073,7 +3073,7 @@ bool TimelineEvent(const char* str_id, float* values,bool keep_range_constant)
     ImVec2 start(posx[0]+TIMELINE_RADIUS,cursor_pos.y+row_height*0.3f);
     ImVec2 end(posx[1]-TIMELINE_RADIUS,start.y+row_height*0.4f);
     if (start.x<cursor_pos.x) start.x=cursor_pos.x;
-    if (end.x>cursor_pos.x+columnWidth) end.x=cursor_pos.x+columnWidth;
+    if (end.x>cursor_pos.x+columnWidth+TIMELINE_RADIUS) end.x=cursor_pos.x+columnWidth+TIMELINE_RADIUS;
     const bool isInvisibleButtonCulled = start.x>cursor_pos.x+columnWidth || end.x<cursor_pos.x;
 
     bool isInvisibleButtonItemActive=false;
