@@ -282,6 +282,10 @@ On Ubuntu, I can compile it with the following command line (provided that imgui
 gcc  -o basicExample mainBasic.cpp -I"../../" ../../imgui.cpp ../../imgui_draw.cpp -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -I"/usr/include/GLFW" -D"IMGUI_USE_GLFW_BINDING" -L"/usr/lib/x86_64-linux-gnu" -lglfw -lX11 -lm -lGL -lstdc++ -s
 
 
+P.S. Please note that you CAN still use OpenGL/Direct3D functions/commands from within mainBasic.cpp, 
+and convert ImTextureIDs to native textures (e.g. GLuint in OpenGL): this possibility makes using 
+the complete "ImGui Addons Framework" convenient not only for programming Dear ImGui Demos, but for 
+general-purpose new projects too.
 
 ======================================================================================================================================
 EXTRA: COMPILING TO HTML USING EMSCRIPTEN:
@@ -365,6 +369,8 @@ If the html demos (in the html subfolder) don't run in your browser:
     The easiest way to do this is to use the python SimpleHTTPServer"
     (in a console/terminal opened in the html subfolder type: python -m SimpleHTTPServer 8080 
 	and then open http://localhost:8080/main.html from your browser).
+	Another way of making it work locally is to use the emrun program from a console/terminal opened 
+	in the html subfolder: emrun main.html	[Never tested, but it should work better.]
 
 ->  otherwise it must be something related to your system or the configuration of your browser.
 

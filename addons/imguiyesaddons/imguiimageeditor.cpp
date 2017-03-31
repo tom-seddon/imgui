@@ -55,7 +55,7 @@
 
 #include <ctype.h>  // tolower
 #include <string.h> // memset,...
-
+#include <math.h>   // just a few filter needs it
 
 // stb_image.h is MANDATORY
 #ifndef IMGUI_USE_AUTO_BINDING
@@ -423,6 +423,17 @@ that the pixel information is stored a row at a time!
 
 // Some old compilers don't have round
 static float round(float x) {return x >= 0.0f ? floor(x + 0.5f) : ceil(x - 0.5f);}
+
+// http://stackoverflow.com/questions/101439/the-most-efficient-way-to-implement-an-integer-based-power-function-powint-int
+template <typename Real> static Real ipow(Real base, int exp)  {
+    Real result = 1;
+    while (exp) {
+        if (exp & 1)    result *= base;
+        exp >>= 1;
+        base *= base;
+    }
+    return result;
+}
 
 static void ImDrawListAddImageCircleFilled(ImDrawList* dl,ImTextureID user_texture_id,const ImVec2& uv0, const ImVec2& uv1,const ImVec2& centre, float radius, ImU32 col, int num_segments=8)   {
     if ((col & IM_COL32_A_MASK) == 0) return;
@@ -1478,6 +1489,298 @@ static bool ApplyLightEffect(unsigned char* im,int w,int h, int c,int lightStren
     return true;
 }
 
+// kernel must be preallocated by the user (a 1D array of size = lengthX*lengthY)
+// lengthX and lengthY must be odd numbers
+static bool GenerateGaussianBlurConvolutionKernel(double* Kernel,int lengthX,int lengthY,double weight=1.0) {
+    if (!Kernel || lengthX<3 || lengthY<3 || lengthX%2==0 || lengthY%2==0 || weight<=0) return false;
+
+    /*
+    In 2D, Gaussian isotropic distribution is:
+
+    G(x,y) = (1/(2*PI*SDV^2)) * exp(-(x^2+y^2)/(2*SDV^2))
+    */
+    const double sdv = 1.0; // We force standard deviation to 1.0, using "weight" in another way.
+
+
+    double sumTotal = 0;
+    int kernelRadiusX = lengthX / 2;
+    int kernelRadiusY = lengthY / 2;
+    double distance = 0;
+    double calculatedEuler = 1.0 / (2.0 * M_PI * sdv*sdv);
+
+    // Actually the values outside [-3*sdv,3*sdv] are nearly zero
+    const double weighting = 2.5/weight;           // here we use 2.5 instead of 3 (otherwise 3x3 filter will be too weak)
+    const double scalingX = weighting*sdv/kernelRadiusX;
+    const double scalingY = weighting*sdv/kernelRadiusY;
+
+    double X2=0,Y2=0,sdv2x2=2.0 * (sdv * sdv);
+    double* pKernel = Kernel;
+    for (int filterY = -kernelRadiusY;filterY <= kernelRadiusY; filterY++)  {
+        Y2 = filterY*scalingY;Y2*=Y2;
+        for (int filterX = -kernelRadiusX;filterX <= kernelRadiusX; filterX++) {
+            X2=filterX*scalingX;X2*=X2;
+            distance = (X2 + Y2) / sdv2x2;
+            pKernel = &Kernel[(filterY + kernelRadiusY)*lengthX + filterX+kernelRadiusX];
+            *pKernel = calculatedEuler * exp(-distance);
+            sumTotal += *pKernel;
+        }
+    }
+    // Normalization
+    for (int y = 0; y < lengthY; y++)   {
+        for (int x = 0; x < lengthX; x++)   {
+            pKernel = &Kernel[y*lengthX + x];
+            (*pKernel)/=sumTotal;
+            //fprintf(stderr,"%1.6f ",*pKernel);
+        }
+        //fprintf(stderr,"\n");
+    }
+    return true;
+}
+
+struct KernelMatrix {
+    double* k;  // reference
+    int w,h,c;
+    KernelMatrix(double* _k,int _w,int _h,int _c) : k(_k),w(_w),h(_h),c(_c)  {}
+    inline double* get(int x, int y) {return &k[(w*y+x)*c];}
+    inline const double* get(int x, int y) const {return &k[(w*y+x)*c];}
+    inline double* shiftUp() {
+        //double *p1=NULL,*p2=NULL;const int stride = w*c;
+        for (int y=0,ySz=h-1;y<ySz;y++) {
+            //p1 = &k[y*stride];p2=p1+stride;for (int i=0;i<stride;i++) *p1++=*p2++;
+            memcpy((void*)&k[w*y*c],(const void*)&k[w*(y+1)*c],w*c*sizeof(double)); // THIS LINE WORKS!
+        }
+        return &k[w*(h-1)*c];
+    }
+    inline double* shiftLeft() {
+        double *p1=NULL,*p2=NULL;
+        for (int y=0;y<h;y++) {
+            p1 = &k[w*y*c];p2 = p1+c;
+            for (int x=0,xSz=w-1;x<xSz;x++) {
+                for (int i=0;i<c;i++) *p1++=*p2++;
+                //memcpy((void*)p1,(const void*)p2,c*sizeof(double));++p1;++p2; // THIS LINE DOES NOT WORK!!!
+            }
+        }
+        return &k[(w-1)*c]; // return right-most top kernel value
+    }
+    inline double* shiftRight() {
+        double *p1=NULL,*p2=NULL;
+        for (int y=0;y<h;y++) {
+            p1 = &k[(w*y+w)*c-1];p2 = p1-c;
+            for (int x=0,xSz=w-1;x<xSz;x++) {
+                for (int i=0;i<c;i++) *p1--=*p2--;
+                //memcpy((void*)p1,(const void*)p2,c*sizeof(double));--p1;--p2; // THIS LINE DOES NOT WORK!!!
+            }
+        }
+        return &k[0]; // return left-most top kernel value
+    }
+
+    static double MaxPixelValue;
+    static double ScaleFactor;
+    static double Offset;
+    // Fills result[0],...,result[c-1]. It uses the 3 static variables above. Does not move result
+    template <typename T> inline void getSum(T* result,const double* kernel) const {
+        // TODO: hande ALPHA for RGBA better
+        double d=0.0;
+        for (int i=0;i<c;i++)   {
+            d=0.0;
+            const double* pk = kernel;
+            for (int y=0;y<h;y++)  {
+                const double* pm = &k[y*w*c+i];
+                for (int x=0;x<w;x++)  {
+                    d+=((*pk++)*(*pm));
+                    pm+=c;
+                }
+            }
+            d*=ScaleFactor+Offset;
+            d*=MaxPixelValue;
+            //if (d<0.0) d=0.0;else if (d>MaxPixelValue) d=MaxPixelValue;
+            result[i] = (T)d;
+        }
+    }
+    /*void debug() {
+        for (int y=0;y<h;y++)  {
+            const double* pm = &k[y*w*c];
+            for (int x=0;x<w;x++)  {
+                fprintf(stderr,"(");
+                for (int i=0;i<c;i++) {if (i>0) fprintf(stderr,",");fprintf(stderr,"%1.2f",*pm++);}
+                fprintf(stderr,") ");
+            }
+            fprintf(stderr,"\n");
+        }
+    }*/
+};
+double KernelMatrix::MaxPixelValue = 255.0;
+double KernelMatrix::ScaleFactor = 1.0;
+double KernelMatrix::Offset = 0.0;
+
+// return image must be freed by the caller; kw and kh oddnumbers
+template <typename T> static T* ApplyConvolutionKernelNxN(const T* im,int w,int h,int c,const double* normalizedKernel,int kw,int kh,bool wrapx=false,bool wrapy=false,const double scaleFactor=1.0,const double offset=0.0,const double maxPixelValue=255.0)
+{
+    if (!im || w<=kw || h<=kh || (c!=1 && c!=3 && c!=4) || kw<3 || kh<3 || kw%2==0 || kh%2==0 || w<3 || h<3) return NULL;
+
+    KernelMatrix::MaxPixelValue = maxPixelValue;
+    KernelMatrix::ScaleFactor = scaleFactor;
+    KernelMatrix::Offset = offset;
+
+    const T* pim =im;
+    T* nim = (T*) STBI_MALLOC(w*h*c);
+    T* pnim = nim;
+    const double* k = normalizedKernel;
+
+    //const int stride = w*c;
+    const int skw=(kw-1)/2;
+    const int skh=(kh-1)/2;
+
+    const double maxPixelValueInv = 1.0/maxPixelValue;
+    //const double tot=(double)ImGuiIE::ipow(2.0,(N-1)*2);
+    //const double half_tot = tot/2.0;
+
+
+    //const KernelMatrix k(normalizedKernel,kw,kh,1);
+    ImVector<double> tmp_matrix;tmp_matrix.resize(kw*kh*c);for (int i=0,isz=kw*kh*c;i<isz;i++) tmp_matrix[i]=0.0;
+    KernelMatrix m(&tmp_matrix[0],kw,kh,c);
+    //ImVector<double> tmp_row;tmp_row.resize(kw*c);for (int i=0,isz=kw*c;i<isz;i++) tmp_row[i]=0.0;
+    //ImVector<double> tmp_col;tmp_col.resize(kh*c);for (int i=0,isz=kh*c;i<isz;i++) tmp_col[i]=0.0;
+
+    // Step 1) Fill m for (0,0)
+    int x=0,y=0;double* pm=NULL;
+    int xCol=0,yRow=0;
+    for(yRow=0;yRow<h;++yRow)    {
+        if (yRow%2==0)   {
+            xCol = 0;
+            if (yRow==0) {
+                // Fill the whole matrix m:
+                for(int sy=-skh;sy<=skh;++sy)    {
+                    y=sy;
+                    if (y<0)        y = wrapy ? (h+y) : 0;
+                    else if (y>=h)  y = wrapy ? (y-h) : (h-1);
+                    for(int sx=-skw;sx<=skw;++sx)   {
+                        x=sx;
+                        if (x<0)        x = wrapx ? (w+x) : 0;
+                        else if (x>=w)  x = wrapx ? (x-w) : (w-1);
+                        pm = m.get(sx+skw,sy+skh);
+                        pim = &im[(w*y+x)*c];
+                        for (int i=0;i<c;i++) *pm++ = (double)(*pim++) * maxPixelValueInv;
+                    }
+                }
+            }
+            else {
+                // Shift up and fill bottom kernel row
+                pm = m.shiftUp();
+                y=yRow+skh;
+                if (y<0)        y = wrapy ? (h+y) : 0;
+                else if (y>=h)  y = wrapy ? (y-h) : (h-1);
+                for(int sx=-skw;sx<=skw;++sx)   {
+                    x=sx;
+                    if (x<0)        x = wrapx ? (w+x) : 0;
+                    else if (x>=w)  x = wrapx ? (x-w) : (w-1);
+                    //pm = m.get(sx+skw,sy+skh);
+                    pim = &im[(w*y+x)*c];
+                    for (int i=0;i<c;i++) *pm++ = (double)(*pim++) * maxPixelValueInv;
+                }
+            }
+            pnim = &nim[(yRow*w+xCol)*c];
+            m.getSum(pnim,k);pnim+=c;       // fill pixel and shift right
+            for (xCol=1;xCol<w;++xCol)   {
+                // Shift left and fill right kernel column
+                pm = m.shiftLeft();
+                x=xCol+skw;  // right col
+                if (x<0)        x = wrapx ? (w+x) : 0;
+                else if (x>=w)  x = wrapx ? (x-w) : (w-1);
+                for(int sy=-skh;sy<=skh;++sy)   {
+                    y=yRow+sy;
+                    if (y<0)        y = wrapy ? (h+y) : 0;
+                    else if (y>=h)  y = wrapy ? (y-h) : (h-1);
+                    //pm = m.get(sx+skw,sy+skh);
+                    pim = &im[(w*y+x)*c];
+                    for (int i=0;i<c;i++) *pm++ = (double)(*pim++) * maxPixelValueInv;
+                    pm+=kw*c-c;    // go down one line
+                }
+                m.getSum(pnim,k);pnim+=c;       // fill pixel and shift right
+
+                /*// Debug-------------------------------
+                if (xCol==w-1 && yRow==0) {
+                    fprintf(stderr,"[%d,%d]:\n",xCol,yRow);m.debug();
+                    pnim-=c;
+                    fprintf(stderr,"Sum [%d,%d] = (",xCol,yRow);
+                    for (int i=0;i<c;i++) {fprintf(stderr,"%d ",(int) *pnim++);}
+                    fprintf(stderr,")\n");
+                }
+                //-------------------------------------*/
+
+            }
+
+        }
+        else {// yRow odd number
+            xCol = w-1;
+            {
+                // Shift up and fill bottom kernel row
+                pm = m.shiftUp();
+                y=yRow+skh;
+                if (y<0)        y = wrapy ? (h+y) : 0;
+                else if (y>=h)  y = wrapy ? (y-h) : (h-1);
+                for(int sx=-skw;sx<=skw;++sx)   {
+                    x=xCol+sx;
+                    if (x<0)        x = wrapx ? (w+x) : 0;
+                    else if (x>=w)  x = wrapx ? (x-w) : (w-1);
+                    //pm = m.get(sx+skw,sy+skh);
+                    pim = &im[(w*y+x)*c];
+                    for (int i=0;i<c;i++) *pm++ = (double)(*pim++) * maxPixelValueInv;
+                }
+            }
+            pnim = &nim[(yRow*w+xCol)*c];
+            m.getSum(pnim,k);pnim-=c;       // fill pixel and shift left
+            /*// Debug-------------------------------
+            if (xCol==w-1 && yRow==1) {
+                fprintf(stderr,"[%d,%d]:\n",xCol,yRow);m.debug();
+                fprintf(stderr,"Sum [%d,%d] = (",xCol,yRow);
+                pnim+=c;
+                for (int i=0;i<c;i++) {fprintf(stderr,"%d ",(int) *pnim++);}
+                pnim-=2*c;
+                fprintf(stderr,")\n");
+            }
+            //-------------------------------------*/
+            for (xCol=w-2;xCol>=0;--xCol)   {
+                // Shift right and fill left kernel column
+                pm = m.shiftRight();
+                x=xCol-skw;  // left col
+                if (x<0)        x = wrapx ? (w+x) : 0;
+                else if (x>=w)  x = wrapx ? (x-w) : (w-1);
+                for(int sy=-skh;sy<=skh;++sy)   {
+                    y=yRow+sy;
+                    if (y<0)        y = wrapy ? (h+y) : 0;
+                    else if (y>=h)  y = wrapy ? (y-h) : (h-1);
+                    //pm = m.get(sx+skw,sy+skh);
+                    pim = &im[(w*y+x)*c];
+                    for (int i=0;i<c;i++) *pm++ = (double)(*pim++) * maxPixelValueInv;
+                    pm+=kw*c-c;    // go down one line
+                }
+                m.getSum(pnim,k);pnim-=c;   // fill pixel and shift left
+                /*// Debug-------------------------------
+                if (xCol==w/2 && yRow==3) {
+                    fprintf(stderr,"[%d,%d]:\n",xCol,yRow);m.debug();
+                    fprintf(stderr,"Sum [%d,%d] = (",xCol,yRow);
+                    pnim+=c;
+                    for (int i=0;i<c;i++) {fprintf(stderr,"%d ",(int) *pnim++);}
+                    pnim-=2*c;
+                    fprintf(stderr,")\n");
+                }
+                //-------------------------------------*/
+            }
+        }
+    }
+
+    return nim;
+}
+
+// return image must be freed by the caller; radiusX and radiusY oddnumbers >=3
+template <typename T> static T* ApplyGaussianBlurNxN(const T* im,int w,int h,int c,int radiusX,int radiusY=-1,bool wrapx=false,bool wrapy=false,double weight=1.0,const double maxPixelValue=255.0) {
+    if (radiusY<3) radiusY=radiusX;
+    if (radiusX<3 || radiusX%2==0 || radiusY%2==0 || !im || w<3 || h<3 || (c!=1 && c!=3 &&c!=4)) return NULL;
+    ImVector<double> normalizedKernel;normalizedKernel.resize(radiusX*radiusY);
+    if (!GenerateGaussianBlurConvolutionKernel(&normalizedKernel[0],radiusX,radiusY,weight)) return NULL;
+    return ApplyConvolutionKernelNxN(im,w,h,c,&normalizedKernel[0],radiusX,radiusY,wrapx,wrapy,1.0,0.0,maxPixelValue);
+}
 
 // this is needed just for doing Brightness And Contrast
 // For now T must be "unsigned char" and R "double" or "float" (=> if you need T "float" you must adjust the code in Channel2Real(...) and RealToChannel(...))
@@ -2496,6 +2799,10 @@ struct StbImage {
 
     int shiftImageSelectionMode;
     bool discardRgbWhenAlphaIsZeroOnSaving;
+    int imageFilterIndex;
+    int gaussianBlurKernelSize;
+    float gaussianBlurPower;
+    bool gaussianBlurSeamless;
 
 #   ifdef STBIR_INCLUDE_STB_IMAGE_RESIZE_H
     ImGuiIE::stbir_data_struct myStbirData;
@@ -2631,6 +2938,10 @@ struct StbImage {
         imageSelection.Min=imageSelection.Max=ImVec2(0,0);
         shiftImageSelectionMode = 0;
         discardRgbWhenAlphaIsZeroOnSaving = false;
+        imageFilterIndex=0;
+        gaussianBlurKernelSize=3;
+        gaussianBlurPower=1.f;
+        gaussianBlurSeamless=false;
 
         ImGuiIE::InitSupportedFileExtensions(); // can be called multiple times safely
     }
@@ -3338,6 +3649,41 @@ struct StbImage {
         return ok;
     }
 
+    bool applyGaussianBlur(const ImRect* pOptionalImageSelection=NULL,int kernelSizeX=3,int kernelSizeY=-1,bool wrapX=false,bool wrapY=false,double weight=1.0) {
+        bool ok = false;  
+        if (image) {
+            if (pOptionalImageSelection) {
+                if (isImageSelectionValid(*pOptionalImageSelection)) {
+                    int dstX = pOptionalImageSelection->Min.x;int dstY = pOptionalImageSelection->Min.y;
+                    int dstW = pOptionalImageSelection->Max.x - dstX;int dstH = pOptionalImageSelection->Max.y-dstY;
+                    unsigned char* selectedImage = ImGuiIE::ExtractImage(dstX,dstY,dstW,dstH,image,w,h,c);
+                    if (selectedImage) {
+                        ImGuiIE::ImageScopedDeleter scoped(selectedImage);                        
+                        unsigned char* im = ImGuiIE::ApplyGaussianBlurNxN(selectedImage,dstW,dstH,c,kernelSizeX,kernelSizeY,wrapX,wrapY,weight);
+                        ImGuiIE::ImageScopedDeleter scoped2(im);
+                        if (im) {
+                            pushImage(pOptionalImageSelection);
+                            ImGuiIE::PasteImage(dstX,dstY,image,w,h,c,im,dstW,dstH);
+                            ok = true;
+                        }
+                    }
+                }
+            }
+            else {
+                unsigned char* im = ImGuiIE::ApplyGaussianBlurNxN(image,w,h,c,kernelSizeX,kernelSizeY,wrapX,wrapY,weight);
+                if (im) {
+                    pushImage();
+                    STBI_FREE(image);
+                    image = im;
+                    ok=true;
+                }
+            }
+            if (ok) mustInvalidateTexID = true;
+        }
+        return ok;
+    }
+
+
     bool applyImageLightEffect(int lightStrength,ImGuiIE::LightEffect lightEffect,const ImRect* pOptionalImageSelection=NULL,bool clampColorComponentsAtAlpha=true) {
         if (c==1) return false;
         bool ok = false;
@@ -3608,6 +3954,22 @@ struct StbImage {
             leftPanelHovered=centralPanelHovered=rightPanelHovered=anyPanelHovered=false;
             mustUndo=mustRedo=mustSave=mustToggleImageNamePanel=false;
         }
+        bool CheckButton(const char* label,bool& value,bool useSmallButton,bool useBlinkingStyle) {
+            bool rv = false;
+            const bool tmp = value;
+            if (tmp) {
+                ImGui::PushStyleColor(ImGuiCol_Button,useBlinkingStyle ? ImGuiIE::GetPulsingColorFrom(CheckButtonColor) : CheckButtonColor);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered,CheckButtonHoveredColor);
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive,CheckButtonActiveColor);
+            }
+            if (useSmallButton) {if (ImGui::SmallButton(label)) {value=!value;rv=true;}}
+            else if (ImGui::Button(label)) {value=!value;rv=true;}
+            if (tmp) ImGui::PopStyleColor(3);
+            return rv;
+        }
+        inline bool CheckButton(const char* label,bool& value,bool useBlinkingStyle=false) {return CheckButton(label,value,false,useBlinkingStyle);}
+        inline bool SmallCheckButton(const char* label,bool& value,bool useBlinkingStyle=false) {return CheckButton(label,value,true,useBlinkingStyle);}
+
     };
 
     void render(const ImVec2& size) {
@@ -3943,7 +4305,7 @@ struct StbImage {
             }
         }
 #       endif //IMGUI_FILESYSTEM_H_
-        if (image && ImGui::TreeNodeEx("Image Size:",ImGuiTreeNodeFlags_DefaultOpen|ImGuiTreeNodeFlags_Framed)) {
+        if (image && ImGui::TreeNodeEx("Image Size:",/*ImGuiTreeNodeFlags_DefaultOpen|*/ImGuiTreeNodeFlags_Framed)) {
             ImGui::TreePop();
             ImGui::PushID("Image Size Group");
             if (ImGui::InputInt("Width",&resizeWidth,1,10)) {
@@ -3954,22 +4316,12 @@ struct StbImage {
                 if (resizeHeight<1) resizeHeight=1;
                 if (resizeKeepsProportions && h!=0) resizeWidth = resizeHeight * w/h;
             }
-            // These is a check button
-            bool tmp = resizeKeepsProportions;
-            if (tmp) {
-                ImGui::PushStyleColor(ImGuiCol_Button,mrs.CheckButtonColor);
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
-            }
-            if (ImGui::SmallButton("Keep Proportions")) {
-                resizeKeepsProportions = !resizeKeepsProportions;
-                    if (resizeKeepsProportions && w!=0 && h!=0) {
+            if (mrs.SmallCheckButton("Keep Proportions",resizeKeepsProportions)) {
+                if (resizeKeepsProportions && w!=0 && h!=0) {
                     if (resizeWidth<=resizeHeight) resizeWidth = resizeHeight * w/h;
                     else resizeHeight = resizeWidth * h/w;
                 }
             }
-            if (tmp) ImGui::PopStyleColor(3);
-
             ImGui::Combo("Resize Filter",&resizeFilter,ImGuiIE::GetResizeFilterNames(),ImGuiIE::RF_COUNT);
 #           ifdef STBIR_INCLUDE_STB_IMAGE_RESIZE_H
             if (resizeFilter==(int)ImGuiIE::RF_BEST)    {
@@ -3993,7 +4345,7 @@ struct StbImage {
             }
             ImGui::PopID();
         }
-        if (image && ImGui::TreeNodeEx("Shift/Flip/Rotate Image:",ImGuiTreeNodeFlags_DefaultOpen|ImGuiTreeNodeFlags_Framed)) {
+        if (image && ImGui::TreeNodeEx("Shift/Flip/Rotate Image:",/*ImGuiTreeNodeFlags_DefaultOpen|*/ImGuiTreeNodeFlags_Framed)) {
             ImGui::TreePop();
             ImGui::PushID("Shift Group");
 
@@ -4029,31 +4381,10 @@ struct StbImage {
             ImGui::SameLine(0,8);
             ImGui::BeginGroup();
             {
-                // These are check buttons
-                {
-                    bool tmp = chbShiftImageWrap;
-                    if (tmp) {
-                        ImGui::PushStyleColor(ImGuiCol_Button,mrs.CheckButtonColor);
-                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
-                        ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
-                    }
-                    if (ImGui::SmallButton("Wrap")) chbShiftImageWrap=!chbShiftImageWrap;
-                    if (tmp) ImGui::PopStyleColor(3);
-                }
+                mrs.SmallCheckButton("Wrap",chbShiftImageWrap);
                 if (hasImageSelection)    {
                     ImGui::SameLine();
-                    bool tmp = chbShiftImageSelection;
-                    if (tmp) {
-                        ImGui::PushStyleColor(ImGuiCol_Button,
-                                              //ImGuiIE::GetPulsingColorFrom(
-                                              mrs.CheckButtonColor
-                                              //)
-                                              );
-                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
-                        ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
-                    }
-                    if (ImGui::SmallButton("Selection")) chbShiftImageSelection=!chbShiftImageSelection;
-                    if (tmp) ImGui::PopStyleColor(3);
+                    mrs.SmallCheckButton("Selection",chbShiftImageSelection);
                     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Limit the Shift/Flip/Rotate\noperations to the selected area");
                     if (chbShiftImageSelection) {
                         ImGui::Spacing();
@@ -4086,7 +4417,7 @@ struct StbImage {
         static const bool canSaveRGB = ImGuiIE::SupportedSaveExtensions[3][0]!='\0';
         static const bool canSaveRGBA = ImGuiIE::SupportedSaveExtensions[4][0]!='\0';
         if (ie->allowSaveAs && image && (canSaveAlpha || canSaveRGB || canSaveRGBA)) {
-            if (ImGui::TreeNodeEx("Save As...",ImGuiTreeNodeFlags_DefaultOpen|ImGuiTreeNodeFlags_Framed)) {
+            if (ImGui::TreeNodeEx("Save As...",/*ImGuiTreeNodeFlags_DefaultOpen|*/ImGuiTreeNodeFlags_Framed)) {
                 ImGui::TreePop();
                 ImGui::PushID("Save As...");
 
@@ -4096,17 +4427,8 @@ struct StbImage {
                     if (ImGui::Button("Save RGBA Image As...")) {numChannels=4;anyPressed=true;}
                     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s",ImGuiIE::SupportedSaveExtensions[4]);
                     ImGui::SameLine();
-                    {
-                        bool tmp = discardRgbWhenAlphaIsZeroOnSaving;
-                        if (tmp) {
-                            ImGui::PushStyleColor(ImGuiCol_Button,mrs.CheckButtonColor);
-                            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
-                            ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
-                        }
-                        if (ImGui::SmallButton("Optimize RGBA")) discardRgbWhenAlphaIsZeroOnSaving=!discardRgbWhenAlphaIsZeroOnSaving;
-                        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","When enabled, on saving RGB is discarded\nwhen ALPHA is zero for better compression");
-                        if (tmp) ImGui::PopStyleColor(3);
-                    }
+                    mrs.SmallCheckButton("Optimize RGBA",discardRgbWhenAlphaIsZeroOnSaving);
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","When enabled, on saving RGB is discarded\nwhen ALPHA is zero for better compression");
                 }
                 if (canSaveRGB && !anyPressed) {
                     if (ImGui::Button("Save RGB Image As...")) {numChannels=3;anyPressed=true;}
@@ -4283,84 +4605,33 @@ struct StbImage {
                     }
                 }
                 if (c!=1)   {
-                    bool tmp = penOverlayMode;
-                    if (tmp) {
-                        ImGui::PushStyleColor(ImGuiCol_Button,mrs.CheckButtonColor);
-                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
-                        ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
-                    }
-                    if (ImGui::Button("Overlay Mode")) penOverlayMode=!penOverlayMode;
-                    if (tmp) ImGui::PopStyleColor(3);
+                    mrs.CheckButton("Overlay Mode",penOverlayMode);
                     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","If checked, pen color alpha\nis used as a blending factor");
                 }
             }
             else if (selectedTopItem==2)    {
                 if (ImGui::InputInt("Pen Width",&penWidth)) {if (penWidth<1.f) penWidth=1.f;}
                 if (c!=1)   {
-                    bool tmp = penOverlayMode;
-                    if (tmp) {
-                        ImGui::PushStyleColor(ImGuiCol_Button,mrs.CheckButtonColor);
-                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
-                        ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
-                    }
-                    if (ImGui::Button("Overlay Mode")) penOverlayMode=!penOverlayMode;
-                    if (tmp) ImGui::PopStyleColor(3);
+                    mrs.CheckButton("Overlay Mode",penOverlayMode);
                     if (ImGui::IsItemHovered()) {
                         if (c==4) ImGui::SetTooltip("%s","If checked, pen color alpha\nis used as a blending factor\nWarning: drawing preview\nit's not 100% correct");
                         else if (c==3) ImGui::SetTooltip("%s","If checked, pen color alpha\nis used as a blending factor");
                     }
                     if (penWidth>2) ImGui::SameLine();
                 }
-                if (penWidth>2)
-                {
-                    bool tmp = penRoundMode;
-                    if (tmp) {
-                        ImGui::PushStyleColor(ImGuiCol_Button,mrs.CheckButtonColor);
-                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
-                        ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
-                    }
-                    if (ImGui::Button("Use Round Pen")) penRoundMode=!penRoundMode;
-                    if (tmp) ImGui::PopStyleColor(3);
-                }
+                if (penWidth>2) mrs.CheckButton("Use Round Pen",penRoundMode);
             }
             ImGui::Separator();
 
             // These are check buttons
-            bool tmp = chbMirrorX;
-            if (tmp) {
-                ImGui::PushStyleColor(ImGuiCol_Button,mrs.CheckButtonColor);
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
-            }
-            if (ImGui::Button("  X  ")) chbMirrorX=!chbMirrorX;
-            if (tmp) ImGui::PopStyleColor(3);
-
-            ImGui::SameLine(0,2);
-
-            tmp = chbMirrorY;
-            if (tmp) {
-                ImGui::PushStyleColor(ImGuiCol_Button,mrs.CheckButtonColor);
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
-            }
-            if (ImGui::Button("  Y  ")) chbMirrorY=!chbMirrorY;
-            if (tmp) ImGui::PopStyleColor(3);
-
-            ImGui::SameLine();ImGui::Text("Mirror");
+            mrs.CheckButton("  X  ",chbMirrorX);    ImGui::SameLine(0,2);
+            mrs.CheckButton("  Y  ",chbMirrorY);    ImGui::SameLine();
+            ImGui::Text("Mirror");
 
             if (hasSelection)   {
                 ImGui::SameLine();
-                tmp = chbSelectionLimit;
-                if (tmp) {
-                    ImGui::PushStyleColor(ImGuiCol_Button,ImGuiIE::GetPulsingColorFrom(mrs.CheckButtonColor));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
-                }
-                if (ImGui::Button("Selection")) chbSelectionLimit=!chbSelectionLimit;
-                if (tmp) ImGui::PopStyleColor(3);
+                mrs.CheckButton("Selection",chbSelectionLimit,true);
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Limit most of the operations\nin this panel to selection");
-
-                //ImGui::SameLine();ImGui::Text("Target");
             }
 
             ImGui::Separator();
@@ -4392,34 +4663,94 @@ struct StbImage {
 
             ImGui::PopID();
         }
-        if (image && ImGui::TreeNodeEx("Adjust Image:",ImGuiTreeNodeFlags_DefaultOpen|ImGuiTreeNodeFlags_Framed)) {
+        if (image && ImGui::TreeNodeEx("Adjust Image:",/*ImGuiTreeNodeFlags_DefaultOpen|*/ImGuiTreeNodeFlags_Framed)) {
             ImGui::TreePop();
             ImGui::PushID("Adjust Image Group");
 
+            static const char* filterNames[4] = {"Brightness And Contrast","Icon Light Effect","Invert Colors","Gaussian Blur"};//,"B/W Sketch","Color Sketch"};
+            static const int filterCount = sizeof(filterNames)/sizeof(filterNames[0]);
             ImGui::PushItemWidth(-1);
-            const bool mustOpenBrightnessAndContrast = ImGui::Button("Brightness And Contrast") && image;
-            if (ImGui::Button("Invert Image") && image && invertImageColors((chbSelectionLimit && hasSelection) ? &imageSelection : NULL)) {assignModified(true);}
+            ImGui::Combo("###AdjustImageFilters",&imageFilterIndex,filterNames,filterCount,filterCount);
             ImGui::PopItemWidth();
 
-            if (c!=1) {
-                ImGui::Text("Icon Light Effect:");
-                const double lightEffectStep = chbLightEffectInvert ? -48 : 48;
-                if (ImGui::SmallButton("Add Linear") && applyImageLightEffect(lightEffectStep,ImGuiIE::LE_LINEAR,(chbSelectionLimit && hasSelection) ? &imageSelection : NULL)) {assignModified(true);}
-                ImGui::SameLine();
-                if (ImGui::SmallButton("Add Round")  && applyImageLightEffect(lightEffectStep,ImGuiIE::LE_ROUND,(chbSelectionLimit && hasSelection) ? &imageSelection : NULL)) {assignModified(true);}
-                if (ImGui::SmallButton("Add Spheric") && applyImageLightEffect(lightEffectStep,ImGuiIE::LE_SPHERICAL,(chbSelectionLimit && hasSelection) ? &imageSelection : NULL)) {assignModified(true);}
-                ImGui::SameLine();
-                // These is a check button
-                bool tmp = chbLightEffectInvert;
-                if (tmp) {
-                    ImGui::PushStyleColor(ImGuiCol_Button,mrs.CheckButtonColor);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
+            bool mustOpenBrightnessAndContrast = false;
+
+            switch (imageFilterIndex)   {
+            case 0: {
+                // Brightness And Contrast
+                ImGui::PushItemWidth(-1);
+                mustOpenBrightnessAndContrast = ImGui::Button("Brightness And Contrast") && image;
+                ImGui::PopItemWidth();
+            }
+                break;
+            case 1: {
+                // Icon List Effect
+                if (c!=1) {
+                    ImGui::Text("Icon Light Effect:");
+                    const double lightEffectStep = chbLightEffectInvert ? -48 : 48;
+                    if (ImGui::SmallButton("Add Linear") && applyImageLightEffect(lightEffectStep,ImGuiIE::LE_LINEAR,(chbSelectionLimit && hasSelection) ? &imageSelection : NULL)) {assignModified(true);}
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("Add Round")  && applyImageLightEffect(lightEffectStep,ImGuiIE::LE_ROUND,(chbSelectionLimit && hasSelection) ? &imageSelection : NULL)) {assignModified(true);}
+                    if (ImGui::SmallButton("Add Spheric") && applyImageLightEffect(lightEffectStep,ImGuiIE::LE_SPHERICAL,(chbSelectionLimit && hasSelection) ? &imageSelection : NULL)) {assignModified(true);}
+                    ImGui::SameLine();
+                    mrs.SmallCheckButton("Inversion",chbLightEffectInvert);
                 }
-                if (ImGui::SmallButton("Inversion")) chbLightEffectInvert=!chbLightEffectInvert;
-                if (tmp) ImGui::PopStyleColor(3);
+                else ImGui::Text("Unavailable for ALPHA images.");
+            }
+                break;
+            case 2: {
+                // Invert Colors
+                ImGui::PushItemWidth(-1);
+                if (ImGui::Button("Invert Colors") && image && invertImageColors((chbSelectionLimit && hasSelection) ? &imageSelection : NULL)) {assignModified(true);}
+                ImGui::PopItemWidth();
+            }
+            break;
+            case 3: {
+                // Gaussian Blur
+                ImGui::BeginGroup();
+                ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.4f);
+                if (ImGui::InputInt("Size##GaussianBlurSize",&gaussianBlurKernelSize,2,5)) {if (gaussianBlurKernelSize%2==0) --gaussianBlurKernelSize;if (gaussianBlurKernelSize<3) gaussianBlurKernelSize=3;}
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Kernel extension in pixels\nIt affects processing speed");
+                if (ImGui::InputFloat("Power##GaussianBlurPower",&gaussianBlurPower,0.02f,0.1f,2)) {if (gaussianBlurPower<0.001f) gaussianBlurPower=0.001f;}
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Bigger values make\nthe result blurrier\n(using the same kernel size)");
+                ImGui::PopItemWidth();
+                ImGui::EndGroup();
+                ImGui::SameLine();
+                ImGui::BeginGroup();
+                ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.35f);
+                mrs.SmallCheckButton("Seamless##GaussianBlurSeamless",gaussianBlurSeamless);
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Affects the behavior\non the borders");
+                ImGui::Spacing();
+                if (ImGui::SmallButton("Reset##GaussianBlurReset")) {
+                    gaussianBlurKernelSize = 3;
+                    gaussianBlurPower = 1.f;
+                    gaussianBlurSeamless = false;
+                }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Resets all the\nfilter properties");
+                ImGui::PopItemWidth();
+                ImGui::EndGroup();
+
+                ImGui::PushItemWidth(-1);
+                if (ImGui::Button("Gaussian Blur") && image && applyGaussianBlur((chbSelectionLimit && hasSelection) ? &imageSelection : NULL,gaussianBlurKernelSize,gaussianBlurKernelSize,gaussianBlurSeamless,gaussianBlurSeamless,(double)gaussianBlurPower)) {assignModified(true);}
+                ImGui::PopItemWidth();
+            }
+            break;
+            case 4: {
 
             }
+            break;
+            case 5: {
+
+            }
+            break;
+            default:
+            IM_ASSERT(true);    // Never happens
+            break;
+            }
+
+
+
+
 
             ImGui::PopID();
 
@@ -4584,7 +4915,7 @@ struct StbImage {
                 }
             }
         }
-        if (image && ImGui::TreeNodeEx("Image Controls:",ImGuiTreeNodeFlags_DefaultOpen|ImGuiTreeNodeFlags_Framed)) {
+        if (image && ImGui::TreeNodeEx("Image Controls:",/*ImGuiTreeNodeFlags_DefaultOpen|*/ImGuiTreeNodeFlags_Framed)) {
             ImGui::TreePop();
             ImGui::PushID("Image Controls Group");
 
@@ -4638,15 +4969,8 @@ struct StbImage {
                     ImGui::SameLine();
                 }
                 if (fileExtCanBeSaved && c==4) {
-                    bool tmp = discardRgbWhenAlphaIsZeroOnSaving;
-                    if (tmp) {
-                        ImGui::PushStyleColor(ImGuiCol_Button,mrs.CheckButtonColor);
-                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,mrs.CheckButtonHoveredColor);
-                        ImGui::PushStyleColor(ImGuiCol_ButtonActive,mrs.CheckButtonActiveColor);
-                    }
-                    if (ImGui::SmallButton("Optimize RGBA")) discardRgbWhenAlphaIsZeroOnSaving=!discardRgbWhenAlphaIsZeroOnSaving;
+                    mrs.SmallCheckButton("Optimize RGBA",discardRgbWhenAlphaIsZeroOnSaving);
                     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","When enabled, on saving RGB is discarded\nwhen ALPHA is zero for better compression");
-                    if (tmp) ImGui::PopStyleColor(3);
                     ImGui::SameLine();
                 }
                 if (ImGui::Button("Reload")) {loadFromFile(filePath);}

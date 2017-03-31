@@ -107,6 +107,10 @@ NOTES:
 */
 
 /* CHANGELOG:
+ IMGUIIMAGEEDITOR_VERSION 0.20
+ * Added a Gaussian Blur filter
+ * Made some collapsable headers closed by default
+
  IMGUIIMAGEEDITOR_VERSION 0.15
  * Now Paste blends the copied image's alpha with the background, or just copies its alpha value (according to the image channels).
  * Removed a hard-coded definition and added an "Optimize RGBA" check button.
@@ -119,7 +123,7 @@ NOTES:
  * Added a proper empty ctr
  * Added round pen
  * Added pen in overlay mode (preview is wrong for RGBA images, but I don't care)
- * Added fill in overlay mode (it doesn't seem 100% correct to me, but this is what I got so far).
+ * Added fill in overlay mode (it doesn't seem 100% correct to me, but this is what I got so far). <=== THIS IS PROBABLY BUGGY!
 
  IMGUIIMAGEEDITOR_VERSION 0.11
  * Added a bunch of booleans in the ImageEditor::ctr()
@@ -127,7 +131,7 @@ NOTES:
  * Added an optional callback SetImageEditorEventCallback(...)
 */
 
-#define IMGUIIMAGEEDITOR_VERSION 0.15
+#define IMGUIIMAGEEDITOR_VERSION 0.20
 
 namespace ImGui {
 
