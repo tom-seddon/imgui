@@ -2311,15 +2311,6 @@ template <typename T> class NormalMapGenerator {
         if (pAmbientOcclusionMap && pAmbientOcclusionMapChannels!=1 && pAmbientOcclusionMapChannels!=3 && pAmbientOcclusionMapChannels!=4) return false;
         const bool normalMapOutIsRGBA = (pssNormalMapOut && pssNormalMapOutChannels==4);
         appendAOMapAsAlphaChannelIfPossible&=normalMapOutIsRGBA;
-        T* ssim = NULL;T* aoim = NULL;
-        if (pssNormalMapOut) {
-            if (!(*pssNormalMapOut)) *pssNormalMapOut = (T*) STBI_MALLOC(w*h*pssNormalMapOutChannels*sizeof(T));
-            ssim = *pssNormalMapOut;
-        }
-        if (pAmbientOcclusionMap) {
-            if (!(*pAmbientOcclusionMap)) *pAmbientOcclusionMap = (T*) STBI_MALLOC(w*h*pAmbientOcclusionMapChannels*sizeof(T));
-            aoim = *pAmbientOcclusionMap;
-        }
 
         if (rayCount<=0) rayCount=1;
         if (rayLength<=0) rayLength=1;
@@ -2336,6 +2327,7 @@ template <typename T> class NormalMapGenerator {
         real xsum(0),ysum(0);
         int cnt=0;
         for(real a=0,aSz=real(2)*M_PI;a<aSz;a+=anglestep) {
+            if (cnt>=rayCount) break; // Fixes stuff with some floating point precision issue (mostly MSVC)
             vec2& dir = dirs[cnt];
 #           if (defined(__USE_GNU) && !defined(IMGUIIMAGEEDITOR_SINGLE_PRECISION_CONVOLUTION))
             sincos(a,&dir.y,&dir.x);
@@ -2349,6 +2341,16 @@ template <typename T> class NormalMapGenerator {
             xsum += fabsdir.x;
             ysum += fabsdir.y;
             ++cnt;
+        }
+
+       T* ssim = NULL;T* aoim = NULL;
+        if (pssNormalMapOut) {
+            if (!(*pssNormalMapOut)) *pssNormalMapOut = (T*) STBI_MALLOC(w*h*pssNormalMapOutChannels*sizeof(T));
+            ssim = *pssNormalMapOut;
+        }
+        if (pAmbientOcclusionMap) {
+            if (!(*pAmbientOcclusionMap)) *pAmbientOcclusionMap = (T*) STBI_MALLOC(w*h*pAmbientOcclusionMapChannels*sizeof(T));
+            aoim = *pAmbientOcclusionMap;
         }
 
         //int skips=0;
