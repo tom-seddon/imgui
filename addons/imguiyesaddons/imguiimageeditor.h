@@ -1,29 +1,26 @@
+/*
+MIT License
 
- /*	code by Flix (https://github.com/Flix01)
-  *
- *	THIS SOFTWARE IS PROVIDED BY THE AUTHORS ``AS IS'' AND ANY EXPRESS
- *	OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- *	WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- *	ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY
- *	DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- *	DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- *	GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- *	INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- *	IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- *	OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- *	IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *  Permission is granted to anyone to use this software for any purpose,
- * including commercial applications, and to alter it and redistribute it
- * freely, subject to the following restrictions:
- * 1. The origin of this software must not be misrepresented; you must not
- *    claim that you wrote the original software. If you use this software
- *    in a product, an acknowledgment in the product documentation would be
- *    appreciated but is not required.
- * 2. Altered source versions must be plainly marked as such, and must not be
- *    misrepresented as being the original software.
- * 3. This notice may not be removed or altered from any source distribution.
+Copyright (c) 2017 by Flix (https://github.com/Flix01)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 */
-
 #ifndef IMGUIIMAGEEDITOR_H_
 #define IMGUIIMAGEEDITOR_H_
 
@@ -104,9 +101,28 @@ NOTES:
 
 /* TODO:
  * Fix bugs
+ * Add more tooltips
+ * Optionally use OpenMP to speed up ambient occlusion / bent normals generation [FAILED! OpemMP code is slower (tested 2 different OpenMP shortcuts)]
+ * See if we can (optionally) re-enable the lodePng plugin (stb_image.h couldn't load back some pngs saved with it correctly [it detected RGB instead of RGBA]).
 */
 
 /* CHANGELOG:
+ IMGUIIMAGEEDITOR_VERSION 0.25
+ * Changed the license to the default MIT license (it's actually shorter than before)
+ * Added a (slow and buggy) normal map filter
+ * Added a (even slower and buggier) ambient occlusion / bent normals generator, based on:
+ *  (1) https://blenderartists.org/forum/showthread.php?330268-Self-Shadowing-Normal-Maps
+ *  (2) https://www.youtube.com/watch?v=e1e6o7KlhEM
+ *  (3) https://www.gamedev.net/topic/557465-self-shadowing-normal-maps/
+ *      Bent Normals work on the same images as (1) and (2) almost correctly, but it doesn't on 80% of all the other images I've tried so far.
+ *      Ambient Occlusion seems to work always correctly (and that was my main goal actually).
+ * When saving as RGB or RGBA from A, put A into RGB channels
+ * Now the ET_IMAGE_LOADED event is fired only when an image is loaded/reloaded, not after saving an image (this is what every user expects)
+ * Now "undo" removes the "modified flag" when necessary
+ * Now the preview image of the Brightness and Constrast dialog has better resolution (max w*h = 256x256, previously 128x128)
+ * Previously the file name changed after extracting a selection to a new image (and there was an option to keep the existing name):
+ *      now this is no more possible (reason: "Undo" can't remember old file names and restore them).
+
  IMGUIIMAGEEDITOR_VERSION 0.20
  * Added a Gaussian Blur filter
  * Made some collapsable headers closed by default
@@ -145,12 +161,12 @@ public:
 
     enum EventType {
         ET_IMAGE_UPDATED=0, // This gets called very frequently, every time the displayed image gets updated
-        ET_IMAGE_LOADED,    // Called when an image is loaded/reloaded and even after an image is successfully saved (because it gets reloaded soon after saving)
+        ET_IMAGE_LOADED,    // Called when an image is loaded/reloaded
         ET_IMAGE_SAVED      // Called when an image is saved
     };
 
     ImageEditor();
-    ImageEditor(bool hideImageNamePanel,bool forbidLoadingNewImagesIfAvailable=false,bool forbidBrowsingInsideFolderIfAvailable=false,bool forbidSaveAsIfAvailable=false,bool _changeFileNameWhenExtractingSelection=true);
+    ImageEditor(bool hideImageNamePanel,bool forbidLoadingNewImagesIfAvailable=false,bool forbidBrowsingInsideFolderIfAvailable=false,bool forbidSaveAsIfAvailable=false);
 #if (defined(IMGUITABWINDOW_H_) && !defined(IMGUIIMAGEEDITOR_NO_TABLABEL))
     virtual ~ImageEditor();
     #else //IMGUITABWINDOW_H_
@@ -209,7 +225,7 @@ public:
 protected:
 	struct StbImage* is;
 
-    bool init,showImageNamePanel,allowLoadingNewImages,allowBrowsingInsideFolder,allowSaveAs,changeFileNameWhenExtractingSelection;
+    bool init,showImageNamePanel,allowLoadingNewImages,allowBrowsingInsideFolder,allowSaveAs;
 
     friend struct StbImage;
 

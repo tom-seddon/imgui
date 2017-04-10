@@ -1,26 +1,25 @@
- /*	code by Flix (https://github.com/Flix01)
-  *
- *	THIS SOFTWARE IS PROVIDED BY THE AUTHORS ``AS IS'' AND ANY EXPRESS
- *	OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- *	WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- *	ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY
- *	DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- *	DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- *	GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- *	INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- *	IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- *	OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- *	IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *  Permission is granted to anyone to use this software for any purpose,
- * including commercial applications, and to alter it and redistribute it
- * freely, subject to the following restrictions:
- * 1. The origin of this software must not be misrepresented; you must not
- *    claim that you wrote the original software. If you use this software
- *    in a product, an acknowledgment in the product documentation would be
- *    appreciated but is not required.
- * 2. Altered source versions must be plainly marked as such, and must not be
- *    misrepresented as being the original software.
- * 3. This notice may not be removed or altered from any source distribution.
+/*
+MIT License
+
+Copyright (c) 2017 by Flix (https://github.com/Flix01)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 */
 
 //- Common Code For All Addons needed just to ease inclusion as separate files in user code ----------------------
@@ -55,7 +54,11 @@
 
 #include <ctype.h>  // tolower
 #include <string.h> // memset,...
-#include <math.h>   // just a few filter needs it
+
+#include <math.h>   // just a few filter needs it (maybe we could add a def to cut them out)
+#ifndef M_PI        // MSVC stuff for sure here...
+    #define M_PI 3.14159265358979323846
+#endif
 
 // stb_image.h is MANDATORY
 #ifndef IMGUI_USE_AUTO_BINDING
@@ -258,7 +261,23 @@ extern "C" {
 
 
 
+#ifdef IMGUI_USE_OMP
+#include <omp.h>                        // Needs -fopenmp
+#endif //IMGUI_USE_OMP
 
+// The following is intended to suppress #pragma omp warnings when IMGUI_USE_OMP is NOT defined
+#ifdef _MSC_VER
+#   pragma warning( push )
+#   pragma warning (disable : 4068 ) // disable unknown pragma warnings
+#endif //_MSC_VER
+#ifdef __GNUC__
+#   pragma GCC diagnostic push
+#   pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#endif //__GNUC__
+#ifdef __clang__
+#   pragma clang diagnostic push
+#   pragma clang diagnostic ignored "-Wunknown-pragmas"
+#endif //__clang__
 
 
 namespace ImGuiIE {
@@ -632,13 +651,14 @@ bool IsItemActiveLastFrame()    {
 bool IsItemJustReleased()   {return IsItemActiveLastFrame() && !ImGui::IsItemActive();}
 
 
-struct ImageScopedDeleter {
-    volatile unsigned char* im;
-    ImageScopedDeleter(unsigned char* image=NULL) : im(image) {}
-    ~ImageScopedDeleter() {
+template<typename T> struct ImageScopedDeleterGeneric {
+    volatile T* im;
+    ImageScopedDeleterGeneric(T* image=NULL) : im(image) {}
+    ~ImageScopedDeleterGeneric() {
         if (im) {STBI_FREE((void*)im);im=NULL;}
     }
 };
+typedef ImageScopedDeleterGeneric<unsigned char> ImageScopedDeleter;
 
 enum ResizeFilter {
     RF_NEAREST = 0,
@@ -724,7 +744,7 @@ static bool FileExists(const char *filePath)   {
 }
 
 
-static const int MaxSupportedExtensionsSize = 2048;
+static const int MaxSupportedExtensionsSize = 512;
 static char SupportedLoadExtensions[MaxSupportedExtensionsSize] = "";
 static char SupportedSaveExtensions[5][MaxSupportedExtensionsSize] = {"","","","",""};
 static void InitSupportedFileExtensions() {
@@ -987,42 +1007,43 @@ template <typename T> static bool PasteImage(int posX,int posY,T* im,int w,int h
 }
 
 // return image must be freed by the caller
-static unsigned char* ConvertColorsTo(int dstC,const unsigned char* im,int w,int h,int c,bool assumeThatOneChannelMeansLuminance=true) {
+template <typename T> static T* ConvertColorsTo(int dstC,const T* im,int w,int h,int c,bool assumeThatOneChannelMeansLuminance=true,bool neverUseAlphaForOneChannelIfItsConstant=true,const T maxChannelValue=T(255)) {
     IM_ASSERT(im && w>0 && h>0 && c>0 && c<=4 && c!=2 && dstC>0 && dstC<=4 && dstC!=2);
     if (!(im && w>0 && h>0 && c>0 && c<=4 && c!=2 && dstC>0 && dstC<=4 && dstC!=2)) return NULL;
+    typedef double sum_type;    // usigned short is good enough when T is unsigned char
     typedef int int_type;
     const int_type wxh = w*h;
     const int_type size =wxh*c;
     const int_type dstSize = wxh*dstC;
-    unsigned char* nim = (unsigned char*) STBI_MALLOC(dstSize);
-    unsigned char* pni = nim;
-    const unsigned char* pim = im;
+    T* nim = (T*) STBI_MALLOC(dstSize*sizeof(T));
+    T* pni = nim;
+    const T* pim = im;
     if (c==1) {
         // Here wxh == size
         if (dstC==1) memcpy(nim,im,dstSize);
         else if (dstC==3) {for (int_type i=0;i<size;i++)   {*pni++ = *pim;*pni++ = *pim;*pni++ = *pim++;}}
         else if (dstC==4) {
-            if (assumeThatOneChannelMeansLuminance) {for (int_type i=0;i<size;i++)   {*pni++ = *pim;*pni++ = *pim;*pni++ = *pim++;*pni++ = 255;}}
+            if (assumeThatOneChannelMeansLuminance) {for (int_type i=0;i<size;i++)   {*pni++ = *pim;*pni++ = *pim;*pni++ = *pim++;*pni++ = maxChannelValue;}}
             else {for (int_type i=0;i<size;i++)   {*pni++ = 0;*pni++ = 0;*pni++ = 0;*pni++ = *pim++;}}
         }
         else IM_ASSERT(true);
     }
     else if (c==3)   {
-        if (dstC==1) {for (int_type i=0;i<wxh;i++)   {*pni++ =(unsigned char) (((unsigned short)(pim[0])+(unsigned short)(pim[1])+(unsigned short)(pim[2]))/3);pim+=3;}}
+        if (dstC==1) {for (int_type i=0;i<wxh;i++)   {*pni++ =(T) (((sum_type)(pim[0])+(sum_type)(pim[1])+(sum_type)(pim[2]))/sum_type(3));pim+=3;}}
         else if (dstC==3) memcpy(nim,im,dstSize);
-        else if (dstC==4) {for (int_type i=0;i<wxh;i++)   {*pni++=*pim++;*pni++=*pim++;*pni++=*pim++;*pni++=255;}}
+        else if (dstC==4) {for (int_type i=0;i<wxh;i++)   {*pni++=*pim++;*pni++=*pim++;*pni++=*pim++;*pni++=maxChannelValue;}}
         else IM_ASSERT(true);
     }
     else if (c==4) {
         if (dstC==1) {
-            if (!assumeThatOneChannelMeansLuminance)    {
+            if (!assumeThatOneChannelMeansLuminance && neverUseAlphaForOneChannelIfItsConstant)    {
                 // We make sure that alpha changes: otherwise we probably want assumeThatOneChannelMeansLuminance=true!
-                const unsigned char value = pim[3];
+                const T value = pim[3];
                 bool alphaChanges = false;
                 for (int_type i=0,isz=wxh*c;i<isz;i+=c)   {if (pim[i+3]!=value) {alphaChanges=true;break;}}
                 if (!alphaChanges) assumeThatOneChannelMeansLuminance=true;
             }
-            if (assumeThatOneChannelMeansLuminance) {for (int_type i=0;i<wxh;i++)   {*pni++ =(unsigned char) (((unsigned short)(pim[0])+(unsigned short)(pim[1])+(unsigned short)(pim[2]))/3);pim+=4;}}
+            if (assumeThatOneChannelMeansLuminance) {for (int_type i=0;i<wxh;i++)   {*pni++ =(T) (((sum_type)(pim[0])+(sum_type)(pim[1])+(sum_type)(pim[2]))/sum_type(3));pim+=4;}}
             else {for (int_type i=0;i<wxh;i++)   {pim+=3;*pni++=*pim++;}}
         }
         else if (dstC==3) {for (int_type i=0;i<wxh;i++)   {*pni++=*pim++;*pni++=*pim++;*pni++=*pim++;++pim;}}
@@ -1537,55 +1558,102 @@ static bool GenerateGaussianBlurConvolutionKernel(double* Kernel,int lengthX,int
     return true;
 }
 
+static bool GenerateSobelConvolutionKernel(double* Kernel,int lengthX,int lengthY,bool vertical=false) {
+    if (!Kernel || lengthX<3 || lengthY<3 || lengthX%2==0 || lengthY%2==0) return false;
+
+    double* pKernel = Kernel;
+    for (int i=0,iSz=lengthX*lengthY;i<iSz;i++) *pKernel++=0.0;
+    pKernel = Kernel;
+
+    const int kernelRadiusX = lengthX / 2;
+    const int kernelRadiusY = lengthY / 2;
+
+    double filterX2=0,filterY2=0;
+    for (int filterY = -kernelRadiusY;filterY <= kernelRadiusY; filterY++)  {
+        if (vertical && filterY==0) continue;
+        filterY2 = filterY*filterY;
+        for (int filterX = -kernelRadiusX;filterX <= kernelRadiusX; filterX++) {
+            if (!vertical && filterX==0) continue;
+            filterX2 = filterX*filterX;
+            Kernel[(filterY + kernelRadiusY)*lengthX + filterX+kernelRadiusX] =
+                    vertical ? ((double) filterY/(filterX2+filterY2)) : ((double) filterX/(filterX2+filterY2));
+
+            //fprintf(stderr,"%d,%d) %1.6f\t",filterX,filterY,filterX2+filterY2);
+        }
+        //fprintf(stderr,"\n");
+    }
+    //fprintf(stderr,"\n");
+
+    // Debug:
+    /*pKernel = Kernel;
+    for (int y=0;y<lengthY;y++) {
+        for (int x=0;x<lengthX;x++) {
+            fprintf(stderr,"%1.6f\t",*pKernel++);
+        }
+        fprintf(stderr,"\n");
+    }
+    fprintf(stderr,"\n");
+    pKernel = Kernel;*/
+
+
+    return true;
+}
+
+
 struct KernelMatrix {
-    double* k;  // reference
+#   ifdef IMGUIIMAGEEDITOR_SINGLE_PRECISION_CONVOLUTION
+    typedef float real;
+#   else
+    typedef double real;
+#   endif
+    real* k;  // reference
     int w,h,c;
-    KernelMatrix(double* _k,int _w,int _h,int _c) : k(_k),w(_w),h(_h),c(_c)  {}
-    inline double* get(int x, int y) {return &k[(w*y+x)*c];}
-    inline const double* get(int x, int y) const {return &k[(w*y+x)*c];}
-    inline double* shiftUp() {
-        //double *p1=NULL,*p2=NULL;const int stride = w*c;
+    KernelMatrix(real* _k,int _w,int _h,int _c) : k(_k),w(_w),h(_h),c(_c)  {}
+    inline real* get(int x, int y) {return &k[(w*y+x)*c];}
+    inline const real* get(int x, int y) const {return &k[(w*y+x)*c];}
+    inline real* shiftUp() {
+        //real *p1=NULL,*p2=NULL;const int stride = w*c;
         for (int y=0,ySz=h-1;y<ySz;y++) {
             //p1 = &k[y*stride];p2=p1+stride;for (int i=0;i<stride;i++) *p1++=*p2++;
-            memcpy((void*)&k[w*y*c],(const void*)&k[w*(y+1)*c],w*c*sizeof(double)); // THIS LINE WORKS!
+            memcpy((void*)&k[w*y*c],(const void*)&k[w*(y+1)*c],w*c*sizeof(real)); // THIS LINE WORKS!
         }
         return &k[w*(h-1)*c];
     }
-    inline double* shiftLeft() {
-        double *p1=NULL,*p2=NULL;
+    inline real* shiftLeft() {
+        real *p1=NULL,*p2=NULL;
         for (int y=0;y<h;y++) {
             p1 = &k[w*y*c];p2 = p1+c;
             for (int x=0,xSz=w-1;x<xSz;x++) {
                 for (int i=0;i<c;i++) *p1++=*p2++;
-                //memcpy((void*)p1,(const void*)p2,c*sizeof(double));++p1;++p2; // THIS LINE DOES NOT WORK!!!
+                //memcpy((void*)p1,(const void*)p2,c*sizeof(real));++p1;++p2; // THIS LINE DOES NOT WORK!!!
             }
         }
         return &k[(w-1)*c]; // return right-most top kernel value
     }
-    inline double* shiftRight() {
-        double *p1=NULL,*p2=NULL;
+    inline real* shiftRight() {
+        real *p1=NULL,*p2=NULL;
         for (int y=0;y<h;y++) {
             p1 = &k[(w*y+w)*c-1];p2 = p1-c;
             for (int x=0,xSz=w-1;x<xSz;x++) {
                 for (int i=0;i<c;i++) *p1--=*p2--;
-                //memcpy((void*)p1,(const void*)p2,c*sizeof(double));--p1;--p2; // THIS LINE DOES NOT WORK!!!
+                //memcpy((void*)p1,(const void*)p2,c*sizeof(real));--p1;--p2; // THIS LINE DOES NOT WORK!!!
             }
         }
         return &k[0]; // return left-most top kernel value
     }
 
-    static double MaxPixelValue;
-    static double ScaleFactor;
-    static double Offset;
+    static real MaxPixelValue;
+    static real ScaleFactor;
+    static real Offset;
     // Fills result[0],...,result[c-1]. It uses the 3 static variables above. Does not move result
-    template <typename T> inline void getSum(T* result,const double* kernel) const {
+    template <typename T> inline void getSum(T* result,const real* kernel) const {
         // TODO: hande ALPHA for RGBA better
-        double d=0.0;
+        real d=0.0;
         for (int i=0;i<c;i++)   {
             d=0.0;
-            const double* pk = kernel;
+            const real* pk = kernel;
             for (int y=0;y<h;y++)  {
-                const double* pm = &k[y*w*c+i];
+                const real* pm = &k[y*w*c+i];
                 for (int x=0;x<w;x++)  {
                     d+=((*pk++)*(*pm));
                     pm+=c;
@@ -1593,13 +1661,14 @@ struct KernelMatrix {
             }
             d*=ScaleFactor+Offset;
             d*=MaxPixelValue;
-            //if (d<0.0) d=0.0;else if (d>MaxPixelValue) d=MaxPixelValue;
+            if (d<0.0) d=0.0;else if (d>MaxPixelValue) d=MaxPixelValue;
             result[i] = (T)d;
         }
     }
+
     /*void debug() {
         for (int y=0;y<h;y++)  {
-            const double* pm = &k[y*w*c];
+            const real* pm = &k[y*w*c];
             for (int x=0;x<w;x++)  {
                 fprintf(stderr,"(");
                 for (int i=0;i<c;i++) {if (i>0) fprintf(stderr,",");fprintf(stderr,"%1.2f",*pm++);}
@@ -1609,9 +1678,9 @@ struct KernelMatrix {
         }
     }*/
 };
-double KernelMatrix::MaxPixelValue = 255.0;
-double KernelMatrix::ScaleFactor = 1.0;
-double KernelMatrix::Offset = 0.0;
+KernelMatrix::real KernelMatrix::MaxPixelValue = 255.0;
+KernelMatrix::real KernelMatrix::ScaleFactor = 1.0;
+KernelMatrix::real KernelMatrix::Offset = 0.0;
 
 // return image must be freed by the caller; kw and kh oddnumbers
 template <typename T> static T* ApplyConvolutionKernelNxN(const T* im,int w,int h,int c,const double* normalizedKernel,int kw,int kh,bool wrapx=false,bool wrapy=false,const double scaleFactor=1.0,const double offset=0.0,const double maxPixelValue=255.0)
@@ -1781,6 +1850,1012 @@ template <typename T> static T* ApplyGaussianBlurNxN(const T* im,int w,int h,int
     if (!GenerateGaussianBlurConvolutionKernel(&normalizedKernel[0],radiusX,radiusY,weight)) return NULL;
     return ApplyConvolutionKernelNxN(im,w,h,c,&normalizedKernel[0],radiusX,radiusY,wrapx,wrapy,1.0,0.0,maxPixelValue);
 }
+
+// return image must be freed by the caller; radiusX and radiusY oddnumbers >=3
+template <typename T> static T* ApplySobelNxN(const T* im,int w,int h,int c,int radiusX,int radiusY=-1,bool vertical=false,bool wrapx=false,bool wrapy=false,double offset=0.5,const double maxPixelValue=255.0) {
+    if (radiusY<3) radiusY=radiusX;
+    if (radiusX<3 || radiusX%2==0 || radiusY%2==0 || !im || w<3 || h<3 || (c!=1 && c!=3 &&c!=4)) return NULL;
+    ImVector<double> normalizedKernel;normalizedKernel.resize(radiusX*radiusY);
+    if (!GenerateSobelConvolutionKernel(&normalizedKernel[0],radiusX,radiusY,vertical)) return NULL;
+    return ApplyConvolutionKernelNxN(im,w,h,c,&normalizedKernel[0],radiusX,radiusY,wrapx,wrapy,1.0,offset,maxPixelValue);
+}
+
+// return image must be freed by the caller;
+// Alpha channel in RGBA images is simply cloned.
+// RGB channels are processed separately => ApplyBlackAndWhiteThreshold(...) might be needed as post-filter
+// Not sure if it works with T=float  (no time to test)
+template <typename T> static T* ApplyEdgeDetectDifference(const T* im,int w,int h,int c,double threshold,bool wrapx=false,bool wrapy=false,const double maxPixelValue=255.0)
+{
+if (!im || w<3 || h<3 || (c!=1 && c!=3 &&c!=4)) return NULL;
+
+const T* pim =im;
+T* nim = (T*) STBI_MALLOC(w*h*c);
+T* pnim = nim;
+
+int nPixel = 0, nPixelMax = 0;
+const int stride = w*c;
+const bool isRGBA = (c==4);
+const int cc = isRGBA ? 3 : c;  // color channels except alpha
+
+if (threshold<0.0) threshold=0.0;
+else if (threshold>1.0) threshold=1.0;
+const int iThreshold = (int) (threshold * maxPixelValue);
+
+pim =im;pnim = nim;
+const T* pim_top=NULL;const T* pim_bot=NULL;const T* pim_extra=NULL;
+const T* pim_top_extra=NULL;const T* pim_bot_extra=NULL;
+for(int y=0;y<h;++y)
+{
+    pim = &im[y*stride];
+    pnim = &nim[y*stride];
+
+    if (y==0) pim_top = wrapy ? &im[(h-1)*stride] : pim;
+    else pim_top = pim-stride;
+    if (y==h-1) pim_bot = wrapy ? im : pim;
+    else pim_bot = pim+stride;
+
+    // 1st column: extra means "left"
+    pim_top_extra = wrapx ? (pim_top+(stride-c)) : pim_top;
+    pim_bot_extra = wrapx ? (pim_bot+(stride-c)) : pim_bot;
+    pim_extra =  wrapx ? (pim+(stride-c)) : pim;
+    for(int x=0;x<cc;++x)  {
+        nPixelMax = abs((pim_top+c)[0] - (*pim_bot_extra));   // Diagonal tr-bl
+        nPixel =    abs((pim_bot+c)[0] - (*pim_top_extra));   // Diagonal br-tl
+        if (nPixel>nPixelMax) nPixelMax = nPixel;
+
+        nPixel = abs((*pim_top)-(*pim_bot));             // Vertical
+        if (nPixel>nPixelMax) nPixelMax = nPixel;
+
+        nPixel = abs((pim+c)[0]-(*pim_extra));                // Horizontal
+        if (nPixel>nPixelMax) nPixelMax = nPixel;
+
+        if (nPixelMax < iThreshold) nPixelMax = 0;
+        *pnim = (unsigned char) nPixelMax;
+
+        ++pnim;++pim;
+        ++pim_top;++pim_bot;
+        ++pim_top_extra;++pim_bot_extra;++pim_extra;
+    }
+    if (isRGBA) {
+        *pnim = *pim;   // simply clone alpha
+        // increment pointers
+        ++pnim;++pim;
+        ++pim_top;++pim_bot;
+    }
+
+    // Almost all the row
+    unsigned char cnt=0;    // to skip alpha if isRGBA
+    for(int x=c,xSz=(w-1)*c;x<xSz;++x)  {
+        if (isRGBA && (++cnt)==4) {
+            cnt=0;
+            *pnim = *pim;   // simply clone alpha
+            ++pnim;++pim;
+            ++pim_top;++pim_bot;
+            continue;
+        }
+
+        nPixelMax = abs((pim_top+c)[0] - (pim_bot-c)[0]);   // Diagonal tr-bl
+        nPixel =    abs((pim_bot+c)[0] - (pim_top-c)[0]);   // Diagonal br-tl
+        if (nPixel>nPixelMax) nPixelMax = nPixel;
+
+        nPixel = abs((*pim_top)-(*pim_bot));             // Vertical
+        if (nPixel>nPixelMax) nPixelMax = nPixel;
+
+        nPixel = abs((pim+c)[0]-(pim-c)[0]);                // Horizontal
+        if (nPixel>nPixelMax) nPixelMax = nPixel;
+
+        if (nPixelMax < iThreshold) nPixelMax = 0;
+        *pnim = (unsigned char) nPixelMax;
+
+        ++pnim;++pim;
+        ++pim_top;++pim_bot;
+    }
+
+    // Last column: extra means "right"
+    pim_top_extra = wrapx ? (pim_top-stride+c) : pim_top;
+    pim_bot_extra = wrapx ? (pim_bot-stride+c) : pim_bot;
+    pim_extra =  wrapx ? (pim-stride+c) : pim;
+    for(int x=(w-1)*c,xSz=x+cc;x<xSz;++x)  {
+        nPixelMax = abs((*pim_top_extra) - (pim_bot-c)[0]);   // Diagonal tr-bl
+        nPixel =    abs((*pim_bot_extra) - (pim_top-c)[0]);   // Diagonal br-tl
+        if (nPixel>nPixelMax) nPixelMax = nPixel;
+
+        nPixel = abs((*pim_top)-(*pim_bot));             // Vertical
+        if (nPixel>nPixelMax) nPixelMax = nPixel;
+
+        nPixel = abs((*pim_extra)-(pim-c)[0]);                // Horizontal
+        if (nPixel>nPixelMax) nPixelMax = nPixel;
+
+        if (nPixelMax < iThreshold) nPixelMax = 0;
+        *pnim = (unsigned char) nPixelMax;
+
+        ++pnim;++pim;
+        ++pim_top;++pim_bot;
+        ++pim_top_extra;++pim_bot_extra;++pim_extra;
+    }
+    if (isRGBA) {
+        *pnim = *pim;   // simply clone alpha
+        // incrementing pointers is useless here because we reset all pointers at the start of the loop
+    }
+}
+
+return nim;
+}
+
+// in place operation; Not sure if it works with T=float (no time to test)
+template <typename T> static bool ApplyBlackAndWhiteThreshold(T* im,int w,int h,int c,double threshold,const double maxPixelValue=255.0)
+{
+if (!im || w<3 || h<3 || (c!=1 && c!=3 &&c!=4)) return false;
+
+T* p =im;
+const int stride = w*c;
+
+if (threshold<0.0) threshold=0.0;
+else if (threshold>1.0) threshold=1.0;
+const T maxPixelValueT = (T) maxPixelValue;
+
+if (c==1) {
+    const T tThreshold = (T) (threshold * maxPixelValue);
+    for (unsigned i=0,iSz=h*stride;i<iSz;i++) {
+        if ((*p)<=tThreshold) *p=0;
+        else *p=maxPixelValueT;
+        ++p;
+    }
+}
+else {
+    // c==3 or c==4
+    int cx=0;int cxPlusOne=0;int cxPlusTwo=0;
+    int nPixel = 0;
+    const int iThreshold = (int) (threshold * maxPixelValue);
+    int thresholdX3=(int)iThreshold*3;
+
+    for(int y=0;y < h ;++y) {
+        for(int x=0; x < w; ++x )   {
+            cx=c*x;cxPlusOne=cx+1;cxPlusTwo=cxPlusOne+1;
+            nPixel=p[cx]+p[cxPlusOne]+p[cxPlusTwo];
+            if (nPixel<=thresholdX3)    {
+                p[cx]=p[cxPlusOne]=p[cxPlusTwo]=0;
+            }
+            else    {
+                p[cx]=p[cxPlusOne]=p[cxPlusTwo]=maxPixelValueT;
+            }
+        }
+        p += stride;
+    }
+}
+
+return true;
+}
+
+template <typename T> static T* ApplyBlackAndWhiteSketch(const T* im,int w,int h,int c,double edgeDetectThreshold=20.0/255.0,double blackAndWhiteThreshold=230.0/255.0)    {
+    T* nim = ApplyEdgeDetectDifference(im,w,h,c,edgeDetectThreshold);
+    if (!nim) return NULL;
+    InvertColors(nim,w,h,c,3);
+    if (!ApplyBlackAndWhiteThreshold(nim,w,h,c,blackAndWhiteThreshold)) {STBI_FREE(nim);nim=NULL;return NULL;}
+    return nim;
+}
+
+// Im place operation
+template <typename T> static void Grayscale(T* im,int w,int h,int c,bool justAvarageRGB=false)  {
+if (!im || w<=0 || h<=0 || (c!=3 && c!=4)) return;
+
+double CR=1.0/3.0,CG=1.0/3.0,CB=1.0/3.0;
+if (!justAvarageRGB) {CR=0.299;CG=0.587;CB=0.114;}
+
+T* p = im;
+for(int i=0,iSz=w*h;i<iSz;++i)    {
+    p[0]=p[1]=p[2]=(T)(CR*(double)p[0]+CG*(double)p[1]+CB*(double)p[2]);
+    p+=c;
+}
+
+}
+
+template <typename T> static T* MergeImagesImV_Private(int w,int h,int c,const ImVector<T*>& images,const ImVector<float> normalizedWeights)    {
+    const int numImages = images.size();
+    if (w<=0 || h<=0 || (c!=1 && c!=3 && c!=4) || numImages<=0 || normalizedWeights.size()!=numImages) return NULL;
+
+    const unsigned size = w*h*c;
+    T* nim = (T*) STBI_MALLOC(size*sizeof(T));
+    T* pnim = nim;
+    for (unsigned i=0,iSz=size;i<iSz;i++) *pnim++ = T(0);
+    float weight = 0.f;
+    const T* pim = NULL;
+    for (int i=0;i<numImages;i++)  {
+        pim = images[i];
+        weight = normalizedWeights[i];
+
+        pnim = nim;
+        for (unsigned i=0,iSz=size;i<iSz;i++) (*pnim++) += (T)(weight*(*pim++));
+    }
+
+    return nim;
+}
+template <typename T> static T* MergeImagesV_Private(int w,int h,int c,int numImages,va_list args)    {
+    if (w<=0 || h<=0 || (c!=1 && c!=3 && c!=4) || numImages<=0) return NULL;
+    ImVector<T*> images;ImVector<float> weights;
+    images.reserve(numImages);weights.reserve(numImages);
+    float weight=0.f,weightSum=0.f;
+    for (int imId=0;imId<numImages;imId++)  {
+        weight = (float) va_arg(args, double);
+        weightSum+=weight;
+        images.push_back(va_arg(args, T*));
+        weights.push_back(weight);
+    }
+    // Normalize weights
+    if (weightSum!=0) {
+        for (int i=0,iSz=weights.size();i<weights.size();i++)  {weights[i]/=weightSum;}
+    }
+    return  MergeImagesImV_Private(w,h,c,images,weights);
+}
+// Usage: MergeImages(w,h,c,N,image1,weight1,image2,weight2,...,imageN,weightN)
+// weights will be normalized
+template <typename T> static T* MergeImages(int w,int h,int c,int numImages,...)  {
+    if (w<=0 || h<=0 || (c!=1 && c!=3 && c!=4) || numImages<=0) return NULL;
+    va_list args;
+    va_start(args, numImages);
+    T* nim = MergeImagesV_Private<T>(w,h,c,numImages,args);
+    va_end(args);
+    return nim;
+}
+
+template <typename T> class NormalMapGenerator {
+    public:
+#   ifdef IMGUIIMAGEEDITOR_SINGLE_PRECISION_CONVOLUTION
+    typedef float real;
+#   else
+    typedef double real;
+#   endif
+    static real MaxChannelValue;            // 255
+    static real MaxChannelValueInv;         // 1/255
+
+    enum OutputAlphaMode {
+        OUTPUT_ALPHA_NONE=0,
+        OUTPUT_ALPHA_INPUT_IMAGE,
+        OUTPUT_ALPHA_HEIGHT_MAP,
+        OUTPUT_ALPHA_AMBIENT_OCCLUSION,
+        OUTPUT_ALPHA_COUNT
+    };
+    static const char** GetOutputAlphaModes() {
+        static const char* Names[OUTPUT_ALPHA_COUNT] = {"NONE","INPUT_IMAGE","HEIGHT_MAP","AMBIENT_OCCLUSION",};
+        return Names;
+    }
+    enum OutputRGBMode {
+        OUTPUT_RGB_NONE=0,
+        OUTPUT_RGB_INPUT_IMAGE,
+        OUTPUT_RGB_HEIGHT_MAP,
+        OUTPUT_RGB_NORMAL_MAP,
+        OUTPUT_RGB_BENT_NORMALS,
+        OUTPUT_RGB_AMBIENT_OCCLUSION,
+        OUTPUT_RGB_COUNT
+    };
+    static const char** GetOutputRGBModes() {
+        static const char* Names[OUTPUT_RGB_COUNT] = {"NONE","INPUT_IMAGE","HEIGHT_MAP","NORMAL_MAP","BENT_NORMALS","AMBIENT_OCCLUSION"};
+        return Names;
+    }
+    struct Params {
+        typedef float fl_type;  // so that I can use Dear Imgui directly on these values
+
+        // Normal Map Params
+        int kws[3];     // But it MUST be: 1) all values odd numbers 2) khs[i+1]-hks[i] = kws[i+1]-kws[i] (and all differences even numbers)
+        int khs[3];
+        fl_type weights[3];
+        bool wrapx,wrapy;
+        fl_type normal_eps; //=real(0.001),
+
+        // Ambient Occlusion / Bent Normal Params
+        int ray_count;
+        int ray_length;
+        fl_type ray_strength;
+
+        // Input Params
+        bool height_map_invert;                         //=false,
+        bool height_map_use_input_alpha_channel_only;   //=false,                                           // only if c==4
+        bool height_map_use_average_RGB;                // true (R+B+G)/3
+
+        // Output Params
+        OutputAlphaMode output_alpha_mode;              // only if c==4
+        OutputRGBMode output_rgb_mode;
+
+        Params() {reset();}
+        void reset() {resetIoParams();resetNormalMapParams();resetAoParams();}
+        void resetIoParams() {
+            height_map_invert=height_map_use_input_alpha_channel_only=false;
+            height_map_use_average_RGB=true;
+            output_alpha_mode=OUTPUT_ALPHA_NONE;
+            output_rgb_mode=OUTPUT_RGB_NORMAL_MAP;
+        }
+        void resetNormalMapParams() {
+            kws[0]=khs[0]=3;weights[0]=1.;
+            kws[1]=khs[1]=3;weights[1]=1.;
+            kws[2]=khs[2]=3;weights[2]=1.;
+            wrapx=wrapy=true;
+            normal_eps=0.001;
+        }
+        void resetAoParams() {ray_count=30;ray_length=60;ray_strength=10;}
+
+        void mirror() {
+            for (int i=0;i<3;i++) {khs[i]=kws[i];}
+            wrapy=wrapx;
+        }
+
+        bool isValid() const {
+            // But it MUST be: 1) all values odd numbers 2) khs[i+1]-hks[i] == kws[i+1]-kws[i] (and all differences even numbers)
+            if (kws[0]<3 || khs[0]<3) return false;
+            for (int i=1;i<3;i++) {
+                int deltax = kws[i]-kws[i-1];
+                int deltay = khs[i]-khs[i-1];
+                if (deltax!=deltay) return false;
+                if (deltax<0) return false;
+                if (deltax!=0 && deltax%2!=0) return false;
+            }
+            // should we validate weights too ?
+            return true;
+        }
+        int getDeltaKernelSize2() const {return kws[1]-kws[0];}
+        int getDeltaKernelSize3() const {return kws[2]-kws[1];}
+        bool needsSecondLevelProcessing(int c) const {
+            return output_rgb_mode>=OUTPUT_RGB_BENT_NORMALS || (c==4 && output_alpha_mode>=OUTPUT_ALPHA_AMBIENT_OCCLUSION);
+        }
+        bool needsFirstLevelProcessing(int c) const {
+            return output_rgb_mode>=OUTPUT_RGB_NORMAL_MAP || (c==4 && output_alpha_mode>=OUTPUT_ALPHA_AMBIENT_OCCLUSION);
+        }
+    };
+
+    // c can be any number (1,3,4)
+    static T* GenerateNormalMap(int channels,const T* im,int w, int h, int c,const Params& params=Params()) {
+        if (w<=0 || h<=0 || (c!=1 && c!=3 && c!=4)) return NULL;
+        if (channels!=3 && channels!=4) return NULL;
+        if (!params.isValid()) return NULL;
+        if (params.output_rgb_mode==OUTPUT_RGB_INPUT_IMAGE && (channels==3 || params.output_alpha_mode==OUTPUT_ALPHA_INPUT_IMAGE)) return NULL;
+
+        // 1) We need a heightmap as input. We generate it using some kind of grayscale algorithm
+        T* imHeightMap = ConvertToGrayscale(im,w,h,c,params.height_map_invert,params.height_map_use_input_alpha_channel_only,params.height_map_use_average_RGB);
+        ImageScopedDeleterGeneric<T> scoped(imHeightMap);
+
+        if (params.output_rgb_mode<OUTPUT_RGB_HEIGHT_MAP && (channels==3 || params.output_alpha_mode<OUTPUT_ALPHA_HEIGHT_MAP)) {
+            // We can stop here
+            const int areaChannels = w*h*channels;const T maxChannelValueT = (T) MaxChannelValue;
+            T* nim = (T*) STBI_MALLOC(areaChannels*sizeof(T));for (int i=0;i<areaChannels;i++) nim[i]=maxChannelValueT;
+            T* pnim = nim;const T* pim = im;const T* pgim = imHeightMap;
+            const bool haveAlpha = channels==4;
+            for (int i=0,iSz=w*h;i<iSz;i++) {
+                if (params.output_rgb_mode==OUTPUT_RGB_INPUT_IMAGE)                     {
+                    if (c>=3) {pnim[0]=pim[0];pnim[1]=pim[1];pnim[2]=pim[2];}
+                    else {pnim[0]=pnim[1]=pnim[2]=*pim;}
+                }
+                else if (imHeightMap && params.output_rgb_mode==OUTPUT_RGB_HEIGHT_MAP)  {pnim[0]=pnim[1]=pnim[2]=*pgim;}
+                if (haveAlpha)  {
+                    if (params.output_alpha_mode==OUTPUT_ALPHA_INPUT_IMAGE) {if (c>=3) pnim[3]=im[3];}
+                    else if (imHeightMap && params.output_alpha_mode==OUTPUT_ALPHA_HEIGHT_MAP) {pnim[3]=*pgim;}
+                }
+                pnim+=channels;pim+=c;if (imHeightMap) ++pgim;
+            }
+            return nim;
+        }
+        if (!imHeightMap) return NULL;
+
+        real normal_eps(params.normal_eps);
+        if (normal_eps<real(0)) normal_eps=-normal_eps;
+        else if (normal_eps==real(0)) normal_eps = real(0.001);
+
+        ImVector<real> khor,kver;
+        T* nim = NULL;
+
+        int kws[3] = {params.kws[0],params.kws[1],params.kws[2]};
+        int khs[3] = {params.khs[0],params.khs[1],params.khs[2]};
+        if (GenerateSobelKernels(params.kws[0],params.khs[0],params.weights[0],
+                                 params.getDeltaKernelSize2(),params.weights[1],
+                                 params.getDeltaKernelSize3(),params.weights[2],
+                                 khor,kver,kws,khs))    {
+            nim = ApplySobelKernelsNxN(imHeightMap,w,h,1,channels,&khor[0],&kver[0],params.kws,params.khs,params.wrapx,params.wrapy,normal_eps);
+            if (nim) {
+
+                if (params.output_rgb_mode==OUTPUT_RGB_AMBIENT_OCCLUSION || params.output_rgb_mode==OUTPUT_RGB_BENT_NORMALS ||
+                        (channels==4 && params.output_alpha_mode==OUTPUT_ALPHA_AMBIENT_OCCLUSION))  {
+                    const T* heightMap = imHeightMap;
+                    T* ssn = NULL;  // 3 channels
+                    T* aoim = NULL; // 1 channel
+                    if (NormalMap2SelfShadowingNormalMap(nim,w,h,channels,heightMap,params.ray_count,params.ray_length,params.ray_strength,
+                    params.output_rgb_mode==OUTPUT_RGB_BENT_NORMALS ? &ssn : NULL,3,
+                    (params.output_rgb_mode==OUTPUT_RGB_AMBIENT_OCCLUSION || (channels==4 && params.output_alpha_mode==OUTPUT_ALPHA_AMBIENT_OCCLUSION)) ? &aoim : NULL,1,
+                    false)) {
+                        //IM_ASSERT(ssn);STBI_FREE(nim);nim=ssn;ssn=NULL;
+                        ImageScopedDeleterGeneric<T> scoped1(ssn);
+                        ImageScopedDeleterGeneric<T> scoped2(aoim);
+                        T* pnim = nim; const T* pssn = ssn;const T* pao = aoim;
+                        if (params.output_rgb_mode==OUTPUT_RGB_AMBIENT_OCCLUSION) {
+                            pnim = nim; pssn = ssn; pao = aoim;
+                            for (int i=0,iSz=w*h;i<iSz;i++) {pnim[0]=pnim[1]=pnim[2]=*pao++;pnim+=channels;}
+                        }
+                        else if (params.output_rgb_mode==OUTPUT_RGB_BENT_NORMALS) {
+                            pnim = nim; pssn = ssn; pao = aoim;
+                            for (int i=0,iSz=w*h;i<iSz;i++) {pnim[0]=*pssn++;pnim[1]=*pssn++;pnim[2]=*pssn++;pnim+=channels;}
+                        }
+                        if (channels==4 && params.output_alpha_mode==OUTPUT_ALPHA_AMBIENT_OCCLUSION)    {
+                            pnim = &nim[3]; pssn = ssn; pao = aoim;
+                            for (int i=0,iSz=w*h;i<iSz;i++) {*pnim=*pao++;pnim+=channels;}
+                        }
+                    }
+                }
+
+                // Copy something into the RGB channels if necessary
+                if (params.output_rgb_mode==OUTPUT_RGB_HEIGHT_MAP) {
+                    const T* ps = imHeightMap;T* pd = nim;for (int i=0,iSz=w*h;i<iSz;i++) {pd[0]=pd[1]=pd[2]=*ps++;pd+=channels;}
+                }
+                else if (c>=3 && params.output_rgb_mode==OUTPUT_RGB_INPUT_IMAGE)    {
+                    T* pnim = nim;const T* pim = im;
+                    for (int i=0,iSz=w*h;i<iSz;i++) {pnim[0]=pim[0];pnim[1]=pim[1];pnim[2]=pim[2];pnim+=channels;pim+=c;}
+                }
+                // Copy something into the 4th channel if necessary
+                if (channels==4)    {
+                    if (params.output_alpha_mode==OUTPUT_ALPHA_HEIGHT_MAP) {
+                        const T* ps = imHeightMap;T* pd = &nim[3];for (int i=0,iSz=w*h;i<iSz;i++) {*pd = *ps++;pd+=4;}
+                    }
+                    else if (c==4 && params.output_alpha_mode==OUTPUT_ALPHA_INPUT_IMAGE)    {
+                        T* pnim = &nim[3];const T* pim = &im[3];
+                        for (int i=0,iSz=w*h;i<iSz;i++) {*pnim=*pim;pnim+=channels;pim+=c;}
+                    }
+                }
+
+            }
+        }
+        return nim;
+    }
+
+    // Based on https://www.gamedev.net/topic/557465-self-shadowing-normal-maps/
+    // Output images will be allocated only if *imageOut==NULL
+    // "heightMap" MUST be w*h*1
+    static bool NormalMap2SelfShadowingNormalMap(const T* normalMap,int w,int h,int c,const T* heightMap,int rayCount=30,int rayLength=60,real strength=real(10),T** pssNormalMapOut=NULL,int pssNormalMapOutChannels=3,T** pAmbientOcclusionMap=NULL,int pAmbientOcclusionMapChannels=1,bool appendAOMapAsAlphaChannelIfPossible=false,bool wrapx=true,bool wrapy=true) {
+        if (!normalMap || w<=0 || h<=0 || (c!=3 && c!=4) || !heightMap || (!pssNormalMapOut && !pAmbientOcclusionMap)) return false;
+        if (pssNormalMapOut && pssNormalMapOutChannels!=3 && pssNormalMapOutChannels!=4) return false;
+        if (pAmbientOcclusionMap && pAmbientOcclusionMapChannels!=1 && pAmbientOcclusionMapChannels!=3 && pAmbientOcclusionMapChannels!=4) return false;
+        const bool normalMapOutIsRGBA = (pssNormalMapOut && pssNormalMapOutChannels==4);
+        appendAOMapAsAlphaChannelIfPossible&=normalMapOutIsRGBA;
+        T* ssim = NULL;T* aoim = NULL;
+        if (pssNormalMapOut) {
+            if (!(*pssNormalMapOut)) *pssNormalMapOut = (T*) STBI_MALLOC(w*h*pssNormalMapOutChannels*sizeof(T));
+            ssim = *pssNormalMapOut;
+        }
+        if (pAmbientOcclusionMap) {
+            if (!(*pAmbientOcclusionMap)) *pAmbientOcclusionMap = (T*) STBI_MALLOC(w*h*pAmbientOcclusionMapChannels*sizeof(T));
+            aoim = *pAmbientOcclusionMap;
+        }
+
+        if (rayCount<=0) rayCount=1;
+        if (rayLength<=0) rayLength=1;
+        strength*=real(0.01);
+
+        const real MaxChannelValueHalf = MaxChannelValue*real(0.5);
+        const real zero(0.0);const real one(1.0);
+        //========================================================================================
+        const real anglestep=real(2)*M_PI/rayCount;
+
+//      Precompute xdir,ydir,fabs(dir.x),fabs(dir.y), and their sum:
+        ImVector<vec2> dirs; dirs.resize(rayCount);
+        ImVector<vec2> fabsdirs; fabsdirs.resize(rayCount);
+        real xsum(0),ysum(0);
+        int cnt=0;
+        for(real a=0,aSz=real(2)*M_PI;a<aSz;a+=anglestep) {
+            vec2& dir = dirs[cnt];
+#           if (defined(__USE_GNU) && !defined(IMGUIIMAGEEDITOR_SINGLE_PRECISION_CONVOLUTION))
+            sincos(a,&dir.y,&dir.x);
+#           else
+            dir.x = cos(a);
+            dir.y = sin(a);
+#           endif
+            vec2& fabsdir = fabsdirs[cnt];
+            fabsdir.x = fabs(dir.x);
+            fabsdir.y = fabs(dir.y);
+            xsum += fabsdir.x;
+            ysum += fabsdir.y;
+            ++cnt;
+        }
+
+        //int skips=0;
+        const real threshold(0.0001f);          // TODO: See if zero is better (we can throw away some code)
+        real deltaNormalX(0),deltaNormalY(0);
+        real ray(zero),normalx(zero),normaly(zero);
+
+//        Test to see if openMP is working
+/*#       ifdef IMGUI_USE_OMP
+#       pragma omp parallel
+        printf("Hello from thread %d, nthreads %d\n", omp_get_thread_num(), omp_get_num_threads());
+#       endif //IMGUI_USE_OMP */
+
+#       ifdef IMGUIIMAGEEDITOR_TEST_SPEED
+        clock_t begin = clock();
+#       endif //IMGUIIMAGEEDITOR_TEST_SPEED
+
+//      Actually it's faster without omp
+//      The shared section can be omitted (performance it's the same)
+//#       pragma omp parallel for shared(dirs,fabsdirs,normalMap,heightMap,ssim,aoim)
+        for(int row=0;row<h;row++)  {
+            T* pss = ssim ? &ssim[row*w*pssNormalMapOutChannels] : NULL;
+            T *pao = aoim ? &aoim[row*w*pAmbientOcclusionMapChannels] : NULL;
+            const T* pnm = &normalMap[row*w*c];
+            for(int col=0;col<w;col++)  {
+                real averagex=zero;
+                real averagey=zero;
+                real averagetotal=zero;
+
+//              Actually it's faster without omp
+//              The shared section can be omitted (performance it's the same)
+//#               pragma omp parallel for private(ray) shared(dirs) reduction(+:averagetotal) reduction(+:averagex) reduction(+:averagey)
+                for(int i=0;i<rayCount;i++)
+                {
+                    const vec2& dir     = dirs[i];                    
+                    ray=raycast(heightMap,w,h,row,col,dir,rayLength,wrapx,wrapy);
+                    averagetotal+=ray;
+                    averagex += dir.x*ray;
+                    averagey += dir.y*ray;
+                }
+
+                averagetotal/=rayCount;
+
+                if (pssNormalMapOut)    {
+                    averagex/=xsum;
+                    averagey/=ysum;
+
+                    // scale normal map x and y parts
+                    deltaNormalX = strength*averagex;
+                    deltaNormalY = strength*averagey;
+
+                    if (fabs(deltaNormalX)>threshold || fabs(deltaNormalY)>threshold)   {
+
+                        normalx= (real)pnm[0]/MaxChannelValueHalf - one;
+                        normaly= (real)pnm[1]/MaxChannelValueHalf - one;
+
+                        normalx -= deltaNormalX;
+                        normaly += deltaNormalY;
+
+                        pss[0] = (T) clamp(normalx*MaxChannelValueHalf+MaxChannelValueHalf,zero,MaxChannelValue);
+                        pss[1] = (T) clamp(normaly*MaxChannelValueHalf+MaxChannelValueHalf,zero,MaxChannelValue);
+                    }
+                    else {
+                        //++skips;
+                        pss[0] = pnm[0];
+                        pss[1] = pnm[1];
+                    }
+                    pss[2] = pnm[2];
+
+                    if (normalMapOutIsRGBA) {
+                        pss[3] = appendAOMapAsAlphaChannelIfPossible ? (T) clamp(MaxChannelValue-real(10)*strength*averagetotal,zero,MaxChannelValue) : MaxChannelValue;
+                    }
+                    pss+=pssNormalMapOutChannels;
+                }
+                if (pao) {
+                    *pao= (T) clamp(MaxChannelValue-real(10)*strength*averagetotal,zero,MaxChannelValue);
+                    pao+=pAmbientOcclusionMapChannels;
+                }
+
+                pnm+=c;
+
+            }
+        }
+        //========================================================================================
+        //fprintf(stderr,"Num Skips: %d/%d\n",skips,w*h);
+#       ifdef IMGUIIMAGEEDITOR_TEST_SPEED
+        fprintf(stderr,"Elapsed Time: %f\n",double(clock() - begin) / CLOCKS_PER_SEC);
+#       endif //IMGUIIMAGEEDITOR_TEST_SPEED
+
+        return true;
+    }
+
+    // User owns returned 1 channel image
+    static T* ConvertToGrayscale(const T* im,int w,int h,int c,bool invertColors=false,bool useOnlyInputAlphaChannel=false,bool useOneThirdRGBAsLuminance=true) {
+        if (!im || w<=0 || h<=0 || (c!=1 && c!=3 && c!=4)) return NULL;
+        T* nim = (T*) STBI_MALLOC(w*h*sizeof(T));
+        const T* pim = im;T* pnim = nim;
+        useOnlyInputAlphaChannel&=(c==4);
+        if (c==1) memcpy((void*)nim,(const void*)im,w*h*sizeof(T));
+        else if (useOnlyInputAlphaChannel) {
+            // c==4
+            pim+=3;for(int i=0,iSz=w*h;i<iSz;++i)   {*pnim++=*pim;pim+=c;}
+        }
+        else {
+            // c==3 || c==4
+            real CR=1.0/3.0,CG=1.0/3.0,CB=1.0/3.0;
+            if (!useOneThirdRGBAsLuminance) {CR=0.299;CG=0.587;CB=0.114;}
+            for(int i=0,iSz=w*h;i<iSz;++i)  {*pnim++=(T)(CR*(real)pim[0]+CG*(real)pim[1]+CB*(real)pim[2]);pim+=c;}
+        }
+        if (invertColors) {
+            const T maxChannelValueT = (T) MaxChannelValue;
+            pnim=nim;for(int i=0,iSz=w*h;i<iSz;++i) {*pnim=maxChannelValueT-(*pnim);++pnim;}
+        }
+        return nim;
+    }
+
+    protected:
+    struct vec3 {
+        real x,y,z;
+        vec3() : x(0.0),y(0.0),z(0.0) {}
+        vec3(real _x,real _y,real _z) : x(_x),y(_y),z(_z) {}
+        vec3 cross(const vec3& o) const {return vec3(y*o.z-z*o.y,z*o.x-x*o.z,x*o.y-y*o.x);}
+        vec3 dot(const vec3& o) const {return vec3(x*o.x,y*o.y,z*o.z);}
+        vec3 operator *(real f) const {return vec3(x*f,y*f,z*f);}
+        vec3 operator -() const {return vec3(-x,-y,-z);}
+        // We can make it lower for bigger lateral normals!
+        inline void normalize(const real squaredThreshold = real(0.001)) {
+            real len = (x*x+y*y+z*z);
+            if (len<squaredThreshold) {x=y=real(0);z=real(1);}
+            else {
+                //len = sqrt(len);x/=len;y/=len;z/=len;
+                len = real(1)/sqrt(len);x*=len;y*=len;z*=len;   // faster but less precise
+            }
+        }
+    };
+    struct vec2 {
+        real x,y;
+        vec2() : x(0.0),y(0.0) {}
+        vec2(real _x,real _y) : x(_x),y(_y) {}
+    };
+
+    inline static T NormalToPixel(real n) {return (T)(((n+real(1))*real(0.5))*MaxChannelValue);}
+    inline static real PixelToNormal(T p) {return (((real)(p)*MaxChannelValueInv)*real(2.0))-real(1.0);}
+
+    // All kw,kh odd numbers>3, with kw1<kw2<kw3
+    inline static bool GenerateSobelKernels(int kw1,int kh1,real weight1,int kdelta2,real weight2,int kdelta3,real weight3,ImVector<real>& khor_out,ImVector<real>& khver_out,int kws[3],int khs[3])  {
+        // Should we expose filterType?
+        const unsigned char filterType = 1; // 0 = Sobel, 1 = Prewitt (afaik), 2 = half way
+
+        //fprintf(stderr,"GenerateSobelKernels(%d,%d,%1.2f,%d,%1.2f,%d,%1.2f)\n",kw1,kh1,weight1,kdelta2,weight2,kdelta3,weight3);
+        if (kw1<3 || kw1%2==0 || kdelta2<0 || (kdelta2!=0 && kdelta2%2==1) || kdelta3<0 || (kdelta3!=0 && kdelta3%2==1)) return false;
+        if (kdelta3==0) {weight3=0;}
+        if (kdelta2==0) {weight2=0;}
+        if (weight3==0) kdelta3=0;
+        if (weight2==0) {
+            if (weight3!=0) {
+                kdelta2 = kdelta3;
+                weight2=weight3;
+                kdelta3=0;weight3=0;
+            }
+            else kdelta2=0;
+        }
+        kws[0]=kw1;kws[1]=kw1+kdelta2;kws[2]=kw1+kdelta2+kdelta3;
+        khs[0]=kh1;khs[1]=kh1+kdelta2;khs[2]=kh1+kdelta2+kdelta3;
+        if (weight1==0 && weight2==0 && weight3==0) weight1=1;
+        const real weights[3] = {weight1,weight2,weight3};
+
+        // Debug:
+        //for (int i=0;i<3;i++) fprintf(stderr,"[%d] (%d,%d) (%f)\n",i,kws[i],khs[i],weights[i]);
+
+        // Kernel Generation:
+        const int lengthX = kws[2];
+        const int lengthY = khs[2];
+        const int kernelVectorSize = lengthX*lengthY;
+        khor_out.resize(kernelVectorSize);khver_out.resize(kernelVectorSize);
+        real* pKernelHor = &khor_out[0];real* pKernelVer = &khver_out[0];
+        for (int i=0;i<kernelVectorSize;i++) {*pKernelHor++=*pKernelVer++=real(0.0);}
+        pKernelHor = &khor_out[0];pKernelVer = &khver_out[0];
+
+
+        const int kernelRadiiiX[3] = {kws[0]/2,kws[1]/2,kws[2]/2};
+        const int kernelRadiiiY[3] = {khs[0]/2,khs[1]/2,khs[2]/2};
+
+        const int kernelRadiusX = kernelRadiiiX[2];
+        const int kernelRadiusY = kernelRadiiiY[2];
+
+        real filterX2=0,filterY2=0,squaredSum=0,denominator=0;int coord=0;
+        int absFilterX=0,absFilterY=0;
+        real absSumHor=0,absSumVer=0;
+        for (int filterY = -kernelRadiusY;filterY <= kernelRadiusY; filterY++)  {
+            filterY2 = filterY*filterY;
+            absFilterY = abs(filterY);
+            for (int filterX = -kernelRadiusX;filterX <= kernelRadiusX; filterX++) {
+                filterX2 = filterX*filterX;
+
+                coord = (filterY + kernelRadiusY)*lengthX + filterX+kernelRadiusX;
+                pKernelHor = &khor_out[coord];
+                pKernelVer = &khver_out[coord];
+                squaredSum = (filterX2+filterY2);
+                if (filterX!=0) {
+                    if (filterType==0)      denominator = squaredSum;
+                    else if (filterType==1) denominator = filterX2;
+                    else                    denominator = (squaredSum+filterX2)*real(0.5);
+                    *pKernelHor    = (real) filterX/denominator;
+                }
+                if (filterY!=0) {
+                    if (filterType==0)      denominator = squaredSum;
+                    else if (filterType==1) denominator = filterY2;
+                    else                    denominator = (squaredSum+filterY2)*real(0.5);
+                    *pKernelVer    = (real) -filterY/denominator;
+                }
+
+                //absSumHor+=fabs(*pKernelHor);absSumVer+=fabs(*pKernelVer);    // Here, or below to take weights into account
+                absFilterX = abs(filterX); absFilterY = abs(filterY);
+                if (absFilterX<=kernelRadiiiX[0] && absFilterY<=kernelRadiiiY[0]) {
+                    *pKernelHor*=weights[0];
+                    *pKernelVer*=weights[0];
+                }
+                else if (absFilterX<=kernelRadiiiX[1] && absFilterY<=kernelRadiiiY[1]) {
+                    *pKernelHor*=weights[1];
+                    *pKernelVer*=weights[1];
+                }
+                else {
+                    *pKernelHor*=weights[2];
+                    *pKernelVer*=weights[2];
+                }
+                absSumHor+=fabs(*pKernelHor);absSumVer+=fabs(*pKernelVer);    // Here, or above
+
+                //fprintf(stderr,"%d,%d) %1.6f\t",filterX,filterY,*pKernelHor);
+            }
+            //fprintf(stderr,"\n");
+        }
+
+        // Normalization ?
+        const bool needsAbsNormalization = true;
+        if (needsAbsNormalization)  {
+            pKernelHor = &khor_out[0];pKernelVer = &khver_out[0];
+            for (int i=0,iSz=lengthX*lengthY;i<iSz;i++) {
+                (*pKernelHor++)/=absSumHor;
+                (*pKernelVer++)/=absSumVer;
+            }
+        }
+        return true;
+    }
+
+    static inline void SumKernelMatrixForNormalMapper(const KernelMatrix& m,vec3& result,const real* kernelHor,const real* kernelVer,real normal_eps,const int kws[3],const int khs[3]) {
+        // We know that c==1
+        static const real zero = real(0);
+        real dh=0.0,dv=0.0;
+        const real* pkh = kernelHor;
+        const real* pkv = kernelVer;
+        const real* pm = &m.k[0];
+        for (int y=0;y<m.h;y++)  {
+            for (int x=0;x<m.w;x++)  {
+                dh+=((*pkh++)*(*pm));
+                dv+=((*pkv++)*(*pm));
+                ++pm;   // c==1
+            }
+        }
+        const real cur_z = m.k[(m.h/2)*m.w+(m.w/2)];
+                            //zero;
+        //result = vec3(dh,zero,cur_z).cross(vec3(zero,dv,cur_z));
+        //result = vec3(zero,dv,cur_z).cross(vec3(dh,zero,cur_z));
+        result = vec3(dv,zero,cur_z).cross(vec3(zero,dh,cur_z));
+        //result = vec3(zero,dv,cur_z).cross(vec3(dh,zero,cur_z));
+        result.normalize(normal_eps);
+        // Not sure here if we should have stopped at each (kws[i],khs[i]), and calculated 3 normals and then made the average values...
+    }
+
+    // c must be 1! and c_out must be 3 or 4
+    static T* ApplySobelKernelsNxN(const T* im,int w,int h,int c,int c_out,const real* sobelKernelHor,const real* sobelKernelVer,const int kws[3],const int khs[3],bool wrapx=false,bool wrapy=false,real normal_eps=real(0.001))
+    {
+    const int kw = kws[2];
+    const int kh = khs[2];
+    if (!im || w<=kw || h<=kh || w<3 || h<3 || c!=1 || (c_out!=3 && c_out!=4) || !sobelKernelHor || !sobelKernelVer) return NULL;
+
+    KernelMatrix::MaxPixelValue = MaxChannelValue;
+    KernelMatrix::ScaleFactor = 1.0;//scaleFactor;
+    KernelMatrix::Offset = 0.0;//offset;
+
+
+    const T* pim =im;
+    T* nim = (T*) STBI_MALLOC(w*h*c_out);
+    T* pnim = nim;
+
+    const int skw=(kw-1)/2;
+    const int skh=(kh-1)/2;
+
+    ImVector<real> tmp_matrix;tmp_matrix.resize(kw*kh*c);for (int i=0,isz=kw*kh*c;i<isz;i++) tmp_matrix[i]=0.0;
+    KernelMatrix m(&tmp_matrix[0],kw,kh,c);
+
+    // Step 1) Fill m for (0,0)
+    int x=0,y=0;real* pm=NULL;
+    int xCol=0,yRow=0;
+    vec3 normal;
+    for(yRow=0;yRow<h;++yRow)    {
+        if (yRow%2==0)   {
+            xCol = 0;
+            if (yRow==0) {
+                // Fill the whole matrix m:
+                for(int sy=-skh;sy<=skh;++sy)    {
+                    y=sy;
+                    if (y<0)        y = wrapy ? (h+y) : 0;
+                    else if (y>=h)  y = wrapy ? (y-h) : (h-1);
+                    for(int sx=-skw;sx<=skw;++sx)   {
+                        x=sx;
+                        if (x<0)        x = wrapx ? (w+x) : 0;
+                        else if (x>=w)  x = wrapx ? (x-w) : (w-1);
+                        pm = m.get(sx+skw,sy+skh);
+                        pim = &im[(w*y+x)*c];
+                        for (int i=0;i<c;i++) *pm++ = (real)(*pim++) * MaxChannelValueInv;
+                    }
+                }
+            }
+            else {
+                // Shift up and fill bottom kernel row
+                pm = m.shiftUp();
+                y=yRow+skh;
+                if (y<0)        y = wrapy ? (h+y) : 0;
+                else if (y>=h)  y = wrapy ? (y-h) : (h-1);
+                for(int sx=-skw;sx<=skw;++sx)   {
+                    x=sx;
+                    if (x<0)        x = wrapx ? (w+x) : 0;
+                    else if (x>=w)  x = wrapx ? (x-w) : (w-1);
+                    //pm = m.get(sx+skw,sy+skh);
+                    pim = &im[(w*y+x)*c];
+                    for (int i=0;i<c;i++) *pm++ = (real)(*pim++) * MaxChannelValueInv;
+                }
+            }
+            pnim = &nim[(yRow*w+xCol)*c_out];
+            SumKernelMatrixForNormalMapper(m,normal,sobelKernelHor,sobelKernelVer,normal_eps,kws,khs);
+            pnim[0]=NormalToPixel(normal.x);pnim[1]=NormalToPixel(normal.y);pnim[2]=NormalToPixel(normal.z);
+            if (c_out==4) pnim[3]=MaxChannelValue;
+            pnim+=c_out;       // fill pixel and shift right
+            for (xCol=1;xCol<w;++xCol)   {
+                // Shift left and fill right kernel column
+                pm = m.shiftLeft();
+                x=xCol+skw;  // right col
+                if (x<0)        x = wrapx ? (w+x) : 0;
+                else if (x>=w)  x = wrapx ? (x-w) : (w-1);
+                for(int sy=-skh;sy<=skh;++sy)   {
+                    y=yRow+sy;
+                    if (y<0)        y = wrapy ? (h+y) : 0;
+                    else if (y>=h)  y = wrapy ? (y-h) : (h-1);
+                    //pm = m.get(sx+skw,sy+skh);
+                    pim = &im[(w*y+x)*c];
+                    for (int i=0;i<c;i++) *pm++ = (real)(*pim++) * MaxChannelValueInv;
+                    pm+=kw*c-c;    // go down one line
+                }
+                SumKernelMatrixForNormalMapper(m,normal,sobelKernelHor,sobelKernelVer,normal_eps,kws,khs);
+                pnim[0]=NormalToPixel(normal.x);pnim[1]=NormalToPixel(normal.y);pnim[2]=NormalToPixel(normal.z);
+                if (c_out==4) pnim[3]=MaxChannelValue;
+                pnim+=c_out;       // fill pixel and shift right
+
+                /*// Debug-------------------------------
+                if (xCol==w-1 && yRow==0) {
+                    fprintf(stderr,"[%d,%d]:\n",xCol,yRow);m.debug();
+                    pnim-=c;
+                    fprintf(stderr,"Sum [%d,%d] = (",xCol,yRow);
+                    for (int i=0;i<c;i++) {fprintf(stderr,"%d ",(int) *pnim++);}
+                    fprintf(stderr,")\n");
+                }
+                //-------------------------------------*/
+
+            }
+
+        }
+        else {// yRow odd number
+            xCol = w-1;
+            {
+                // Shift up and fill bottom kernel row
+                pm = m.shiftUp();
+                y=yRow+skh;
+                if (y<0)        y = wrapy ? (h+y) : 0;
+                else if (y>=h)  y = wrapy ? (y-h) : (h-1);
+                for(int sx=-skw;sx<=skw;++sx)   {
+                    x=xCol+sx;
+                    if (x<0)        x = wrapx ? (w+x) : 0;
+                    else if (x>=w)  x = wrapx ? (x-w) : (w-1);
+                    //pm = m.get(sx+skw,sy+skh);
+                    pim = &im[(w*y+x)*c];
+                    for (int i=0;i<c;i++) *pm++ = (real)(*pim++) * MaxChannelValueInv;
+                }
+            }
+            pnim = &nim[(yRow*w+xCol)*c_out];
+            SumKernelMatrixForNormalMapper(m,normal,sobelKernelHor,sobelKernelVer,normal_eps,kws,khs);
+            pnim[0]=NormalToPixel(normal.x);pnim[1]=NormalToPixel(normal.y);pnim[2]=NormalToPixel(normal.z);
+            if (c_out==4) pnim[3]=MaxChannelValue;
+            pnim-=c_out;       // fill pixel and shift left
+            /*// Debug-------------------------------
+            if (xCol==w-1 && yRow==1) {
+                fprintf(stderr,"[%d,%d]:\n",xCol,yRow);m.debug();
+                fprintf(stderr,"Sum [%d,%d] = (",xCol,yRow);
+                pnim+=c;
+                for (int i=0;i<c;i++) {fprintf(stderr,"%d ",(int) *pnim++);}
+                pnim-=2*c;
+                fprintf(stderr,")\n");
+            }
+            //-------------------------------------*/
+            for (xCol=w-2;xCol>=0;--xCol)   {
+                // Shift right and fill left kernel column
+                pm = m.shiftRight();
+                x=xCol-skw;  // left col
+                if (x<0)        x = wrapx ? (w+x) : 0;
+                else if (x>=w)  x = wrapx ? (x-w) : (w-1);
+                for(int sy=-skh;sy<=skh;++sy)   {
+                    y=yRow+sy;
+                    if (y<0)        y = wrapy ? (h+y) : 0;
+                    else if (y>=h)  y = wrapy ? (y-h) : (h-1);
+                    //pm = m.get(sx+skw,sy+skh);
+                    pim = &im[(w*y+x)*c];
+                    for (int i=0;i<c;i++) *pm++ = (real)(*pim++) * MaxChannelValueInv;
+                    pm+=kw*c-c;    // go down one line
+                }
+                SumKernelMatrixForNormalMapper(m,normal,sobelKernelHor,sobelKernelVer,normal_eps,kws,khs);
+                pnim[0]=NormalToPixel(normal.x);pnim[1]=NormalToPixel(normal.y);pnim[2]=NormalToPixel(normal.z);
+                if (c_out==4) pnim[3]=MaxChannelValue;
+                pnim-=c_out;   // fill pixel and shift left
+                /*// Debug-------------------------------
+                if (xCol==w/2 && yRow==3) {
+                    fprintf(stderr,"[%d,%d]:\n",xCol,yRow);m.debug();
+                    fprintf(stderr,"Sum [%d,%d] = (",xCol,yRow);
+                    pnim+=c;
+                    for (int i=0;i<c;i++) {fprintf(stderr,"%d ",(int) *pnim++);}
+                    pnim-=2*c;
+                    fprintf(stderr,")\n");
+                }
+                //-------------------------------------*/
+            }
+        }
+    }
+
+    return nim;
+}
+
+    // Based on https://www.gamedev.net/topic/557465-self-shadowing-normal-maps/
+    // find highest elevation angle in height map along a line
+    // "heightMap" MUST be w*h*1
+    inline static real raycast(const T* heightMap,int w,int h,int y0,int x0,const vec2& dir,int length,bool wrapx=false,bool wrapy=false) {
+
+        int baserow=y0;
+        int basecol=x0;
+        real startingheight = (real) heightMap[y0*w+x0];
+
+        int x1 = x0+dir.x*length;
+        int y1 = y0+dir.y*length;
+
+        bool steep = abs(y1 - y0) > abs(x1 - x0);
+
+        int tmp=0;
+        if(steep) {tmp=x0;x0=y0;y0=tmp;tmp=x1;x1=y1;y1=tmp;}
+        if(x0>x1) {tmp=x0;x0=x1;x1=tmp;tmp=y0;y0=y1;y1=tmp;}
+
+        int deltax = x1 - x0;
+        int deltay = abs(y1 - y0);
+        int error = deltax / 2;
+        int y = y0;
+        int ystep = (y0<y1)? 1 : -1;
+        real maxelevation(0),curelevation(0);
+        real distance(0);
+        int rowMinusBaseRowSquared(0),ColMinusBaseColSquared(0);
+
+        for(int x=x0;x<=x1;x++)   {
+            int row,col;
+            if(steep)   {row=x;col=y;}
+            else        {row=y;col=x;}
+
+            if (row<0)          row = wrapy ? (h+row) : 0;
+            else if (row>=h)    row = wrapy ? (row-h) : (h-1);
+            if (col<0)          col = wrapx ? (w+col) : 0;
+            else if (col>=w)    col = wrapx ? (col-w) : (w-1);
+
+            if(baserow!=row || basecol!=col) // ignore first pixel
+            {
+                rowMinusBaseRowSquared = (row-baserow);rowMinusBaseRowSquared*=rowMinusBaseRowSquared;
+                ColMinusBaseColSquared = (col-basecol);ColMinusBaseColSquared*=ColMinusBaseColSquared;
+
+                // Original code (sqrt always)
+                /*distance=sqrt(rowMinusBaseRowSquared+ColMinusBaseColSquared);
+                curelevation = ((real) (heightMap[row*w+col])-startingheight)/distance;
+                if (maxelevation<curelevation) maxelevation = curelevation;*/
+
+                // New code (all squared)
+                distance=rowMinusBaseRowSquared+ColMinusBaseColSquared;
+                curelevation = ((real) (heightMap[row*w+col])-startingheight);
+                if (curelevation<0) {curelevation*=curelevation/distance;curelevation=-curelevation;}
+                else curelevation*=curelevation/distance;
+                if (maxelevation<curelevation) maxelevation = curelevation;
+
+                error = error - deltay;
+                if(error < 0) {y = y + ystep;error = error + deltax;}
+            }
+        }
+
+        // New code
+        if (maxelevation<0)         maxelevation=-sqrt(-maxelevation);
+        else if (maxelevation>0)    maxelevation=sqrt(maxelevation);
+
+        return maxelevation;
+    }
+
+    inline static real clamp(real v,real vmin,real vmax) {return (v<vmin) ? vmin : (v>vmax) ? vmax : v;}
+
+};
+template <typename T> typename NormalMapGenerator<T>::real NormalMapGenerator<T>::MaxChannelValue = 255.0;
+template <typename T> typename NormalMapGenerator<T>::real NormalMapGenerator<T>::MaxChannelValueInv = 1.0/NormalMapGenerator<T>::MaxChannelValue;
+typedef NormalMapGenerator<unsigned char> NormalMapGeneratorUC;
 
 // this is needed just for doing Brightness And Contrast
 // For now T must be "unsigned char" and R "double" or "float" (=> if you need T "float" you must adjust the code in Channel2Real(...) and RealToChannel(...))
@@ -2461,11 +3536,12 @@ class UndoStack : protected ImVector<StbImageBuffer*> {
 
     const int stack_max;    //Number Of Available Undo/Redo (higher=more memory used)
     int stack_cur;          //=0;
+    bool stack_max_reached;
 
     public:
 
     ~UndoStack() {clear(true);}
-    UndoStack(int stackMax=-1) : Base(),stack_max(stackMax>0 ? stackMax : 25),stack_cur(0)  {
+    UndoStack(int stackMax=-1) : Base(),stack_max(stackMax>0 ? stackMax : 25),stack_cur(0),stack_max_reached(false)  {
         this->resize(stack_max);   // We resize it soon, and we never resize it again
     }
 
@@ -2479,8 +3555,10 @@ class UndoStack : protected ImVector<StbImageBuffer*> {
             else {for (int i=0;i<Size;i++) {ClearItem(Data[i]);}}            
         }
         stack_cur=0;
+        stack_max_reached = false;
     }
     inline int getStackCur() const {return stack_cur;}
+    inline bool getStackMaxReached() const {return stack_max_reached;}
 
     void push(const unsigned char* im,int w,int h,int c,const ImRect* sel=NULL,bool clearNextEntries = false)    {
         if (stack_cur<stack_max)    {
@@ -2513,6 +3591,7 @@ class UndoStack : protected ImVector<StbImageBuffer*> {
         }
         //stack_cur == stack_max:
         //if (stack_cur!=stack_max) Console.WriteLine ("\tStackPush(): Error: stack_cur!=stack_max with: stack_cur={0}, stack_max={1}", stack_cur, stack_max);
+        stack_max_reached = true;
         ItemType* Data0 = Data[0];
         if (Data0->isValid()) {
             /*stack [0].Dispose ();*/Data0->destroy(); //Discard stack[0]
@@ -2658,7 +3737,7 @@ struct StbImage {
             ImGuiIE::ImageScopedDeleter scoped(mustPrecessSelection ? im : NULL);
 
             // baseImage
-            const int maxWxH = 128*128;
+            const int maxWxH = 256*256;
             if (w*h>maxWxH) {
                 // resize s.image
                 const float scaling = (float)maxWxH/(float)(w*h);
@@ -2804,6 +3883,9 @@ struct StbImage {
     float gaussianBlurPower;
     bool gaussianBlurSeamless;
 
+    ImGuiIE::NormalMapGeneratorUC::Params normalMapParams;
+
+
 #   ifdef STBIR_INCLUDE_STB_IMAGE_RESIZE_H
     ImGuiIE::stbir_data_struct myStbirData;
 #   endif //STBIR_INCLUDE_STB_IMAGE_RESIZE_H
@@ -2942,6 +4024,8 @@ struct StbImage {
         gaussianBlurKernelSize=3;
         gaussianBlurPower=1.f;
         gaussianBlurSeamless=false;
+        normalMapParams.reset();
+
 
         ImGuiIE::InitSupportedFileExtensions(); // can be called multiple times safely
     }
@@ -3196,6 +4280,7 @@ struct StbImage {
                     ImFormatImageDimString(imageDimString,64,w,h);
                     imageSelection.Min = imageSelection.Max = ImVec2(0,0);
                 }
+                if (undoStack.getStackCur()==0 && !undoStack.getStackMaxReached()) assignModified(false);
                 return true;
             }
         }
@@ -3649,6 +4734,29 @@ struct StbImage {
         return ok;
     }
 
+    bool makeGrayscale(const ImRect* pOptionalImageSelection=NULL,bool justAverageRGB=true) {
+        bool ok = false;
+        if (image) {
+            if (pOptionalImageSelection) {
+                if (isImageSelectionValid(*pOptionalImageSelection)) {
+                    int dstX = pOptionalImageSelection->Min.x;int dstY = pOptionalImageSelection->Min.y;
+                    int dstW = pOptionalImageSelection->Max.x - dstX;int dstH = pOptionalImageSelection->Max.y-dstY;
+                    unsigned char* selectedImage = ImGuiIE::ExtractImage(dstX,dstY,dstW,dstH,image,w,h,c);
+                    if (selectedImage) {
+                        ImGuiIE::ImageScopedDeleter scoped(selectedImage);
+                        ImGuiIE::InvertColors(selectedImage,dstW,dstH,c,justAverageRGB);
+                        pushImage(pOptionalImageSelection);
+                        ImGuiIE::PasteImage(dstX,dstY,image,w,h,c,selectedImage,dstW,dstH);
+                        ok = true;
+                    }
+                }
+            }
+            else {pushImage();ImGuiIE::Grayscale(image,w,h,c,justAverageRGB);ok=true;}
+            if (ok) mustInvalidateTexID = true;
+        }
+        return ok;
+    }
+
     bool applyGaussianBlur(const ImRect* pOptionalImageSelection=NULL,int kernelSizeX=3,int kernelSizeY=-1,bool wrapX=false,bool wrapY=false,double weight=1.0) {
         bool ok = false;  
         if (image) {
@@ -3683,6 +4791,74 @@ struct StbImage {
         return ok;
     }
 
+    bool generateNormalMap(const ImRect* pOptionalImageSelection,const ImGuiIE::NormalMapGeneratorUC::Params& normalMapParams=ImGuiIE::NormalMapGeneratorUC::Params()) {
+        bool ok = false;
+        if (image) {
+            if (pOptionalImageSelection) {
+                if (isImageSelectionValid(*pOptionalImageSelection)) {
+                    int dstX = pOptionalImageSelection->Min.x;int dstY = pOptionalImageSelection->Min.y;
+                    int dstW = pOptionalImageSelection->Max.x - dstX;int dstH = pOptionalImageSelection->Max.y-dstY;
+                    unsigned char* selectedImage = ImGuiIE::ExtractImage(dstX,dstY,dstW,dstH,image,w,h,c);
+                    if (selectedImage) {
+                        ImGuiIE::ImageScopedDeleter scoped(selectedImage);    
+                        unsigned char* im = ImGuiIE::NormalMapGeneratorUC::GenerateNormalMap(c,selectedImage,dstW,dstH,c,normalMapParams);
+                        ImGuiIE::ImageScopedDeleter scoped2(im);
+                        if (im) {
+                            pushImage(pOptionalImageSelection);
+                            ImGuiIE::PasteImage(dstX,dstY,image,w,h,c,im,dstW,dstH);
+                            ok = true;
+                        }
+                    }
+                }
+            }
+            else {
+                unsigned char* im = ImGuiIE::NormalMapGeneratorUC::GenerateNormalMap(c,image,w,h,c,normalMapParams);
+                if (im) {
+                    pushImage();
+                    STBI_FREE(image);
+                    image = im;
+                    ok=true;
+                }
+            }
+            if (ok) mustInvalidateTexID = true;
+        }
+        return ok;
+    }
+
+    bool applyBlackAndWhiteSketchEffect(const ImRect* pOptionalImageSelection=NULL,double edgeDetectThreshold=0.0/255.0,double blackAndWhiteThreshold=230.0/255.0)    {
+        bool ok = false;
+        if (image) {
+            if (pOptionalImageSelection) {
+                if (isImageSelectionValid(*pOptionalImageSelection)) {
+                    int dstX = pOptionalImageSelection->Min.x;int dstY = pOptionalImageSelection->Min.y;
+                    int dstW = pOptionalImageSelection->Max.x - dstX;int dstH = pOptionalImageSelection->Max.y-dstY;
+                    unsigned char* selectedImage = ImGuiIE::ExtractImage(dstX,dstY,dstW,dstH,image,w,h,c);
+                    if (selectedImage) {
+                        ImGuiIE::ImageScopedDeleter scoped(selectedImage);
+                        unsigned char* im = ImGuiIE::ApplyBlackAndWhiteSketch(selectedImage,dstW,dstH,c,edgeDetectThreshold,blackAndWhiteThreshold);
+                        ImGuiIE::ImageScopedDeleter scoped2(im);
+                        if (im) {
+                            pushImage(pOptionalImageSelection);
+                            ImGuiIE::PasteImage(dstX,dstY,image,w,h,c,im,dstW,dstH);
+                            ok = true;
+                        }
+                    }
+                }
+            }
+            else {
+                unsigned char* im = ImGuiIE::ApplyBlackAndWhiteSketch(image,w,h,c,edgeDetectThreshold,blackAndWhiteThreshold);
+                //unsigned char* im = ImGuiIE::ApplyEdgeDetectDifference(image,w,h,c,edgeDetectThreshold);
+                if (im) {
+                    pushImage();
+                    STBI_FREE(image);
+                    image = im;
+                    ok=true;
+                }
+            }
+            if (ok) mustInvalidateTexID = true;
+        }
+        return ok;
+    }
 
     bool applyImageLightEffect(int lightStrength,ImGuiIE::LightEffect lightEffect,const ImRect* pOptionalImageSelection=NULL,bool clampColorComponentsAtAlpha=true) {
         if (c==1) return false;
@@ -3782,7 +4958,7 @@ struct StbImage {
         return ok;
     }
 
-    bool saveAs(const char* path=NULL,int numChannels=0,bool assumeThatOneChannelMeansLuminance=false) {
+    bool saveAs(const char* path=NULL,int numChannels=0) {
         bool rv = false;
         if (!path || path[0]=='\0') path = filePath;
         if (!image || !path) return rv;
@@ -3812,7 +4988,7 @@ struct StbImage {
         if (numChannels!=1 && numChannels!=3 && numChannels!=4) return rv;
 
 
-
+        const bool assumeThatOneChannelMeansLuminance = (numChannels!=1);
         if (numChannels!=c && !convertImageToColorMode(numChannels,assumeThatOneChannelMeansLuminance)) return false;
         IM_ASSERT(c==numChannels);
 
@@ -3925,14 +5101,23 @@ struct StbImage {
 
         if (rv) {
             if (strstr(ImGuiIE::SupportedLoadExtensions,feh.ext)!=NULL) {
-                if (ImageEditor::ImageEditorEventCb) ImageEditor::ImageEditorEventCb(*ie,ImageEditor::ET_IMAGE_SAVED);
+                // The image has been saved: we'd better load it back if possible,
+                // because the image can change or lose quality when saved, and the user should be made aware of this.
+                // But what we want is to suppress firing the ET_IMAGE_LOAD event
+                typedef struct _ImageEditorEventCbSuppressor {
+                    ImageEditor::ImageEditorEventDelegate cb;
+                    _ImageEditorEventCbSuppressor(ImageEditor::ImageEditorEventDelegate _cb) : cb(_cb) {ImageEditor::ImageEditorEventCb=NULL;}
+                    ~_ImageEditorEventCbSuppressor() {ImageEditor::ImageEditorEventCb=cb;}
+                } ImageEditorEventCbSuppressor;
+                ImageEditorEventCbSuppressor scoped(ImageEditor::ImageEditorEventCb);
                 loadFromFile(path); // Better reload, so that we can see the real saved quality soon.
             }
             else {
                 if (path!=filePath) assignFilePath(path);
                 assignModified(false);
-                if (ImageEditor::ImageEditorEventCb) ImageEditor::ImageEditorEventCb(*ie,ImageEditor::ET_IMAGE_SAVED);
             }
+            // Not that our image has been saved (and hopefully reloaded), we can fire the ET_IMAGE_SAVED event
+            if (ImageEditor::ImageEditorEventCb) ImageEditor::ImageEditorEventCb(*ie,ImageEditor::ET_IMAGE_SAVED);
         }
         else fprintf(stderr,"Error: cannot save file: \"%s\"\n",path);
         return rv;
@@ -4524,7 +5709,7 @@ struct StbImage {
                             // Extract Image
                             if (extractSelection()) {
                                 assignModified(true);
-                                // Change the file name (better refactor)
+                                /*// Change the file name (better refactor)
                                 if (ie->changeFileNameWhenExtractingSelection) {
                                 const size_t len = strlen(filePath) + 1 + 12; // "Extracted000"
                                 const char* filePathExt = strrchr(filePathName,'.');
@@ -4551,7 +5736,7 @@ struct StbImage {
                                 //------------------------------------------------
                                 ImGui::MemFree(p);
                                 mustUpdateFileListSoon = true;
-                                }
+                                }*/
                             }
                         }
                         else if (pressedItem==2) {
@@ -4667,15 +5852,18 @@ struct StbImage {
             ImGui::TreePop();
             ImGui::PushID("Adjust Image Group");
 
-            static const char* filterNames[4] = {"Brightness And Contrast","Icon Light Effect","Invert Colors","Gaussian Blur"};//,"B/W Sketch","Color Sketch"};
+            static const char* filterNames[5] = {"Brightness And Contrast","Icon Light Effect","Color Effects","Gaussian Blur","Normal Map"};//,"Color Sketch Effect"};
             static const int filterCount = sizeof(filterNames)/sizeof(filterNames[0]);
             ImGui::PushItemWidth(-1);
-            ImGui::Combo("###AdjustImageFilters",&imageFilterIndex,filterNames,filterCount,filterCount);
+            const int NumFiltersThatDoesNotWorkWithOneChannel = 1;  // Placed at the end
+            const int availableFilterCount = c==1 ? (filterCount-NumFiltersThatDoesNotWorkWithOneChannel) : filterCount;
+            int filterIndexToUse = imageFilterIndex>=availableFilterCount ? 0 : imageFilterIndex;
+            if (ImGui::Combo("###AdjustImageFilters",&filterIndexToUse,filterNames,availableFilterCount,availableFilterCount)) {imageFilterIndex=filterIndexToUse;}
             ImGui::PopItemWidth();
 
             bool mustOpenBrightnessAndContrast = false;
 
-            switch (imageFilterIndex)   {
+            switch (filterIndexToUse)   {
             case 0: {
                 // Brightness And Contrast
                 ImGui::PushItemWidth(-1);
@@ -4699,9 +5887,20 @@ struct StbImage {
             }
                 break;
             case 2: {
+                // Color Effects
                 // Invert Colors
-                ImGui::PushItemWidth(-1);
-                if (ImGui::Button("Invert Colors") && image && invertImageColors((chbSelectionLimit && hasSelection) ? &imageSelection : NULL)) {assignModified(true);}
+                ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.5f);
+                // Grayscale
+                if (ImGui::Button("Grayscale 1") && image && makeGrayscale((chbSelectionLimit && hasSelection) ? &imageSelection : NULL),true) {assignModified(true);}
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","(R+G+B)/3");
+                ImGui::SameLine();
+                if (ImGui::Button("Grayscale 2") && image && makeGrayscale((chbSelectionLimit && hasSelection) ? &imageSelection : NULL),false) {assignModified(true);}
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","0.3*R+0.6*G+0.1*B");
+                if (ImGui::Button("Invert") && image && invertImageColors((chbSelectionLimit && hasSelection) ? &imageSelection : NULL)) {assignModified(true);}
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Invert Colors");
+                ImGui::SameLine();
+                if (ImGui::Button("B/W Sketch Effect") && image && applyBlackAndWhiteSketchEffect((chbSelectionLimit && hasSelection) ? &imageSelection : NULL)) {assignModified(true);}
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Draws only the outlines\nof the image in black");
                 ImGui::PopItemWidth();
             }
             break;
@@ -4736,11 +5935,91 @@ struct StbImage {
             }
             break;
             case 4: {
+                // Normal Map
+                IM_ASSERT(c!=1);    // Well, should we allow changing the number of channels on the fly ? Better not!
+                ImGui::Separator();
+                if (ImGui::TreeNodeEx("Input/Output Params:##NormalMapTreeNode",ImGuiTreeNodeFlags_DefaultOpen)) {
+                    ImGui::TreePop();
+                    ImGui::TextDisabled("Input Params:");
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","An image (RGB or RGBA)\n(ideally a heightmap)\n");
+                    if (c!=4 || !normalMapParams.height_map_use_input_alpha_channel_only)   {
+                        ImGui::Checkbox("(R+G+B)/3##NormalMap",&normalMapParams.height_map_use_average_RGB);
+                        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","when unchecked, the\ninput heightmap will be:\n0.3*R+0.6*G+0.1*B");
+                        ImGui::SameLine();
+                    }
+                    if (c==4)   {
+                        ImGui::Checkbox("A##NormalMap",&normalMapParams.height_map_use_input_alpha_channel_only);
+                        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","when checked, the\ninput heightmap will be\nthe image alpha channel");
+                        ImGui::SameLine();
+                    }
+                    ImGui::Checkbox("Invert##NormalMapHI",&normalMapParams.height_map_invert);
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","when checked, the\ninput heightmap will be\ninverted");
 
-            }
-            break;
-            case 5: {
+                    ImGui::Separator();
+                    ImGui::TextDisabled("Output Params:");
+                    int rbgMode = (int) normalMapParams.output_rgb_mode;
+                    if (ImGui::Combo("RGB##NormaMapOutput",&rbgMode,ImGuiIE::NormalMapGeneratorUC::GetOutputRGBModes(),ImGuiIE::NormalMapGeneratorUC::OUTPUT_RGB_COUNT,ImGuiIE::NormalMapGeneratorUC::OUTPUT_RGB_COUNT)) normalMapParams.output_rgb_mode = (ImGuiIE::NormalMapGeneratorUC::OutputRGBMode) rbgMode;
+                    if (c==4) {
+                        int alphaMode = (int) normalMapParams.output_alpha_mode;
+                        if (ImGui::Combo("A##NormaMapOutput",&alphaMode,ImGuiIE::NormalMapGeneratorUC::GetOutputAlphaModes(),ImGuiIE::NormalMapGeneratorUC::OUTPUT_ALPHA_COUNT,ImGuiIE::NormalMapGeneratorUC::OUTPUT_ALPHA_COUNT)) normalMapParams.output_alpha_mode = (ImGuiIE::NormalMapGeneratorUC::OutputAlphaMode) alphaMode;
+                    }
+                    if (ImGui::SmallButton("Reset I/O Params##NormalMap")) {normalMapParams.resetIoParams();}
+                }
 
+                bool mustShowResetAll = false;
+                if (normalMapParams.needsFirstLevelProcessing(c))    {
+                    mustShowResetAll = true;
+                    ImGui::Separator();
+                    if (ImGui::TreeNodeEx("Convolution Params:##NormalMapTreeNode")) {
+                        ImGui::TreePop();
+
+                        if (ImGui::InputInt3("Sizes##NormalMap",normalMapParams.kws)) {
+                            for (int i=0;i<3;i++) {
+                                if (normalMapParams.kws[i]%2==0) {
+                                    --normalMapParams.kws[i];
+                                }
+                                if (normalMapParams.kws[i]<3) normalMapParams.kws[i]=3;
+                            }
+                            if (normalMapParams.kws[1]<normalMapParams.kws[0]) normalMapParams.kws[1]=normalMapParams.kws[0];
+                            if (normalMapParams.kws[2]<normalMapParams.kws[1]) normalMapParams.kws[2]=normalMapParams.kws[1];
+                            normalMapParams.mirror();   // normalMapParams.khs[] = normalMapParams.kws[]
+                        }
+                        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Sobel kernel sizes for the near, middle and far\nedge detection filters");
+                        ImGui::InputFloat3("Weights##NormalMap",normalMapParams.weights);
+                        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Weights for the near, middle and far\nedge detection filters");
+                        if (ImGui::InputFloat("Epsilon##NormalMap",&normalMapParams.normal_eps)) {
+                            normalMapParams.normal_eps = fabs(normalMapParams.normal_eps);
+                            if (normalMapParams.normal_eps<0.000000001f) normalMapParams.normal_eps=0.000000001f;
+                        }
+                        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Controls the amount of\nperfectly blue normals\n(0,0,1)");
+                        if (mrs.SmallCheckButton("Seamless##NormalMap",normalMapParams.wrapx))  {normalMapParams.mirror();}
+                        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Affects the behavior\non the borders");
+                        if (ImGui::SmallButton("Reset Convolution Params##NormalMap")) {normalMapParams.resetNormalMapParams();}
+                    }
+                }
+
+                if (normalMapParams.needsSecondLevelProcessing(c)) {
+                    mustShowResetAll = true;
+                    ImGui::Separator();
+                    if (ImGui::TreeNodeEx("Raycast Params:##NormalMapTreeNode")) {
+                        ImGui::TreePop();
+                        if (ImGui::DragInt("Num Rays##NormalMap",&normalMapParams.ray_count,0.1f,1,120) && normalMapParams.ray_count<1) normalMapParams.ray_count=1;
+                        if (ImGui::DragInt("Ray Length##NormalMap",&normalMapParams.ray_length,0.1f,1,240) && normalMapParams.ray_length<1) normalMapParams.ray_length=1;
+                        if (ImGui::DragFloat("Strength##NormalMap",&normalMapParams.ray_strength,0.1f,0.1f,1000.f,"%.1f",1.0f) && normalMapParams.ray_strength<0.1f) normalMapParams.ray_strength=0.1f;
+                        if (ImGui::SmallButton("Reset Raycast Params##NormalMap")) {normalMapParams.resetAoParams();}
+                    }
+                }
+                if (mustShowResetAll)   {
+                    ImGui::Separator();
+                    if (ImGui::SmallButton("Reset All Params##NormalMap")) {normalMapParams.reset();normalMapParams.mirror();}
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Resets all normal\nmap parameters");
+                }
+                ImGui::Separator();
+                ImGui::Text("Action:");
+                ImGui::PushItemWidth(-1);
+                if (ImGui::Button("Normal Map##Normal Map") && image && generateNormalMap((chbSelectionLimit && hasSelection) ? &imageSelection : NULL,normalMapParams)) {assignModified(true);}
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","It might take A LOT OF TIME\nTip: if you want to retry with\ndifferent parameters, remember\nto press \"Undo\" first.");
+                ImGui::PopItemWidth();
             }
             break;
             default:
@@ -5701,14 +6980,12 @@ static StbImage* CreateStbImage(ImageEditor& ie) {
 
 ImageEditor::ImageEditor()
 : userPtr(NULL),is(NULL),init(false),showImageNamePanel(true),
-allowLoadingNewImages(true),allowBrowsingInsideFolder(true),allowSaveAs(true),
-changeFileNameWhenExtractingSelection(true)
+allowLoadingNewImages(true),allowBrowsingInsideFolder(true),allowSaveAs(true)
 {}
 
-ImageEditor::ImageEditor(bool hideImageNamePanel,bool forbidLoadingNewImagesIfAvailable,bool forbidBrowsingInsideFolderIfAvailable,bool forbidSaveAsIfAvailable,bool _changeFileNameWhenExtractingSelection)
+ImageEditor::ImageEditor(bool hideImageNamePanel,bool forbidLoadingNewImagesIfAvailable,bool forbidBrowsingInsideFolderIfAvailable,bool forbidSaveAsIfAvailable)
 : userPtr(NULL),is(NULL),init(false),showImageNamePanel(!hideImageNamePanel),
-allowLoadingNewImages(!forbidLoadingNewImagesIfAvailable),allowBrowsingInsideFolder(!forbidBrowsingInsideFolderIfAvailable),allowSaveAs(!forbidSaveAsIfAvailable),
-changeFileNameWhenExtractingSelection(_changeFileNameWhenExtractingSelection)
+allowLoadingNewImages(!forbidLoadingNewImagesIfAvailable),allowBrowsingInsideFolder(!forbidBrowsingInsideFolderIfAvailable),allowSaveAs(!forbidSaveAsIfAvailable)
 {}
 
 ImageEditor::~ImageEditor() {destroy();}
@@ -5779,3 +7056,13 @@ ImageEditor::Style::Style() : splitterSize(-1),splitterColor(-1.f,1.f,1.f,1.f) {
 } // namespace ImGui
 
 
+// The following was intended to suppress #pragma omp warnings when IMGUI_USE_OMP is NOT defined
+#ifdef __clang__
+#   pragma clang diagnostic pop
+#endif //__clang__
+#ifdef __GNUC__
+#   pragma GCC diagnostic pop
+#endif //__GNUC__
+#ifdef _MSC_VER
+#   pragma warning( pop )
+#endif //_MSC_VER
