@@ -163,6 +163,8 @@ enum FieldType {
     FieldInfo& addField(double* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,double lowerLimit=0,double upperLimit=100,void* userData=NULL,bool needsRadiansToDegs=false);
 
     FieldInfo& addFieldEnum(int* pdata,int numEnumElements,FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
+    FieldInfo& addFieldEnum(int *pdata, int numEnumElements, const char* const* items, const char *label=NULL, const char *tooltip=NULL);
+    FieldInfo& addFieldEnum(int *pdata,const char* items_separated_by_zeros, const char *label=NULL, const char *tooltip=NULL);     // separate items with \0, end item-list with \0\0
     FieldInfo& addField(bool* pdata,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
     FieldInfo& addFieldColor(float* pdata,bool useAlpha=true,const char* label=NULL,const char* tooltip=NULL,int precision=3,void* userData=NULL);
     FieldInfo& addFieldTextEdit(char* pdata, int textLength=0, const char* label=NULL, const char* tooltip=NULL, int flags=ImGuiInputTextFlags_EnterReturnsTrue, void* userData=NULL) {

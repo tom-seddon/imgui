@@ -2321,9 +2321,8 @@ template <typename T> class NormalMapGenerator {
         //========================================================================================
         const real anglestep=real(2)*M_PI/rayCount;
 
-//      Precompute xdir,ydir,fabs(dir.x),fabs(dir.y), and their sum:
+//      Precompute xdir,ydir, and their absolute sum:
         ImVector<vec2> dirs; dirs.resize(rayCount);
-        ImVector<vec2> fabsdirs; fabsdirs.resize(rayCount);
         real xsum(0),ysum(0);
         int cnt=0;
         for(real a=0,aSz=real(2)*M_PI;a<aSz;a+=anglestep) {
@@ -2335,11 +2334,8 @@ template <typename T> class NormalMapGenerator {
             dir.x = cos(a);
             dir.y = sin(a);
 #           endif
-            vec2& fabsdir = fabsdirs[cnt];
-            fabsdir.x = fabs(dir.x);
-            fabsdir.y = fabs(dir.y);
-            xsum += fabsdir.x;
-            ysum += fabsdir.y;
+            xsum += fabs(dir.x);
+            ysum += fabs(dir.y);
             ++cnt;
         }
 
@@ -2370,7 +2366,7 @@ template <typename T> class NormalMapGenerator {
 
 //      Actually it's faster without omp
 //      The shared section can be omitted (performance it's the same)
-//#       pragma omp parallel for shared(dirs,fabsdirs,normalMap,heightMap,ssim,aoim)
+//#       pragma omp parallel for shared(dirs,normalMap,heightMap,ssim,aoim)
         for(int row=0;row<h;row++)  {
             T* pss = ssim ? &ssim[row*w*pssNormalMapOutChannels] : NULL;
             T *pao = aoim ? &aoim[row*w*pAmbientOcclusionMapChannels] : NULL;

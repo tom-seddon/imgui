@@ -2081,6 +2081,44 @@ FieldInfo &FieldInfoVector::addFieldEnum(int *pdata, int numEnumElements, FieldI
     f.init(FT_ENUM,(void*) pdata,label,tooltip,0,0,0,1,false,numEnumElements,textFromEnumFunctionPtr,userData);
     return f;
 }
+// 2 overloads of addFieldEnum(...) follow here. Both are based on the code in imgui.cpp
+static bool NGE_Enum_Items_ArrayGetter(void* data, int idx, const char** out_text)   {
+    const char* const* items = (const char* const*)data;
+    if (out_text) *out_text = items[idx];
+    return true;
+}
+FieldInfo &FieldInfoVector::addFieldEnum(int *pdata, int numEnumElements, const char* const* items, const char *label, const char *tooltip)   {
+    IM_ASSERT(pdata && numEnumElements>0);
+    push_back(FieldInfo());
+    FieldInfo& f = (*this)[size()-1];
+    f.init(FT_ENUM,(void*) pdata,label,tooltip,0,0,0,1,false,numEnumElements,NGE_Enum_Items_ArrayGetter,(void*)items);
+    return f;
+}
+static bool NGE_Enum_Items_SingleStringGetter(void* data, int idx, const char** out_text)   {
+    // FIXME-OPT: we could pre-compute the indices to fasten this. But only 1 active combo means the waste is limited.
+    const char* items_separated_by_zeros = (const char*)data;
+    int items_count = 0;
+    const char* p = items_separated_by_zeros;
+    while (*p)  {
+        if (idx == items_count) break;
+        p += strlen(p) + 1;
+        items_count++;
+    }
+    if (!*p)        return false;
+    if (out_text)   *out_text = p;
+    return true;
+}
+FieldInfo &FieldInfoVector::addFieldEnum(int *pdata,const char* items_separated_by_zeros, const char *label, const char *tooltip)   {
+    IM_ASSERT(pdata);
+    int items_count = 0;
+    const char* p = items_separated_by_zeros;       // FIXME-OPT: Avoid computing this, or at least only when combo is open
+    while (*p)  {p += strlen(p) + 1;items_count++;}
+    IM_ASSERT(items_count>0);
+    push_back(FieldInfo());
+    FieldInfo& f = (*this)[size()-1];
+    f.init(FT_ENUM,(void*) pdata,label,tooltip,0,0,0,1,false,items_count,NGE_Enum_Items_SingleStringGetter,(void*) items_separated_by_zeros);
+    return f;
+}
 FieldInfo &FieldInfoVector::addField(bool *pdata, const char *label, const char *tooltip, void *userData)   {
     IM_ASSERT(pdata);
     push_back(FieldInfo());
@@ -2773,16 +2811,24 @@ class ComplexNode : public Node {
     static ThisClass* Create(const ImVec2& pos) {
         // 1) allocation
         // MANDATORY (NodeGraphEditor::~NodeGraphEditor() will delete these with ImGui::MemFree(...))
-	// MANDATORY even with blank ctrs.  Reason: ImVector does not call ctrs/dctrs on items.
-	ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));IM_PLACEMENT_NEW(node) ThisClass();
+        // MANDATORY even with blank ctrs.  Reason: ImVector does not call ctrs/dctrs on items.
+        ThisClass* node = (ThisClass*) ImGui::MemAlloc(sizeof(ThisClass));IM_PLACEMENT_NEW(node) ThisClass();
 
         // 2) main init
         node->init("ComplexNode",pos,"in1;in2;in3","out1;out2",TYPE);
 
         // 3) init fields ( this uses the node->fields variable; otherwise we should have overridden other virtual methods (to render and serialize) )
-	node->fields.addField(&node->Value[0],3,"Angles","Three floats that are stored in radiant units internally",2,0,360,NULL,true);
-	node->fields.addFieldColor(&node->Color.x,true,"Color","color with alpha");
+        node->fields.addField(&node->Value[0],3,"Angles","Three floats that are stored in radiant units internally",2,0,360,NULL,true);
+        node->fields.addFieldColor(&node->Color.x,true,"Color","color with alpha");
+        // addFieldEnum(...) now has all the 3 overloads ImGui::Combo(...) has.
+        // addFieldEnum(...) [1] (item_count + external callback)
         node->fields.addFieldEnum(&node->enumIndex,3,&GetTextFromEnumIndex,"Fruit","Choose your favourite");
+        // addFieldEnum(...) [2] (items_count + item_names)
+        //static const char* FruitNames[3] = {"APPLE","LEMON","ORANGE"};
+        //node->fields.addFieldEnum(&node->enumIndex,3,FruitNames,"Fruit","Choose your favourite");
+        // addFieldEnum(...) [3] (zero_separated_item_names)
+        //node->fields.addFieldEnum(&node->enumIndex,"APPLE\0LEMON\0ORANGE\0\0","Fruit","Choose your favourite");
+
 
         // 4) set (or load) field values
         node->Value[0] = 0;node->Value[1] = 3.14f; node->Value[2] = 4.68f;
@@ -2997,7 +3043,7 @@ void TestNodeGraphEditor()  {
         ImGui::Node* complexNode =  nge.addNode(MNT_COMPLEX_NODE,ImVec2(40,150));
         ImGui::Node* combineNode =  nge.addNode(MNT_COMBINE_NODE,ImVec2(275,80)); // optionally use e.g.: ImGui::CombineNode::Cast(combineNode)->fraction = 0.8f;
         ImGui::Node* outputNode =  nge.addNode(MNT_OUTPUT_NODE,ImVec2(520,140));
-        // Return values can be NULL (if node types are not registered of their instance limit has been already reached).
+        // Return values can be NULL (if node types are not registered or their instance limit has been already reached).
         //nge.overrideNodeName(combineNode,"CombineNodeCustomName");  // Test only (to remove)
         //nge.overrideNodeInputSlots(combineNode,"in1;in2;in3;in4");  // Test only (to remove)
         //ImU32 bg = IM_COL32(0,128,0,255);nge.overrideNodeTitleBarColors(combineNode,NULL,&bg,NULL);  // Test only (to remove)
