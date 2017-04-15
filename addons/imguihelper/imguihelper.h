@@ -211,6 +211,7 @@ class Serializer {
     bool save(const double* pValue, const char* name, int numArrayElements=1,int prec=-1);
     bool save(const bool* pValue, const char* name, int numArrayElements=1);
     bool saveTextLines(const char* pValue,const char* name); // Splits the string into N lines: each line is passed by the deserializer into a single element in the callback
+    bool saveTextLines(int numValues,bool (*items_getter)(void* data, int idx, const char** out_text),void* data,const char* name);
 
     // To serialize FT_CUSTOM:
     bool saveCustomFieldTypeHeader(const char* name, int numTextLines=1); //e.g. for 4 lines "[CUSTOM-4:MyCustomFieldTypeName]\n". Then add 4 lines using getPointer() below.

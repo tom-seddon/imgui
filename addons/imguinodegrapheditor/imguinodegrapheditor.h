@@ -304,7 +304,7 @@ class Node
     float overrideTitleBgColorGradient;                 //-1 -> don't override
     bool isInEditingMode;
 
-    Node() : Pos(0,0),Size(0,0),isSelected(false),baseWidthOverride(-1),mustOverrideName(false),mustOverrideInputSlots(false),mustOverrideOutputSlots(false),overrideTitleTextColor(0),overrideTitleBgColor(0),overrideTitleBgColorGradient(-1.f),isInEditingMode(false) {}
+    Node() : Pos(0,0),Size(0,0),isSelected(false),baseWidthOverride(-1),mustOverrideName(false),mustOverrideInputSlots(false),mustOverrideOutputSlots(false),overrideTitleTextColor(0),overrideTitleBgColor(0),overrideTitleBgColorGradient(-1.f),isInEditingMode(false),parentNodeGraphEditor(NULL) {}
     void init(const char* name, const ImVec2& pos,const char* inputSlotNamesSeparatedBySemicolons=NULL,const char* outputSlotNamesSeparatedBySemicolons=NULL,int _nodeTypeID=0/*,float currentWindowFontScale=-1.f*/);
 
     inline ImVec2 GetInputSlotPos(int slot_no,float currentFontWindowScale=1.f) const   { return ImVec2(Pos.x*currentFontWindowScale,           Pos.y*currentFontWindowScale + Size.y * ((float)slot_no+1) / ((float)InputsCount+1)); }
@@ -318,6 +318,13 @@ class Node
     // casts:
     template <typename T> inline static T* Cast(Node* n,int TYPE) {return ((n && n->getType()==TYPE) ? static_cast<T*>(n) : NULL);}
     template <typename T> inline static const T* Cast(const Node* n,int TYPE) {return ((n && n->getType()==TYPE) ? static_cast<const T*>(n) : NULL);}
+
+    private:
+    struct NodeGraphEditor* parentNodeGraphEditor;
+
+    protected:
+    NodeGraphEditor& getNodeGraphEditor() {IM_ASSERT(parentNodeGraphEditor);return *parentNodeGraphEditor;}
+    const NodeGraphEditor& getNodeGraphEditor() const {IM_ASSERT(parentNodeGraphEditor);return *parentNodeGraphEditor;}
 
 
 };
@@ -625,6 +632,8 @@ struct NodeGraphEditor	{
     bool hasLinks(Node* node) const;
     int getAllNodesOfType(int typeID,ImVector<Node*>* pNodesOut=NULL,bool clearNodesOutBeforeUsage=true);
     int getAllNodesOfType(int typeID,ImVector<const Node*>* pNodesOut=NULL,bool clearNodesOutBeforeUsage=true) const;
+    int getNumNodes() const {return nodes.size();}
+    Node* getNode(int index) {return (index>=0 && index<nodes.size()) ? nodes[index] : NULL;}
 
     // It should be better not to add/delete node/links in the callbacks... (but all is untested here)
     void setNodeCallback(NodeCallback cb) {nodeCallback=cb;}
@@ -688,6 +697,7 @@ struct NodeGraphEditor	{
     // BEST PRACTICE: always call this method like: Node* node = addNode(ExampleNode::Create(...));
     Node* addNode(Node* justCreatedNode)	{
         if (justCreatedNode) {
+            justCreatedNode->parentNodeGraphEditor = this;
             nodes.push_back(justCreatedNode);
             if (nodeCallback) nodeCallback(nodes[nodes.size()-1],NS_ADDED,*this);
         }
@@ -712,6 +722,7 @@ struct NodeGraphEditor	{
         return -1;
     }
     static Style style;
+
 
     private:
     // Refactored for cleaner exposure (without the misleading 'flag' argument)

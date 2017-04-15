@@ -1334,6 +1334,29 @@ bool Serializer::saveTextLines(const char* pValue,const char* name)   {
     f->print("\n");
     return true;
 }
+bool Serializer::saveTextLines(int numValues,bool (*items_getter)(void* data, int idx, const char** out_text),void* data,const char* name)  {
+    FieldType ft = ImGui::FT_TEXTLINE;
+    if (!items_getter || !f || ft==ImGui::FT_COUNT || numValues<=0 || !name || name[0]=='\0') return false;
+    int numArrayElements =numValues;  // numLines
+
+    // name
+    f->print( "[%s",FieldTypeNames[ft]);
+    if (numArrayElements==0) numArrayElements=1;
+    if (numArrayElements>1) f->print( "-%d",numArrayElements);
+    f->print( ":%s]\n",name);
+
+    // value
+    const char* text=NULL;int len=0;
+    for (int i=0;i<numArrayElements;i++)    {
+        if (items_getter(data,i,&text)) {
+            f->print("%s",text);
+            if (len<=0 || text[len-1]!='\n')  f->print("\n");
+        }
+        else f->print("\n");
+    }
+    f->print("\n");
+    return true;
+}
 bool Serializer::saveCustomFieldTypeHeader(const char* name, int numTextLines) {
     // name
     f->print( "[%s",FieldTypeNames[ImGui::FT_CUSTOM]);
