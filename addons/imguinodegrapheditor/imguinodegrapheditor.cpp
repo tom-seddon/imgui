@@ -2081,6 +2081,13 @@ FieldInfo &FieldInfoVector::addFieldEnum(int *pdata, int numEnumElements, FieldI
     f.init(FT_ENUM,(void*) pdata,label,tooltip,0,0,0,1,false,numEnumElements,textFromEnumFunctionPtr,userData);
     return f;
 }
+FieldInfo &FieldInfoVector::addFieldEnum(int *pdata, FieldInfo::GetNumEnumElementsDelegate getNumEnumElementsFunctionPtr, FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr, const char *label, const char *tooltip, void *userData)   {
+    IM_ASSERT(pdata && getNumEnumElementsFunctionPtr && textFromEnumFunctionPtr);
+    push_back(FieldInfo());
+    FieldInfo& f = (*this)[size()-1];
+    f.init(FT_ENUM,(void*) pdata,label,tooltip,0,0,0,1,false,-1,textFromEnumFunctionPtr,userData,getNumEnumElementsFunctionPtr);
+    return f;
+}
 // 2 overloads of addFieldEnum(...) follow here. Both are based on the code in imgui.cpp
 static bool NGE_Enum_Items_ArrayGetter(void* data, int idx, const char** out_text)   {
     const char* const* items = (const char* const*)data;
@@ -2336,7 +2343,8 @@ bool FieldInfo::render(int nodeWidth)   {
     }
         break;
     case FT_ENUM: {
-        changed|=ImGui::Combo(label,(int*) f.pdata,f.textFromEnumFunctionPointer,f.userData,f.numEnumElements);
+	if (f.getNumEnumElementsFunctionPointer) f.numEnumElements = f.getNumEnumElementsFunctionPointer(f.userData);
+	changed|=ImGui::Combo(label,(int*) f.pdata,f.textFromEnumFunctionPointer,f.userData,f.numEnumElements,f.numEnumElements<12 ? f.numEnumElements : -1);
     }
         break;
     case FT_STRING: {

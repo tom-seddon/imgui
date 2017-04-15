@@ -88,6 +88,8 @@ enum FieldType {
         typedef bool (*TextFromEnumDelegate)(void*, int, const char**); // userData is the first param
         TextFromEnumDelegate  textFromEnumFunctionPointer;  // used only when type==FT_ENUM, otherwise set it to NULL. The method is used to convert an int to a char*.
         void* userData;          // passed to textFromEnumFunctionPointer when type==FT_ENUM (useful if you want to share the same TextFromEnumDelegate for multiple enums). Otherwise set it to NULL or use it as you like.
+        typedef int (*GetNumEnumElementsDelegate)(void*); // userData is the first param
+        GetNumEnumElementsDelegate getNumEnumElementsFunctionPointer;  // used OPTIONALLY only when type==FT_ENUM, otherwise set it to NULL. The method overrides the value of 'numEnumElements'.
         typedef void (*EditedFieldDelegate)(FieldInfo& field,int widgetIndex);  // widgetIndex is always zero
         EditedFieldDelegate editedFieldDelegate;
         // used only for FT_CUSTOM
@@ -115,7 +117,7 @@ enum FieldType {
         FieldInfo() {}
         void init (int _type=FT_INT,void* _pdata=NULL,const char* _label=NULL,const char* _tooltip=NULL,
                    int _precision=0,int _numArrayElements=0,double _lowerLimit=0,double _upperLimit=1,bool _needsRadiansToDegs=false,
-                   int _numEnumElements=0,TextFromEnumDelegate _textFromEnumFunctionPointer=NULL,void* _userData=NULL,
+                   int _numEnumElements=0,TextFromEnumDelegate _textFromEnumFunctionPointer=NULL,void* _userData=NULL,GetNumEnumElementsDelegate _getNumEnumElementsFunctionPointer=NULL,
                    RenderFieldDelegate _renderFieldDelegate=NULL,EditedFieldDelegate _editedFieldDelegate=NULL)
         {
             label[0]='\0';if (_label) {strncpy(label,_label,IMGUIFIELDINFO_MAX_LABEL_LENGTH);label[IMGUIFIELDINFO_MAX_LABEL_LENGTH-1]='\0';}
@@ -130,6 +132,7 @@ enum FieldType {
             numEnumElements = _numEnumElements;
             textFromEnumFunctionPointer = _textFromEnumFunctionPointer;
             userData = _userData;
+            getNumEnumElementsFunctionPointer = _getNumEnumElementsFunctionPointer;
             renderFieldDelegate = _renderFieldDelegate;
             editedFieldDelegate = _editedFieldDelegate;
         }
@@ -163,6 +166,7 @@ enum FieldType {
     FieldInfo& addField(double* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,double lowerLimit=0,double upperLimit=100,void* userData=NULL,bool needsRadiansToDegs=false);
 
     FieldInfo& addFieldEnum(int* pdata,int numEnumElements,FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
+    FieldInfo& addFieldEnum(int* pdata,FieldInfo::GetNumEnumElementsDelegate getNumEnumElementsFunctionPtr,FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
     FieldInfo& addFieldEnum(int *pdata, int numEnumElements, const char* const* items, const char *label=NULL, const char *tooltip=NULL);
     FieldInfo& addFieldEnum(int *pdata,const char* items_separated_by_zeros, const char *label=NULL, const char *tooltip=NULL);     // separate items with \0, end item-list with \0\0
     FieldInfo& addField(bool* pdata,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
