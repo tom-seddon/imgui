@@ -434,7 +434,8 @@ struct DockContext
         switch (dock_slot)
         {
         default: return rect;
-        case ImGuiDockSlot_Top: return ImRect(rect.Min, ImVec2(rect.Max.x, rect.Min.y + half_size.y));
+	//case ImGuiDockSlot_Top: return ImRect(rect.Min, ImVec2(rect.Max.x, rect.Min.y + half_size.y));	  //  original
+	case ImGuiDockSlot_Top: return ImRect(rect.Min, rect.Min + ImVec2(rect.Max.x - rect.Min.x, half_size.y)); //  @r-lyeh
         case ImGuiDockSlot_Right: return ImRect(rect.Min + ImVec2(half_size.x, 0), rect.Max);
         case ImGuiDockSlot_Bottom: return ImRect(rect.Min + ImVec2(0, half_size.y), rect.Max);
         case ImGuiDockSlot_Left: return ImRect(rect.Min, ImVec2(rect.Min.x + half_size.x, rect.Max.y));

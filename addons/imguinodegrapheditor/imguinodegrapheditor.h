@@ -19,6 +19,9 @@
 
     }
     ImGui::End();
+
+// Please see: https://gist.github.com/Flix01/a7873b73f0ffb00c87260e5bf13a18d4
+// for another test demo
 */
 
 // TODO:
@@ -185,7 +188,7 @@ enum FieldType {
     }
 
     FieldInfo& addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,FieldInfo::CopyFieldDelegate copyFieldDelegate,void* userData
-//------WIP----------------------------------------------------------------------
+//-------------------------------------------------------------------------------
 #       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
         ,FieldInfo::SerializeFieldDelegate serializeFieldDelegate=NULL,
@@ -205,7 +208,7 @@ enum FieldType {
         }
     }
 
-//------WIP----------------------------------------------------------------------
+//-------------------------------------------------------------------------------
 #   if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #    ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
     bool serialize(ImGuiHelper::Serializer& s) const {
@@ -634,6 +637,10 @@ struct NodeGraphEditor	{
     int getAllNodesOfType(int typeID,ImVector<const Node*>* pNodesOut=NULL,bool clearNodesOutBeforeUsage=true) const;
     int getNumNodes() const {return nodes.size();}
     Node* getNode(int index) {return (index>=0 && index<nodes.size()) ? nodes[index] : NULL;}
+    const Node* getNode(int index) const {return (index>=0 && index<nodes.size()) ? nodes[index] : NULL;}
+    Node* getCopiedNode() {return sourceCopyNode;}
+    const Node* getCopiedNode() const {return sourceCopyNode;}
+
 
     // It should be better not to add/delete node/links in the callbacks... (but all is untested here)
     void setNodeCallback(NodeCallback cb) {nodeCallback=cb;}
