@@ -267,10 +267,10 @@ public:
 
     void                        resize(int new_size)            {
         if (new_size > Capacity) {
-            reserve(_grow_capacity(new_size));
-            for (int i=Size;i<new_size;i++) {IMIMPL_PLACEMENT_NEW(&Data[i]) T();}
+            reserve(_grow_capacity(new_size));            
         }
         if (new_size < Size)   {for (int i=new_size;i<Size;i++) Data[i].~T();}
+        else {for (int i=Size;i<new_size;i++) {IMIMPL_PLACEMENT_NEW(&Data[i]) T();}}
         Size = new_size;
     }
     void                        reserve(int new_capacity)

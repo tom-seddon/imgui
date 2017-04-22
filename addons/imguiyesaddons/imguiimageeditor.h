@@ -102,8 +102,6 @@ NOTES:
 /* TODO:
  * Fix bugs
  * Add more tooltips
- * Optionally use OpenMP to speed up ambient occlusion / bent normals generation [FAILED! OpemMP code is slower (tested 2 different OpenMP shortcuts)]
- * See if we can (optionally) re-enable the lodePng plugin (stb_image.h couldn't load back some pngs saved with it correctly [it detected RGB instead of RGBA]).
 */
 
 /* CHANGELOG:
@@ -114,6 +112,7 @@ NOTES:
  *  (1) https://blenderartists.org/forum/showthread.php?330268-Self-Shadowing-Normal-Maps
  *  (2) https://www.youtube.com/watch?v=e1e6o7KlhEM
  *  (3) https://www.gamedev.net/topic/557465-self-shadowing-normal-maps/
+ *  (4) https://www.gamedev.net/topic/469124-bent-normals--ambient-occlusion-for-heightmaps/        by lonesock
  *      Bent Normals work on the same images as (1) and (2) almost correctly, but it doesn't on 80% of all the other images I've tried so far.
  *      Ambient Occlusion seems to work always correctly (and that was my main goal actually).
  * When saving as RGB or RGBA from A, put A into RGB channels

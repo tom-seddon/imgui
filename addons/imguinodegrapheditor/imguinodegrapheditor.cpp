@@ -471,8 +471,9 @@ void NodeGraphEditor::render()
     // Draw a list of nodes on the left side
     bool open_context_menu = false,open_delete_only_context_menu = false;
     Node* node_hovered_in_list = NULL;
-    Node* node_hovered_in_scene = NULL;    
+    Node* node_hovered_in_scene = NULL;
     Node* node_to_center_view_around = NULL;
+    Node *node_to_fire_edit_callback = NULL,* node_to_paste_from_copy_source = NULL;
 
     if (show_left_pane) {
         // Helper stuff for setting up the left splitter
@@ -488,59 +489,59 @@ void NodeGraphEditor::render()
 
         ImGui::Spacing();
         ImGui::Separator();
-    if (ImGui::CollapsingHeader("Node List##node_list_1",NULL,false))   {
+        if (ImGui::CollapsingHeader("Node List##node_list_1",NULL,false))   {
+            ImGui::Separator();
+            typedef struct _MyDummyStuff {
+                const ImVector<AvailableNodeInfo>& availableNodesInfo;
+                _MyDummyStuff(const ImVector<AvailableNodeInfo>& _availableNodesInfo) : availableNodesInfo(_availableNodesInfo){}
+                static bool item_getter(void* pmds,int idx,const char** pOut) {
+                    const _MyDummyStuff& mds = * ((const _MyDummyStuff*) pmds);
+                    if (idx<0 || idx>mds.availableNodesInfo.size()) return false;
+                    static const char ZeroName[] = "ALL";
+                    *pOut = idx==0 ? ZeroName : mds.availableNodesInfo[idx-1].name;
+                    return true;
+                }
+            } MyDummyStuff;
+            MyDummyStuff mds(availableNodesInfo);
+            ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.5f);
+            const int numEntriesInNodeListFilterCombo = availableNodesInfo.size()+1;
+            ImGui::Combo("Type Filter",&nodeListFilterComboIndex,&MyDummyStuff::item_getter,&mds,numEntriesInNodeListFilterCombo,numEntriesInNodeListFilterCombo<25 ? numEntriesInNodeListFilterCombo : 25);
+            ImGui::PopItemWidth();
+            for (int node_idx = 0; node_idx < nodes.Size; node_idx++)   {
+                Node* node = nodes[node_idx];
+                if (nodeListFilterComboIndex>0 && availableNodesInfoInverseMap[node->getType()]!=nodeListFilterComboIndex-1) continue;
+                ImGui::PushID((const void*) node);
+                if (ImGui::Selectable(node->Name, node->isSelected)) {
+                    if (!node->isSelected || !io.KeyCtrl)  {
+                        if (!io.KeyCtrl) unselectAllNodes();
+                        selectNodePrivate(node,true,false);
+                        //activeNode = node;    // Better not. Changing the active node [currently] makes it go at the bottom of the list: this is bad while we are clicking on it
+                    }
+                    else unselectNode(node,false);
+                }
+                //if (ImGui::Selectable(node->Name, node == activeNode)) activeNode = node;
+                if (ImGui::IsItemHovered()) {
+                    node_hovered_in_list = node;//menuNode=node;
+                    if (ImGui::IsMouseClicked(1))   {
+                        menuNode=node;
+                        open_context_menu=true;
+                    }
+                    else if (io.MouseReleased[2] || ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Home]) || io.MouseDoubleClicked[0]) node_to_center_view_around = node;
+                }
+                ImGui::PopID();
+            }
+        }
         ImGui::Separator();
-        typedef struct _MyDummyStuff {
-	    const ImVector<AvailableNodeInfo>& availableNodesInfo;
-	    _MyDummyStuff(const ImVector<AvailableNodeInfo>& _availableNodesInfo) : availableNodesInfo(_availableNodesInfo){}
-            static bool item_getter(void* pmds,int idx,const char** pOut) {
-                const _MyDummyStuff& mds = * ((const _MyDummyStuff*) pmds);
-		if (idx<0 || idx>mds.availableNodesInfo.size()) return false;
-                static const char ZeroName[] = "ALL";
-		*pOut = idx==0 ? ZeroName : mds.availableNodesInfo[idx-1].name;
-                return true;
-            }
-        } MyDummyStuff;
-	MyDummyStuff mds(availableNodesInfo);
-        ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.5f);
-        const int numEntriesInNodeListFilterCombo = availableNodesInfo.size()+1;
-        ImGui::Combo("Type Filter",&nodeListFilterComboIndex,&MyDummyStuff::item_getter,&mds,numEntriesInNodeListFilterCombo,numEntriesInNodeListFilterCombo<25 ? numEntriesInNodeListFilterCombo : 25);
-        ImGui::PopItemWidth();
-        for (int node_idx = 0; node_idx < nodes.Size; node_idx++)   {
-        Node* node = nodes[node_idx];
-	if (nodeListFilterComboIndex>0 && availableNodesInfoInverseMap[node->getType()]!=nodeListFilterComboIndex-1) continue;
-        ImGui::PushID((const void*) node);
-        if (ImGui::Selectable(node->Name, node->isSelected)) {
-            if (!node->isSelected || !io.KeyCtrl)  {
-                if (!io.KeyCtrl) unselectAllNodes();
-                selectNodePrivate(node,true,false);
-                //activeNode = node;    // Better not. Changing the active node [currently] makes it go at the bottom of the list: this is bad while we are clicking on it
-            }
-            else unselectNode(node,false);
-        }
-        //if (ImGui::Selectable(node->Name, node == activeNode)) activeNode = node;
-        if (ImGui::IsItemHovered()) {
-            node_hovered_in_list = node;//menuNode=node;
-            if (ImGui::IsMouseClicked(1))   {
-                menuNode=node;
-                open_context_menu=true;
-            }
-            else if (io.MouseReleased[2] || ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Home]) || io.MouseDoubleClicked[0]) node_to_center_view_around = node;
-        }
-        ImGui::PopID();
-        }
-    }
-        ImGui::Separator();
-	if (activeNode)   {
-	    const char* nodeInfo = activeNode->getInfo();
+        if (activeNode)   {
+            const char* nodeInfo = activeNode->getInfo();
             if (nodeInfo && nodeInfo[0]!='\0')  {
-            ImGui::Spacing();
-            ImGui::Separator();
-	    if (ImGui::CollapsingHeader("Active Node##activeNode",NULL,false))   {
+                ImGui::Spacing();
                 ImGui::Separator();
-                ImGui::TextWrapped("%s",nodeInfo);
-            }
-            ImGui::Separator();
+                if (ImGui::CollapsingHeader("Active Node##activeNode",NULL,false))   {
+                    ImGui::Separator();
+                    ImGui::TextWrapped("%s",nodeInfo);
+                }
+                ImGui::Separator();
             }
         }
         if (show_style_editor)   {
@@ -586,42 +587,42 @@ void NodeGraphEditor::render()
             ImGui::Separator();
         }
 #if	(defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
-	if (show_load_save_buttons) {
-	    ImGui::Spacing();
-	    ImGui::Separator();
-	    if (ImGui::CollapsingHeader("Serialization##serialization",NULL,false))   {
-		ImGui::Separator();
-		const char* saveName = "nodeGraphEditor.nge";
-        const char* saveNamePersistent = "/persistent_folder/nodeGraphEditor.nge";
-        const char* pSaveName = saveName;
+        if (show_load_save_buttons) {
+            ImGui::Spacing();
+            ImGui::Separator();
+            if (ImGui::CollapsingHeader("Serialization##serialization",NULL,false))   {
+                ImGui::Separator();
+                const char* saveName = "nodeGraphEditor.nge";
+                const char* saveNamePersistent = "/persistent_folder/nodeGraphEditor.nge";
+                const char* pSaveName = saveName;
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-		if (ImGui::SmallButton("Save##saveGNE")) {
+                if (ImGui::SmallButton("Save##saveGNE")) {
 #           ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
-            pSaveName = saveNamePersistent;
+                    pSaveName = saveNamePersistent;
 #           endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
-            if (save(pSaveName))    {
+                    if (save(pSaveName))    {
 #           ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
-                ImGui::EmscriptenFileSystemHelper::Sync();
+                        ImGui::EmscriptenFileSystemHelper::Sync();
 #           endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
-            }
-		}
-		ImGui::SameLine();
+                    }
+                }
+                ImGui::SameLine();
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-		if (ImGui::SmallButton("Load##loadGNE")) {
+                if (ImGui::SmallButton("Load##loadGNE")) {
 #           ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
-            if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
+                    if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
 #           endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
-            load(pSaveName);
-		}
-		ImGui::SameLine();
+                    load(pSaveName);
+                }
+                ImGui::SameLine();
 #		endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
-		if (ImGui::SmallButton("Clear##clearGNE")) {
-		    clear();
-		}
-	    }
-	    ImGui::Separator();
-	}
+                if (ImGui::SmallButton("Clear##clearGNE")) {
+                    clear();
+                }
+            }
+            ImGui::Separator();
+        }
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 
         ImGui::EndChild();
@@ -632,7 +633,7 @@ void NodeGraphEditor::render()
 
         ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(1,1,1,0.2f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(1,1,1,0.35f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(1,1,1,0.5f));        
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(1,1,1,0.5f));
         /*bool splitterHovered = false,splitterActive=false;
         ImGui::ButtonExEx("##hsplitter1",ImVec2(splitterWidth,-1),&splitterHovered,&splitterActive);
         if (splitterHovered || splitterActive) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);*/
@@ -655,936 +656,947 @@ void NodeGraphEditor::render()
 
     const bool isMouseDraggingForScrolling = ImGui::IsMouseDragging(2, 0.0f);
 
-    ImGui::BeginChild("GraphNodeChildWindow", ImVec2(0,0), true);
+    if (ImGui::BeginChild("GraphNodeChildWindow", ImVec2(0,0), true))   {
 
-    // Create our child canvas
-    if (show_top_pane)   {
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0,0));
+        // Create our child canvas
+        if (show_top_pane)   {
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0,0));
 
-        ImGui::Checkbox("Show connection names.", &show_connection_names);
-    //if (io.FontAllowUserScaling)
-    {ImGui::SameLine(0,15);ImGui::Text("Use CTRL+MW to zoom. Scroll with MMB.");}
-        ImGui::SameLine(ImGui::GetWindowWidth()-120);
-        ImGui::Checkbox("Show grid", &show_grid);
-    ImGui::Text("%s","Double-click LMB on slots to remove their links (or SHIFT+LMB on links).");
-        ImGui::SameLine(ImGui::GetWindowWidth()-120);
-        // Color Mode
-        static const char* btnlbls[2]={"HSV##myColorBtnType","RGB##myColorBtnType"};
-        if (colorEditMode!=ImGuiColorEditMode_RGB)  {
-            if (ImGui::SmallButton(btnlbls[0])) {
-                colorEditMode = ImGuiColorEditMode_RGB;
-                ImGui::ColorEditMode(colorEditMode);
-            }
-        }
-        else if (colorEditMode!=ImGuiColorEditMode_HSV)  {
-            if (ImGui::SmallButton(btnlbls[1])) {
-                colorEditMode = ImGuiColorEditMode_HSV;
-                ImGui::ColorEditMode(colorEditMode);
-            }
-        }
-        ImGui::SameLine(0);ImGui::Text("Color Mode");
-        // ------------------
-        ImGui::PopStyleVar(2);
-    }
-
-
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1,1));
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
-    ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.color_background);
-    ImGui::BeginChild("scrolling_region", ImVec2(0,0), true, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollWithMouse);
-
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = ImGui::GetCurrentWindow();
-
-    // New: to ensure font scaling in subchilds of the nodes too, we MUST track g.Font->Scale,
-    // instead of ImGui::GetCurrentWindow()->FontWindowScale.
-    // Note that this change could break io.FontAllowUserScaling==true (To test, but it didn't work as expacted anyway)
-    float oldFontScaleToReset = g.Font->Scale;      // We'll clean up at the bottom
-    float fontScaleStored = oldFontWindowScale ? oldFontWindowScale : oldFontScaleToReset;
-    float& fontScaleToTrack = g.Font->Scale;
-
-    if (!io.FontAllowUserScaling)   {
-        // Set the correct font scale (3 lines)
-        fontScaleToTrack = fontScaleStored;
-        g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize;
-        g.FontSize = window->CalcFontSize();
-
-        if (io.KeyCtrl && ImGui::GetCurrentWindow()==GImGui->HoveredWindow && (io.MouseWheel || io.MouseClicked[2]))   {
-            // Zoom / Scale window
-            float new_font_scale = ImClamp(fontScaleToTrack + g.IO.MouseWheel * 0.075f, 0.50f, 2.50f);
-            if (io.MouseClicked[2]) new_font_scale = 1.f;   // MMB = RESET ZOOM
-            float scale = new_font_scale/fontScaleToTrack;
-            if (scale!=1)	{
-                scrolling=scrolling*scale;
-                // Set the correct font scale (3 lines), and store it
-                fontScaleStored = fontScaleToTrack = new_font_scale;
-                g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize;
-                g.FontSize = window->CalcFontSize();
-            }
-        }
-    }
-
-    // fixes zooming just a bit
-    bool nodesHaveZeroSize = false;
-    const float currentFontWindowScale = !io.FontAllowUserScaling ? fontScaleStored : ImGui::GetCurrentWindow()->FontWindowScale;
-    if (oldFontWindowScale==0.f) {
-        oldFontWindowScale = currentFontWindowScale;
-        nodesHaveZeroSize = true;   // at start or after clear()
-        scrolling = ImGui::GetWindowSize()*.5f;
-    }
-    else if (oldFontWindowScale!=currentFontWindowScale) {
-        nodesHaveZeroSize = true;
-        for (int i=0,isz=nodes.size();i<isz;i++)    {
-            Node* node = nodes[i];
-            node->Size = ImVec2(0,0);   // we must reset the size
-        }
-        // These two lines makes the scaling work around the mouse position AFAICS
-	if (io.FontAllowUserScaling)	{
-	    const ImVec2 delta = (io.MousePos-ImGui::GetCursorScreenPos());//-ImGui::GetWindowSize()*.5f));
-	    scrolling+=(delta*currentFontWindowScale-delta*oldFontWindowScale)/currentFontWindowScale;
-	    /*ImGuiWindow* window = ImGui::GetCurrentWindow();
-	    float scale = currentFontWindowScale / oldFontWindowScale;
-	    ImVec2 oldWindowSize = window->Size/scale;
-	    const ImVec2 offset = window->Size * (1.0f - scale) * (io.MousePos - window->Pos) / window->Size;
-	    */
-	    //------------------------------------------------------------------------
-	}
-        oldFontWindowScale = currentFontWindowScale;
-        maxConnectorNameWidth = 0.f;
-    }
-
-    const float NODE_SLOT_RADIUS = style.node_slots_radius*currentFontWindowScale;
-    const float NODE_SLOT_RADIUS_SQUARED = (NODE_SLOT_RADIUS*NODE_SLOT_RADIUS);
-    const ImVec2& NODE_WINDOW_PADDING = style.node_window_padding;
-    const float MOUSE_DELTA_SQUARED = io.MouseDelta.x*io.MouseDelta.x+io.MouseDelta.y*io.MouseDelta.y;
-    const float MOUSE_DELTA_SQUARED_THRESHOLD = NODE_SLOT_RADIUS_SQUARED * 0.05f;    // We don't detect "mouse release" events while dragging links onto slots. Instead we check that our mouse delta is small enough. Otherwise we couldn't hover other slots while dragging links.
-
-    const float baseNodeWidth = nodesBaseWidth*currentFontWindowScale;
-    float currentNodeWidth = baseNodeWidth;
-    ImGui::PushItemWidth(currentNodeWidth);
-
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    draw_list->ChannelsSplit(5);
-
-    ImVec2 canvasSize = ImGui::GetWindowSize();
-    ImVec2 win_pos = ImGui::GetCursorScreenPos();
-    if (node_to_center_view_around && !nodesHaveZeroSize) {scrolling = node_to_center_view_around->GetPos(currentFontWindowScale)+node_to_center_view_around->Size*0.5f;node_to_center_view_around = NULL;}
-    ImVec2 effectiveScrolling = scrolling - canvasSize*.5f;
-    ImVec2 offset = ImGui::GetCursorScreenPos() - effectiveScrolling;
-    ImVec2 offset2 = ImGui::GetCursorPos() - effectiveScrolling;//scrolling;
-
-
-
-    // Display grid
-    if (show_grid)
-    {
-        const ImU32& GRID_COLOR = style.color_grid;
-        const float& GRID_SZ = currentFontWindowScale * style.grid_size;
-        const float grid_Line_width = currentFontWindowScale * style.grid_line_width;
-        for (float x = fmodf(offset2.x,GRID_SZ); x < canvasSize.x; x += GRID_SZ)
-            draw_list->AddLine(ImVec2(x,0.0f)+win_pos, ImVec2(x,canvasSize.y)+win_pos, GRID_COLOR,grid_Line_width);
-        for (float y = fmodf(offset2.y,GRID_SZ); y < canvasSize.y; y += GRID_SZ)
-            draw_list->AddLine(ImVec2(0.0f,y)+win_pos, ImVec2(canvasSize.x,y)+win_pos, GRID_COLOR,grid_Line_width);
-    }
-
-    const ImVec2 link_cp(style.link_control_point_distance * currentFontWindowScale,0); // Bezier control point of the links
-    const float link_line_width = style.link_line_width * currentFontWindowScale;
-
-    static ImRect mouseRectangularSelectionForNodes;
-    static bool mouseRectangularSelectionForNodesStarted = false;
-
-
-    // Clipping Data (used to cull nodes and/or links)
-    const bool enableNodeCulling = true;const bool enableLinkCulling = true;    // Tweakables
-    int numberOfCulledNodes = 0, numberOfCulledLinks = 0;
-    ImRect windowClipRect,linkClipRect;
-    if (enableNodeCulling || enableLinkCulling) {
-        ImVec2 windowClipRect0(win_pos.x-offset.x,win_pos.y-offset.y);
-        ImVec2 windowClipRect1 = windowClipRect0 + canvasSize;
-        if (enableLinkCulling) linkClipRect = ImRect(windowClipRect0+offset-link_cp-ImVec2(0,link_line_width),windowClipRect1+offset+link_cp+ImVec2(0,link_line_width));   // used to clip links
-        if (enableNodeCulling)  {
-            const float windowClipHalfExtraWidth = NODE_SLOT_RADIUS + (show_connection_names ? maxConnectorNameWidth : 0.f);  // Otherwise node names are culled too early
-            windowClipRect0.x-=     windowClipHalfExtraWidth;
-            windowClipRect1.x+=     windowClipHalfExtraWidth;
-            windowClipRect = ImRect(windowClipRect0,windowClipRect1);   // used to clip nodes (= windows)
-        }
-    }
-    // End Clipping Data
-
-    const bool isMouseHoveringWindow = ImGui::IsMouseHoveringWindow();
-
-    const bool isLMBClicked = ImGui::IsMouseClicked(0);
-    const bool isLMBDoubleClicked = ImGui::IsMouseDoubleClicked(0);
-    const bool isMouseDraggingForMovingNodes = ImGui::IsMouseDragging(0, 8.0f);	// This is not enough for a node to be actually moved
-
-    // Display links variable (their display code have been moved down)
-    const bool cantDragAnything = isMouseDraggingForScrolling || mouseRectangularSelectionForNodesStarted;
-    bool isLMBDraggingForMakingLinks = !cantDragAnything && ImGui::IsMouseDragging(0, 0.0f);
-    bool isDragNodeValid = dragNode.isValid();
-    const bool mustCheckForNearestLink = isMouseHoveringWindow && !isLMBDraggingForMakingLinks && io.KeyShift;
-
-
-    // Display nodes
-    //ImGui::PushStyleColor(ImGuiCol_Header,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderActive,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderHovered,transparent);    // moved inside the loop to wrap the ImGui::TreeNode()
-    bool isSomeNodeMoving = false;Node *node_to_fire_edit_callback = NULL,* node_to_paste_from_copy_source = NULL;bool mustDeleteANodeSoon = false;
-    ImGui::ColorEditMode(colorEditMode);
-
-    const float nodeTitleBarBgHeight = ImGui::GetTextLineHeightWithSpacing() + NODE_WINDOW_PADDING.y;
-    Node* nodeThatIsBeingEditing = NULL;
-    const float textSizeButtonPaste = ImGui::CalcTextSize(NodeGraphEditor::CloseCopyPasteChars[0]).x;
-    const float textSizeButtonCopy = ImGui::CalcTextSize(NodeGraphEditor::CloseCopyPasteChars[1]).x;
-    const float textSizeButtonX = ImGui::CalcTextSize(NodeGraphEditor::CloseCopyPasteChars[2]).x;
-    int activeNodeIndex = -1;
-    const ImGuiStyle& mainStyle = ImGui::GetStyle();
-    const ImVec4& defaultTextColor = mainStyle.Colors[ImGuiCol_Text];
-    for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
-    {
-        Node* node = nodes[node_idx];
-        const ImVec2 nodePos = node->GetPos(currentFontWindowScale);
-        if (activeNode==node) activeNodeIndex = node_idx;
-
-        // culling attempt
-        if (enableNodeCulling && !nodesHaveZeroSize) {
-            const ImRect cullRect(nodePos,nodePos+node->Size);
-            if (!windowClipRect.Overlaps(cullRect)) {
-                ++numberOfCulledNodes;
-                continue;
-            }
-        }        
-
-        if (node->baseWidthOverride>0) {
-            currentNodeWidth = node->baseWidthOverride*currentFontWindowScale;
-            ImGui::PushItemWidth(currentNodeWidth);
-        }
-        else currentNodeWidth = baseNodeWidth;
-
-        ImGui::PushID((const void*) node);
-        ImVec2 node_rect_min = offset + nodePos;
-
-        // Display node contents first
-        draw_list->ChannelsSetCurrent(activeNodeIndex==node_idx ? 4 : 2); // Foreground
-        bool old_any_active = ImGui::IsAnyItemActive();
-        ImGui::SetCursorScreenPos(node_rect_min + NODE_WINDOW_PADDING);
-
-        bool nodeInEditMode = false;
-        ImGui::BeginGroup(); // Lock horizontal position
-        ImGui::SetNextTreeNodeOpen(node->isOpen,ImGuiSetCond_Always);
-
-        ImU32 titleTextColorU32 = 0, titleBgColorU32 = 0;float titleBgGradient = -1.f;
-        node->getDefaultTitleBarColors(titleTextColorU32,titleBgColorU32,titleBgGradient);
-
-        ImVec4 titleTextColor = node->overrideTitleTextColor ? ImGui::ColorConvertU32ToFloat4(node->overrideTitleTextColor) : titleTextColorU32 ? ImGui::ColorConvertU32ToFloat4(titleTextColorU32) : style.color_node_title;
-        if (titleTextColor.w==0.f) titleTextColor = defaultTextColor;
-        ImGui::PushStyleColor(ImGuiCol_Text,titleTextColor);    // titleTextColor (these 3 lines can be moved down to leave the TreeNode triangle always 'defaultTextColor')
-
-        ImGui::PushStyleColor(ImGuiCol_Header,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderActive,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderHovered,transparent);    // Moved from outside loop
-        if (ImGui::TreeNode(node,"%s","")) {ImGui::TreePop();node->isOpen = true;}
-        else node->isOpen = false;
-        ImGui::PopStyleColor(3);   // Moved from outside loop
-        ImGui::SameLine(0,2);
-
-        // titleTextColor: the 3 lines above can be moved here  to leave the TreeNode triangle always 'defaultTextColor'
-        static char NewNodeName[IMGUINODE_MAX_NAME_LENGTH]="";
-        static bool mustStartEditingNodeName = false;
-        if (!node->isInEditingMode) {
-            ImGui::Text("%s",node->Name);
-            if (ImGui::IsItemHovered()) {
-                const char* tooltip = node->getTooltip();
-                if (tooltip && tooltip[0]!='\0') ImGui::SetTooltip("%s",tooltip);
-                if (isLMBDoubleClicked) {
-                    nodeThatIsBeingEditing = node;
-                    node->isInEditingMode = mustStartEditingNodeName = true;
-                    strcpy(&NewNodeName[0],node->Name);
+            ImGui::Checkbox("Show connection names.", &show_connection_names);
+            //if (io.FontAllowUserScaling)
+            {ImGui::SameLine(0,15);ImGui::Text("Use CTRL+MW to zoom. Scroll with MMB.");}
+            ImGui::SameLine(ImGui::GetWindowWidth()-120);
+            ImGui::Checkbox("Show grid", &show_grid);
+            ImGui::Text("%s","Double-click LMB on slots to remove their links (or SHIFT+LMB on links).");
+            ImGui::SameLine(ImGui::GetWindowWidth()-120);
+            // Color Mode
+            static const char* btnlbls[2]={"HSV##myColorBtnType","RGB##myColorBtnType"};
+            if (colorEditMode!=ImGuiColorEditMode_RGB)  {
+                if (ImGui::SmallButton(btnlbls[0])) {
+                    colorEditMode = ImGuiColorEditMode_RGB;
+                    ImGui::ColorEditMode(colorEditMode);
                 }
             }
-        }
-        else {
-            if (mustStartEditingNodeName) {ImGui::SetKeyboardFocusHere();}
-            if (ImGui::InputText("###imguiNodeGraphEditorNodeRename",NewNodeName,IMGUINODE_MAX_NAME_LENGTH,ImGuiInputTextFlags_EnterReturnsTrue))   {
-                if (NewNodeName[0]!='\0' && strcmp(node->Name,NewNodeName)!=0) overrideNodeName(node,NewNodeName);
-                node->isInEditingMode = mustStartEditingNodeName = false;
-                nodeThatIsBeingEditing = NULL;
+            else if (colorEditMode!=ImGuiColorEditMode_HSV)  {
+                if (ImGui::SmallButton(btnlbls[1])) {
+                    colorEditMode = ImGuiColorEditMode_HSV;
+                    ImGui::ColorEditMode(colorEditMode);
+                }
             }
-            else if (!mustStartEditingNodeName && !ImGui::IsItemActive()) {
-                node->isInEditingMode = mustStartEditingNodeName = false;
-            }
-            mustStartEditingNodeName = false;
-        }
-        ImGui::PopStyleColor();                                 // titleTextColor
-
-    // Note: if node->isOpen, we'll draw the buttons later, because we need node->Size that is not known
-    // BUTTONS ========================================================
-    const bool canPaste = sourceCopyNode && sourceCopyNode->typeID==node->typeID;
-    const bool canCopy = node->canBeCopied();
-    static const ImVec4 transparentColor(1,1,1,0);
-    const ImVec2 nodeTitleBarButtonsStartCursor = node->isOpen ? ImGui::GetCursorPos() : ImVec2(0,0);
-    if (!node->isOpen && !node->isInEditingMode)    {
-        ImGui::SameLine();
-        //== Actual code to draw buttons (same code is copied below) =====================
-        ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(0.75,0.75,0.75,0.5));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.75,0.75,0.75,0.77));
-        ImGui::PushStyleColor(ImGuiCol_Text,titleTextColor);
-        ImGui::PushID("NodeButtons");
-        if (show_node_copy_paste_buttons)   {
-        static const ImVec2 vec2zero(0,0);
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,vec2zero);
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing,vec2zero);
-        if (canPaste) {
-            if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[2])) {
-            node_to_paste_from_copy_source = node_hovered_in_scene = node;
-            }
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
-            ImGui::SameLine(0);
-        }
-        if (canCopy)	{
-            if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[1])) {
-            node_hovered_in_scene = node;
-            copyNode(node);
-            }
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
-            ImGui::SameLine(0);
-        }
-        }
-        if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[0])) {
-        node_hovered_in_scene = node;
-        if (!hasLinks(node))  {menuNode = node;mustDeleteANodeSoon=true;}
-        else {
-            menuNode = node;
-            open_delete_only_context_menu = true;  // will ask to delete node later
-        }
-        }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Delete");
-        if (show_node_copy_paste_buttons) ImGui::PopStyleVar(2);
-        ImGui::PopID();
-        ImGui::PopStyleColor(4);
-        //== End actual code to draw buttons (same code is copied below) ====================
-	}
-	//=================================================================
-
-	ImGui::Spacing();
-
-        if (node->isOpen)
-        {
-            if (!node->isInEditingMode) ImGui::Spacing();
-            // this code goes into a virtual method==============================
-            nodeInEditMode|=node->render(currentNodeWidth);
-            //===================================================================
-            isLMBDraggingForMakingLinks&=!nodeInEditMode;   // Don't create links while dragging the mouse to edit node values
-        }
-        ImGui::EndGroup();
-        if (nodeInEditMode) node->startEditingTime = -1.f;
-        else if (node->startEditingTime!=0.f) {
-            //if (nodeCallback)   {
-            if (node->startEditingTime<0) node->startEditingTime = ImGui::GetTime();
-            else if (ImGui::GetTime()-node->startEditingTime>nodeEditedTimeThreshold) {
-                node->startEditingTime = 0.f;
-                node_to_fire_edit_callback = node;
-            }
-            //}
-            //else node->startEditingTime = 0.f;
+            ImGui::SameLine(0);ImGui::Text("Color Mode");
+            // ------------------
+            ImGui::PopStyleVar(2);
         }
 
-        // Save the size of what we have emitted and whether any of the widgets are being used
-        bool node_widgets_active = (!old_any_active && ImGui::IsAnyItemActive());
-        node->Size = ImGui::GetItemRectSize() + NODE_WINDOW_PADDING + NODE_WINDOW_PADDING;
-        ImVec2 node_rect_max = node_rect_min + node->Size;
 
-	// Go backwards and display title bar buttons if node->isOpen
-    // BUTTONS ========================================================
-    if (node->Size.x!=0 && !node->isInEditingMode)    {
-        const ImVec2 cursorPosToRestore = ImGui::GetCursorPos();
-        ImGui::SetCursorPos(nodeTitleBarButtonsStartCursor);
-        //--------------------------------------------
-        ImGui::SameLine(-effectiveScrolling.x+nodePos.x+node->Size.x-textSizeButtonX-10
-                -(show_node_copy_paste_buttons ?
-                  (
-                      (canCopy?(textSizeButtonCopy+2):0) +
-                      (canPaste?(textSizeButtonPaste+2):0)
-                      )
-                : 0)
-                ,0);
-        //== Actual code to draw buttons (same code is copied below) =====================
-        ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(0.75,0.75,0.75,0.5));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.75,0.75,0.75,0.77));
-        ImGui::PushStyleColor(ImGuiCol_Text,titleTextColor);
-        ImGui::PushID("NodeButtons");
-        if (show_node_copy_paste_buttons)   {
-        static const ImVec2 vec2zero(0,0);
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,vec2zero);
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing,vec2zero);
-        if (canPaste) {
-            if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[2])) {
-            node_to_paste_from_copy_source = node_hovered_in_scene = node;
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1,1));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
+        ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.color_background);
+        if (ImGui::BeginChild("scrolling_region", ImVec2(0,0), true, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollWithMouse))  {
+
+            ImGuiContext& g = *GImGui;
+            ImGuiWindow* window = ImGui::GetCurrentWindow();
+
+            // New: to ensure font scaling in subchilds of the nodes too, we MUST track g.Font->Scale,
+            // instead of ImGui::GetCurrentWindow()->FontWindowScale.
+            // Note that this change could break io.FontAllowUserScaling==true (To test, but it didn't work as expacted anyway)
+            float oldFontScaleToReset = g.Font->Scale;      // We'll clean up at the bottom
+            float fontScaleStored = oldFontWindowScale ? oldFontWindowScale : oldFontScaleToReset;
+            float& fontScaleToTrack = g.Font->Scale;
+
+            if (!io.FontAllowUserScaling)   {
+                // Set the correct font scale (3 lines)
+                fontScaleToTrack = fontScaleStored;
+                g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize;
+                g.FontSize = window->CalcFontSize();
+
+                if (io.KeyCtrl && ImGui::GetCurrentWindow()==GImGui->HoveredWindow && (io.MouseWheel || io.MouseClicked[2]))   {
+                    // Zoom / Scale window
+                    float new_font_scale = ImClamp(fontScaleToTrack + g.IO.MouseWheel * 0.075f, 0.50f, 2.50f);
+                    if (io.MouseClicked[2]) new_font_scale = 1.f;   // MMB = RESET ZOOM
+                    float scale = new_font_scale/fontScaleToTrack;
+                    if (scale!=1)	{
+                        scrolling=scrolling*scale;
+                        // Set the correct font scale (3 lines), and store it
+                        fontScaleStored = fontScaleToTrack = new_font_scale;
+                        g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize;
+                        g.FontSize = window->CalcFontSize();
+                    }
+                }
             }
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
-            ImGui::SameLine(0);
-        }
-        if (canCopy)	{
-            if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[1])) {
-            node_hovered_in_scene = node;
-            copyNode(node);
+
+            // fixes zooming just a bit
+            bool nodesHaveZeroSize = false;
+            const float currentFontWindowScale = !io.FontAllowUserScaling ? fontScaleStored : ImGui::GetCurrentWindow()->FontWindowScale;
+            if (oldFontWindowScale==0.f) {
+                oldFontWindowScale = currentFontWindowScale;
+                nodesHaveZeroSize = true;   // at start or after clear()
+                scrolling = ImGui::GetWindowSize()*.5f;
             }
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
-            ImGui::SameLine(0);
-        }
-        }
-        if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[0])) {
-        node_hovered_in_scene = node;
-        if (!hasLinks(node))  {menuNode = node;mustDeleteANodeSoon=true;}
-        else {
-            menuNode = node;
-            open_delete_only_context_menu = true;  // will ask to delete node later
-        }
-        }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Delete");
-        if (show_node_copy_paste_buttons) ImGui::PopStyleVar(2);
-        ImGui::PopID();
-        ImGui::PopStyleColor(4);
-        //== End actual code to draw buttons (same code is copied below) ====================
-	    //-----------------------------------------------------------
-	    ImGui::SetCursorPos(cursorPosToRestore);
-	}
-	//=================================================================
+            else if (oldFontWindowScale!=currentFontWindowScale) {
+                nodesHaveZeroSize = true;
+                for (int i=0,isz=nodes.size();i<isz;i++)    {
+                    Node* node = nodes[i];
+                    node->Size = ImVec2(0,0);   // we must reset the size
+                }
+                // These two lines makes the scaling work around the mouse position AFAICS
+                if (io.FontAllowUserScaling)	{
+                    const ImVec2 delta = (io.MousePos-ImGui::GetCursorScreenPos());//-ImGui::GetWindowSize()*.5f));
+                    scrolling+=(delta*currentFontWindowScale-delta*oldFontWindowScale)/currentFontWindowScale;
+                    /*ImGuiWindow* window = ImGui::GetCurrentWindow();
+        float scale = currentFontWindowScale / oldFontWindowScale;
+        ImVec2 oldWindowSize = window->Size/scale;
+        const ImVec2 offset = window->Size * (1.0f - scale) * (io.MousePos - window->Pos) / window->Size;
+        */
+                    //------------------------------------------------------------------------
+                }
+                oldFontWindowScale = currentFontWindowScale;
+                maxConnectorNameWidth = 0.f;
+            }
+
+            const float NODE_SLOT_RADIUS = style.node_slots_radius*currentFontWindowScale;
+            const float NODE_SLOT_RADIUS_SQUARED = (NODE_SLOT_RADIUS*NODE_SLOT_RADIUS);
+            const ImVec2& NODE_WINDOW_PADDING = style.node_window_padding;
+            const float MOUSE_DELTA_SQUARED = io.MouseDelta.x*io.MouseDelta.x+io.MouseDelta.y*io.MouseDelta.y;
+            const float MOUSE_DELTA_SQUARED_THRESHOLD = NODE_SLOT_RADIUS_SQUARED * 0.05f;    // We don't detect "mouse release" events while dragging links onto slots. Instead we check that our mouse delta is small enough. Otherwise we couldn't hover other slots while dragging links.
+
+            const float baseNodeWidth = nodesBaseWidth*currentFontWindowScale;
+            float currentNodeWidth = baseNodeWidth;
+            ImGui::PushItemWidth(currentNodeWidth);
+
+            ImDrawList* draw_list = ImGui::GetWindowDrawList();
+            draw_list->ChannelsSplit(5);
+
+            ImVec2 canvasSize = ImGui::GetWindowSize();
+            ImVec2 win_pos = ImGui::GetCursorScreenPos();
+            if (node_to_center_view_around && !nodesHaveZeroSize) {scrolling = node_to_center_view_around->GetPos(currentFontWindowScale)+node_to_center_view_around->Size*0.5f;node_to_center_view_around = NULL;}
+            ImVec2 effectiveScrolling = scrolling - canvasSize*.5f;
+            ImVec2 offset = ImGui::GetCursorScreenPos() - effectiveScrolling;
+            ImVec2 offset2 = ImGui::GetCursorPos() - effectiveScrolling;//scrolling;
 
 
-        // Display node box
-        draw_list->ChannelsSetCurrent(activeNodeIndex == node_idx ? 3 : 1); // Background
-        ImGui::SetCursorScreenPos(node_rect_min);
-        ImGui::InvisibleButton("node##nodeinvbtn", node->Size);
-        if (ImGui::IsItemHovered()) {
-            if (!node_hovered_in_scene) {
-                node_hovered_in_scene = node;
-                menuNode = node;
-            }
-            if (ImGui::IsMouseClicked(1))   {
-        //menuNode = node;
-        open_context_menu=true;
-            }
-        }        
-        bool node_moving_active = !isMouseDraggingForScrolling && !nodeInEditMode && ImGui::IsItemActive() && !mouseRectangularSelectionForNodesStarted;
 
-        // Handle selected and active states
-        if (isLMBClicked && (node_widgets_active || node_moving_active))  {
-            if (!node->isSelected) {
-                if (!io.KeyCtrl) unselectAllNodes();
-                node->isSelected = true;activeNode = node;activeNodeIndex=node_idx;
-            }
-            else if (io.KeyCtrl) {
-                //unselectNode(node); // We must unwrap it, so we can store th new 'activeNodeIndex' for later use
-                node->isSelected=false;
-                if (node==activeNode) {activeNode = NULL;activeNodeIndex=findANewActiveNode();}
-            }
-            else if (io.KeyShift || (isLMBDoubleClicked && !node->isInEditingMode)/*|| io.MouseDelta.x*io.MouseDelta.x+io.MouseDelta.y*io.MouseDelta.y < 0.000000001f*/)    // Good idea to enable the correct behavior without pressing SHIFT, but the latter condition is almost always fullfilled...
+            // Display grid
+            if (show_grid)
             {
-                unselectAllNodes();
-                node->isSelected = true;activeNode = node;activeNodeIndex=node_idx;
+                const ImU32& GRID_COLOR = style.color_grid;
+                const float& GRID_SZ = currentFontWindowScale * style.grid_size;
+                const float grid_Line_width = currentFontWindowScale * style.grid_line_width;
+                for (float x = fmodf(offset2.x,GRID_SZ); x < canvasSize.x; x += GRID_SZ)
+                    draw_list->AddLine(ImVec2(x,0.0f)+win_pos, ImVec2(x,canvasSize.y)+win_pos, GRID_COLOR,grid_Line_width);
+                for (float y = fmodf(offset2.y,GRID_SZ); y < canvasSize.y; y += GRID_SZ)
+                    draw_list->AddLine(ImVec2(0.0f,y)+win_pos, ImVec2(canvasSize.x,y)+win_pos, GRID_COLOR,grid_Line_width);
             }
-            else {
-                activeNode = node;activeNodeIndex=node_idx;
+
+            const ImVec2 link_cp(style.link_control_point_distance * currentFontWindowScale,0); // Bezier control point of the links
+            const float link_line_width = style.link_line_width * currentFontWindowScale;
+
+            ImVec2& mouseRectangularSelectionForNodesMin = rectangularSelectionData.mouseRectangularSelectionForNodesMin;
+            ImVec2& mouseRectangularSelectionForNodesMax = rectangularSelectionData.mouseRectangularSelectionForNodesMax;
+            bool& mouseRectangularSelectionForNodesStarted = rectangularSelectionData.mouseRectangularSelectionForNodesStarted;
+
+
+            // Clipping Data (used to cull nodes and/or links)
+            const bool enableNodeCulling = true;const bool enableLinkCulling = true;    // Tweakables
+            int numberOfCulledNodes = 0, numberOfCulledLinks = 0;
+            ImRect windowClipRect,linkClipRect;
+            if (enableNodeCulling || enableLinkCulling) {
+                ImVec2 windowClipRect0(win_pos.x-offset.x,win_pos.y-offset.y);
+                ImVec2 windowClipRect1 = windowClipRect0 + canvasSize;
+                if (enableLinkCulling) linkClipRect = ImRect(windowClipRect0+offset-link_cp-ImVec2(0,link_line_width),windowClipRect1+offset+link_cp+ImVec2(0,link_line_width));   // used to clip links
+                if (enableNodeCulling)  {
+                    const float windowClipHalfExtraWidth = NODE_SLOT_RADIUS + (show_connection_names ? maxConnectorNameWidth : 0.f);  // Otherwise node names are culled too early
+                    windowClipRect0.x-=     windowClipHalfExtraWidth;
+                    windowClipRect1.x+=     windowClipHalfExtraWidth;
+                    windowClipRect = ImRect(windowClipRect0,windowClipRect1);   // used to clip nodes (= windows)
+                }
             }
-        }
+            // End Clipping Data
 
-        // Perform selected nodes move
-        if (node_moving_active && node->isSelected && !isDragNodeValid && isMouseDraggingForMovingNodes) {
-            const ImVec2 mouseDeltaPos = io.MouseDelta/currentFontWindowScale;
-            for (int j=0,jsz=nodes.size();j<jsz;j++) {
-                Node* jn = nodes[j];
-                if (jn->isSelected) jn->Pos = jn->Pos + mouseDeltaPos;
-            }
-            isSomeNodeMoving=true;
-        }
+            const bool isMouseHoveringWindow = ImGui::IsMouseHoveringWindow();
 
-        const ImU32& node_bg_color = (node_hovered_in_list == node || node_hovered_in_scene == node) ? style.color_node_hovered :
-												       (activeNode == node ? style.color_node_active :
-												       (node->isSelected ? style.color_node_selected :
-												       style.color_node));
+            const bool isLMBClicked = ImGui::IsMouseClicked(0);
+            const bool isLMBDoubleClicked = ImGui::IsMouseDoubleClicked(0);
+            const bool isMouseDraggingForMovingNodes = isMouseHoveringWindow && ImGui::IsMouseDragging(0, 8.0f);	// This is not enough for a node to be actually moved
 
-        draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, style.node_rounding); // Bg
+            // Display links variable (their display code have been moved down)
+            const bool cantDragAnything = isMouseDraggingForScrolling || mouseRectangularSelectionForNodesStarted;
+            bool isLMBDraggingForMakingLinks = isMouseHoveringWindow && !cantDragAnything && ImGui::IsMouseDragging(0, 0.0f);
+            bool isDragNodeValid = dragNode.isValid();
+            const bool mustCheckForNearestLink = isMouseHoveringWindow && !isLMBDraggingForMakingLinks && io.KeyShift;
 
-        // Node Title Bg Color
-        const ImU32 nodeTitleBgColor = node->overrideTitleBgColor ? node->overrideTitleBgColor : titleBgColorU32 ? titleBgColorU32 : style.color_node_title_background;
-        if ((nodeTitleBgColor&IM_COL32_A_MASK)!=0) {
-//#           define SKIP_VERTICAL_GRADIENT
+
+            // Display nodes
+            //ImGui::PushStyleColor(ImGuiCol_Header,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderActive,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderHovered,transparent);    // moved inside the loop to wrap the ImGui::TreeNode()
+            bool isSomeNodeMoving = false;bool mustDeleteANodeSoon = false;
+            ImGui::ColorEditMode(colorEditMode);
+
+            const float nodeTitleBarBgHeight = ImGui::GetTextLineHeightWithSpacing() + NODE_WINDOW_PADDING.y;
+            Node* nodeThatIsBeingEditing = NULL;
+            const float textSizeButtonPaste = ImGui::CalcTextSize(NodeGraphEditor::CloseCopyPasteChars[0]).x;
+            const float textSizeButtonCopy = ImGui::CalcTextSize(NodeGraphEditor::CloseCopyPasteChars[1]).x;
+            const float textSizeButtonX = ImGui::CalcTextSize(NodeGraphEditor::CloseCopyPasteChars[2]).x;
+            int activeNodeIndex = -1;
+            const ImGuiStyle& mainStyle = ImGui::GetStyle();
+            const ImVec4& defaultTextColor = mainStyle.Colors[ImGuiCol_Text];
+            for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
+            {
+                Node* node = nodes[node_idx];
+                const ImVec2 nodePos = node->GetPos(currentFontWindowScale);
+                if (activeNode==node) activeNodeIndex = node_idx;
+
+                // culling attempt
+                if (enableNodeCulling && !nodesHaveZeroSize) {
+                    const ImRect cullRect(nodePos,nodePos+node->Size);
+                    if (!windowClipRect.Overlaps(cullRect)) {
+                        ++numberOfCulledNodes;
+                        continue;
+                    }
+                }
+
+                if (node->baseWidthOverride>0) {
+                    currentNodeWidth = node->baseWidthOverride*currentFontWindowScale;
+                    ImGui::PushItemWidth(currentNodeWidth);
+                }
+                else currentNodeWidth = baseNodeWidth;
+
+                ImGui::PushID((const void*) node);
+                ImVec2 node_rect_min = offset + nodePos;
+
+                // Display node contents first
+                draw_list->ChannelsSetCurrent(activeNodeIndex==node_idx ? 4 : 2); // Foreground
+                bool old_any_active = ImGui::IsAnyItemActive();
+                ImGui::SetCursorScreenPos(node_rect_min + NODE_WINDOW_PADDING);
+
+                bool nodeInEditMode = false;
+                ImGui::BeginGroup(); // Lock horizontal position
+                ImGui::SetNextTreeNodeOpen(node->isOpen,ImGuiSetCond_Always);
+
+                ImU32 titleTextColorU32 = 0, titleBgColorU32 = 0;float titleBgGradient = -1.f;
+                node->getDefaultTitleBarColors(titleTextColorU32,titleBgColorU32,titleBgGradient);
+
+                ImVec4 titleTextColor = node->overrideTitleTextColor ? ImGui::ColorConvertU32ToFloat4(node->overrideTitleTextColor) : titleTextColorU32 ? ImGui::ColorConvertU32ToFloat4(titleTextColorU32) : style.color_node_title;
+                if (titleTextColor.w==0.f) titleTextColor = defaultTextColor;
+                ImGui::PushStyleColor(ImGuiCol_Text,titleTextColor);    // titleTextColor (these 3 lines can be moved down to leave the TreeNode triangle always 'defaultTextColor')
+
+                ImGui::PushStyleColor(ImGuiCol_Header,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderActive,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderHovered,transparent);    // Moved from outside loop
+                if (ImGui::TreeNode(node,"%s","")) {ImGui::TreePop();node->isOpen = true;}
+                else node->isOpen = false;
+                ImGui::PopStyleColor(3);   // Moved from outside loop
+                ImGui::SameLine(0,2);
+
+                // titleTextColor: the 3 lines above can be moved here  to leave the TreeNode triangle always 'defaultTextColor'
+                static char NewNodeName[IMGUINODE_MAX_NAME_LENGTH]="";
+                static bool mustStartEditingNodeName = false;
+                if (!node->isInEditingMode) {
+                    ImGui::Text("%s",node->Name);
+                    if (ImGui::IsItemHovered()) {
+                        const char* tooltip = node->getTooltip();
+                        if (tooltip && tooltip[0]!='\0') ImGui::SetTooltip("%s",tooltip);
+                        if (isLMBDoubleClicked) {
+                            nodeThatIsBeingEditing = node;
+                            node->isInEditingMode = mustStartEditingNodeName = true;
+                            strcpy(&NewNodeName[0],node->Name);
+                        }
+                    }
+                }
+                else {
+                    if (mustStartEditingNodeName) {ImGui::SetKeyboardFocusHere();}
+                    if (ImGui::InputText("###imguiNodeGraphEditorNodeRename",NewNodeName,IMGUINODE_MAX_NAME_LENGTH,ImGuiInputTextFlags_EnterReturnsTrue))   {
+                        if (NewNodeName[0]!='\0' && strcmp(node->Name,NewNodeName)!=0) overrideNodeName(node,NewNodeName);
+                        node->isInEditingMode = mustStartEditingNodeName = false;
+                        nodeThatIsBeingEditing = NULL;
+                    }
+                    else if (!mustStartEditingNodeName && !ImGui::IsItemActive()) {
+                        node->isInEditingMode = mustStartEditingNodeName = false;
+                    }
+                    mustStartEditingNodeName = false;
+                }
+                ImGui::PopStyleColor();                                 // titleTextColor
+
+                // Note: if node->isOpen, we'll draw the buttons later, because we need node->Size that is not known
+                // BUTTONS ========================================================
+                const bool canPaste = sourceCopyNode && sourceCopyNode->typeID==node->typeID;
+                const bool canCopy = node->canBeCopied();
+                static const ImVec4 transparentColor(1,1,1,0);
+                const ImVec2 nodeTitleBarButtonsStartCursor = node->isOpen ? ImGui::GetCursorPos() : ImVec2(0,0);
+                if (!node->isOpen && !node->isInEditingMode)    {
+                    ImGui::SameLine();
+                    //== Actual code to draw buttons (same code is copied below) =====================
+                    ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(0.75,0.75,0.75,0.5));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.75,0.75,0.75,0.77));
+                    ImGui::PushStyleColor(ImGuiCol_Text,titleTextColor);
+                    ImGui::PushID("NodeButtons");
+                    if (show_node_copy_paste_buttons)   {
+                        static const ImVec2 vec2zero(0,0);
+                        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,vec2zero);
+                        ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing,vec2zero);
+                        if (canPaste) {
+                            if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[2])) {
+                                node_to_paste_from_copy_source = node_hovered_in_scene = node;
+                            }
+                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
+                            ImGui::SameLine(0);
+                        }
+                        if (canCopy)	{
+                            if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[1])) {
+                                node_hovered_in_scene = node;
+                                copyNode(node);
+                            }
+                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
+                            ImGui::SameLine(0);
+                        }
+                    }
+                    if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[0])) {
+                        node_hovered_in_scene = node;
+                        if (!hasLinks(node))  {menuNode = node;mustDeleteANodeSoon=true;}
+                        else {
+                            menuNode = node;
+                            open_delete_only_context_menu = true;  // will ask to delete node later
+                        }
+                    }
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Delete");
+                    if (show_node_copy_paste_buttons) ImGui::PopStyleVar(2);
+                    ImGui::PopID();
+                    ImGui::PopStyleColor(4);
+                    //== End actual code to draw buttons (same code is copied below) ====================
+                }
+                //=================================================================
+
+                ImGui::Spacing();
+
+                if (node->isOpen)
+                {
+                    if (!node->isInEditingMode) ImGui::Spacing();
+                    // ------------------------------------------------------------------
+                    //ImGui::BeginGroup();
+                    // this code goes into a virtual method==============================
+                    nodeInEditMode|=node->render(currentNodeWidth);
+                    //===================================================================
+                    //ImGui::EndGroup();
+                    //-------------------------------------------------------------------
+                    isLMBDraggingForMakingLinks&=!nodeInEditMode;   // Don't create links while dragging the mouse to edit node values
+                }
+                ImGui::EndGroup();
+                if (nodeInEditMode) node->startEditingTime = -1.f;
+                else if (node->startEditingTime!=0.f) {
+                    //if (nodeCallback)   {
+                    if (node->startEditingTime<0) node->startEditingTime = ImGui::GetTime();
+                    else if (ImGui::GetTime()-node->startEditingTime>nodeEditedTimeThreshold) {
+                        node->startEditingTime = 0.f;
+                        node_to_fire_edit_callback = node;
+                    }
+                    //}
+                    //else node->startEditingTime = 0.f;
+                }
+
+                // Save the size of what we have emitted and whether any of the widgets are being used
+                bool node_widgets_active = (!old_any_active && ImGui::IsAnyItemActive());
+                node->Size = ImGui::GetItemRectSize() + NODE_WINDOW_PADDING + NODE_WINDOW_PADDING;
+                ImVec2 node_rect_max = node_rect_min + node->Size;
+
+                // Go backwards and display title bar buttons if node->isOpen
+                // BUTTONS ========================================================
+                if (node->Size.x!=0 && !node->isInEditingMode)    {
+                    const ImVec2 cursorPosToRestore = ImGui::GetCursorPos();
+                    ImGui::SetCursorPos(nodeTitleBarButtonsStartCursor);
+                    //--------------------------------------------
+                    ImGui::SameLine(-effectiveScrolling.x+nodePos.x+node->Size.x-textSizeButtonX-10
+                                    -(show_node_copy_paste_buttons ?
+                                          (
+                                              (canCopy?(textSizeButtonCopy+2):0) +
+                                              (canPaste?(textSizeButtonPaste+2):0)
+                                              )
+                                        : 0)
+                                    ,0);
+                    //== Actual code to draw buttons (same code is copied below) =====================
+                    ImGui::PushStyleColor(ImGuiCol_Button,transparentColor);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(0.75,0.75,0.75,0.5));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.75,0.75,0.75,0.77));
+                    ImGui::PushStyleColor(ImGuiCol_Text,titleTextColor);
+                    ImGui::PushID("NodeButtons");
+                    if (show_node_copy_paste_buttons)   {
+                        static const ImVec2 vec2zero(0,0);
+                        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,vec2zero);
+                        ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing,vec2zero);
+                        if (canPaste) {
+                            if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[2])) {
+                                node_to_paste_from_copy_source = node_hovered_in_scene = node;
+                            }
+                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
+                            ImGui::SameLine(0);
+                        }
+                        if (canCopy)	{
+                            if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[1])) {
+                                node_hovered_in_scene = node;
+                                copyNode(node);
+                            }
+                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
+                            ImGui::SameLine(0);
+                        }
+                    }
+                    if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[0])) {
+                        node_hovered_in_scene = node;
+                        if (!hasLinks(node))  {menuNode = node;mustDeleteANodeSoon=true;}
+                        else {
+                            menuNode = node;
+                            open_delete_only_context_menu = true;  // will ask to delete node later
+                        }
+                    }
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Delete");
+                    if (show_node_copy_paste_buttons) ImGui::PopStyleVar(2);
+                    ImGui::PopID();
+                    ImGui::PopStyleColor(4);
+                    //== End actual code to draw buttons (same code is copied below) ====================
+                    //-----------------------------------------------------------
+                    ImGui::SetCursorPos(cursorPosToRestore);
+                }
+                //=================================================================
+
+
+                // Display node box
+                draw_list->ChannelsSetCurrent(activeNodeIndex == node_idx ? 3 : 1); // Background
+                ImGui::SetCursorScreenPos(node_rect_min);
+                ImGui::InvisibleButton("node##nodeinvbtn", node->Size);
+                if (ImGui::IsItemHovered()) {
+                    if (!node_hovered_in_scene) {
+                        node_hovered_in_scene = node;
+                        menuNode = node;
+                    }
+                    if (ImGui::IsMouseClicked(1))   {
+                        //menuNode = node;
+                        open_context_menu=true;
+                    }
+                }
+                bool node_moving_active = !isMouseDraggingForScrolling && !nodeInEditMode && ImGui::IsItemActive() && !mouseRectangularSelectionForNodesStarted;
+
+                // Handle selected and active states
+                if (isLMBClicked && (node_widgets_active || node_moving_active))  {
+                    if (!node->isSelected) {
+                        if (!io.KeyCtrl) unselectAllNodes();
+                        node->isSelected = true;activeNode = node;activeNodeIndex=node_idx;
+                    }
+                    else if (io.KeyCtrl) {
+                        //unselectNode(node); // We must unwrap it, so we can store th new 'activeNodeIndex' for later use
+                        node->isSelected=false;
+                        if (node==activeNode) {activeNode = NULL;activeNodeIndex=findANewActiveNode();}
+                    }
+                    else if (io.KeyShift || (isLMBDoubleClicked && !node->isInEditingMode)/*|| io.MouseDelta.x*io.MouseDelta.x+io.MouseDelta.y*io.MouseDelta.y < 0.000000001f*/)    // Good idea to enable the correct behavior without pressing SHIFT, but the latter condition is almost always fullfilled...
+                    {
+                        unselectAllNodes();
+                        node->isSelected = true;activeNode = node;activeNodeIndex=node_idx;
+                    }
+                    else {
+                        activeNode = node;activeNodeIndex=node_idx;
+                    }
+                }
+
+                // Perform selected nodes move
+                if (node_moving_active && node->isSelected && !isDragNodeValid && isMouseDraggingForMovingNodes) {
+                    const ImVec2 mouseDeltaPos = io.MouseDelta/currentFontWindowScale;
+                    for (int j=0,jsz=nodes.size();j<jsz;j++) {
+                        Node* jn = nodes[j];
+                        if (jn->isSelected) jn->Pos = jn->Pos + mouseDeltaPos;
+                    }
+                    isSomeNodeMoving=true;
+                }
+
+                const ImU32& node_bg_color = (node_hovered_in_list == node || node_hovered_in_scene == node) ? style.color_node_hovered :
+                                                                                                               (activeNode == node ? style.color_node_active :
+                                                                                                                                     (node->isSelected ? style.color_node_selected :
+                                                                                                                                                         style.color_node));
+
+                draw_list->AddRectFilled(node_rect_min, node_rect_max, node_bg_color, style.node_rounding); // Bg
+
+                // Node Title Bg Color
+                const ImU32 nodeTitleBgColor = node->overrideTitleBgColor ? node->overrideTitleBgColor : titleBgColorU32 ? titleBgColorU32 : style.color_node_title_background;
+                if ((nodeTitleBgColor&IM_COL32_A_MASK)!=0) {
+                    //#           define SKIP_VERTICAL_GRADIENT
 #           ifndef SKIP_VERTICAL_GRADIENT
-            float fillGradientFactor = node->overrideTitleBgColorGradient>=0.f ? node->overrideTitleBgColorGradient : titleBgGradient>=0.f ? titleBgGradient : style.color_node_title_background_gradient;//0.15f;
-            if (node->isSelected) fillGradientFactor = -fillGradientFactor; // or if (node==activeNode)
-            if (fillGradientFactor!=0.f)    {
-                if (node->isOpen) ImGui::NGE_Draw::ImDrawListAddRectWithVerticalGradient(draw_list,node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor,fillGradientFactor,IM_COL32_BLACK_TRANS,style.node_rounding,1|2);
-                else ImGui::NGE_Draw::ImDrawListAddRectWithVerticalGradient(draw_list,node_rect_min, node_rect_max, nodeTitleBgColor,fillGradientFactor,IM_COL32_BLACK_TRANS, style.node_rounding);
-            }
-            else {
-                if (node->isOpen) draw_list->AddRectFilled(node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor, style.node_rounding,1|2);
-                else draw_list->AddRectFilled(node_rect_min, node_rect_max, nodeTitleBgColor, style.node_rounding);
-            }
+                    float fillGradientFactor = node->overrideTitleBgColorGradient>=0.f ? node->overrideTitleBgColorGradient : titleBgGradient>=0.f ? titleBgGradient : style.color_node_title_background_gradient;//0.15f;
+                    if (node->isSelected) fillGradientFactor = -fillGradientFactor; // or if (node==activeNode)
+                    if (fillGradientFactor!=0.f)    {
+                        if (node->isOpen) ImGui::NGE_Draw::ImDrawListAddRectWithVerticalGradient(draw_list,node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor,fillGradientFactor,IM_COL32_BLACK_TRANS,style.node_rounding,1|2);
+                        else ImGui::NGE_Draw::ImDrawListAddRectWithVerticalGradient(draw_list,node_rect_min, node_rect_max, nodeTitleBgColor,fillGradientFactor,IM_COL32_BLACK_TRANS, style.node_rounding);
+                    }
+                    else {
+                        if (node->isOpen) draw_list->AddRectFilled(node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor, style.node_rounding,1|2);
+                        else draw_list->AddRectFilled(node_rect_min, node_rect_max, nodeTitleBgColor, style.node_rounding);
+                    }
 #           else // SKIP_VERTICAL_GRADIENT
-            if (node->isOpen) draw_list->AddRectFilled(node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor, style.node_rounding,1|2);
-            else draw_list->AddRectFilled(node_rect_min, node_rect_max, nodeTitleBgColor, style.node_rounding);
+                    if (node->isOpen) draw_list->AddRectFilled(node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor, style.node_rounding,1|2);
+                    else draw_list->AddRectFilled(node_rect_min, node_rect_max, nodeTitleBgColor, style.node_rounding);
 #           undef SKIP_VERTICAL_GRADIENT
 #           endif // SKIP_VERTICAL_GRADIENT
-        }
+                }
 
 
-        // Display Frame (this can be moved to the and of the foreground draw channel if we like)---------------------------
-    const ImU32& node_frame_color = (activeNode == node) ? style.color_node_frame_active :
-    (node->isSelected ? style.color_node_frame_selected :
-    ((node_hovered_in_list == node || node_hovered_in_scene == node) ? style.color_node_frame_hovered :
-    style.color_node_frame));
-        const float lineThickness = ((activeNode == node) ? 3.0f : (node->isSelected ? 2.0f : 1.f))*currentFontWindowScale;
-        draw_list->AddRect(node_rect_min, node_rect_max, node_frame_color, style.node_rounding,0x0F,lineThickness);    // Frame
+                // Display Frame (this can be moved to the and of the foreground draw channel if we like)---------------------------
+                const ImU32& node_frame_color = (activeNode == node) ? style.color_node_frame_active :
+                                                                       (node->isSelected ? style.color_node_frame_selected :
+                                                                                           ((node_hovered_in_list == node || node_hovered_in_scene == node) ? style.color_node_frame_hovered :
+                                                                                                                                                              style.color_node_frame));
+                const float lineThickness = ((activeNode == node) ? 3.0f : (node->isSelected ? 2.0f : 1.f))*currentFontWindowScale;
+                draw_list->AddRect(node_rect_min, node_rect_max, node_frame_color, style.node_rounding,0x0F,lineThickness);    // Frame
 
-        // Line below node name
-        if (node->isOpen) {
-            ImVec2 tmp1(node_rect_min.x,node_rect_min.y+nodeTitleBarBgHeight+1);
-            ImVec2 tmp2(node_rect_max.x,tmp1.y);
-            draw_list->AddLine(tmp1,tmp2,node_frame_color,lineThickness);
-        }
-        //-----------------------------------------------------------------------------------------------------------------
+                // Line below node name
+                if (node->isOpen) {
+                    ImVec2 tmp1(node_rect_min.x,node_rect_min.y+nodeTitleBarBgHeight+1);
+                    ImVec2 tmp2(node_rect_max.x,tmp1.y);
+                    draw_list->AddLine(tmp1,tmp2,node_frame_color,lineThickness);
+                }
+                //-----------------------------------------------------------------------------------------------------------------
 
 
-        // Display connectors
-        const ImVec2 oldCursorScreenPos = ImGui::GetCursorScreenPos();
-        const ImVec2 mouseScreenPos = io.MousePos;;
-        ImVec2 connectorScreenPos,deltaPos;const bool canDeleteLinks = true;
-        const bool mustDeleteLinkIfSlotIsHovered = canDeleteLinks && io.MouseDoubleClicked[0];
-        const bool mustDetectIfSlotIsHoveredForDragNDrop = !cantDragAnything && !isSomeNodeMoving && (!isDragNodeValid || isLMBDraggingForMakingLinks);
-        ImGui::PushStyleColor(ImGuiCol_Text,style.color_node_input_slots_names);
-        const float connectorBorderThickness = NODE_SLOT_RADIUS*0.25f; // lineThickness = ((activeNode == node) ? 3.0f : (node->isSelected ? 2.0f : 1.f))*currentFontWindowScale;
-        ImVec2 connectorNameSize(0,0);
-        for (int slot_idx = 0; slot_idx < node->InputsCount; slot_idx++)    {
-            connectorScreenPos = offset + node->GetInputSlotPos(slot_idx,currentFontWindowScale);
-            //draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, style.color_node_input_slots,connectorNumSegments);
-            ImGui::NGE_Draw::ImDrawListAddCircle(draw_list,connectorScreenPos,NODE_SLOT_RADIUS,style.color_node_input_slots,style.color_node_input_slots_border,style.node_slots_num_segments,connectorBorderThickness,true);
-            /*if ((style.color_node_input_slots & IM_COL32_A_MASK) != 0)  {
+                // Display connectors
+                const ImVec2 oldCursorScreenPos = ImGui::GetCursorScreenPos();
+                const ImVec2 mouseScreenPos = io.MousePos;;
+                ImVec2 connectorScreenPos,deltaPos;const bool canDeleteLinks = true;
+                const bool mustDeleteLinkIfSlotIsHovered = canDeleteLinks && io.MouseDoubleClicked[0];
+                const bool mustDetectIfSlotIsHoveredForDragNDrop = !cantDragAnything && !isSomeNodeMoving && (!isDragNodeValid || isLMBDraggingForMakingLinks);
+                ImGui::PushStyleColor(ImGuiCol_Text,style.color_node_input_slots_names);
+                const float connectorBorderThickness = NODE_SLOT_RADIUS*0.25f; // lineThickness = ((activeNode == node) ? 3.0f : (node->isSelected ? 2.0f : 1.f))*currentFontWindowScale;
+                ImVec2 connectorNameSize(0,0);
+                for (int slot_idx = 0; slot_idx < node->InputsCount; slot_idx++)    {
+                    connectorScreenPos = offset + node->GetInputSlotPos(slot_idx,currentFontWindowScale);
+                    //draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, style.color_node_input_slots,connectorNumSegments);
+                    ImGui::NGE_Draw::ImDrawListAddCircle(draw_list,connectorScreenPos,NODE_SLOT_RADIUS,style.color_node_input_slots,style.color_node_input_slots_border,style.node_slots_num_segments,connectorBorderThickness,true);
+                    /*if ((style.color_node_input_slots & IM_COL32_A_MASK) != 0)  {
                 const float a_max = IM_PI * 0.5f * 11.f/12.f;
                 draw_list->PathArcTo(connectorScreenPos, NODE_SLOT_RADIUS, IM_PI-a_max, IM_PI+a_max, 12);
                 draw_list->PathFill(style.color_node_input_slots);
             }*/
-            if (show_connection_names && node->InputNames[slot_idx][0]!='\0')   {
-                const char* name = node->InputNames[slot_idx];
-                if (name)   {
-                    connectorNameSize = ImGui::CalcTextSize(name);
-                    if (maxConnectorNameWidth<connectorNameSize.x) maxConnectorNameWidth = connectorNameSize.x;
-                    ImGui::SetCursorScreenPos(offset + node->GetInputSlotPos(slot_idx,currentFontWindowScale)-ImVec2(NODE_SLOT_RADIUS,0)-connectorNameSize);
-                    ImGui::Text("%s",name);
-                }
-            }
-            if (mustDetectIfSlotIsHoveredForDragNDrop || mustDeleteLinkIfSlotIsHovered)    {
-                deltaPos.x = mouseScreenPos.x-connectorScreenPos.x;
-                deltaPos.y = mouseScreenPos.y-connectorScreenPos.y;
-                if ((deltaPos.x*deltaPos.x)+(deltaPos.y*deltaPos.y)<NODE_SLOT_RADIUS_SQUARED)   {
-                    if (mustDeleteLinkIfSlotIsHovered)  {
-                        // remove the link
-                        //printf("To be removed: input slot %d.\n",slot_idx);fflush(stdout);
-                        for (int link_idx=0;link_idx<links.size();link_idx++)   {
-                            NodeLink& link = links[link_idx];
-                            if (link.OutputNode == node && slot_idx == link.OutputSlot)   {
-                                if (linkCallback) linkCallback(link,LS_DELETED,*this);
-                                // remove link
-                                if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
-                                links.resize(links.size()-1);
-                                --link_idx;
-                            }
+                    if (show_connection_names && node->InputNames[slot_idx][0]!='\0')   {
+                        const char* name = node->InputNames[slot_idx];
+                        if (name)   {
+                            connectorNameSize = ImGui::CalcTextSize(name);
+                            if (maxConnectorNameWidth<connectorNameSize.x) maxConnectorNameWidth = connectorNameSize.x;
+                            ImGui::SetCursorScreenPos(offset + node->GetInputSlotPos(slot_idx,currentFontWindowScale)-ImVec2(NODE_SLOT_RADIUS,0)-connectorNameSize);
+                            ImGui::Text("%s",name);
                         }
                     }
-                    else if (isLMBDraggingForMakingLinks && !isDragNodeValid) {
-                        dragNode.node = node;
-                        dragNode.outputSlotIdx = slot_idx;
-                        dragNode.inputSlotIdx = -1;
-                        dragNode.pos = mouseScreenPos;
-                        //printf("Start dragging.\n");fflush(stdout);
-                    }
-                    else if (isDragNodeValid && dragNode.node!=node
-                             && MOUSE_DELTA_SQUARED<MOUSE_DELTA_SQUARED_THRESHOLD   // optional... what I wanted is not to end a connection just when I hover another node...
-                             ) {
-                        // verify compatibility
-                        if (dragNode.inputSlotIdx!=-1)  {
-                            // drag goes from the output (dragNode.inputSlotIdx) slot of dragNode.node to the input slot of 'node':
-                            if (!avoidCircularLinkLoopsInOut || !isNodeReachableFrom(dragNode.node,true,node))  {
-                                if (allowOnlyOneLinkPerInputSlot)   {
-                                    // Remove all existing node links to node-slot_idx before adding new link:
-                                    for (int link_idx=0;link_idx<links.size();link_idx++)   {
-                                        NodeLink& link = links[link_idx];
-                                        if (link.OutputNode == node && slot_idx == link.OutputSlot)   {
-                                            if (linkCallback) linkCallback(link,LS_DELETED,*this);
-                                            // remove link
-                                            if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
-                                            links.resize(links.size()-1);
-                                            --link_idx;
-                                        }
+                    if (mustDetectIfSlotIsHoveredForDragNDrop || mustDeleteLinkIfSlotIsHovered)    {
+                        deltaPos.x = mouseScreenPos.x-connectorScreenPos.x;
+                        deltaPos.y = mouseScreenPos.y-connectorScreenPos.y;
+                        if ((deltaPos.x*deltaPos.x)+(deltaPos.y*deltaPos.y)<NODE_SLOT_RADIUS_SQUARED)   {
+                            if (mustDeleteLinkIfSlotIsHovered)  {
+                                // remove the link
+                                //printf("To be removed: input slot %d.\n",slot_idx);fflush(stdout);
+                                for (int link_idx=0;link_idx<links.size();link_idx++)   {
+                                    NodeLink& link = links[link_idx];
+                                    if (link.OutputNode == node && slot_idx == link.OutputSlot)   {
+                                        if (linkCallback) linkCallback(link,LS_DELETED,*this);
+                                        // remove link
+                                        if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
+                                        links.resize(links.size()-1);
+                                        --link_idx;
                                     }
                                 }
-                                // create link
-                                addLink(dragNode.node,dragNode.inputSlotIdx,node,slot_idx,true);
                             }
-                            // clear dragNode
-                            dragNode.node = NULL;
-                            dragNode.outputSlotIdx = dragNode.inputSlotIdx = -1;
-                            //printf("End dragging.\n");fflush(stdout);
+                            else if (isLMBDraggingForMakingLinks && !isDragNodeValid) {
+                                dragNode.node = node;
+                                dragNode.outputSlotIdx = slot_idx;
+                                dragNode.inputSlotIdx = -1;
+                                dragNode.pos = mouseScreenPos;
+                                //printf("Start dragging.\n");fflush(stdout);
+                            }
+                            else if (isDragNodeValid && dragNode.node!=node
+                                     && MOUSE_DELTA_SQUARED<MOUSE_DELTA_SQUARED_THRESHOLD   // optional... what I wanted is not to end a connection just when I hover another node...
+                                     ) {
+                                // verify compatibility
+                                if (dragNode.inputSlotIdx!=-1)  {
+                                    // drag goes from the output (dragNode.inputSlotIdx) slot of dragNode.node to the input slot of 'node':
+                                    if (!avoidCircularLinkLoopsInOut || !isNodeReachableFrom(dragNode.node,true,node))  {
+                                        if (allowOnlyOneLinkPerInputSlot)   {
+                                            // Remove all existing node links to node-slot_idx before adding new link:
+                                            for (int link_idx=0;link_idx<links.size();link_idx++)   {
+                                                NodeLink& link = links[link_idx];
+                                                if (link.OutputNode == node && slot_idx == link.OutputSlot)   {
+                                                    if (linkCallback) linkCallback(link,LS_DELETED,*this);
+                                                    // remove link
+                                                    if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
+                                                    links.resize(links.size()-1);
+                                                    --link_idx;
+                                                }
+                                            }
+                                        }
+                                        // create link
+                                        addLink(dragNode.node,dragNode.inputSlotIdx,node,slot_idx,true);
+                                    }
+                                    // clear dragNode
+                                    dragNode.node = NULL;
+                                    dragNode.outputSlotIdx = dragNode.inputSlotIdx = -1;
+                                    //printf("End dragging.\n");fflush(stdout);
+                                }
+                            }
                         }
                     }
                 }
-            }
-        }
-        ImGui::PopStyleColor();
-        ImGui::PushStyleColor(ImGuiCol_Text,style.color_node_output_slots_names);
-        for (int slot_idx = 0; slot_idx < node->OutputsCount; slot_idx++)   {
-            connectorScreenPos = offset + node->GetOutputSlotPos(slot_idx,currentFontWindowScale);
-            //draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, style.color_node_output_slots,connectorNumSegments);
-            ImGui::NGE_Draw::ImDrawListAddCircle(draw_list,connectorScreenPos,NODE_SLOT_RADIUS,style.color_node_output_slots,style.color_node_output_slots_border,style.node_slots_num_segments,connectorBorderThickness,true);
-            /*if ((style.color_node_output_slots & IM_COL32_A_MASK) != 0)  {
+                ImGui::PopStyleColor();
+                ImGui::PushStyleColor(ImGuiCol_Text,style.color_node_output_slots_names);
+                for (int slot_idx = 0; slot_idx < node->OutputsCount; slot_idx++)   {
+                    connectorScreenPos = offset + node->GetOutputSlotPos(slot_idx,currentFontWindowScale);
+                    //draw_list->AddCircleFilled(connectorScreenPos, NODE_SLOT_RADIUS, style.color_node_output_slots,connectorNumSegments);
+                    ImGui::NGE_Draw::ImDrawListAddCircle(draw_list,connectorScreenPos,NODE_SLOT_RADIUS,style.color_node_output_slots,style.color_node_output_slots_border,style.node_slots_num_segments,connectorBorderThickness,true);
+                    /*if ((style.color_node_output_slots & IM_COL32_A_MASK) != 0)  {
                 const float a_max = IM_PI * 0.5f * 11.f/12.f;
                 draw_list->PathArcTo(connectorScreenPos, NODE_SLOT_RADIUS, -a_max, a_max, 12);
                 draw_list->PathFill(style.color_node_output_slots);
             }*/
-            if (show_connection_names && node->OutputNames[slot_idx][0]!='\0')   {
-                const char* name = node->OutputNames[slot_idx];
-                if (name)   {
-                    connectorNameSize = ImGui::CalcTextSize(name);
-                    if (maxConnectorNameWidth<connectorNameSize.x) maxConnectorNameWidth = connectorNameSize.x;
-                    ImGui::SetCursorScreenPos(offset + node->GetOutputSlotPos(slot_idx,currentFontWindowScale)+ImVec2(NODE_SLOT_RADIUS,0)-ImVec2(0,connectorNameSize.y));
-                    ImGui::Text("%s",name);
-                }
-            }
-            if (mustDetectIfSlotIsHoveredForDragNDrop || mustDeleteLinkIfSlotIsHovered)    {
-                deltaPos.x = mouseScreenPos.x-connectorScreenPos.x;
-                deltaPos.y = mouseScreenPos.y-connectorScreenPos.y;
-                if ((deltaPos.x*deltaPos.x)+(deltaPos.y*deltaPos.y)<NODE_SLOT_RADIUS_SQUARED)   {
-                    if (mustDeleteLinkIfSlotIsHovered)  {
-                        // remove the link
-                        //printf("To be removed: output slot %d.\n",slot_idx);fflush(stdout);
-                        for (int link_idx=0;link_idx<links.size();link_idx++)   {
-                            NodeLink& link = links[link_idx];
-                            if (link.InputNode == node && slot_idx == link.InputSlot)   {
-                                if (linkCallback) linkCallback(link,LS_DELETED,*this);
-                                // remove link
-                                if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
-                                links.resize(links.size()-1);
-                                --link_idx;
-                            }
+                    if (show_connection_names && node->OutputNames[slot_idx][0]!='\0')   {
+                        const char* name = node->OutputNames[slot_idx];
+                        if (name)   {
+                            connectorNameSize = ImGui::CalcTextSize(name);
+                            if (maxConnectorNameWidth<connectorNameSize.x) maxConnectorNameWidth = connectorNameSize.x;
+                            ImGui::SetCursorScreenPos(offset + node->GetOutputSlotPos(slot_idx,currentFontWindowScale)+ImVec2(NODE_SLOT_RADIUS,0)-ImVec2(0,connectorNameSize.y));
+                            ImGui::Text("%s",name);
                         }
                     }
-                    else if (isLMBDraggingForMakingLinks && !isDragNodeValid) {
-                        dragNode.node = node;
-                        dragNode.inputSlotIdx = slot_idx;
-                        dragNode.outputSlotIdx = -1;
-                        dragNode.pos = mouseScreenPos;
-                        //printf("Start dragging.\n");fflush(stdout);
-                    }
-                    else if (isDragNodeValid && dragNode.node!=node
-                             && MOUSE_DELTA_SQUARED<MOUSE_DELTA_SQUARED_THRESHOLD    // optional... what I wanted is not to end a connection just when I hover another node...
-                             ) {
-                        // verify compatibility
-                        if (dragNode.outputSlotIdx!=-1)  {
-                            // drag goes from the output slot_idx of node to the input slot (dragNode.outputSlotIdx) of dragNode.node:
-                            if (!avoidCircularLinkLoopsInOut || !isNodeReachableFrom(node,true,dragNode.node))    {
-                                if (allowOnlyOneLinkPerInputSlot)   {
-                                    // Remove all existing node links to dragNode before adding new link:
-                                    for (int link_idx=0;link_idx<links.size();link_idx++)   {
-                                        NodeLink& link = links[link_idx];
-                                        if (link.OutputNode == dragNode.node && dragNode.outputSlotIdx == link.OutputSlot)   {
-                                            if (linkCallback) linkCallback(link,LS_DELETED,*this);
-                                            // remove link
-                                            if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
-                                            links.resize(links.size()-1);
-                                            --link_idx;
-                                        }
+                    if (mustDetectIfSlotIsHoveredForDragNDrop || mustDeleteLinkIfSlotIsHovered)    {
+                        deltaPos.x = mouseScreenPos.x-connectorScreenPos.x;
+                        deltaPos.y = mouseScreenPos.y-connectorScreenPos.y;
+                        if ((deltaPos.x*deltaPos.x)+(deltaPos.y*deltaPos.y)<NODE_SLOT_RADIUS_SQUARED)   {
+                            if (mustDeleteLinkIfSlotIsHovered)  {
+                                // remove the link
+                                //printf("To be removed: output slot %d.\n",slot_idx);fflush(stdout);
+                                for (int link_idx=0;link_idx<links.size();link_idx++)   {
+                                    NodeLink& link = links[link_idx];
+                                    if (link.InputNode == node && slot_idx == link.InputSlot)   {
+                                        if (linkCallback) linkCallback(link,LS_DELETED,*this);
+                                        // remove link
+                                        if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
+                                        links.resize(links.size()-1);
+                                        --link_idx;
                                     }
                                 }
-                                // create link
-                                addLink(node,slot_idx,dragNode.node,dragNode.outputSlotIdx,true);
                             }
-                            // clear dragNode
-                            dragNode.node = NULL;
-                            dragNode.outputSlotIdx = dragNode.inputSlotIdx = -1;
-                            //printf("End dragging.\n");fflush(stdout);
+                            else if (isLMBDraggingForMakingLinks && !isDragNodeValid) {
+                                dragNode.node = node;
+                                dragNode.inputSlotIdx = slot_idx;
+                                dragNode.outputSlotIdx = -1;
+                                dragNode.pos = mouseScreenPos;
+                                //printf("Start dragging.\n");fflush(stdout);
+                            }
+                            else if (isDragNodeValid && dragNode.node!=node
+                                     && MOUSE_DELTA_SQUARED<MOUSE_DELTA_SQUARED_THRESHOLD    // optional... what I wanted is not to end a connection just when I hover another node...
+                                     ) {
+                                // verify compatibility
+                                if (dragNode.outputSlotIdx!=-1)  {
+                                    // drag goes from the output slot_idx of node to the input slot (dragNode.outputSlotIdx) of dragNode.node:
+                                    if (!avoidCircularLinkLoopsInOut || !isNodeReachableFrom(node,true,dragNode.node))    {
+                                        if (allowOnlyOneLinkPerInputSlot)   {
+                                            // Remove all existing node links to dragNode before adding new link:
+                                            for (int link_idx=0;link_idx<links.size();link_idx++)   {
+                                                NodeLink& link = links[link_idx];
+                                                if (link.OutputNode == dragNode.node && dragNode.outputSlotIdx == link.OutputSlot)   {
+                                                    if (linkCallback) linkCallback(link,LS_DELETED,*this);
+                                                    // remove link
+                                                    if (link_idx+1 < links.size()) link = links[links.size()-1];    // swap with the last link
+                                                    links.resize(links.size()-1);
+                                                    --link_idx;
+                                                }
+                                            }
+                                        }
+                                        // create link
+                                        addLink(node,slot_idx,dragNode.node,dragNode.outputSlotIdx,true);
+                                    }
+                                    // clear dragNode
+                                    dragNode.node = NULL;
+                                    dragNode.outputSlotIdx = dragNode.inputSlotIdx = -1;
+                                    //printf("End dragging.\n");fflush(stdout);
+                                }
+                            }
                         }
                     }
                 }
+                ImGui::PopStyleColor();
+                if (!isLMBDraggingForMakingLinks) {
+                    dragNode.node = NULL; // clear dragNode
+                    //printf("Quit dragging.\n");fflush(stdout);
+                }
+                ImGui::SetCursorScreenPos(oldCursorScreenPos);
+
+
+
+                ImGui::PopID();
+                if (node->baseWidthOverride>0) ImGui::PopItemWidth();
             }
-        }
-        ImGui::PopStyleColor();
-        if (!isLMBDraggingForMakingLinks) {
-            dragNode.node = NULL; // clear dragNode
-            //printf("Quit dragging.\n");fflush(stdout);
-        }
-        ImGui::SetCursorScreenPos(oldCursorScreenPos);
+            //ImGui::PopStyleColor(3);      // moved inside the loop to wrap the ImGui::TreeNode()
 
+            // Display Links
+            draw_list->ChannelsSetCurrent(0); // Deeper than Background
+            {
+                ImRect cullLink;ImVec2 p1,p2,cp1,cp2;
+                int nearestLinkId=-1;
+                const float hoveredLinkDistSqrThres = 100.0f * currentFontWindowScale;
+                for (int link_idx = 0; link_idx < links.Size; link_idx++)
+                {
+                    NodeLink& link = links[link_idx];
+                    Node* node_inp = link.InputNode;
+                    Node* node_out = link.OutputNode;
+                    p1 = offset + node_inp->GetOutputSlotPos(link.InputSlot,currentFontWindowScale);
+                    p2 = offset + node_out->GetInputSlotPos(link.OutputSlot,currentFontWindowScale);
+                    if (enableLinkCulling) {
+                        cullLink.Min=cullLink.Max=p1;cullLink.Add(p2);cullLink.Expand(link_line_width*2.f);
+                        if (!linkClipRect.Overlaps(cullLink)) {
+                            ++numberOfCulledLinks;
+                            continue;
+                        }
+                    }
+                    cp1 = p1+link_cp;
+                    cp2 = p2-link_cp;
 
+                    // highlight nearest link
+                    if (mustCheckForNearestLink && nearestLinkId==-1 && (enableLinkCulling ? cullLink.Contains(io.MousePos) : true)) {
+                        const float distanceSquared = GetSquaredDistanceToBezierCurve(io.MousePos,p1,cp1, cp2,p2);
+                        if (distanceSquared<hoveredLinkDistSqrThres) nearestLinkId=link_idx;
+                        // dbg line:
+                        //if (io.MouseDelta.x!=0.f || io.MouseDelta.y!=0.f)   fprintf(stderr,"%d) MP{%1.0f,%1.0f} p1{%1.0f,%1.0f} p2{%1.0f,%1.0f} distanceSquared=%1.4f hoveredLinkDistSqrThres=%1.4f\n",link_idx,io.MousePos.x,io.MousePos.y,p1.x,p1.y,p2.x,p2.y,distanceSquared,hoveredLinkDistSqrThres);
+                    }
 
-        ImGui::PopID();
-        if (node->baseWidthOverride>0) ImGui::PopItemWidth();
-    }
-    //ImGui::PopStyleColor(3);      // moved inside the loop to wrap the ImGui::TreeNode()
-
-    // Display Links
-    draw_list->ChannelsSetCurrent(0); // Deeper than Background
-    {
-        ImRect cullLink;ImVec2 p1,p2,cp1,cp2;
-        int nearestLinkId=-1;
-        const float hoveredLinkDistSqrThres = 100.0f * currentFontWindowScale;
-        for (int link_idx = 0; link_idx < links.Size; link_idx++)
-        {
-            NodeLink& link = links[link_idx];
-            Node* node_inp = link.InputNode;
-            Node* node_out = link.OutputNode;
-            p1 = offset + node_inp->GetOutputSlotPos(link.InputSlot,currentFontWindowScale);
-            p2 = offset + node_out->GetInputSlotPos(link.OutputSlot,currentFontWindowScale);
-            if (enableLinkCulling) {
-                cullLink.Min=cullLink.Max=p1;cullLink.Add(p2);
-                if (!linkClipRect.Overlaps(cullLink)) {
-                    ++numberOfCulledLinks;
-                    continue;
+                    draw_list->AddBezierCurve(p1,cp1,cp2,p2,style.color_link,(nearestLinkId!=link_idx) ? link_line_width : (link_line_width*2.f), style.link_num_segments);
+                }
+                if (nearestLinkId!=-1 && io.MouseReleased[0]) {
+                    //fprintf(stderr,"Removing link at: %d\n",nearestLinkId);
+                    removeLinkAt(nearestLinkId);
+                    nearestLinkId=-1;
                 }
             }
-            cp1 = p1+link_cp;
-            cp2 = p2-link_cp;
-
-            // highlight nearest link
-            if (mustCheckForNearestLink && nearestLinkId==-1 && (enableLinkCulling ? cullLink.Contains(io.MousePos) : true)) {
-                const float distanceSquared = GetSquaredDistanceToBezierCurve(io.MousePos,p1,cp1, cp2,p2);
-                if (distanceSquared<hoveredLinkDistSqrThres) nearestLinkId=link_idx;
-                // dbg line:
-        //if (io.MouseDelta.x!=0.f || io.MouseDelta.y!=0.f)   fprintf(stderr,"%d) MP{%1.0f,%1.0f} p1{%1.0f,%1.0f} p2{%1.0f,%1.0f} distanceSquared=%1.4f hoveredLinkDistSqrThres=%1.4f\n",link_idx,io.MousePos.x,io.MousePos.y,p1.x,p1.y,p2.x,p2.y,distanceSquared,hoveredLinkDistSqrThres);
+            // Display dragging link
+            if (isLMBDraggingForMakingLinks && isDragNodeValid)   {
+                if (dragNode.inputSlotIdx!=-1)  {   // Dragging from the output slot of dragNode
+                    ImVec2 p1 = offset + dragNode.node->GetOutputSlotPos(dragNode.inputSlotIdx,currentFontWindowScale);
+                    const ImVec2& p2 = io.MousePos;//offset + node_out->GetInputSlotPos(link.OutputSlot);
+                    draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
+                }
+                else if (dragNode.outputSlotIdx!=-1)  {  // Dragging from the input slot of dragNode
+                    const ImVec2& p1 = io.MousePos;//
+                    ImVec2 p2 = offset + dragNode.node->GetInputSlotPos(dragNode.outputSlotIdx,currentFontWindowScale);
+                    draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
+                }
             }
 
-            draw_list->AddBezierCurve(p1,cp1,cp2,p2,style.color_link,(nearestLinkId!=link_idx) ? link_line_width : (link_line_width*2.0f), style.link_num_segments);
-        }
-        if (nearestLinkId!=-1 && io.MouseReleased[0]) {
-            //fprintf(stderr,"Removing link at: %d\n",nearestLinkId);
-            removeLinkAt(nearestLinkId);
-            nearestLinkId=-1;
-        }
-    }
-    // Display dragging link
-    if (isLMBDraggingForMakingLinks && isDragNodeValid)   {
-        if (dragNode.inputSlotIdx!=-1)  {   // Dragging from the output slot of dragNode
-            ImVec2 p1 = offset + dragNode.node->GetOutputSlotPos(dragNode.inputSlotIdx,currentFontWindowScale);
-            const ImVec2& p2 = io.MousePos;//offset + node_out->GetInputSlotPos(link.OutputSlot);
-            draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
-        }
-        else if (dragNode.outputSlotIdx!=-1)  {  // Dragging from the input slot of dragNode
-            const ImVec2& p1 = io.MousePos;//
-            ImVec2 p2 = offset + dragNode.node->GetInputSlotPos(dragNode.outputSlotIdx,currentFontWindowScale);
-            draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
-        }
-    }
 
+            draw_list->ChannelsMerge();
 
-    draw_list->ChannelsMerge();
-
-//#   define DEBUG_NODE_CULLING
+            //#   define DEBUG_NODE_CULLING     // Debug works for a single Node Graph Editor present only
 #   ifdef DEBUG_NODE_CULLING
-    static int lastNumberOfCulledNodes=0;
-    if (enableNodeCulling && numberOfCulledNodes!=lastNumberOfCulledNodes) {
-        lastNumberOfCulledNodes = numberOfCulledNodes;
-        fprintf(stderr,"numberOfCulledNodes: %d/%d  numberOfVisibleNodes: %d/%d\n",numberOfCulledNodes,nodes.Size,nodes.Size-numberOfCulledNodes,nodes.Size);
-    }
+            static int lastNumberOfCulledNodes=0;
+            if (enableNodeCulling && numberOfCulledNodes!=lastNumberOfCulledNodes) {
+                lastNumberOfCulledNodes = numberOfCulledNodes;
+                fprintf(stderr,"numberOfCulledNodes: %d/%d  numberOfVisibleNodes: %d/%d\n",numberOfCulledNodes,nodes.Size,nodes.Size-numberOfCulledNodes,nodes.Size);
+            }
 #   undef DEBUG_NODE_CULLING
 #   endif //DEBUG_NODE_CULLING
 
-//#   define DEBUG_LINK_CULLING
+            //#   define DEBUG_LINK_CULLING     // Debug works for a single Node Graph Editor present only
 #   ifdef DEBUG_LINK_CULLING
-    static int lastNumberOfCulledLinks=0;
-    if (enableLinkCulling && numberOfCulledLinks!=lastNumberOfCulledLinks) {
-        lastNumberOfCulledLinks = numberOfCulledLinks;
-        fprintf(stderr,"numberOfCulledLinks: %d/%d  numberOfVisibleLinks: %d/%d\n",numberOfCulledLinks,links.Size,links.Size-numberOfCulledLinks,links.Size);
-    }
+            static int lastNumberOfCulledLinks=0;
+            if (enableLinkCulling && numberOfCulledLinks!=lastNumberOfCulledLinks) {
+                lastNumberOfCulledLinks = numberOfCulledLinks;
+                fprintf(stderr,"numberOfCulledLinks: %d/%d  numberOfVisibleLinks: %d/%d\n",numberOfCulledLinks,links.Size,links.Size-numberOfCulledLinks,links.Size);
+            }
 #   undef DEBUG_LINK_CULLING
 #   endif //DEBUG_LINK_CULLING
 
-    // Move activeNode at the start of the nodes list [This should improve active node overlapping other nodes]
-    if (activeNode && nodes.size()>0 && activeNodeIndex!=0) {
-        IM_ASSERT(activeNodeIndex>=0 && activeNodeIndex<nodes.size());
-        IM_ASSERT(nodes[activeNodeIndex]==activeNode);
-        Node* n=nodes[0];
-        nodes[0]=activeNode;
-        nodes[activeNodeIndex]=n;
-        activeNodeIndex=0;
-    }
+            // Move activeNode at the start of the nodes list [This should improve active node overlapping other nodes]
+            if (activeNode && nodes.size()>0 && activeNodeIndex!=0) {
+                IM_ASSERT(activeNodeIndex>=0 && activeNodeIndex<nodes.size());
+                IM_ASSERT(nodes[activeNodeIndex]==activeNode);
+                Node* n=nodes[0];
+                nodes[0]=activeNode;
+                nodes[activeNodeIndex]=n;
+                activeNodeIndex=0;
+            }
 
 
-    // Open context menu
-    if (!open_context_menu && (node_hovered_in_scene || node_hovered_in_list) && ((ImGui::IsKeyReleased(io.KeyMap[ImGuiKey_Delete]) && !ImGui::GetIO().WantTextInput) || mustDeleteANodeSoon)) {
-        // Delete selected node directly:
-    menuNode = node_hovered_in_scene ? node_hovered_in_scene : node_hovered_in_list ? node_hovered_in_list : NULL;
-    if (menuNode==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
-    if (menuNode==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
-    if (menuNode==nodeThatIsBeingEditing) nodeThatIsBeingEditing = NULL;
-    deleteNode(menuNode);menuNode = NULL;
-    menuNode = node_hovered_in_list = node_hovered_in_scene = NULL;
-        open_delete_only_context_menu = false;	// just in case...
-    }
-    else if (/*!isAContextMenuOpen &&*/ !ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() && getNumAvailableNodeTypes()>0 && nodeFactoryFunctionPtr)   {
-        if (ImGui::IsMouseClicked(1))   {   // Open context menu for adding nodes
-        menuNode = node_hovered_in_scene ? node_hovered_in_scene : node_hovered_in_list ? node_hovered_in_list : NULL;
-        //fprintf(stderr,"menuNode.name=%s\n",menuNode?menuNode->getName():"NULL");
-        node_hovered_in_list = node_hovered_in_scene = NULL;
-            open_context_menu = true;
-        }
-    }
+            // Open context menu
+            if (!open_context_menu && (node_hovered_in_scene || node_hovered_in_list) && ((ImGui::IsKeyReleased(io.KeyMap[ImGuiKey_Delete]) && !ImGui::GetIO().WantTextInput) || mustDeleteANodeSoon)) {
+                // Delete selected node directly:
+                menuNode = node_hovered_in_scene ? node_hovered_in_scene : node_hovered_in_list ? node_hovered_in_list : NULL;
+                if (menuNode==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
+                if (menuNode==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
+                if (menuNode==nodeThatIsBeingEditing) nodeThatIsBeingEditing = NULL;
+                deleteNode(menuNode);menuNode = NULL;
+                menuNode = node_hovered_in_list = node_hovered_in_scene = NULL;
+                open_delete_only_context_menu = false;	// just in case...
+            }
+            else if (/*!isAContextMenuOpen &&*/ !ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() && getNumAvailableNodeTypes()>0 && nodeFactoryFunctionPtr)   {
+                if (ImGui::IsMouseClicked(1))   {   // Open context menu for adding nodes
+                    menuNode = node_hovered_in_scene ? node_hovered_in_scene : node_hovered_in_list ? node_hovered_in_list : NULL;
+                    //fprintf(stderr,"menuNode.name=%s\n",menuNode?menuNode->getName():"NULL");
+                    node_hovered_in_list = node_hovered_in_scene = NULL;
+                    open_context_menu = true;
+                }
+            }
 
-    // Open context menu
-    if (open_context_menu || open_delete_only_context_menu)  {
-        /*if (!menuNode)  {
+            // Open context menu
+            if (open_context_menu || open_delete_only_context_menu)  {
+                /*if (!menuNode)  {
             if (node_hovered_in_list) menuNode = node_hovered_in_list;
             if (node_hovered_in_scene) menuNode = node_hovered_in_scene;
         }*/
-        ImGuiContext& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
-    ImGui::PushID(menuNode);
-        if (open_delete_only_context_menu) ImGui::OpenPopup("delete_only_context_menu");
-        else if (open_context_menu) ImGui::OpenPopup("context_menu");
-        ImGui::PopID();
-    }
-    else if (mouseRectangularSelectionForNodesStarted || (!node_hovered_in_scene && !node_hovered_in_list && !isMouseDraggingForScrolling && !dragNode.isValid() && !isSomeNodeMoving && !io.KeyShift && !ImGui::IsAnyItemActive() && !ImGui::IsAnyItemHovered())) {
-        // Test mouse rect selection for nodes
-        static ImRect absSelection;
-        if (isMouseDraggingForMovingNodes) {
-            if (!mouseRectangularSelectionForNodesStarted) {
-                mouseRectangularSelectionForNodesStarted=true;
-                mouseRectangularSelectionForNodes.Min=mouseRectangularSelectionForNodes.Max=io.MousePos;
+                ImGuiContext& g = *GImGui; while (g.OpenPopupStack.size() > 0) g.OpenPopupStack.pop_back();   // Close all existing context-menus
+                ImGui::PushID(menuNode);
+                if (open_delete_only_context_menu) ImGui::OpenPopup("delete_only_context_menu");
+                else if (open_context_menu) ImGui::OpenPopup("context_menu");
+                ImGui::PopID();
             }
-            mouseRectangularSelectionForNodes.Max=io.MousePos;
+            else if (mouseRectangularSelectionForNodesStarted || (!node_hovered_in_scene && !node_hovered_in_list && !isMouseDraggingForScrolling && !dragNode.isValid() && !isSomeNodeMoving && !io.KeyShift && !ImGui::IsAnyItemActive() && !ImGui::IsAnyItemHovered())) {
+                // Test mouse rect selection for nodes
+                ImRect absSelection(rectangularSelectionData.absSelectionMin,rectangularSelectionData.absSelectionMax);
+                if (isMouseDraggingForMovingNodes) {
+                    if (!mouseRectangularSelectionForNodesStarted) {
+                        mouseRectangularSelectionForNodesStarted=true;
+                        mouseRectangularSelectionForNodesMin=mouseRectangularSelectionForNodesMax=io.MousePos;
+                    }
+                    mouseRectangularSelectionForNodesMax=io.MousePos;
 
-            absSelection = ImRect(mouseRectangularSelectionForNodes.Min,mouseRectangularSelectionForNodes.Max);
-            if (absSelection.Min.x>absSelection.Max.x)  {float tmp = absSelection.Min.x;absSelection.Min.x=absSelection.Max.x;absSelection.Max.x=tmp;}
-            if (absSelection.Min.y>absSelection.Max.y)  {float tmp = absSelection.Min.y;absSelection.Min.y=absSelection.Max.y;absSelection.Max.y=tmp;}
+                    absSelection = ImRect(mouseRectangularSelectionForNodesMin,mouseRectangularSelectionForNodesMax);
+                    if (absSelection.Min.x>absSelection.Max.x)  {float tmp = absSelection.Min.x;absSelection.Min.x=absSelection.Max.x;absSelection.Max.x=tmp;}
+                    if (absSelection.Min.y>absSelection.Max.y)  {float tmp = absSelection.Min.y;absSelection.Min.y=absSelection.Max.y;absSelection.Max.y=tmp;}
 
-            draw_list->AddRectFilled(absSelection.Min, absSelection.Max, style.color_mouse_rectangular_selection, 0.f);
-            draw_list->AddRect(absSelection.Min, absSelection.Max, style.color_mouse_rectangular_selection_frame, 0.f,0x0F,4.0f*currentFontWindowScale);    // Frame
-        }
-        else if (mouseRectangularSelectionForNodesStarted) {
-            // Note: merging this if branch into the main node loop would save a second loop for selecting nodes [Possible opt]
-            mouseRectangularSelectionForNodesStarted=false;
-            if (!io.KeyCtrl) unselectAllNodes();
-            //select all nodes inside selection-------------------
-            absSelection.Min-=offset;absSelection.Max-=offset;
-            ImVec2 nodePos;ImRect cullRect;
-            for (int i=0,isz=nodes.size();i<isz;i++)    {
-                Node* node = nodes[i];
-                nodePos = node->GetPos(currentFontWindowScale);
-                cullRect=ImRect(nodePos,nodePos+node->Size);
-                if (absSelection.Overlaps(cullRect)) {
-                    node->isSelected=true;
-                    if (!activeNode) activeNode = node;  //Optional faster alternative to: findANewActiveNode(); commented out below
+                    draw_list->AddRectFilled(absSelection.Min, absSelection.Max, style.color_mouse_rectangular_selection, 0.f);
+                    draw_list->AddRect(absSelection.Min, absSelection.Max, style.color_mouse_rectangular_selection_frame, 0.f,0x0F,4.0f*currentFontWindowScale);    // Frame
                 }
-            }
-            //--------------------------------------------------------
-            //if (!activeNode) findANewActiveNode();
-        }
-
-    }
-
-    // Draw context menu
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8,8));
-    ImGui::PushID(menuNode);
-    if (ImGui::BeginPopup("delete_only_context_menu"))  {
-    Node* node = menuNode;
-        if (node)   {
-            ImGui::Text("Node '%s'", node->Name);
-            ImGui::Separator();
-            if (ImGui::MenuItem("Delete", NULL, false, true)) {
-                if (node==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
-                if (node==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
-                if (node==nodeThatIsBeingEditing) nodeThatIsBeingEditing = NULL;
-                //printf("Current nodes.size()=%d; Deleting node %s.\n",nodes.size(),node->Name);fflush(stdout);
-        deleteNode(node);menuNode = NULL;
-            }
-        }
-        ImGui::EndPopup();
-        //isAContextMenuOpen = true;
-    }
-    else if (ImGui::BeginPopup("context_menu"))  {
-    Node* node = menuNode;
-        ImVec2 scene_pos = (ImGui::GetMousePosOnOpeningCurrentPopup() - offset)/currentFontWindowScale;
-        if (node)   {
-            ImGui::Text("Node '%s'", node->Name);
-            ImGui::Separator();
-            //if (ImGui::MenuItem("Rename..", NULL, false, false)) {}
-            if (node->canBeCopied() && ImGui::MenuItem("Copy", NULL, false, true)) copyNode(node);
-            if (sourceCopyNode && sourceCopyNode->typeID==node->typeID) {
-                if (ImGui::MenuItem("Paste", NULL, false, true)) {
-                    node_to_paste_from_copy_source = node;
+                else if (mouseRectangularSelectionForNodesStarted) {
+                    // Note: merging this if branch into the main node loop would save a second loop for selecting nodes [Possible opt]
+                    mouseRectangularSelectionForNodesStarted=false;
+                    if (!io.KeyCtrl) unselectAllNodes();
+                    //select all nodes inside selection-------------------
+                    absSelection.Min-=offset;absSelection.Max-=offset;
+                    ImVec2 nodePos;ImRect cullRect;
+                    for (int i=0,isz=nodes.size();i<isz;i++)    {
+                        Node* node = nodes[i];
+                        nodePos = node->GetPos(currentFontWindowScale);
+                        cullRect=ImRect(nodePos,nodePos+node->Size);
+                        if (absSelection.Overlaps(cullRect)) {
+                            node->isSelected=true;
+                            if (!activeNode) activeNode = node;  //Optional faster alternative to: findANewActiveNode(); commented out below
+                        }
+                    }
+                    //--------------------------------------------------------
+                    //if (!activeNode) findANewActiveNode();
                 }
+                rectangularSelectionData.absSelectionMin = absSelection.Min;
+                rectangularSelectionData.absSelectionMax = absSelection.Max;
             }
-            if (ImGui::MenuItem("Delete", NULL, false, true)) {
-        if (node==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
-                if (node==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
-                if (node==nodeThatIsBeingEditing) nodeThatIsBeingEditing = NULL;
-                //printf("Current nodes.size()=%d; Deleting node %s.\n",nodes.size(),node->Name);fflush(stdout);
-        deleteNode(node);menuNode=NULL;
+
+            // Draw context menu
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8,8));
+            ImGui::PushID(menuNode);
+            if (ImGui::BeginPopup("delete_only_context_menu"))  {
+                Node* node = menuNode;
+                if (node)   {
+                    ImGui::Text("Node '%s'", node->Name);
+                    ImGui::Separator();
+                    if (ImGui::MenuItem("Delete", NULL, false, true)) {
+                        if (node==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
+                        if (node==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
+                        if (node==nodeThatIsBeingEditing) nodeThatIsBeingEditing = NULL;
+                        //printf("Current nodes.size()=%d; Deleting node %s.\n",nodes.size(),node->Name);fflush(stdout);
+                        deleteNode(node);menuNode = NULL;
+                    }
+                }
+                ImGui::EndPopup();
+                //isAContextMenuOpen = true;
             }
-            //if (ImGui::MenuItem("Copy", NULL, false, false)) {}
-        }
-        else    {
-            /*if (ImGui::MenuItem("Add ExampleNode")) {
+            else if (ImGui::BeginPopup("context_menu"))  {
+                Node* node = menuNode;
+                ImVec2 scene_pos = (ImGui::GetMousePosOnOpeningCurrentPopup() - offset)/currentFontWindowScale;
+                if (node)   {
+                    ImGui::Text("Node '%s'", node->Name);
+                    ImGui::Separator();
+                    //if (ImGui::MenuItem("Rename..", NULL, false, false)) {}
+                    if (node->canBeCopied() && ImGui::MenuItem("Copy", NULL, false, true)) copyNode(node);
+                    if (sourceCopyNode && sourceCopyNode->typeID==node->typeID) {
+                        if (ImGui::MenuItem("Paste", NULL, false, true)) {
+                            node_to_paste_from_copy_source = node;
+                        }
+                    }
+                    if (ImGui::MenuItem("Delete", NULL, false, true)) {
+                        if (node==node_to_fire_edit_callback) node_to_fire_edit_callback = NULL;
+                        if (node==node_to_paste_from_copy_source) node_to_paste_from_copy_source = NULL;
+                        if (node==nodeThatIsBeingEditing) nodeThatIsBeingEditing = NULL;
+                        //printf("Current nodes.size()=%d; Deleting node %s.\n",nodes.size(),node->Name);fflush(stdout);
+                        deleteNode(node);menuNode=NULL;
+                    }
+                    //if (ImGui::MenuItem("Copy", NULL, false, false)) {}
+                }
+                else    {
+                    /*if (ImGui::MenuItem("Add ExampleNode")) {
                 addNode(ExampleNode::Create(scene_pos,0.5f, ImColor(100,100,200)));
             }*/
-            ImGui::Text("%s","Add Node Menu");
-            ImGui::Separator();
-            if (nodeFactoryFunctionPtr) {
-                if (sourceCopyNode && sourceCopyNode->canBeCopied()) {
-                    AvailableNodeInfo* ni = fetchAvailableNodeInfo(sourceCopyNode->getType());
-                    if ((!ni || ni->maxNumInstances<0 || ni->curNumInstances<ni->maxNumInstances) && ImGui::MenuItem("Paste##cloneCopySource")) {
-                        Node* clonedNode = addNode(nodeFactoryFunctionPtr(sourceCopyNode->typeID,scene_pos));
-                        clonedNode->fields.copyPDataValuesFrom(sourceCopyNode->fields);
-			clonedNode->onCopied();
-                    }
+                    ImGui::Text("%s","Add Node Menu");
                     ImGui::Separator();
-                }
-                for (int nt=0,ntSize=getNumAvailableNodeTypes();nt<ntSize;nt++) {
-                    ImGui::PushID(nt);
-                    AvailableNodeInfo& ni = availableNodesInfo[nt];
-                    if ((ni.maxNumInstances<0 || ni.curNumInstances<ni.maxNumInstances) && ImGui::MenuItem(pNodeTypeNames[ni.type])) {
-                        addNode(ni.type,scene_pos,&ni);
+                    if (nodeFactoryFunctionPtr) {
+                        if (sourceCopyNode && sourceCopyNode->canBeCopied()) {
+                            AvailableNodeInfo* ni = fetchAvailableNodeInfo(sourceCopyNode->getType());
+                            if ((!ni || ni->maxNumInstances<0 || ni->curNumInstances<ni->maxNumInstances) && ImGui::MenuItem("Paste##cloneCopySource")) {
+                                Node* clonedNode = addNode(nodeFactoryFunctionPtr(sourceCopyNode->typeID,scene_pos,*this));
+                                clonedNode->fields.copyPDataValuesFrom(sourceCopyNode->fields);
+                                clonedNode->onCopied();
+                            }
+                            ImGui::Separator();
+                        }
+                        for (int nt=0,ntSize=getNumAvailableNodeTypes();nt<ntSize;nt++) {
+                            ImGui::PushID(nt);
+                            AvailableNodeInfo& ni = availableNodesInfo[nt];
+                            if ((ni.maxNumInstances<0 || ni.curNumInstances<ni.maxNumInstances) && ImGui::MenuItem(pNodeTypeNames[ni.type])) {
+                                addNode(ni.type,scene_pos,&ni);
+                            }
+                            ImGui::PopID();
+                        }
                     }
-                    ImGui::PopID();
+                    //if (ImGui::MenuItem("Paste", NULL, false, false)) {}
                 }
+                ImGui::EndPopup();
+                //isAContextMenuOpen = true;
             }
-            //if (ImGui::MenuItem("Paste", NULL, false, false)) {}
+            //else isAContextMenuOpen = false;
+            ImGui::PopID();
+            ImGui::PopStyleVar();
+
+
+
+            ImGui::PopItemWidth();
+
+            // Scrolling
+            //if (!isSomeNodeMoving && !isaNodeInActiveState && !dragNode.node && ImGui::IsWindowHovered() &&  ImGui::IsMouseDragging(0, 6.0f)) scrolling = scrolling - io.MouseDelta;
+            if (isMouseDraggingForScrolling /*&& ImGui::IsWindowHovered()*/ && (ImGui::IsWindowHovered() || ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused())) {
+                scrolling = scrolling - io.MouseDelta;
+                ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
+                // This must be fixed somehow: ImGui::GetIO().WantCaptureMouse == false, because g.ActiveID == 0
+                //        fprintf(stderr,"g.ActiveId=%d\n",g.ActiveId);     // This is the inner cause
+                //        ImGui::GetIO().WantCaptureMouse = true; // does nothing
+                //        g.ActiveId = window->MoveId;            // makes WantCaptureMouse and WantCaptureKeyboard toggle like crazy every frame
+            }
+            else if (isSomeNodeMoving) ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
+
+            if (!io.FontAllowUserScaling)   {
+                // Reset the font scale (3 lines)
+                fontScaleToTrack = oldFontScaleToReset;
+                g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize;
+                g.FontSize = window->CalcFontSize();
+            }
         }
-        ImGui::EndPopup();
-        //isAContextMenuOpen = true;
+        ImGui::EndChild();  // scrolling_region
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar(2);
+
     }
-    //else isAContextMenuOpen = false;
-    ImGui::PopID();
-    ImGui::PopStyleVar();
-
-
-
-    ImGui::PopItemWidth();
-
-    // Scrolling
-    //if (!isSomeNodeMoving && !isaNodeInActiveState && !dragNode.node && ImGui::IsWindowHovered() &&  ImGui::IsMouseDragging(0, 6.0f)) scrolling = scrolling - io.MouseDelta;
-    if (isMouseDraggingForScrolling /*&& ImGui::IsWindowHovered()*/ && (ImGui::IsWindowHovered() || ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused())) {
-        scrolling = scrolling - io.MouseDelta;
-        ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
-    }
-    else if (isSomeNodeMoving) ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
-
-    if (!io.FontAllowUserScaling)   {
-        // Reset the font scale (3 lines)
-        fontScaleToTrack = oldFontScaleToReset;
-        g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize;
-        g.FontSize = window->CalcFontSize();
-    }
-
-    ImGui::EndChild();  // scrolling_region
-    ImGui::PopStyleColor();
-    ImGui::PopStyleVar(2);
-
     ImGui::EndChild();  // GraphNodeChildWindow
 
     if (node_to_paste_from_copy_source && sourceCopyNode && node_to_paste_from_copy_source->typeID==sourceCopyNode->typeID) {
         node_to_paste_from_copy_source->fields.copyPDataValuesFrom(sourceCopyNode->fields);
-	node_to_paste_from_copy_source->onCopied();
+        node_to_paste_from_copy_source->onCopied();
     }
 
     if (node_to_fire_edit_callback) {
-	node_to_fire_edit_callback->onEdited();
-	if (nodeCallback) nodeCallback(node_to_fire_edit_callback,NS_EDITED,*this);
+        node_to_fire_edit_callback->onEdited();
+        if (nodeCallback) nodeCallback(node_to_fire_edit_callback,NS_EDITED,*this);
     }
 
 
@@ -1706,7 +1718,7 @@ void NodeGraphEditor::copyNode(Node *n)	{
     if (!n) return;
     if (!sourceCopyNode)    {
 	if (!nodeFactoryFunctionPtr) return;
-	sourceCopyNode = nodeFactoryFunctionPtr(n->typeID,ImVec2(0,0));
+    sourceCopyNode = nodeFactoryFunctionPtr(n->typeID,ImVec2(0,0),*this);
     }
     sourceCopyNode->fields.copyPDataValuesFrom(n->fields);
     //sourceCopyNode->onCopied();   // Nope: sourceCopyNode is just owned for storage
@@ -2559,7 +2571,7 @@ bool NodeGraphEditor::load(ImGuiHelper::Deserializer& d, const char ** pOptional
         NodeGraphEditorParseCallback2Struct cbn;
         amount = d.parse(NodeGraphEditorParseCallback2,(void*)&cbn,amount);
         // TODO: do some checks on cbn
-        Node* n = nodeFactoryFunctionPtr(cbn.typeID,cbn.Pos);
+        Node* n = nodeFactoryFunctionPtr(cbn.typeID,cbn.Pos,*this);
         n->userID = cbn.userID;
         n->isOpen = cbn.isOpen;
         n->isSelected = cbn.isSelected;
@@ -3020,7 +3032,7 @@ class OutputNode : public Node {
     }
 };
 
-static Node* MyNodeFactory(int nt,const ImVec2& pos) {
+static Node* MyNodeFactory(int nt,const ImVec2& pos,const NodeGraphEditor& /*nge*/) {
     switch (nt) {
     case MNT_COLOR_NODE: return ColorNode::Create(pos);
     case MNT_COMBINE_NODE: return CombineNode::Create(pos);

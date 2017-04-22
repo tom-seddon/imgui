@@ -42,6 +42,14 @@
 -> Add/Adjust/Fix more FieldTypes. TODO! And test/fix FT_CUSTOM field type too.
 */
 
+// BUGS:
+/*
+-> BUG: When MMB drags the background ImGui::GetIO().WantMouseCapture incorrectly returns false (because g.ActiveID==0; no idea on how to fix this)
+        This happens only with the glfw3 binding (not sure if it depends on its version or not)
+-> FIXED: Interference of rectangular selections in multiple Node Graph Editors
+-> FIXED: When links are very horizontal, holding SHIFT down, they are not hoverable (because the AABB's height of the link is zero).
+*/
+
 
 namespace ImGui	{
 #   ifndef IMGUIHELPER_H_
@@ -347,7 +355,7 @@ struct NodeLink
 
 struct NodeGraphEditor	{
     public:
-    typedef Node* (*NodeFactoryDelegate)(int nodeType,const ImVec2& pos);
+    typedef Node* (*NodeFactoryDelegate)(int nodeType,const ImVec2& pos,const NodeGraphEditor& nge);
     enum NodeState {NS_ADDED,NS_DELETED,NS_EDITED};
     enum LinkState {LS_ADDED,LS_DELETED};
 
@@ -697,7 +705,7 @@ struct NodeGraphEditor	{
         if (!nodeFactoryFunctionPtr) return NULL;
         if (!pOptionalNi) pOptionalNi = fetchAvailableNodeInfo(nodeType);
         if (!pOptionalNi || (pOptionalNi->maxNumInstances>=0 && pOptionalNi->curNumInstances>=pOptionalNi->maxNumInstances)) return NULL;
-        Node* rv = nodeFactoryFunctionPtr(pOptionalNi->type,Pos);
+        Node* rv = nodeFactoryFunctionPtr(pOptionalNi->type,Pos,*this);
         if (rv) ++(pOptionalNi->curNumInstances);
         return addNode(rv);
     }
@@ -740,6 +748,15 @@ struct NodeGraphEditor	{
         const AvailableNodeInfo& ni1 = *((AvailableNodeInfo*) s1);
         return strcmp(ni0.name,ni1.name);
     }
+    struct RectangularSelectionData {
+        ImVec2 mouseRectangularSelectionForNodesMin,mouseRectangularSelectionForNodesMax;
+        ImVec2  absSelectionMin,absSelectionMax;
+        bool mouseRectangularSelectionForNodesStarted;
+        RectangularSelectionData() :
+            mouseRectangularSelectionForNodesMin(0,0),mouseRectangularSelectionForNodesMax(0,0),
+            absSelectionMin(0,0),absSelectionMax(0,0),mouseRectangularSelectionForNodesStarted(false) {}
+    };
+    RectangularSelectionData rectangularSelectionData;
 
 };
 

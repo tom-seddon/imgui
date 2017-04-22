@@ -173,6 +173,8 @@ SOFTWARE.
 // When it saves some (all?) RGBA image (as LCT_RGBA), it seems to work (I can open it in my file browser),
 // but when I load it back (with stb_image(...) or with lodePng as well) it's detected as RGB
 // and thus it does not display correctly.
+// BTW: Now, if you activate it, it still works, because it's not used (png saves go through stb_image_write.h)
+// It's only used in the Undo stack
 
 /*#if (!defined(IMGUIIMAGEEDITOR_NO_LODEPNG_PLUGIN) && !defined(IMGUIIMAGEEDITOR_NO_LODE_PNG_PLUGIN))
 #ifndef LODEPNG_H
@@ -259,25 +261,6 @@ extern "C" {
 
 #endif //IMGUIIMAGEEDITOR_NO_PLUGINS
 
-
-
-#ifdef IMGUI_USE_OMP
-#include <omp.h>                        // Needs -fopenmp
-#endif //IMGUI_USE_OMP
-
-// The following is intended to suppress #pragma omp warnings when IMGUI_USE_OMP is NOT defined
-#ifdef _MSC_VER
-#   pragma warning( push )
-#   pragma warning (disable : 4068 ) // disable unknown pragma warnings
-#endif //_MSC_VER
-#ifdef __GNUC__
-#   pragma GCC diagnostic push
-#   pragma GCC diagnostic ignored "-Wunknown-pragmas"
-#endif //__GNUC__
-#ifdef __clang__
-#   pragma clang diagnostic push
-#   pragma clang diagnostic ignored "-Wunknown-pragmas"
-#endif //__clang__
 
 
 namespace ImGuiIE {
@@ -1510,9 +1493,15 @@ static bool ApplyLightEffect(unsigned char* im,int w,int h, int c,int lightStren
     return true;
 }
 
+#ifdef IMGUIIMAGEEDITOR_SINGLE_PRECISION_CONVOLUTION
+    typedef float real;
+#else
+    typedef double real;
+#endif
+
 // kernel must be preallocated by the user (a 1D array of size = lengthX*lengthY)
 // lengthX and lengthY must be odd numbers
-static bool GenerateGaussianBlurConvolutionKernel(double* Kernel,int lengthX,int lengthY,double weight=1.0) {
+static bool GenerateGaussianBlurConvolutionKernel(real* Kernel,int lengthX,int lengthY,real weight=1.0) {
     if (!Kernel || lengthX<3 || lengthY<3 || lengthX%2==0 || lengthY%2==0 || weight<=0) return false;
 
     /*
@@ -1520,22 +1509,22 @@ static bool GenerateGaussianBlurConvolutionKernel(double* Kernel,int lengthX,int
 
     G(x,y) = (1/(2*PI*SDV^2)) * exp(-(x^2+y^2)/(2*SDV^2))
     */
-    const double sdv = 1.0; // We force standard deviation to 1.0, using "weight" in another way.
+    const real sdv = 1.0; // We force standard deviation to 1.0, using "weight" in another way.
 
 
-    double sumTotal = 0;
+    real sumTotal = 0;
     int kernelRadiusX = lengthX / 2;
     int kernelRadiusY = lengthY / 2;
-    double distance = 0;
-    double calculatedEuler = 1.0 / (2.0 * M_PI * sdv*sdv);
+    real distance = 0;
+    real calculatedEuler = 1.0 / (2.0 * M_PI * sdv*sdv);
 
     // Actually the values outside [-3*sdv,3*sdv] are nearly zero
-    const double weighting = 2.5/weight;           // here we use 2.5 instead of 3 (otherwise 3x3 filter will be too weak)
-    const double scalingX = weighting*sdv/kernelRadiusX;
-    const double scalingY = weighting*sdv/kernelRadiusY;
+    const real weighting = 2.5/weight;           // here we use 2.5 instead of 3 (otherwise 3x3 filter will be too weak)
+    const real scalingX = weighting*sdv/kernelRadiusX;
+    const real scalingY = weighting*sdv/kernelRadiusY;
 
-    double X2=0,Y2=0,sdv2x2=2.0 * (sdv * sdv);
-    double* pKernel = Kernel;
+    real X2=0,Y2=0,sdv2x2=2.0 * (sdv * sdv);
+    real* pKernel = Kernel;
     for (int filterY = -kernelRadiusY;filterY <= kernelRadiusY; filterY++)  {
         Y2 = filterY*scalingY;Y2*=Y2;
         for (int filterX = -kernelRadiusX;filterX <= kernelRadiusX; filterX++) {
@@ -1558,17 +1547,17 @@ static bool GenerateGaussianBlurConvolutionKernel(double* Kernel,int lengthX,int
     return true;
 }
 
-static bool GenerateSobelConvolutionKernel(double* Kernel,int lengthX,int lengthY,bool vertical=false) {
+static bool GenerateSobelConvolutionKernel(real* Kernel,int lengthX,int lengthY,bool vertical=false) {
     if (!Kernel || lengthX<3 || lengthY<3 || lengthX%2==0 || lengthY%2==0) return false;
 
-    double* pKernel = Kernel;
+    real* pKernel = Kernel;
     for (int i=0,iSz=lengthX*lengthY;i<iSz;i++) *pKernel++=0.0;
     pKernel = Kernel;
 
     const int kernelRadiusX = lengthX / 2;
     const int kernelRadiusY = lengthY / 2;
 
-    double filterX2=0,filterY2=0;
+    real filterX2=0,filterY2=0;
     for (int filterY = -kernelRadiusY;filterY <= kernelRadiusY; filterY++)  {
         if (vertical && filterY==0) continue;
         filterY2 = filterY*filterY;
@@ -1576,7 +1565,7 @@ static bool GenerateSobelConvolutionKernel(double* Kernel,int lengthX,int length
             if (!vertical && filterX==0) continue;
             filterX2 = filterX*filterX;
             Kernel[(filterY + kernelRadiusY)*lengthX + filterX+kernelRadiusX] =
-                    vertical ? ((double) filterY/(filterX2+filterY2)) : ((double) filterX/(filterX2+filterY2));
+                    vertical ? ((real) filterY/(filterX2+filterY2)) : ((real) filterX/(filterX2+filterY2));
 
             //fprintf(stderr,"%d,%d) %1.6f\t",filterX,filterY,filterX2+filterY2);
         }
@@ -1599,13 +1588,9 @@ static bool GenerateSobelConvolutionKernel(double* Kernel,int lengthX,int length
     return true;
 }
 
-
 struct KernelMatrix {
-#   ifdef IMGUIIMAGEEDITOR_SINGLE_PRECISION_CONVOLUTION
-    typedef float real;
-#   else
-    typedef double real;
-#   endif
+    typedef ImGuiIE::real real;
+
     real* k;  // reference
     int w,h,c;
     KernelMatrix(real* _k,int _w,int _h,int _c) : k(_k),w(_w),h(_h),c(_c)  {}
@@ -1683,7 +1668,7 @@ KernelMatrix::real KernelMatrix::ScaleFactor = 1.0;
 KernelMatrix::real KernelMatrix::Offset = 0.0;
 
 // return image must be freed by the caller; kw and kh oddnumbers
-template <typename T> static T* ApplyConvolutionKernelNxN(const T* im,int w,int h,int c,const double* normalizedKernel,int kw,int kh,bool wrapx=false,bool wrapy=false,const double scaleFactor=1.0,const double offset=0.0,const double maxPixelValue=255.0)
+template <typename T> static T* ApplyConvolutionKernelNxN(const T* im,int w,int h,int c,const real* normalizedKernel,int kw,int kh,bool wrapx=false,bool wrapy=false,const real scaleFactor=1.0,const real offset=0.0,const real maxPixelValue=255.0)
 {
     if (!im || w<=kw || h<=kh || (c!=1 && c!=3 && c!=4) || kw<3 || kh<3 || kw%2==0 || kh%2==0 || w<3 || h<3) return NULL;
 
@@ -1694,25 +1679,25 @@ template <typename T> static T* ApplyConvolutionKernelNxN(const T* im,int w,int 
     const T* pim =im;
     T* nim = (T*) STBI_MALLOC(w*h*c);
     T* pnim = nim;
-    const double* k = normalizedKernel;
+    const real* k = normalizedKernel;
 
     //const int stride = w*c;
     const int skw=(kw-1)/2;
     const int skh=(kh-1)/2;
 
-    const double maxPixelValueInv = 1.0/maxPixelValue;
-    //const double tot=(double)ImGuiIE::ipow(2.0,(N-1)*2);
-    //const double half_tot = tot/2.0;
+    const real maxPixelValueInv = 1.0/maxPixelValue;
+    //const real tot=(real)ImGuiIE::ipow(2.0,(N-1)*2);
+    //const real half_tot = tot/2.0;
 
 
     //const KernelMatrix k(normalizedKernel,kw,kh,1);
-    ImVector<double> tmp_matrix;tmp_matrix.resize(kw*kh*c);for (int i=0,isz=kw*kh*c;i<isz;i++) tmp_matrix[i]=0.0;
+    ImVector<real> tmp_matrix;tmp_matrix.resize(kw*kh*c);for (int i=0,isz=kw*kh*c;i<isz;i++) tmp_matrix[i]=0.0;
     KernelMatrix m(&tmp_matrix[0],kw,kh,c);
-    //ImVector<double> tmp_row;tmp_row.resize(kw*c);for (int i=0,isz=kw*c;i<isz;i++) tmp_row[i]=0.0;
-    //ImVector<double> tmp_col;tmp_col.resize(kh*c);for (int i=0,isz=kh*c;i<isz;i++) tmp_col[i]=0.0;
+    //ImVector<real> tmp_row;tmp_row.resize(kw*c);for (int i=0,isz=kw*c;i<isz;i++) tmp_row[i]=0.0;
+    //ImVector<real> tmp_col;tmp_col.resize(kh*c);for (int i=0,isz=kh*c;i<isz;i++) tmp_col[i]=0.0;
 
     // Step 1) Fill m for (0,0)
-    int x=0,y=0;double* pm=NULL;
+    int x=0,y=0;real* pm=NULL;
     int xCol=0,yRow=0;
     for(yRow=0;yRow<h;++yRow)    {
         if (yRow%2==0)   {
@@ -1729,7 +1714,7 @@ template <typename T> static T* ApplyConvolutionKernelNxN(const T* im,int w,int 
                         else if (x>=w)  x = wrapx ? (x-w) : (w-1);
                         pm = m.get(sx+skw,sy+skh);
                         pim = &im[(w*y+x)*c];
-                        for (int i=0;i<c;i++) *pm++ = (double)(*pim++) * maxPixelValueInv;
+                        for (int i=0;i<c;i++) *pm++ = (real)(*pim++) * maxPixelValueInv;
                     }
                 }
             }
@@ -1745,7 +1730,7 @@ template <typename T> static T* ApplyConvolutionKernelNxN(const T* im,int w,int 
                     else if (x>=w)  x = wrapx ? (x-w) : (w-1);
                     //pm = m.get(sx+skw,sy+skh);
                     pim = &im[(w*y+x)*c];
-                    for (int i=0;i<c;i++) *pm++ = (double)(*pim++) * maxPixelValueInv;
+                    for (int i=0;i<c;i++) *pm++ = (real)(*pim++) * maxPixelValueInv;
                 }
             }
             pnim = &nim[(yRow*w+xCol)*c];
@@ -1762,7 +1747,7 @@ template <typename T> static T* ApplyConvolutionKernelNxN(const T* im,int w,int 
                     else if (y>=h)  y = wrapy ? (y-h) : (h-1);
                     //pm = m.get(sx+skw,sy+skh);
                     pim = &im[(w*y+x)*c];
-                    for (int i=0;i<c;i++) *pm++ = (double)(*pim++) * maxPixelValueInv;
+                    for (int i=0;i<c;i++) *pm++ = (real)(*pim++) * maxPixelValueInv;
                     pm+=kw*c-c;    // go down one line
                 }
                 m.getSum(pnim,k);pnim+=c;       // fill pixel and shift right
@@ -1794,7 +1779,7 @@ template <typename T> static T* ApplyConvolutionKernelNxN(const T* im,int w,int 
                     else if (x>=w)  x = wrapx ? (x-w) : (w-1);
                     //pm = m.get(sx+skw,sy+skh);
                     pim = &im[(w*y+x)*c];
-                    for (int i=0;i<c;i++) *pm++ = (double)(*pim++) * maxPixelValueInv;
+                    for (int i=0;i<c;i++) *pm++ = (real)(*pim++) * maxPixelValueInv;
                 }
             }
             pnim = &nim[(yRow*w+xCol)*c];
@@ -1821,7 +1806,7 @@ template <typename T> static T* ApplyConvolutionKernelNxN(const T* im,int w,int 
                     else if (y>=h)  y = wrapy ? (y-h) : (h-1);
                     //pm = m.get(sx+skw,sy+skh);
                     pim = &im[(w*y+x)*c];
-                    for (int i=0;i<c;i++) *pm++ = (double)(*pim++) * maxPixelValueInv;
+                    for (int i=0;i<c;i++) *pm++ = (real)(*pim++) * maxPixelValueInv;
                     pm+=kw*c-c;    // go down one line
                 }
                 m.getSum(pnim,k);pnim-=c;   // fill pixel and shift left
@@ -1843,19 +1828,19 @@ template <typename T> static T* ApplyConvolutionKernelNxN(const T* im,int w,int 
 }
 
 // return image must be freed by the caller; radiusX and radiusY oddnumbers >=3
-template <typename T> static T* ApplyGaussianBlurNxN(const T* im,int w,int h,int c,int radiusX,int radiusY=-1,bool wrapx=false,bool wrapy=false,double weight=1.0,const double maxPixelValue=255.0) {
+template <typename T> static T* ApplyGaussianBlurNxN(const T* im,int w,int h,int c,int radiusX,int radiusY=-1,bool wrapx=false,bool wrapy=false,real weight=1.0,const real maxPixelValue=255.0) {
     if (radiusY<3) radiusY=radiusX;
     if (radiusX<3 || radiusX%2==0 || radiusY%2==0 || !im || w<3 || h<3 || (c!=1 && c!=3 &&c!=4)) return NULL;
-    ImVector<double> normalizedKernel;normalizedKernel.resize(radiusX*radiusY);
+    ImVector<real> normalizedKernel;normalizedKernel.resize(radiusX*radiusY);
     if (!GenerateGaussianBlurConvolutionKernel(&normalizedKernel[0],radiusX,radiusY,weight)) return NULL;
     return ApplyConvolutionKernelNxN(im,w,h,c,&normalizedKernel[0],radiusX,radiusY,wrapx,wrapy,1.0,0.0,maxPixelValue);
 }
 
 // return image must be freed by the caller; radiusX and radiusY oddnumbers >=3
-template <typename T> static T* ApplySobelNxN(const T* im,int w,int h,int c,int radiusX,int radiusY=-1,bool vertical=false,bool wrapx=false,bool wrapy=false,double offset=0.5,const double maxPixelValue=255.0) {
+template <typename T> static T* ApplySobelNxN(const T* im,int w,int h,int c,int radiusX,int radiusY=-1,bool vertical=false,bool wrapx=false,bool wrapy=false,real offset=0.5,const real maxPixelValue=255.0) {
     if (radiusY<3) radiusY=radiusX;
     if (radiusX<3 || radiusX%2==0 || radiusY%2==0 || !im || w<3 || h<3 || (c!=1 && c!=3 &&c!=4)) return NULL;
-    ImVector<double> normalizedKernel;normalizedKernel.resize(radiusX*radiusY);
+    ImVector<real> normalizedKernel;normalizedKernel.resize(radiusX*radiusY);
     if (!GenerateSobelConvolutionKernel(&normalizedKernel[0],radiusX,radiusY,vertical)) return NULL;
     return ApplyConvolutionKernelNxN(im,w,h,c,&normalizedKernel[0],radiusX,radiusY,wrapx,wrapy,1.0,offset,maxPixelValue);
 }
@@ -2100,11 +2085,8 @@ template <typename T> static T* MergeImages(int w,int h,int c,int numImages,...)
 
 template <typename T> class NormalMapGenerator {
     public:
-#   ifdef IMGUIIMAGEEDITOR_SINGLE_PRECISION_CONVOLUTION
-    typedef float real;
-#   else
-    typedef double real;
-#   endif
+    typedef ImGuiIE::real real;             // double of float according to the IMGUIIMAGEEDITOR_SINGLE_PRECISION_CONVOLUTION definition
+
     static real MaxChannelValue;            // 255
     static real MaxChannelValueInv;         // 1/255
 
@@ -2354,19 +2336,6 @@ template <typename T> class NormalMapGenerator {
         real deltaNormalX(0),deltaNormalY(0);
         real ray(zero),normalx(zero),normaly(zero);
 
-//        Test to see if openMP is working
-/*#       ifdef IMGUI_USE_OMP
-#       pragma omp parallel
-        printf("Hello from thread %d, nthreads %d\n", omp_get_thread_num(), omp_get_num_threads());
-#       endif //IMGUI_USE_OMP */
-
-#       ifdef IMGUIIMAGEEDITOR_TEST_SPEED
-        clock_t begin = clock();
-#       endif //IMGUIIMAGEEDITOR_TEST_SPEED
-
-//      Actually it's faster without omp
-//      The shared section can be omitted (performance it's the same)
-//#       pragma omp parallel for shared(dirs,normalMap,heightMap,ssim,aoim)
         for(int row=0;row<h;row++)  {
             T* pss = ssim ? &ssim[row*w*pssNormalMapOutChannels] : NULL;
             T *pao = aoim ? &aoim[row*w*pAmbientOcclusionMapChannels] : NULL;
@@ -2376,9 +2345,6 @@ template <typename T> class NormalMapGenerator {
                 real averagey=zero;
                 real averagetotal=zero;
 
-//              Actually it's faster without omp
-//              The shared section can be omitted (performance it's the same)
-//#               pragma omp parallel for private(ray) shared(dirs) reduction(+:averagetotal) reduction(+:averagex) reduction(+:averagey)
                 for(int i=0;i<rayCount;i++)
                 {
                     const vec2& dir     = dirs[i];                    
@@ -2431,11 +2397,6 @@ template <typename T> class NormalMapGenerator {
             }
         }
         //========================================================================================
-        //fprintf(stderr,"Num Skips: %d/%d\n",skips,w*h);
-#       ifdef IMGUIIMAGEEDITOR_TEST_SPEED
-        fprintf(stderr,"Elapsed Time: %f\n",double(clock() - begin) / CLOCKS_PER_SEC);
-#       endif //IMGUIIMAGEEDITOR_TEST_SPEED
-
         return true;
     }
 
@@ -3361,7 +3322,11 @@ protected:
         int W=0,H=0,C=0;    // not used
         unsigned char* data = NULL;
 #       ifdef LODEPNG_H
-        if (imDestructorCb==&DestroyBufferLodePng) lodepng_decode_memory(&data,&W,&H,im,(size_t) compressedSize,c==4 ? LCT_RGBA : (c==3 ? LCT_RGB : (c==1 ? LCT_GREY : LCT_RGBA)), 8);
+        if (imDestructorCb==&DestroyBufferLodePng) {
+            unsigned int Wu=0,Hu=0;
+            lodepng_decode_memory(&data,&Wu,&Hu,im,(size_t) imCompressedSize,c==4 ? LCT_RGBA : (c==3 ? LCT_RGB : (c==1 ? LCT_GREY : LCT_RGBA)), 8);
+            W=(int)Wu;H=(int)Hu;
+        }
         else data = stbi_load_from_memory(im,imCompressedSize,&W,&H,&C,c);
 #       else // LODEPNG_H
         data = stbi_load_from_memory(im,imCompressedSize,&W,&H,&C,c);
@@ -6002,8 +5967,11 @@ struct StbImage {
                     if (ImGui::TreeNodeEx("Raycast Params:##NormalMapTreeNode")) {
                         ImGui::TreePop();
                         if (ImGui::DragInt("Num Rays##NormalMap",&normalMapParams.ray_count,0.1f,1,120) && normalMapParams.ray_count<1) normalMapParams.ray_count=1;
+                        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Raycast count\n(greatly affects performance)");
                         if (ImGui::DragInt("Ray Length##NormalMap",&normalMapParams.ray_length,0.1f,1,240) && normalMapParams.ray_length<1) normalMapParams.ray_length=1;
-                        if (ImGui::DragFloat("Strength##NormalMap",&normalMapParams.ray_strength,0.1f,0.1f,1000.f,"%.1f",1.0f) && normalMapParams.ray_strength<0.1f) normalMapParams.ray_strength=0.1f;
+                        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Raycast length in pixels");
+                        if (ImGui::DragFloat("Strength##NormalMap",&normalMapParams.ray_strength,0.1f,0.1f,100.f,"%.1f",1.0f) && normalMapParams.ray_strength<0.1f) normalMapParams.ray_strength=0.1f;
+                        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Raycast strength (0-100)");
                         if (ImGui::SmallButton("Reset Raycast Params##NormalMap")) {normalMapParams.resetAoParams();}
                     }
                 }
@@ -7053,14 +7021,3 @@ ImageEditor::Style::Style() : splitterSize(-1),splitterColor(-1.f,1.f,1.f,1.f) {
 
 } // namespace ImGui
 
-
-// The following was intended to suppress #pragma omp warnings when IMGUI_USE_OMP is NOT defined
-#ifdef __clang__
-#   pragma clang diagnostic pop
-#endif //__clang__
-#ifdef __GNUC__
-#   pragma GCC diagnostic pop
-#endif //__GNUC__
-#ifdef _MSC_VER
-#   pragma warning( pop )
-#endif //_MSC_VER
