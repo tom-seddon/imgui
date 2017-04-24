@@ -1729,8 +1729,8 @@ void NodeGraphEditor::getInputNodesForNodeAndSlot(const Node* node,int input_slo
     for (int link_idx=0,link_idx_size=links.size();link_idx<link_idx_size;link_idx++)   {
         const NodeLink& link = links[link_idx];
         if (link.OutputNode == node && link.OutputSlot == input_slot)  {
-            returnValueOut.push_back(link.OutputNode);
-            if (pOptionalReturnValueOutputSlotOut) pOptionalReturnValueOutputSlotOut->push_back(link.OutputSlot);
+            returnValueOut.push_back(link.InputNode);
+            if (pOptionalReturnValueOutputSlotOut) pOptionalReturnValueOutputSlotOut->push_back(link.InputSlot);
         }
     }
 }
@@ -1739,8 +1739,8 @@ Node* NodeGraphEditor::getInputNodeForNodeAndSlot(const Node* node,int input_slo
     for (int link_idx=0,link_idx_size=links.size();link_idx<link_idx_size;link_idx++)   {
         const NodeLink& link = links[link_idx];
         if (link.OutputNode == node && link.OutputSlot == input_slot)  {
-            if (pOptionalReturnValueOutputSlotOut) *pOptionalReturnValueOutputSlotOut = link.OutputSlot;
-            return link.OutputNode;
+            if (pOptionalReturnValueOutputSlotOut) *pOptionalReturnValueOutputSlotOut = link.InputSlot;
+            return link.InputNode;
         }
     }
     return NULL;
@@ -1750,8 +1750,8 @@ void NodeGraphEditor::getOutputNodesForNodeAndSlot(const Node* node,int output_s
     for (int link_idx=0,link_idx_size=links.size();link_idx<link_idx_size;link_idx++)   {
         const NodeLink& link = links[link_idx];
         if (link.InputNode == node && link.InputSlot == output_slot)  {
-            returnValueOut.push_back(link.InputNode);
-            if (pOptionalReturnValueInputSlotOut) pOptionalReturnValueInputSlotOut->push_back(link.InputSlot);
+            returnValueOut.push_back(link.OutputNode);
+            if (pOptionalReturnValueInputSlotOut) pOptionalReturnValueInputSlotOut->push_back(link.OutputSlot);
         }
     }
 }
