@@ -48,6 +48,7 @@
         This happens only with the glfw3 binding (not sure if it depends on its version or not)
 -> FIXED: Interference of rectangular selections in multiple Node Graph Editors
 -> FIXED: When links are very horizontal, holding SHIFT down, they are not hoverable (because the AABB's height of the link is zero).
+-> FIXED: https://github.com/Flix01/imgui/issues/16
 */
 
 

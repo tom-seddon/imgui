@@ -259,6 +259,8 @@ bool NodeGraphEditor::Style::Edit(NodeGraphEditor::Style& s) {
     const float dragSpeed = 0.5f;
     const char prec[] = "%1.1f";
     ImGui::PushID(&s);
+    ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.5f); // default size is: ImGui::GetWindowWidth()*0.65f
+
     changed|=ImGui::ColorEdit4( "color_background",&s.color_background.x);
     changed|=EditColorImU32(    "color_grid",s.color_grid);
     changed|=ImGui::DragFloat(  "grid_line_width",&s.grid_line_width,dragSpeed,1.f,32.f,prec);
@@ -275,7 +277,11 @@ bool NodeGraphEditor::Style::Edit(NodeGraphEditor::Style& s) {
     changed|=EditColorImU32(    "color_node_frame_hovered",s.color_node_frame_hovered);
     ImGui::Spacing();
     changed|=ImGui::DragFloat(  "node_rounding",&s.node_rounding,dragSpeed,0.f,16.f,prec);
-    changed|=ImGui::DragFloat2(  "node_window_padding",&s.node_window_padding.x,dragSpeed,0.f,8.f,prec);
+    ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.25f-2);
+    changed|=ImGui::DragFloat(  "###node_window_padding_x",&s.node_window_padding.x,dragSpeed,0.f,32.f,prec);
+    ImGui::SameLine(0,4);
+    changed|=ImGui::DragFloat(  "node_window_padding##_y",&s.node_window_padding.y,dragSpeed,0.f,8.f,prec);
+    ImGui::PopItemWidth();
     ImGui::Spacing();
     changed|=EditColorImU32(    "color_node_input_slots",s.color_node_input_slots);
     changed|=EditColorImU32(    "color_node_input_slots_border",s.color_node_input_slots_border);
@@ -295,11 +301,12 @@ bool NodeGraphEditor::Style::Edit(NodeGraphEditor::Style& s) {
     changed|=ImGui::ColorEdit4( "color_node_title",&s.color_node_title.x);
     changed|=ImGui::EditColorImU32( "color_node_title_background",s.color_node_title_background);
     changed|=ImGui::DragFloat("color_node_title_background_gradient",&s.color_node_title_background_gradient,0.01f,0.f,.5f,"%1.3f");
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Zero gradient renders much faster\nwhen \"node_rounding\" is positive.\nUsed only if available.");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Zero gradient renders much faster\nwhen \"node_rounding\" is positive.");
     ImGui::Spacing();
     changed|=ImGui::ColorEdit4( "color_node_input_slots_names",&s.color_node_input_slots_names.x);
     changed|=ImGui::ColorEdit4( "color_node_output_slots_names",&s.color_node_output_slots_names.x);
 
+    ImGui::PopItemWidth();
     ImGui::PopID();
     return changed;
 }
@@ -1114,7 +1121,7 @@ void NodeGraphEditor::render()
                 const ImU32 nodeTitleBgColor = node->overrideTitleBgColor ? node->overrideTitleBgColor : titleBgColorU32 ? titleBgColorU32 : style.color_node_title_background;
                 if ((nodeTitleBgColor&IM_COL32_A_MASK)!=0) {
                     //#           define SKIP_VERTICAL_GRADIENT
-#           ifndef SKIP_VERTICAL_GRADIENT
+#                   ifndef SKIP_VERTICAL_GRADIENT
                     float fillGradientFactor = node->overrideTitleBgColorGradient>=0.f ? node->overrideTitleBgColorGradient : titleBgGradient>=0.f ? titleBgGradient : style.color_node_title_background_gradient;//0.15f;
                     if (node->isSelected) fillGradientFactor = -fillGradientFactor; // or if (node==activeNode)
                     if (fillGradientFactor!=0.f)    {
@@ -1125,11 +1132,11 @@ void NodeGraphEditor::render()
                         if (node->isOpen) draw_list->AddRectFilled(node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor, style.node_rounding,1|2);
                         else draw_list->AddRectFilled(node_rect_min, node_rect_max, nodeTitleBgColor, style.node_rounding);
                     }
-#           else // SKIP_VERTICAL_GRADIENT
+#                   else // SKIP_VERTICAL_GRADIENT
                     if (node->isOpen) draw_list->AddRectFilled(node_rect_min, ImVec2(node_rect_max.x,node_rect_min.y+nodeTitleBarBgHeight), nodeTitleBgColor, style.node_rounding,1|2);
                     else draw_list->AddRectFilled(node_rect_min, node_rect_max, nodeTitleBgColor, style.node_rounding);
-#           undef SKIP_VERTICAL_GRADIENT
-#           endif // SKIP_VERTICAL_GRADIENT
+#                   undef SKIP_VERTICAL_GRADIENT
+#                   endif // SKIP_VERTICAL_GRADIENT
                 }
 
 

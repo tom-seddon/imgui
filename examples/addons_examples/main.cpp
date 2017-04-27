@@ -247,7 +247,7 @@ void DrawGL()	// Mandatory
             {printf("'H' key pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
             // Tips for processing other "stateful" events (e.g. key/mouse pressed/released):
             // a) for ImGui "known special chars", we can use something like:
-            //      if (ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Escape],false)  {...}
+            //      if (ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Escape],false))  {...}
             // b) for mouse Pressed/Released events:
             //      if (io.KeysPressed[...]) {...}
             // c) for F1-F12 Pressed/Released events use gImGuiFunctionKeyXXX[0-11]:
@@ -751,6 +751,134 @@ void DrawGL()	// Mandatory
         ImGui::PopID();
 
         ImGui::Spacing();
+        ImGui::Text("AutoCompletion Stuff (UP/DOWN/TAB keys):");
+        {
+            // Bad implementation: users think they can click on the autocompletion-menu, instead of using TAB+ARROWS
+
+            static const int bufferSize = 84;   // Mandatory [ImGui::InputText(...) needs it]
+            // Customizable section (we will use ImVector<char[bufferSize]> here to store our autocompletion entries; it can be easily changed to std::vector<std::string> or similiar):
+            typedef struct _TMP {
+                // MANDATORY! The same signature as ImGui::Combo(...)
+                static bool ItemGetter(void* data,int i,const char** txt)   {
+                    IM_ASSERT(data);
+                    const ImVector<char[bufferSize]>& v = *((const ImVector<char[bufferSize]>*)data);
+                    if (i>=0 && i<v.size()) {*txt=v[i];return true;}
+                    return false;
+                }
+                // This is optional in InputTextWithAutoCompletion(...) (all at the user side), but mandatory in InputComboWithAutoCompletion(...)
+                static bool ItemInserter(void* data,int pos,const char* txt)  {
+                    IM_ASSERT(data && txt && strlen(txt)<bufferSize);
+                    ImVector<char[bufferSize]>& v = *((ImVector<char[bufferSize]>*)data);
+                    const int size = v.size();
+                    if (pos<0) pos=0;else if (pos>size) pos=size;
+
+                    v.resize(size+1);
+                    for (int i=size;i>pos;--i) strcpy(v[i],v[i-1]);
+                    strcpy(v[pos],txt);
+
+                    return true;
+                }
+                // This is optional in InputComboWithAutoCompletion(...) (not needed by InputTextWithAutoCompletion(...))
+                static bool ItemDeleter(void* data,int pos)  {
+                    IM_ASSERT(data);
+                    ImVector<char[bufferSize]>& v = *((ImVector<char[bufferSize]>*)data);
+                    const int size = v.size();
+                    if (pos<0 || pos>size) return false;
+
+                    for (int i=pos,iSz=size-1;i<iSz;++i) strcpy(v[i],v[i+1]);
+                    v.resize(size-1);
+
+                    return true;
+                }
+                // This is optional in InputComboWithAutoCompletion(...) (not needed by InputTextWithAutoCompletion(...))
+                // This method can be built out of ItemDeleter(...) and ItemInserter(...) [but it's still good to notify user that a rename has occurred]
+                static bool ItemRenamer(void* data,int posOld,int posNew,const char* txtNew)  {
+                    // We must move item at posOld to position posNew, and change its text to txtNew
+                    IM_ASSERT(data && txtNew && strlen(txtNew)<bufferSize);
+                    ImVector<char[bufferSize]>& v = *((ImVector<char[bufferSize]>*)data);
+                    const int size = v.size();
+                    if (posOld<0 || posOld>size) return false;
+                    if (posNew<0 || posNew>size) return false;
+                    // worst implementation possible here:
+                    bool ok = ItemDeleter(data,posOld);
+                    if (ok) ok = ItemInserter(data,posNew,txtNew);
+                    return ok;
+                }
+            } TMP;
+
+            ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.275f);
+            // InputTextWithAutoCompletion:
+            {
+                // Mandatory stuff
+                static char buf[bufferSize];
+                static ImGui::InputTextWithAutoCompletionData bufData;
+                static ImVector<char[bufferSize]> autocompletionEntries;    // The type here depends on our TMP struct
+                // [Optional] Bad init, but very comfortable to start with something
+                if (!bufData.isInited()) {
+                    // Important: entries must be sorted alphabetically
+                    TMP::ItemInserter(&autocompletionEntries,0,"APPLE");
+                    TMP::ItemInserter(&autocompletionEntries,1,"APRICOT");
+                    TMP::ItemInserter(&autocompletionEntries,2,"KIWI");
+                    TMP::ItemInserter(&autocompletionEntries,3,"LEMON");
+                    TMP::ItemInserter(&autocompletionEntries,4,"PAPAYA");
+                    TMP::ItemInserter(&autocompletionEntries,5,"PEAR");
+                    TMP::ItemInserter(&autocompletionEntries,6,"PEACH");
+                    TMP::ItemInserter(&autocompletionEntries,7,"WATERMELON");
+
+                    // [Optional] user can handle bufData.currentAutocompletionItemIndex
+                    // bufData.currentAutocompletionItemIndex is owned by the user (for ImGui::InputTextWithAutoCompletion(...) only).
+                    // When !=-1, the specified item is displayed in a different way in the autocompletion menu.
+                    // bufData.currentAutocompletionItemIndex = 2;
+                }
+
+                if (ImGui::InputTextWithAutoCompletion("Fruits##AutoCompleteIT",buf,bufferSize,&bufData,TMP::ItemGetter,autocompletionEntries.size(),(void*)&autocompletionEntries) && buf[0]!='\0')    {
+                    // Return has been pressed and buf is valid
+                    if (bufData.getItemPositionOfReturnedText()>=0)  {
+                        // The entered text must be inserted at that position
+                        TMP::ItemInserter(&autocompletionEntries,bufData.getItemPositionOfReturnedText(),buf);
+                        // bufData.currentAutocompletionItemIndex = bufData.getItemPositionOfReturnedText();
+                    }
+                    // else if (bufData.getItemIndexOfReturnedText()>=0)    {
+                    // User has entered an existing autocomplete item that can be retrieved at position: bufData.getItemIndexOfReturnedText()
+                    // bufData.currentAutocompletionItemIndex = getItemIndexOfReturnedText();
+                    //}
+                    buf[0]='\0';  // clear
+                    ImGui::SetKeyboardFocusHere(-1);    // So we keep typing
+                }
+            }
+            ImGui::SameLine(0,ImGui::GetWindowWidth()*0.05f);
+            // InputComboWithAutoCompletion:
+            {
+                // Mandatory stuff
+                static int current_item=-1;
+                static ImGui::InputComboWithAutoCompletionData bufData;
+                static ImVector<char[bufferSize]> autocompletionEntries;    // The type here depends on our TMP struct
+                // [Optional] Bad init, but very comfortable to start with something
+                if (!bufData.isInited()) {
+                    // Important: entries must be sorted alphabetically
+                    TMP::ItemInserter(&autocompletionEntries,0,"black");
+                    TMP::ItemInserter(&autocompletionEntries,1,"blue");
+                    TMP::ItemInserter(&autocompletionEntries,2,"green");
+                    TMP::ItemInserter(&autocompletionEntries,3,"ivory");
+                    TMP::ItemInserter(&autocompletionEntries,4,"pink");
+                    TMP::ItemInserter(&autocompletionEntries,5,"red");
+                    TMP::ItemInserter(&autocompletionEntries,6,"yellow");
+                    // We CAN'T handle bufData.currentAutocompletionItemIndex for Combos, because we have:
+                    current_item = 2;
+                }
+
+                if (ImGui::InputComboWithAutoCompletion("Colors##AutoCompleteIT",&current_item,bufferSize,&bufData,
+                    TMP::ItemGetter,TMP::ItemInserter,TMP::ItemDeleter,TMP::ItemRenamer,   // TMP::ItemDeleter and TMP::ItemRenemer can be NULL
+                    autocompletionEntries.size(),(void*)&autocompletionEntries))    {
+                    // something has changes (the Combo selected item, and/or an insert/delete operation
+                }
+            }
+            ImGui::PopItemWidth();
+
+        }
+
+        ImGui::Spacing();
+        ImGui::Text("Buttons With Images:");
         ImGui::ImageButtonWithText(reinterpret_cast<ImTextureID>(myImageTextureId2),"MyImageButtonWithText",ImVec2(16,16),ImVec2(0,0),ImVec2(0.33334f,0.33334f));
 
 #       ifndef NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE

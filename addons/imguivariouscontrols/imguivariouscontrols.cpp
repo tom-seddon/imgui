@@ -41,6 +41,20 @@ struct gif_result : stbi__gif {
 
 
 namespace ImGui {
+
+#ifndef IMGUIHELPER_H_
+// Posted by Omar in one post. It might turn useful...
+bool IsItemActiveLastFrame()    {
+    ImGuiContext& g = *GImGui;
+    if (g.ActiveIdPreviousFrame)
+	return g.ActiveIdPreviousFrame== GImGui->CurrentWindow->DC.LastItemId;
+    return false;
+}
+bool IsItemJustReleased()   {
+    return IsItemActiveLastFrame() && !ImGui::IsItemActive();
+}
+#endif //IMGUIHELPER_H_
+
 static float GetWindowFontScale() {
     //ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -2032,6 +2046,275 @@ int PlotCurve(const char* label, float (*values_getter)(void* data, float x,int 
     return h_hovered;
 }
 // End PlotCurve(...) implementation --------------------------------------
+
+
+
+int DefaultInputTextAutoCompletionCallback(ImGuiTextEditCallbackData *data) {
+    InputTextWithAutoCompletionData& mad = *((InputTextWithAutoCompletionData*) data->UserData);
+    if (mad.newTextToSet.size()>0 && mad.newTextToSet[0]!='\0') {
+        data->DeleteChars(0,data->BufTextLen);
+        data->InsertChars(0,&mad.newTextToSet[0]);
+        mad.newTextToSet[0]='\0';
+    }
+    if      (data->EventKey==ImGuiKey_DownArrow) ++mad.deltaTTItems;
+    else if (data->EventKey==ImGuiKey_UpArrow) --mad.deltaTTItems;
+    else if (data->EventKey==ImGuiKey_Tab) {mad.tabPressed=true;}
+    return 0;
+}
+float InputTextWithAutoCompletionData::Opacity = 0.6f;
+bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size, InputTextWithAutoCompletionData* pAutocompletion_data, bool (*autocompletion_items_getter)(void*, int, const char**), int autocompletion_items_size, void* autocompletion_user_data, int num_visible_autocompletion_items) {
+    IM_ASSERT(pAutocompletion_data);
+    IM_ASSERT(autocompletion_items_getter);
+    InputTextWithAutoCompletionData& ad = *pAutocompletion_data;
+    ad.inited = true;
+    const ImGuiInputTextFlags itFlags = (!(ad.newTextToSet.size()>0 && ad.newTextToSet[0]!='\0')) ?  (ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory) : (ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways);
+    const ImVec2 cursorScreenPos = ImGui::GetCursorScreenPos();
+    const bool rv = ImGui::InputText(label,buf,buf_size,itFlags,DefaultInputTextAutoCompletionCallback,(void*)&ad);
+    if (rv) {
+        // return pressed
+        ad.itemPositionOfReturnedText=ad.itemIndexOfReturnedText=-1;
+        if (strlen(buf)>0)  {
+            const char* txt=NULL;
+            int itemPlacement = 0,comp = 0, alreadyPresentIndex = -1;
+            for (int i=0;i<autocompletion_items_size;i++) {
+                if (autocompletion_items_getter(autocompletion_user_data,i,&txt))   {
+                    comp = strcmp(buf,txt);
+                    if (comp>0) ++itemPlacement;
+                    else if (comp==0) {
+                        alreadyPresentIndex=i;
+                        break;    // already present
+                    }
+                }
+            }
+            if (alreadyPresentIndex>=0)	{ad.itemIndexOfReturnedText=alreadyPresentIndex;}
+            else {ad.itemPositionOfReturnedText=itemPlacement;}
+        }
+        return rv;
+    }
+    bool inputTextActive = ImGui::IsItemActive();
+    //ImGui::SameLine();ImGui::Text(label);
+    if (inputTextActive) {
+        const int numItems = autocompletion_items_size;
+        if (buf[0]!='\0' && numItems>0) {
+            int selectedTTItemIndex = numItems-1;
+            const char* txt=NULL;
+            for (int i=0;i<numItems;i++) {
+                if (autocompletion_items_getter(autocompletion_user_data,i,&txt))   {
+                    if (strcmp(txt,buf)>=0)  {selectedTTItemIndex=i;break;}
+                }
+            }
+            if (selectedTTItemIndex + ad.deltaTTItems>=numItems) ad.deltaTTItems=numItems-selectedTTItemIndex-1;
+            else if (selectedTTItemIndex + ad.deltaTTItems<0) ad.deltaTTItems=-selectedTTItemIndex;
+            selectedTTItemIndex+=ad.deltaTTItems;
+            if (ad.tabPressed)  {
+                if (selectedTTItemIndex<numItems) {
+                    const char* selectedTTItemText=NULL;
+                    if (!autocompletion_items_getter(autocompletion_user_data,selectedTTItemIndex,&selectedTTItemText))   {
+                        IM_ASSERT(true);
+                    }
+                    IM_ASSERT(selectedTTItemText && strlen(selectedTTItemText)>0);
+                    const size_t len = strlen(selectedTTItemText);
+                    ad.newTextToSet.resize(len+1);
+                    strcpy(&ad.newTextToSet[0],selectedTTItemText);
+                }
+                ad.deltaTTItems=0;
+            }
+
+            const int MaxNumTooltipItems = num_visible_autocompletion_items>0 ? num_visible_autocompletion_items : 7;
+
+            const int numTTItems = numItems>MaxNumTooltipItems?MaxNumTooltipItems:numItems;
+            const int numTTItemsHalf = numTTItems/2;
+            int firstTTItemIndex = selectedTTItemIndex-numTTItemsHalf;
+            if (selectedTTItemIndex+numTTItemsHalf>=numItems) firstTTItemIndex = numItems-numTTItems;
+            if (firstTTItemIndex<0) firstTTItemIndex=0;
+
+            const ImVec2 inputTextBoxSize = ImGui::GetItemRectSize();
+            float labelWidth = ImGui::CalcTextSize(label,NULL,true).x;
+            if (labelWidth>0.0f) labelWidth+=ImGui::GetStyle().ItemInnerSpacing.x;
+            const float textLineHeightWithSpacing = ImGui::GetTextLineHeightWithSpacing();
+            const ImVec2 ttWindowSize(ImVec2(inputTextBoxSize.x-labelWidth,numTTItems*textLineHeightWithSpacing));
+            const ImVec2 storedCursorScreenPos = ImGui::GetCursorScreenPos();
+            const ImVec2 newCursorScreenPos(cursorScreenPos.x,cursorScreenPos.y+textLineHeightWithSpacing);
+            ImGui::SetCursorScreenPos(newCursorScreenPos);
+            ImGui::SetNextWindowPos(newCursorScreenPos);
+            ImGui::SetNextWindowSize(ttWindowSize);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,0);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(0,0));
+
+            if (ImGui::Begin("##TooltipAutocomplete", NULL,ttWindowSize,InputTextWithAutoCompletionData::Opacity,ImGuiWindowFlags_Tooltip|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))  {
+                // We must always use newCursorScreenPos when mnually drawing inside this window
+                for (int i=firstTTItemIndex,iSz=firstTTItemIndex+numTTItems;i<iSz;i++) {
+                    if (i==ad.currentAutocompletionItemIndex) {
+                        ImVec2 start(newCursorScreenPos.x,newCursorScreenPos.y+(i-firstTTItemIndex)*textLineHeightWithSpacing);
+                        ImVec2 end(start.x+ttWindowSize.x,start.y+textLineHeightWithSpacing);
+                        ImU32 col = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Header]);
+                        ImGui::GetWindowDrawList()->AddRectFilled(start,end,col,0,0);
+                        //ImGui::GetWindowDrawList()->AddRect(start,end,ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]),0,0,1.f);
+
+                        ImGui::PushStyleColor(ImGuiCol_Text,ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+                    }
+                    if (i==selectedTTItemIndex) {
+                        ImVec2 start(newCursorScreenPos.x,newCursorScreenPos.y+(i-firstTTItemIndex)*textLineHeightWithSpacing);
+                        ImVec2 end(start.x+ttWindowSize.x,start.y+textLineHeightWithSpacing);
+                        ImU32 col = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Button]);
+                        ImGui::GetWindowDrawList()->AddRectFilled(start,end,col,0,0);
+                        ImGui::GetWindowDrawList()->AddRect(start,end,ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]),0,0,1.f);
+
+                    }
+                    if (autocompletion_items_getter(autocompletion_user_data,i,&txt)) ImGui::Text(" %s",txt);
+                    else ImGui::Text(" %s","unknown");
+                    if (i==ad.currentAutocompletionItemIndex) ImGui::PopStyleColor();
+                }
+            }
+            ImGui::End();
+            ImGui::PopStyleVar(2);
+            ImGui::SetCursorScreenPos(storedCursorScreenPos);   // restore
+
+
+            // Debug:
+            //ImGui::SetTooltip("autocompletionEntries.size()=%d\nbufData.currentAutocompletionItemIndex=%d\nad.deltaTTItems=%d\nfirstTTItemIndex=%d\nnumTTItems=%d",autocompletion_items_size,ad.currentAutocompletionItemIndex,ad.deltaTTItems,firstTTItemIndex,numTTItems);
+
+        }
+    }
+    ad.tabPressed=false;
+    return rv;
+}
+
+char InputComboWithAutoCompletionData::ButtonCharcters[3][5] = {"+","r","x"};
+char InputComboWithAutoCompletionData::ButtonTooltips[3][128] = {"add","rename","delete"};
+
+bool InputComboWithAutoCompletion(const char* label, int *current_item, size_t autocompletion_buffer_size, InputComboWithAutoCompletionData* pAutocompletion_data,
+                                  bool (*items_getter)(void*, int, const char**),       // gets item at position ... (cannot be NULL)
+                                  bool (*items_inserter)(void*, int,const char*),       // inserts item at position ... (cannot be NULL)
+                                  bool (*items_deleter)(void*, int),                    // deletes item at position ... (can be NULL)
+                                  bool (*items_renamer)(void *, int, int, const char *),// deletes item at position, and inserts renamed item at new position  ... (can be NULL)
+                                  int items_count, void* user_data, int num_visible_items)   {
+
+    IM_ASSERT(pAutocompletion_data);
+    IM_ASSERT(items_getter);
+    IM_ASSERT(items_inserter);
+    IM_ASSERT(autocompletion_buffer_size>1);
+    bool rv = false;
+    InputComboWithAutoCompletionData* pad = pAutocompletion_data;
+    pad->inited = true;if (current_item) pad->currentAutocompletionItemIndex=*current_item;
+    pad->itemHovered = pad->itemActive = false;
+    ImGui::PushID(pAutocompletion_data);
+    if (!pad->inputTextShown) {
+        // ImGui::Combo(...) here
+        const bool aValidItemIsSelected = items_count>0 && pad->currentAutocompletionItemIndex>=0 && pad->currentAutocompletionItemIndex<items_count;
+        const bool hasDeleteButton = items_deleter && aValidItemIsSelected;
+        const bool hasRenameButton = items_renamer && aValidItemIsSelected;
+        const float singleButtonPadding = ImGui::GetStyle().FramePadding.x * 2.0f;
+        const float addButtonWidth      = singleButtonPadding + ImGui::CalcTextSize(InputComboWithAutoCompletionData::ButtonCharcters[0]).x;
+        const float renameButtonWidth   = singleButtonPadding + ImGui::CalcTextSize(InputComboWithAutoCompletionData::ButtonCharcters[1]).x;
+        const float deleteButtonWidth   = singleButtonPadding + ImGui::CalcTextSize(InputComboWithAutoCompletionData::ButtonCharcters[2]).x;
+        const float buttonsWidth = addButtonWidth + (hasRenameButton ? renameButtonWidth : 0.f) + (hasDeleteButton ? deleteButtonWidth : 0.f);
+        const ImGuiWindow* window = ImGui::GetCurrentWindowRead();
+        float comboWidth = (window->DC.ItemWidthStack.size()>0 ? window->DC.ItemWidthStack[window->DC.ItemWidthStack.size()-1] : window->ItemWidthDefault);
+        bool noButtons = false;
+        if (comboWidth>buttonsWidth) comboWidth-=buttonsWidth;
+        else noButtons=true;
+
+        // Combo
+        ImGui::PushItemWidth(comboWidth);
+        rv= ImGui::Combo("###icwac",current_item,items_getter,user_data,items_count,num_visible_items);
+        ImGui::PopItemWidth();
+        if (rv && current_item)  pad->currentAutocompletionItemIndex=*current_item;
+        const bool comboHovered = ImGui::IsItemHovered();
+        const bool comboActive = ImGui::IsItemActive();
+        pad->itemHovered|=comboHovered;
+        pad->itemActive|=comboActive;
+        bool mustEnterEditMode = comboHovered && ImGui::IsMouseClicked(1);
+        // Buttons
+        if (!noButtons) {
+            ImGui::SameLine(0,0);
+            mustEnterEditMode|=ImGui::Button(InputComboWithAutoCompletionData::ButtonCharcters[0]);
+            if (InputComboWithAutoCompletionData::ButtonTooltips[0][0]!='\0' && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",InputComboWithAutoCompletionData::ButtonTooltips[0]);
+            if (mustEnterEditMode) {
+                ++pad->inputTextShown;
+                if (pad->buf.size()<(int)autocompletion_buffer_size) {
+                    pad->buf.resize(autocompletion_buffer_size);
+                    pad->buf[0]='\0';
+                }
+            }
+            if (hasRenameButton)   {
+                ImGui::SameLine(0,0);
+                if (ImGui::Button(InputComboWithAutoCompletionData::ButtonCharcters[1])) {
+                    ++pad->inputTextShown;pad->isRenaming = true;
+                }
+                if (InputComboWithAutoCompletionData::ButtonTooltips[1][0]!='\0' && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",InputComboWithAutoCompletionData::ButtonTooltips[1]);
+            }
+            if (hasDeleteButton)   {
+                ImGui::SameLine(0,0);
+                if (ImGui::Button(InputComboWithAutoCompletionData::ButtonCharcters[2]) && items_deleter(user_data,pad->currentAutocompletionItemIndex)) {
+                    rv = true;
+                    pad->currentAutocompletionItemIndex=-1;
+                    if (current_item) *current_item = pad->currentAutocompletionItemIndex;
+                }
+                if (InputComboWithAutoCompletionData::ButtonTooltips[2][0]!='\0' && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",InputComboWithAutoCompletionData::ButtonTooltips[2]);
+            }
+        }
+        // Label
+        ImGui::SameLine();
+        //ImGui::Text("%s",label);    // This doesn't cut "##"
+        ImGui::RenderText(ImVec2(window->DC.CursorPos.x,window->DC.CursorPos.y+window->DC.CurrentLineTextBaseOffset),label);
+        // TODO: Add pad->itemHovered|=thisLabel
+    }
+    else {
+        // ImGui::InputText(...) here
+        if (pad->inputTextShown==1) {++pad->inputTextShown;ImGui::SetKeyboardFocusHere(0);}
+        const bool enter_pressed = InputTextWithAutoCompletion(label,&pad->buf[0],autocompletion_buffer_size,pad,items_getter,items_count,user_data,num_visible_items);
+        const bool inputTextHovered = ImGui::IsItemHovered();
+        const bool inputTextActive = ImGui::IsItemActive();
+        pad->itemHovered|=inputTextHovered;
+        pad->itemActive|=inputTextActive;
+        bool mustAllowFurtherEditing = false;
+        if (enter_pressed) {
+            if (pad->buf[0]!='\0')  {
+                if (pad->isRenaming) {
+                    if (pad->getItemPositionOfReturnedText()>=0)    {
+                        const int oldItemPosition = pad->currentAutocompletionItemIndex;
+                        const int newItemPositionInOldList = pad->getItemPositionOfReturnedText();
+                        int newItemPositionInNewList = newItemPositionInOldList;
+                        if (oldItemPosition<newItemPositionInOldList) newItemPositionInNewList=newItemPositionInOldList-1;
+                        if (items_renamer(user_data,oldItemPosition,newItemPositionInNewList,&pad->buf[0])) {
+                            pad->currentAutocompletionItemIndex=newItemPositionInNewList;
+                            if (current_item) *current_item = pad->currentAutocompletionItemIndex;
+                            rv = true;
+                            pad->buf[0]='\0';
+                            pad->inputTextShown = mustAllowFurtherEditing ? 1 : 0;
+                            pad->isRenaming = false;
+                        }
+                    }
+                }
+                else {
+                    if (pad->getItemIndexOfReturnedText()>=0) {
+                        pad->currentAutocompletionItemIndex=pad->getItemIndexOfReturnedText();
+                        if (current_item) *current_item = pad->currentAutocompletionItemIndex;
+                        rv = true;
+                    }
+                    else if (pad->getItemPositionOfReturnedText()>=0 && items_inserter(user_data,pad->getItemPositionOfReturnedText(),&pad->buf[0])) {
+                        pad->currentAutocompletionItemIndex=pad->getItemPositionOfReturnedText();
+                        if (current_item) *current_item = pad->currentAutocompletionItemIndex;
+                        rv = true;
+                    }
+                }
+                if (ImGui::GetIO().KeyShift && !pad->isRenaming) mustAllowFurtherEditing=true;
+                pad->buf[0]='\0';
+                pad->inputTextShown = mustAllowFurtherEditing ? 1 : 0;
+                pad->isRenaming = false;
+            }
+
+        }
+        if ((ImGui::IsItemActiveLastFrame() && !inputTextActive) || (inputTextHovered && ImGui::IsMouseClicked(1)))	{
+            pad->inputTextShown = mustAllowFurtherEditing ? 1 : 0;
+            pad->buf[0]='\0';
+            pad->isRenaming = false;
+        }
+    }
+    ImGui::PopID();
+    return rv;
+}
 
 }   // ImGui namespace
 

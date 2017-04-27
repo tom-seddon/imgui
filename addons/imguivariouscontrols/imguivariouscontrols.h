@@ -34,6 +34,11 @@ ImGui::TestPopupMenuSimple();
 
 namespace ImGui {
 
+#ifndef IMGUIHELPER_H_
+IMGUI_API bool IsItemActiveLastFrame();
+IMGUI_API bool IsItemJustReleased();
+#endif //IMGUIHELPER_H_
+
 IMGUI_API bool CheckButton(const char* label,bool* pvalue);
 IMGUI_API bool SmallCheckButton(const char* label,bool* pvalue);
 
@@ -350,8 +355,66 @@ IMGUI_API int PlotHistogram2(const char* label, const float* values,int values_c
 IMGUI_API int PlotCurve(const char* label, float (*values_getter)(void* data, float x,int numCurve), void* data,int num_curves,const char* overlay_text,const ImVec2 rangeY,const ImVec2 rangeX=ImVec2(-.1f,FLT_MAX), ImVec2 graph_size=ImVec2(0,0),ImVec2* pOptionalHoveredValueOut=NULL,float precisionInPixels=1.f,float numGridLinesHint=4.f,const ImU32* pColorsOverride=NULL,int numColorsOverride=0);
 
 
+class InputTextWithAutoCompletionData  {
+    protected:
+    // auto completion:
+    int deltaTTItems;                           // modified by UP/DOWN keys
+    bool tabPressed;                            // triggers autocompletion
+    ImVector<char> newTextToSet;                // needed because ImGui does not allow changing an InputText(...) buffer directly, while it's active
+    int itemPositionOfReturnedText;
+    int itemIndexOfReturnedText;
+    bool inited;                                // turns true the first time a method that use this class is called
+
+    public:
+    int currentAutocompletionItemIndex;         // completely user-side (if!=-1, that item is displayed in a different way in the autocompletion menu)
+    InputTextWithAutoCompletionData(int _currentAutocompletionItemIndex=-1) : deltaTTItems(0),tabPressed(false),itemPositionOfReturnedText(-1),itemIndexOfReturnedText(-1),inited(false),currentAutocompletionItemIndex(_currentAutocompletionItemIndex) {}
+
+    bool isInited() const {return inited;}      // added just for my laziness (to init elements inside DrawGL() of similiar)
+    int getItemPositionOfReturnedText() const {return itemPositionOfReturnedText;}  // usable only after "return" is pressed: it returns the item position at which the newly entered text can be inserted, or -1
+    int getItemIndexOfReturnedText() const {return itemIndexOfReturnedText;}        // usable only after "return" is pressed: it returns the item index that exactly matches the newly entered text, or -1
+
+    static float Opacity;   // 0.6f;
+
+    friend bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size,InputTextWithAutoCompletionData* pAutocompletion_data, bool (*autocompletion_items_getter)(void*, int, const char**), int autocompletion_items_size, void* autocompletion_user_data, int num_visible_autocompletion_items);
+    friend int DefaultInputTextAutoCompletionCallback(ImGuiTextEditCallbackData *data);
+};
+IMGUI_API bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size, InputTextWithAutoCompletionData* pAutocompletion_data, bool (*autocompletion_items_getter)(void*, int, const char**), int autocompletion_items_size, void* autocompletion_user_data=NULL, int num_visible_autocompletion_items=-1);
+
+class InputComboWithAutoCompletionData : protected InputTextWithAutoCompletionData {
+    protected:
+    int inputTextShown;
+    ImVector<char> buf;
+    bool isRenaming;
+    bool itemHovered,itemActive;
+    public:
+    InputComboWithAutoCompletionData() : inputTextShown(0),isRenaming(false),itemHovered(false),itemActive(false) {}
+
+    bool isInited() const {return inited;}              // added just for my laziness (to init elements inside DrawGL() of similiar)
+    bool isItemHovered() const {return itemHovered;}    // well, this widget is made of 2 widgets with buttons, so ImGui::IsItemHovered() does not always work
+    bool isItemActive() const {return itemActive;}      // well, this widget is made of 2 widgets with buttons, so ImGui::IsItemActive() does not always work
+    bool isInputTextVisibleNextCall() const {return inputTextShown!=0;}
+    const char* getInputTextBuffer() const {return buf.size()>0 ? &buf[0] : NULL;}
+
+    static char ButtonCharcters[3][5];  // = {"+","r","x"};
+    static char ButtonTooltips[3][128]; // = {"add","rename","delete"};
+
+    friend bool InputComboWithAutoCompletion(const char* label, int *current_item, size_t autocompletion_buffer_size, InputComboWithAutoCompletionData* pAutocompletion_data,
+                                  bool (*items_getter)(void*, int, const char**),       // gets item at position ... (cannot be NULL)
+                                  bool (*items_inserter)(void*, int,const char*),       // inserts item at position ... (cannot be NULL)
+                                  bool (*items_deleter)(void*, int),                    // deletes item at position ... (can be NULL)
+                                  bool (*items_renamer)(void *, int, int, const char *),// deletes item at position, and inserts renamed item at new position  ... (can be NULL)
+                                  int items_count, void* user_data, int num_visible_items);
+};
+IMGUI_API bool InputComboWithAutoCompletion(const char* label,int* current_item,size_t autocompletion_buffer_size,InputComboWithAutoCompletionData* pAutocompletion_data,
+    bool (*items_getter)(void*, int, const char**),  // gets item at position ... (cannot be NULL)
+    bool (*items_inserter)(void*, int,const char*),  // inserts item at position ... (cannot be NULL)
+    bool (*items_deleter)(void*, int),               // deletes item at position ... (can be NULL)
+    bool (*items_renamer)(void*,int,int,const char*),// deletes item at position, and inserts renamed item at new position  ... (can be NULL)
+    int items_count, void* user_data=NULL, int num_visible_items=-1);
+
+
 // Basic tree view implementation
-// TODO: See if we can switch context-menu with a single-shot RMB click (when a menu is still open)
+// TODO: See if we can switch context-menu with a single-shot RMB click (when a menu is already open)
 class TreeViewNode {
 protected:
     friend class TreeView;
@@ -753,6 +816,7 @@ IMGUI_API bool BeginTimeline(const char* str_id, float max_value=0.f, int num_vi
 IMGUI_API bool TimelineEvent(const char* str_id, float* values, bool keep_range_constant=false);
 IMGUI_API void EndTimeline(int num_vertical_grid_lines=5.f,float current_time=0.f,ImU32 timeline_running_color=IM_COL32(0,128,0,200));
 // End Timeline ======================================================================================
+
 
 } // namespace ImGui
 
