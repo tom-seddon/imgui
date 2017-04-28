@@ -2067,7 +2067,9 @@ bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size, 
     IM_ASSERT(autocompletion_items_getter);
     InputTextWithAutoCompletionData& ad = *pAutocompletion_data;
     ad.inited = true;
-    const ImGuiInputTextFlags itFlags = (!(ad.newTextToSet.size()>0 && ad.newTextToSet[0]!='\0')) ?  (ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory) : (ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways);
+    const ImGuiInputTextFlags itFlags = (!(ad.newTextToSet.size()>0 && ad.newTextToSet[0]!='\0')) ?
+                (ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_AutoSelectAll) :
+                (ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways);
     const ImVec2 cursorScreenPos = ImGui::GetCursorScreenPos();
     const bool rv = ImGui::InputText(label,buf,buf_size,itFlags,DefaultInputTextAutoCompletionCallback,(void*)&ad);
     if (rv) {
@@ -2175,6 +2177,7 @@ bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size, 
             //ImGui::SetTooltip("autocompletionEntries.size()=%d\nbufData.currentAutocompletionItemIndex=%d\nad.deltaTTItems=%d\nfirstTTItemIndex=%d\nnumTTItems=%d",autocompletion_items_size,ad.currentAutocompletionItemIndex,ad.deltaTTItems,firstTTItemIndex,numTTItems);
 
         }
+        else ad.deltaTTItems = 0;
     }
     ad.tabPressed=false;
     return rv;
@@ -2198,6 +2201,9 @@ bool InputComboWithAutoCompletion(const char* label, int *current_item, size_t a
     InputComboWithAutoCompletionData* pad = pAutocompletion_data;
     pad->inited = true;if (current_item) pad->currentAutocompletionItemIndex=*current_item;
     pad->itemHovered = pad->itemActive = false;
+    if (pad->buf.size()<(int)autocompletion_buffer_size) {
+        pad->buf.resize(autocompletion_buffer_size);pad->buf[0]='\0';
+    }
     ImGui::PushID(pAutocompletion_data);
     if (!pad->inputTextShown) {
         // ImGui::Combo(...) here
@@ -2241,6 +2247,13 @@ bool InputComboWithAutoCompletion(const char* label, int *current_item, size_t a
                 ImGui::SameLine(0,0);
                 if (ImGui::Button(InputComboWithAutoCompletionData::ButtonCharcters[1])) {
                     ++pad->inputTextShown;pad->isRenaming = true;
+                    const char* textToHighlight = NULL;
+                    if (items_getter(user_data,pad->currentAutocompletionItemIndex,&textToHighlight) && textToHighlight) {
+                        const int len = (int) strlen(textToHighlight);
+                        if (len>0 && len<(int)autocompletion_buffer_size)    {
+                            strcpy(&pad->buf[0],textToHighlight);
+                        }
+                    }
                 }
                 if (InputComboWithAutoCompletionData::ButtonTooltips[1][0]!='\0' && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",InputComboWithAutoCompletionData::ButtonTooltips[1]);
             }
@@ -2256,9 +2269,13 @@ bool InputComboWithAutoCompletion(const char* label, int *current_item, size_t a
         }
         // Label
         ImGui::SameLine();
-        //ImGui::Text("%s",label);    // This doesn't cut "##"
-        ImGui::RenderText(ImVec2(window->DC.CursorPos.x,window->DC.CursorPos.y+window->DC.CurrentLineTextBaseOffset),label);
-        // TODO: Add pad->itemHovered|=thisLabel
+        //ImGui::Text("%s",label);    // This doesn't cut "##". We must add all this cucumberson and error-prone code to workaround this (for correct alignment and isHovered detection):
+        const ImVec2 label_size = CalcTextSize(label, NULL, true);
+        if (label_size.x>0) ImGui::RenderText(ImVec2(window->DC.CursorPos.x,window->DC.CursorPos.y+window->DC.CurrentLineTextBaseOffset),label);
+        const ImRect label_bb(window->DC.CursorPos,ImVec2(window->DC.CursorPos.x + label_size.x, window->DC.CursorPos.y + label_size.y + ImGui::GetStyle().FramePadding.y*2.0f));
+        ImGui::ItemSize(label_bb, ImGui::GetStyle().FramePadding.y);
+        const ImGuiID labelID = 0;  // is this allowed ?
+        if (ImGui::ItemAdd(label_bb, &labelID)) pad->itemHovered|=ImGui::IsHovered(label_bb, labelID);
     }
     else {
         // ImGui::InputText(...) here

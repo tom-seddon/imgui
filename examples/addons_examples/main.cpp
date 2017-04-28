@@ -818,12 +818,15 @@ void DrawGL()	// Mandatory
                     // Important: entries must be sorted alphabetically
                     TMP::ItemInserter(&autocompletionEntries,0,"APPLE");
                     TMP::ItemInserter(&autocompletionEntries,1,"APRICOT");
-                    TMP::ItemInserter(&autocompletionEntries,2,"KIWI");
-                    TMP::ItemInserter(&autocompletionEntries,3,"LEMON");
-                    TMP::ItemInserter(&autocompletionEntries,4,"PAPAYA");
-                    TMP::ItemInserter(&autocompletionEntries,5,"PEAR");
+                    TMP::ItemInserter(&autocompletionEntries,2,"CHERRY");
+                    TMP::ItemInserter(&autocompletionEntries,3,"KIWI");
+                    TMP::ItemInserter(&autocompletionEntries,4,"LEMON");
+                    TMP::ItemInserter(&autocompletionEntries,5,"PAPAYA");
                     TMP::ItemInserter(&autocompletionEntries,6,"PEACH");
-                    TMP::ItemInserter(&autocompletionEntries,7,"WATERMELON");
+                    TMP::ItemInserter(&autocompletionEntries,7,"PEAR");
+                    TMP::ItemInserter(&autocompletionEntries,8,"PINEAPPLE");
+                    TMP::ItemInserter(&autocompletionEntries,9,"STRAWBERRY");
+                    TMP::ItemInserter(&autocompletionEntries,10,"WATERMELON");
 
                     // [Optional] user can handle bufData.currentAutocompletionItemIndex
                     // bufData.currentAutocompletionItemIndex is owned by the user (for ImGui::InputTextWithAutoCompletion(...) only).
@@ -862,7 +865,8 @@ void DrawGL()	// Mandatory
                     TMP::ItemInserter(&autocompletionEntries,3,"ivory");
                     TMP::ItemInserter(&autocompletionEntries,4,"pink");
                     TMP::ItemInserter(&autocompletionEntries,5,"red");
-                    TMP::ItemInserter(&autocompletionEntries,6,"yellow");
+                    TMP::ItemInserter(&autocompletionEntries,6,"white");
+                    TMP::ItemInserter(&autocompletionEntries,7,"yellow");
                     // We CAN'T handle bufData.currentAutocompletionItemIndex for Combos, because we have:
                     current_item = 2;
                 }
@@ -872,6 +876,8 @@ void DrawGL()	// Mandatory
                     autocompletionEntries.size(),(void*)&autocompletionEntries))    {
                     // something has changes (the Combo selected item, and/or an insert/delete operation
                 }
+                // For this particular widget ImGui::IsItemHovered() does not always work as expected. Workaround:
+                //if (bufData.isItemHovered()) ImGui::SetTooltip("%s","InputComboWithAutoCompletion tooltip");
             }
             ImGui::PopItemWidth();
 
