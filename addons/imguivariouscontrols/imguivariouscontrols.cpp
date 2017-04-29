@@ -2071,7 +2071,7 @@ bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size, 
                 (ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_AutoSelectAll) :
                 (ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways);
     const ImVec2 cursorScreenPos = ImGui::GetCursorScreenPos();
-    const bool rv = ImGui::InputText(label,buf,buf_size,itFlags,DefaultInputTextAutoCompletionCallback,(void*)&ad);
+    const bool rv = ImGui::InputText(label,buf,buf_size,itFlags|ad.additionalFlags,DefaultInputTextAutoCompletionCallback,(void*)&ad);
     if (rv) {
         // return pressed
         ad.itemPositionOfReturnedText=ad.itemIndexOfReturnedText=-1;
@@ -2123,8 +2123,18 @@ bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size, 
             }
 
             const int MaxNumTooltipItems = num_visible_autocompletion_items>0 ? num_visible_autocompletion_items : 7;
+            const float textLineHeightWithSpacing = ImGui::GetTextLineHeightWithSpacing();
+            const ImVec2 storedCursorScreenPos = ImGui::GetCursorScreenPos();
+            const int MaxNumItemsBelowInputText = (ImGui::GetIO().DisplaySize.y - (storedCursorScreenPos.y+textLineHeightWithSpacing))/textLineHeightWithSpacing;
+            const int MaxNumItemsAboveInputText = storedCursorScreenPos.y/textLineHeightWithSpacing;
+            int numTTItems = numItems>MaxNumTooltipItems?MaxNumTooltipItems:numItems;
+            bool useUpperScreen = false;
+            if (numTTItems>MaxNumItemsBelowInputText && MaxNumItemsBelowInputText<MaxNumItemsAboveInputText)    {
+                useUpperScreen = true;
+                if (numTTItems>MaxNumItemsAboveInputText) numTTItems = MaxNumItemsAboveInputText;
+            }
+            else if (numTTItems>MaxNumItemsBelowInputText) numTTItems=MaxNumItemsBelowInputText;
 
-            const int numTTItems = numItems>MaxNumTooltipItems?MaxNumTooltipItems:numItems;
             const int numTTItemsHalf = numTTItems/2;
             int firstTTItemIndex = selectedTTItemIndex-numTTItemsHalf;
             if (selectedTTItemIndex+numTTItemsHalf>=numItems) firstTTItemIndex = numItems-numTTItems;
@@ -2132,23 +2142,24 @@ bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size, 
 
             const ImVec2 inputTextBoxSize = ImGui::GetItemRectSize();
             float labelWidth = ImGui::CalcTextSize(label,NULL,true).x;
-            if (labelWidth>0.0f) labelWidth+=ImGui::GetStyle().ItemInnerSpacing.x;
-            const float textLineHeightWithSpacing = ImGui::GetTextLineHeightWithSpacing();
+            if (labelWidth>0.0f) labelWidth+=ImGui::GetStyle().ItemInnerSpacing.x;            
             const ImVec2 ttWindowSize(ImVec2(inputTextBoxSize.x-labelWidth,numTTItems*textLineHeightWithSpacing));
-            const ImVec2 storedCursorScreenPos = ImGui::GetCursorScreenPos();
-            const ImVec2 newCursorScreenPos(cursorScreenPos.x,cursorScreenPos.y+textLineHeightWithSpacing);
+            const ImVec2 newCursorScreenPos(cursorScreenPos.x,cursorScreenPos.y+(useUpperScreen ? (-numTTItems*textLineHeightWithSpacing) : (textLineHeightWithSpacing)));
             ImGui::SetCursorScreenPos(newCursorScreenPos);
             ImGui::SetNextWindowPos(newCursorScreenPos);
             ImGui::SetNextWindowSize(ttWindowSize);
+            const float xPadding = textLineHeightWithSpacing*0.5f;
+            ImGuiWindow* window = ImGui::GetCurrentWindowRead();
             ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,0);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(0,0));
 
             if (ImGui::Begin("##TooltipAutocomplete", NULL,ttWindowSize,InputTextWithAutoCompletionData::Opacity,ImGuiWindowFlags_Tooltip|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))  {
                 // We must always use newCursorScreenPos when mnually drawing inside this window
+                if (!window) window = ImGui::GetCurrentWindowRead();
                 for (int i=firstTTItemIndex,iSz=firstTTItemIndex+numTTItems;i<iSz;i++) {
+                    const ImVec2 start(newCursorScreenPos.x,newCursorScreenPos.y+(i-firstTTItemIndex)*textLineHeightWithSpacing);
                     if (i==ad.currentAutocompletionItemIndex) {
-                        ImVec2 start(newCursorScreenPos.x,newCursorScreenPos.y+(i-firstTTItemIndex)*textLineHeightWithSpacing);
-                        ImVec2 end(start.x+ttWindowSize.x,start.y+textLineHeightWithSpacing);
+                        ImVec2 end(start.x+ttWindowSize.x-1,start.y+textLineHeightWithSpacing);
                         ImU32 col = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Header]);
                         ImGui::GetWindowDrawList()->AddRectFilled(start,end,col,0,0);
                         //ImGui::GetWindowDrawList()->AddRect(start,end,ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]),0,0,1.f);
@@ -2156,15 +2167,14 @@ bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size, 
                         ImGui::PushStyleColor(ImGuiCol_Text,ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
                     }
                     if (i==selectedTTItemIndex) {
-                        ImVec2 start(newCursorScreenPos.x,newCursorScreenPos.y+(i-firstTTItemIndex)*textLineHeightWithSpacing);
-                        ImVec2 end(start.x+ttWindowSize.x,start.y+textLineHeightWithSpacing);
+                        ImVec2 end(start.x+ttWindowSize.x-1,start.y+textLineHeightWithSpacing);
                         ImU32 col = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Button]);
                         ImGui::GetWindowDrawList()->AddRectFilled(start,end,col,0,0);
                         ImGui::GetWindowDrawList()->AddRect(start,end,ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]),0,0,1.f);
 
                     }
-                    if (autocompletion_items_getter(autocompletion_user_data,i,&txt)) ImGui::Text(" %s",txt);
-                    else ImGui::Text(" %s","unknown");
+                    const bool ok = autocompletion_items_getter(autocompletion_user_data,i,&txt);
+                    ImGui::RenderText(ImVec2(start.x+xPadding,start.y+window->DC.PrevLineTextBaseOffset*0.5f),ok ? txt : "unknown");    // Not sure about +window->DC.PrevLineTextBaseOffset*0.5f
                     if (i==ad.currentAutocompletionItemIndex) ImGui::PopStyleColor();
                 }
             }

@@ -811,7 +811,7 @@ void DrawGL()	// Mandatory
             {
                 // Mandatory stuff
                 static char buf[bufferSize];
-                static ImGui::InputTextWithAutoCompletionData bufData;
+		static ImGui::InputTextWithAutoCompletionData bufData(ImGuiInputTextFlags_CharsUppercase);  // Only ImGuiInputTextFlags_Chars... flags are allowed here
                 static ImVector<char[bufferSize]> autocompletionEntries;    // The type here depends on our TMP struct
                 // [Optional] Bad init, but very comfortable to start with something
                 if (!bufData.isInited()) {

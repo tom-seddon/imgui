@@ -363,11 +363,14 @@ class InputTextWithAutoCompletionData  {
     ImVector<char> newTextToSet;                // needed because ImGui does not allow changing an InputText(...) buffer directly, while it's active
     int itemPositionOfReturnedText;
     int itemIndexOfReturnedText;
+    int additionalFlags;
     bool inited;                                // turns true the first time a method that use this class is called
 
     public:
     int currentAutocompletionItemIndex;         // completely user-side (if!=-1, that item is displayed in a different way in the autocompletion menu)
-    InputTextWithAutoCompletionData(int _currentAutocompletionItemIndex=-1) : deltaTTItems(0),tabPressed(false),itemPositionOfReturnedText(-1),itemIndexOfReturnedText(-1),inited(false),currentAutocompletionItemIndex(_currentAutocompletionItemIndex) {}
+    InputTextWithAutoCompletionData(ImGuiInputTextFlags _additionalFlags=0,int _currentAutocompletionItemIndex=-1) : deltaTTItems(0),tabPressed(false),itemPositionOfReturnedText(-1),itemIndexOfReturnedText(-1),
+    additionalFlags(_additionalFlags&(ImGuiInputTextFlags_CharsDecimal|ImGuiInputTextFlags_CharsHexadecimal|ImGuiInputTextFlags_CharsNoBlank|ImGuiInputTextFlags_CharsUppercase)),
+    inited(false),currentAutocompletionItemIndex(_currentAutocompletionItemIndex) {}
 
     bool isInited() const {return inited;}      // added just for my laziness (to init elements inside DrawGL() of similiar)
     int getItemPositionOfReturnedText() const {return itemPositionOfReturnedText;}  // usable only after "return" is pressed: it returns the item position at which the newly entered text can be inserted, or -1
