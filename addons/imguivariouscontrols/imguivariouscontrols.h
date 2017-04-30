@@ -363,13 +363,13 @@ class InputTextWithAutoCompletionData  {
     ImVector<char> newTextToSet;                // needed because ImGui does not allow changing an InputText(...) buffer directly, while it's active
     int itemPositionOfReturnedText;
     int itemIndexOfReturnedText;
-    int additionalFlags;
+    int additionalFlags,bufTextLen,lastSelectedTTItemIndex;
     bool inited;                                // turns true the first time a method that use this class is called
 
     public:
     int currentAutocompletionItemIndex;         // completely user-side (if!=-1, that item is displayed in a different way in the autocompletion menu)
     InputTextWithAutoCompletionData(ImGuiInputTextFlags _additionalFlags=0,int _currentAutocompletionItemIndex=-1) : deltaTTItems(0),tabPressed(false),itemPositionOfReturnedText(-1),itemIndexOfReturnedText(-1),
-    additionalFlags(_additionalFlags&(ImGuiInputTextFlags_CharsDecimal|ImGuiInputTextFlags_CharsHexadecimal|ImGuiInputTextFlags_CharsNoBlank|ImGuiInputTextFlags_CharsUppercase)),
+    additionalFlags(_additionalFlags&(ImGuiInputTextFlags_CharsDecimal|ImGuiInputTextFlags_CharsHexadecimal|ImGuiInputTextFlags_CharsNoBlank|ImGuiInputTextFlags_CharsUppercase)),bufTextLen(-1),lastSelectedTTItemIndex(-1),
     inited(false),currentAutocompletionItemIndex(_currentAutocompletionItemIndex) {}
 
     bool isInited() const {return inited;}      // added just for my laziness (to init elements inside DrawGL() of similiar)
@@ -380,8 +380,13 @@ class InputTextWithAutoCompletionData  {
 
     friend bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size,InputTextWithAutoCompletionData* pAutocompletion_data, bool (*autocompletion_items_getter)(void*, int, const char**), int autocompletion_items_size, void* autocompletion_user_data, int num_visible_autocompletion_items);
     friend int DefaultInputTextAutoCompletionCallback(ImGuiTextEditCallbackData *data);
+
+    // Some useful helper methods
+    static int HelperGetItemInsertionPosition(const char* txt,bool (*items_getter)(void*, int, const char**), int items_count, void* user_data=NULL,bool* item_is_already_present_out=NULL);
+    static int HelperInsertItem(const char* txt,bool (*items_getter)(void*, int, const char**),bool (*items_inserter)(void*, int,const char*), int items_count, void* user_data=NULL,bool* item_is_already_present_out=NULL);
 };
 IMGUI_API bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size, InputTextWithAutoCompletionData* pAutocompletion_data, bool (*autocompletion_items_getter)(void*, int, const char**), int autocompletion_items_size, void* autocompletion_user_data=NULL, int num_visible_autocompletion_items=-1);
+
 
 class InputComboWithAutoCompletionData : protected InputTextWithAutoCompletionData {
     protected:
@@ -390,7 +395,7 @@ class InputComboWithAutoCompletionData : protected InputTextWithAutoCompletionDa
     bool isRenaming;
     bool itemHovered,itemActive;
     public:
-    InputComboWithAutoCompletionData() : inputTextShown(0),isRenaming(false),itemHovered(false),itemActive(false) {}
+    InputComboWithAutoCompletionData(ImGuiInputTextFlags additionalInputTextFlags=0) : InputTextWithAutoCompletionData(additionalInputTextFlags),inputTextShown(0),isRenaming(false),itemHovered(false),itemActive(false) {}
 
     bool isInited() const {return inited;}              // added just for my laziness (to init elements inside DrawGL() of similiar)
     bool isItemHovered() const {return itemHovered;}    // well, this widget is made of 2 widgets with buttons, so ImGui::IsItemHovered() does not always work

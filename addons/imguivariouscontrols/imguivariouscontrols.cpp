@@ -2062,6 +2062,31 @@ int DefaultInputTextAutoCompletionCallback(ImGuiTextEditCallbackData *data) {
     return 0;
 }
 float InputTextWithAutoCompletionData::Opacity = 0.6f;
+int InputTextWithAutoCompletionData::HelperGetItemInsertionPosition(const char* txt,bool (*items_getter)(void*, int, const char**), int items_count, void* user_data,bool* item_is_already_present_out) {
+    if (item_is_already_present_out) *item_is_already_present_out=false;
+    if (!txt || txt[0]=='\0' || !items_getter || items_count<0) return -1;
+    const char* itxt = NULL;int cmp = 0;
+    for (int i=0;i<items_count;i++) {
+        if (items_getter(user_data,i,&itxt))   {
+            if ((cmp=strcmp(itxt,txt))>=0)  {
+                if (item_is_already_present_out && cmp==0) *item_is_already_present_out=true;
+                return i;
+            }
+        }
+    }
+    return items_count;
+}
+int InputTextWithAutoCompletionData::HelperInsertItem(const char* txt,bool (*items_getter)(void*, int, const char**),bool (*items_inserter)(void*, int,const char*), int items_count, void* user_data,bool* item_is_already_present_out) {
+    if (!txt || txt[0]=='\0' || !items_getter || !items_inserter || items_count<0) return -1;
+    bool alreadyPresent=false;
+    if (!item_is_already_present_out) item_is_already_present_out=&alreadyPresent;
+    const int itemPosition = HelperGetItemInsertionPosition(txt,items_getter,items_count,user_data,item_is_already_present_out);
+    if (!(*item_is_already_present_out) && itemPosition>=0) {
+        if (items_inserter(user_data,itemPosition,txt)) return itemPosition;
+        else return -1;
+    }
+    return itemPosition;
+}
 bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size, InputTextWithAutoCompletionData* pAutocompletion_data, bool (*autocompletion_items_getter)(void*, int, const char**), int autocompletion_items_size, void* autocompletion_user_data, int num_visible_autocompletion_items) {
     IM_ASSERT(pAutocompletion_data);
     IM_ASSERT(autocompletion_items_getter);
@@ -2095,19 +2120,54 @@ bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size, 
     }
     bool inputTextActive = ImGui::IsItemActive();
     //ImGui::SameLine();ImGui::Text(label);
-    if (inputTextActive) {
+    if (inputTextActive && autocompletion_items_size>0) {
         const int numItems = autocompletion_items_size;
         if (buf[0]!='\0' && numItems>0) {
+            const int buffersize = strlen(buf);
+            if (ad.bufTextLen!=buffersize) {
+                ad.bufTextLen=buffersize;
+                ad.deltaTTItems = 0;    // We reset the UP/DOWN offset whe text changes
+            }
+
             int selectedTTItemIndex = numItems-1;
             const char* txt=NULL;
-            for (int i=0;i<numItems;i++) {
-                if (autocompletion_items_getter(autocompletion_user_data,i,&txt))   {
-                    if (strcmp(txt,buf)>=0)  {selectedTTItemIndex=i;break;}
+            // We need to fetch the selectedTTItemIndex here
+            if (ad.lastSelectedTTItemIndex>=0 && ad.lastSelectedTTItemIndex<numItems && autocompletion_items_getter(autocompletion_user_data,ad.lastSelectedTTItemIndex,&txt))   {
+                // Speed up branch (we start our search from previous frame: ad.lastSelectedTTItemIndex
+                int i = ad.lastSelectedTTItemIndex;
+                //int cnt = 0;
+                if (strcmp(txt,buf)<0)  {
+                    while (i<numItems) {
+                        if (autocompletion_items_getter(autocompletion_user_data,++i,&txt))   {
+                            if (strcmp(txt,buf)>=0)  {selectedTTItemIndex=i;break;}
+                        }
+                        //++cnt;
+                    }
+                    if (i>=numItems) selectedTTItemIndex=numItems-1;
+                }
+                else {
+                    while (i>=0) {
+                        if (autocompletion_items_getter(autocompletion_user_data,i-1,&txt))   {
+                            if (strcmp(txt,buf)<0)  {selectedTTItemIndex=i;break;}
+                        }
+                        --i;
+                        //++cnt;
+                    }
+                    if (i<0) selectedTTItemIndex=0;
+                }
+                //static int oldCnt=10000000;if (cnt!=oldCnt) {fprintf(stderr,"cnt=%d\n",cnt);oldCnt=cnt;}
+            }
+            else {
+                // Normal (slow) branch
+                for (int i=0;i<numItems;i++) {
+                    if (autocompletion_items_getter(autocompletion_user_data,i,&txt))   {
+                        if (strcmp(txt,buf)>=0)  {selectedTTItemIndex=i;break;}
+                    }
                 }
             }
             if (selectedTTItemIndex + ad.deltaTTItems>=numItems) ad.deltaTTItems=numItems-selectedTTItemIndex-1;
             else if (selectedTTItemIndex + ad.deltaTTItems<0) ad.deltaTTItems=-selectedTTItemIndex;
-            selectedTTItemIndex+=ad.deltaTTItems;
+            ad.lastSelectedTTItemIndex=selectedTTItemIndex+=ad.deltaTTItems;
             if (ad.tabPressed)  {
                 if (selectedTTItemIndex<numItems) {
                     const char* selectedTTItemText=NULL;
@@ -2271,7 +2331,12 @@ bool InputComboWithAutoCompletion(const char* label, int *current_item, size_t a
                 ImGui::SameLine(0,0);
                 if (ImGui::Button(InputComboWithAutoCompletionData::ButtonCharcters[2]) && items_deleter(user_data,pad->currentAutocompletionItemIndex)) {
                     rv = true;
-                    pad->currentAutocompletionItemIndex=-1;
+                    if (ImGui::GetIO().KeyShift) {
+                        const int num_items = items_count -1;
+                        --pad->currentAutocompletionItemIndex;
+                        if (pad->currentAutocompletionItemIndex<0) pad->currentAutocompletionItemIndex=num_items-1;
+                    }
+                    else pad->currentAutocompletionItemIndex=-1;
                     if (current_item) *current_item = pad->currentAutocompletionItemIndex;
                 }
                 if (InputComboWithAutoCompletionData::ButtonTooltips[2][0]!='\0' && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",InputComboWithAutoCompletionData::ButtonTooltips[2]);

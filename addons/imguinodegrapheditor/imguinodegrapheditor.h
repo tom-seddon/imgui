@@ -40,6 +40,8 @@
 -> DONE - Added node name renaming with double LMB click.
 
 -> Add/Adjust/Fix more FieldTypes. TODO! And test/fix FT_CUSTOM field type too.
+
+-> Complete integration with TabWindow::TabLabel: set the modified flag correctly ( I guess this will need tons of testing :( )
 */
 
 // BUGS:
@@ -324,7 +326,7 @@ class Node
     inline const ImVec2 GetPos(float currentFontWindowScale=1.f) const {return ImVec2(Pos.x*currentFontWindowScale,Pos.y*currentFontWindowScale);}
 
     friend struct NodeLink;
-    friend struct NodeGraphEditor;
+    friend class NodeGraphEditor;
 
     // Helper static methods to simplify code of the derived classes
     // casts:
@@ -332,7 +334,7 @@ class Node
     template <typename T> inline static const T* Cast(const Node* n,int TYPE) {return ((n && n->getType()==TYPE) ? static_cast<const T*>(n) : NULL);}
 
     private:
-    struct NodeGraphEditor* parentNodeGraphEditor;
+    class NodeGraphEditor* parentNodeGraphEditor;
 
     protected:
     NodeGraphEditor& getNodeGraphEditor() {IM_ASSERT(parentNodeGraphEditor);return *parentNodeGraphEditor;}
@@ -354,7 +356,11 @@ struct NodeLink
     friend struct NodeGraphEditor;
 };
 
-struct NodeGraphEditor	{
+class NodeGraphEditor
+#if (defined(IMGUITABWINDOW_H_) && !defined(IMGUINODEGRAPHEDITOR_NO_TABLABEL))
+: public TabWindow::TabLabel
+#endif //IMGUITABWINDOW_H_
+{
     public:
     typedef Node* (*NodeFactoryDelegate)(int nodeType,const ImVec2& pos,const NodeGraphEditor& nge);
     enum NodeState {NS_ADDED,NS_DELETED,NS_EDITED};
@@ -523,6 +529,7 @@ struct NodeGraphEditor	{
         nodesBaseWidth = 120.f;
         maxConnectorNameWidth = 0;
         nodeListFilterComboIndex = 0;
+        setModified(false);
     }
     virtual ~NodeGraphEditor() {
         clear();
@@ -556,6 +563,23 @@ struct NodeGraphEditor	{
         for (int i=0,isz=availableNodesInfo.size();i<isz;i++) {availableNodesInfo[i].curNumInstances=0;}
         nodeListFilterComboIndex = 0;
     }
+
+#if (!(defined(IMGUITABWINDOW_H_) && !defined(IMGUINODEGRAPHEDITOR_NO_TABLABEL)))
+    private:
+    mutable bool modified;
+    protected:
+    void setModified(bool flag) {modified=flag;}    // so that this method is always available
+    public:
+    bool getModified() const {return modified;}     // so that this method is always available
+#   else
+    virtual bool saveAs(const char* savePath=NULL) {
+#       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_SAVE))
+        return save(savePath);
+#       else
+        return false;
+#       endif
+    }
+#   endif //IMGUITABWINDOW_H_
 
     bool isInited() const {return !inited;}
 
@@ -628,7 +652,7 @@ struct NodeGraphEditor	{
     Node* getActiveNode() {return activeNode;}  // The 'active' node is the first of the selected nodes
     const Node* getActiveNode() const {return activeNode;}
     const char* getActiveNodeInfo() const {return activeNode->getInfo();}
-    void setActiveNode(const Node* node) {if (node) {node->isSelected=true;activeNode=const_cast<Node*>(node);}}
+    void setActiveNode(const Node* node) {if (node) {node->isSelected=true;activeNode=const_cast<Node*>(node);setModified(true);}}
     void selectNode(const Node* node,bool findANewActiveNodeWhenNeeded=true)   {selectNodePrivate(node,true,findANewActiveNodeWhenNeeded);}
     void unselectNode(const Node* node,bool findANewActiveNodeWhenNeeded=true)   {selectNodePrivate(node,false,findANewActiveNodeWhenNeeded);}
     void selectAllNodes(bool findANewActiveNodeWhenNeeded=true) {selectAllNodesPrivate(true,findANewActiveNodeWhenNeeded);}

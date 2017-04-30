@@ -2486,6 +2486,7 @@ bool NodeGraphEditor::save(ImGuiHelper::Serializer& s)    {
 	s.save(&l.OutputSlot,"OutputSlot");
     }    
     //--------------------------------------------
+    setModified(false);
     return true;
 }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
@@ -2569,6 +2570,7 @@ static bool NodeGraphEditorParseCallback3(ImGuiHelper::FieldType /*ft*/,int /*nu
 bool NodeGraphEditor::load(ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart)    {
     if (!d.isValid() || !nodeFactoryFunctionPtr) return false;
     clear();
+    setModified(false);
     //--------------------------------------------
     const char* amount = pOptionalBufferStart ? (*pOptionalBufferStart) : 0;
     NodeGraphEditorParseCallback1Struct cbs;
@@ -2611,6 +2613,7 @@ bool NodeGraphEditor::load(ImGuiHelper::Deserializer& d, const char ** pOptional
     oldFontWindowScale = 0;
     //--------------------------------------------
     if (pOptionalBufferStart) *pOptionalBufferStart = amount;
+    setModified(false);
     return true;
     //--------------------------------------------
     //return true;

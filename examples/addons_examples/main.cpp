@@ -811,23 +811,24 @@ void DrawGL()	// Mandatory
             {
                 // Mandatory stuff
                 static char buf[bufferSize];
-		static ImGui::InputTextWithAutoCompletionData bufData(ImGuiInputTextFlags_CharsUppercase);  // Only ImGuiInputTextFlags_Chars... flags are allowed here
+                static ImGui::InputTextWithAutoCompletionData bufData(ImGuiInputTextFlags_CharsUppercase);  // Only ImGuiInputTextFlags_Chars... flags are allowed here
                 static ImVector<char[bufferSize]> autocompletionEntries;    // The type here depends on our TMP struct
                 // [Optional] Bad init, but very comfortable to start with something
                 if (!bufData.isInited()) {
+                    const char* entries[] = {"WATERMELON","STRAWBERRY","APRICOT","APPLE","KIWI","CHERRY","PAPAYA",
+                                             "LEMON","PEACH","PEAR","PINEAPPLE"};
+                    const int numEntries = (int) sizeof(entries)/sizeof(entries[0]);
+                    for (int i=0;i<numEntries;i++)  {
+                        // This helper call should ensure sorting + duplicate elimination
+                        ImGui::InputTextWithAutoCompletionData::HelperInsertItem(entries[i],TMP::ItemGetter,TMP::ItemInserter,autocompletionEntries.size(),&autocompletionEntries);
+                    }
+                    /* Otherwise we could have:
                     // Important: entries must be sorted alphabetically
                     TMP::ItemInserter(&autocompletionEntries,0,"APPLE");
                     TMP::ItemInserter(&autocompletionEntries,1,"APRICOT");
                     TMP::ItemInserter(&autocompletionEntries,2,"CHERRY");
-                    TMP::ItemInserter(&autocompletionEntries,3,"KIWI");
-                    TMP::ItemInserter(&autocompletionEntries,4,"LEMON");
-                    TMP::ItemInserter(&autocompletionEntries,5,"PAPAYA");
-                    TMP::ItemInserter(&autocompletionEntries,6,"PEACH");
-                    TMP::ItemInserter(&autocompletionEntries,7,"PEAR");
-                    TMP::ItemInserter(&autocompletionEntries,8,"PINEAPPLE");
-                    TMP::ItemInserter(&autocompletionEntries,9,"STRAWBERRY");
-                    TMP::ItemInserter(&autocompletionEntries,10,"WATERMELON");
-
+                    // ... and so on
+                    */
                     // [Optional] user can handle bufData.currentAutocompletionItemIndex
                     // bufData.currentAutocompletionItemIndex is owned by the user (for ImGui::InputTextWithAutoCompletion(...) only).
                     // When !=-1, the specified item is displayed in a different way in the autocompletion menu.
@@ -858,15 +859,12 @@ void DrawGL()	// Mandatory
                 static ImVector<char[bufferSize]> autocompletionEntries;    // The type here depends on our TMP struct
                 // [Optional] Bad init, but very comfortable to start with something
                 if (!bufData.isInited()) {
-                    // Important: entries must be sorted alphabetically
-                    TMP::ItemInserter(&autocompletionEntries,0,"black");
-                    TMP::ItemInserter(&autocompletionEntries,1,"blue");
-                    TMP::ItemInserter(&autocompletionEntries,2,"green");
-                    TMP::ItemInserter(&autocompletionEntries,3,"ivory");
-                    TMP::ItemInserter(&autocompletionEntries,4,"pink");
-                    TMP::ItemInserter(&autocompletionEntries,5,"red");
-                    TMP::ItemInserter(&autocompletionEntries,6,"white");
-                    TMP::ItemInserter(&autocompletionEntries,7,"yellow");
+                    const char* entries[] = {"black","blue","green","ivory","pink","red","white","yellow"};
+                    const int numEntries = (int) sizeof(entries)/sizeof(entries[0]);
+                    for (int i=0;i<numEntries;i++)  {
+                        // This helper call should ensure sorting + duplicate elimination
+                        ImGui::InputTextWithAutoCompletionData::HelperInsertItem(entries[i],TMP::ItemGetter,TMP::ItemInserter,autocompletionEntries.size(),&autocompletionEntries);
+                    }
                     // We CAN'T handle bufData.currentAutocompletionItemIndex for Combos, because we have:
                     current_item = 2;
                 }
