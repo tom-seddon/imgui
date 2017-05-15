@@ -427,6 +427,8 @@ static void ImImplMainLoopFrame(void* userPtr)	{
 
     static const int numFramesDelay = 12;
     static int curFramesDelay = -1;
+    // What about using: if (gImGuiAppIsIconified = glfwGetWindowAttrib(window, GLFW_ICONIFIED)) instead of listening to glfw_window_iconify_callback ?
+    // (some users suggest using !glfwGetWindowAttrib(window, GLFW_FOCUSED) instead..., some other: !glfwGetWindowAttrib(window, GLFW_VISIBLE) )
     if (gImGuiAppIsIconified || (gImGuiWereOutsideImGui ? (gImGuiInverseFPSClampOutsideImGui==0) : (gImGuiInverseFPSClampInsideImGui==0))) {
         //fprintf(stderr,"glfwWaitEvents() Start %1.4f\n",glfwGetTime());
         glfwWaitEvents();

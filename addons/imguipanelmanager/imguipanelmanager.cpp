@@ -618,7 +618,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 window->DrawList->PathLineTo(br + ImVec2(-resize_corner_size, 0.0f));
                 window->DrawList->PathLineTo(br + ImVec2(0.0f, -resize_corner_size));
                 window->DrawList->PathArcToFast(ImVec2(br.x - window_rounding, br.y - window_rounding), window_rounding, 0, 3);
-                window->DrawList->PathFill(resize_col);
+                window->DrawList->PathFillConvex(resize_col);
             }
 
             // Borders
