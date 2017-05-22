@@ -354,6 +354,33 @@ IMGUI_API int PlotHistogram2(const char* label, const float* values,int values_c
 // 'numGridLinesHint' is currently something we must still fix. Set it to zero to hide lines.
 IMGUI_API int PlotCurve(const char* label, float (*values_getter)(void* data, float x,int numCurve), void* data,int num_curves,const char* overlay_text,const ImVec2 rangeY,const ImVec2 rangeX=ImVec2(-.1f,FLT_MAX), ImVec2 graph_size=ImVec2(0,0),ImVec2* pOptionalHoveredValueOut=NULL,float precisionInPixels=1.f,float numGridLinesHint=4.f,const ImU32* pColorsOverride=NULL,int numColorsOverride=0);
 
+// These 2 have a completely different implementation:
+// Posted by @JaapSuter and @maxint (please see: https://github.com/ocornut/imgui/issues/632)
+IMGUI_API void PlotMultiLines(
+    const char* label,
+    int num_datas,
+    const char** names,
+    const ImColor* colors,
+    float(*getter)(const void* data, int idx),
+    const void * const * datas,
+    int values_count,
+    float scale_min,
+    float scale_max,
+    ImVec2 graph_size);
+
+// Posted by @JaapSuter and @maxint (please see: https://github.com/ocornut/imgui/issues/632)
+IMGUI_API void PlotMultiHistograms(
+    const char* label,
+    int num_hists,
+    const char** names,
+    const ImColor* colors,
+    float(*getter)(const void* data, int idx),
+    const void * const * datas,
+    int values_count,
+    float scale_min,
+    float scale_max,
+    ImVec2 graph_size);
+
 
 class InputTextWithAutoCompletionData  {
     protected:

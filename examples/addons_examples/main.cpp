@@ -1000,6 +1000,11 @@ void DrawGL()	// Mandatory
 
                 ImGui::TreePop();
             }
+
+            // ImGui::PlotMultiLines(...) and ImGui::PlotMultiHistograms(...)
+            // from here: https://github.com/ocornut/imgui/issues/632
+            // (made by @JaapSuter and @maxint)
+            // are available too (but no example so far... I'm too lazy to code it)
         }
 
 
