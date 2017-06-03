@@ -4,7 +4,7 @@
 #include "imguibindings.h"
 
 
-static SDL_Window* window = NULL;
+/*static*/ SDL_Window* window = NULL;
 static ImVec2 mousePosScale(1.0f, 1.0f);
 
 static const SDL_SystemCursor sdlCursorIds[ImGuiMouseCursor_Count_+1] = {
