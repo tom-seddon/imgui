@@ -1,4 +1,4 @@
-// dear imgui, v1.50 WIP
+// dear imgui, v1.50
 // (main code and documentation)
 
 // See ImGui::ShowTestWindow() in imgui_demo.cpp for demo code.
@@ -280,8 +280,9 @@
       stb_textedit.h
       stb_truetype.h
     Don't overwrite imconfig.h if you have made modification to your copy.
-    Check the "API BREAKING CHANGES" sections for a list of occasional API breaking changes. If you have a problem with a function, search for its name
-    in the code, there will likely be a comment about it. Please report any issue to the GitHub page!
+    If you have a problem with a missing function/symbols, search for its name in the code, there will likely be a comment about it. 
+    Check the "API BREAKING CHANGES" sections for a list of occasional API breaking changes. 
+    Please report any issue to the GitHub page!
 
  Q: What is ImTextureID and how do I display an image?
  A: ImTextureID is a void* used to pass renderer-agnostic texture references around until it hits your render function.
@@ -3148,25 +3149,26 @@ static bool IsKeyPressedMap(ImGuiKey key, bool repeat)
     return ImGui::IsKeyPressed(key_index, repeat);
 }
 
-int ImGui::GetKeyIndex(ImGuiKey key)
+int ImGui::GetKeyIndex(ImGuiKey imgui_key)
 {
-    IM_ASSERT(key >= 0 && key < ImGuiKey_COUNT);
-    return GImGui->IO.KeyMap[key];
+    IM_ASSERT(imgui_key >= 0 && imgui_key < ImGuiKey_COUNT);
+    return GImGui->IO.KeyMap[imgui_key];
 }
 
-bool ImGui::IsKeyDown(int key_index)
+// Note that imgui doesn't know the semantic of each entry of io.KeyDown[]. Use your own indices/enums according to how your backend/engine stored them into KeyDown[]!
+bool ImGui::IsKeyDown(int user_key_index)
 {
-    if (key_index < 0) return false;
-    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(GImGui->IO.KeysDown));
-    return GImGui->IO.KeysDown[key_index];
+    if (user_key_index < 0) return false;
+    IM_ASSERT(user_key_index >= 0 && user_key_index < IM_ARRAYSIZE(GImGui->IO.KeysDown));
+    return GImGui->IO.KeysDown[user_key_index];
 }
 
-bool ImGui::IsKeyPressed(int key_index, bool repeat)
+bool ImGui::IsKeyPressed(int user_key_index, bool repeat)
 {
     ImGuiContext& g = *GImGui;
-    if (key_index < 0) return false;
-    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown));
-    const float t = g.IO.KeysDownDuration[key_index];
+    if (user_key_index < 0) return false;
+    IM_ASSERT(user_key_index >= 0 && user_key_index < IM_ARRAYSIZE(g.IO.KeysDown));
+    const float t = g.IO.KeysDownDuration[user_key_index];
     if (t == 0.0f)
         return true;
 
@@ -3179,12 +3181,12 @@ bool ImGui::IsKeyPressed(int key_index, bool repeat)
     return false;
 }
 
-bool ImGui::IsKeyReleased(int key_index)
+bool ImGui::IsKeyReleased(int user_key_index)
 {
     ImGuiContext& g = *GImGui;
-    if (key_index < 0) return false;
-    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown));
-    if (g.IO.KeysDownDurationPrev[key_index] >= 0.0f && !g.IO.KeysDown[key_index])
+    if (user_key_index < 0) return false;
+    IM_ASSERT(user_key_index >= 0 && user_key_index < IM_ARRAYSIZE(g.IO.KeysDown));
+    if (g.IO.KeysDownDurationPrev[user_key_index] >= 0.0f && !g.IO.KeysDown[user_key_index])
         return true;
     return false;
 }
