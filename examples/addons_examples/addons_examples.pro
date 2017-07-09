@@ -16,9 +16,9 @@ DESTDIR = ./
 #CONFIG+= use_main6  # dev only
 
 # Only one of these must be active:
-CONFIG+= use_glfw3
+#CONFIG+= use_glfw3
 #CONFIG+= use_glut
-#CONFIG+= use_sdl2
+CONFIG+= use_sdl2
 #CONFIG+= use_winapi
 #CONFIG+= use_direct3d9
 # Optional, but it might be mandatory for Windows: only ONE of them is allowed

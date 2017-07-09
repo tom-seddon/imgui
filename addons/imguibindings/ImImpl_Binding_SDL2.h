@@ -330,7 +330,7 @@ static void ImImplMainLoopFrame(void* pDone)	{
 #				endif //
             break;
         case SDL_USEREVENT:
-           if (gImGuiUserEventCallback) gImGuiUserEventCallback((void)&event);
+           if (gImGuiUserEventCallback) gImGuiUserEventCallback((void*)&event);
            break;
         default:
             break;

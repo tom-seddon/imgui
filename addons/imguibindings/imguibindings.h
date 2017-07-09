@@ -147,7 +147,7 @@ extern ImImplVoidDelegate gImGuiPostInitGLCallback;
 extern ImImplVoidDelegate gImGuiPreDrawGLCallback;
 extern ImImplVoidDelegate gImGuiPreDrawGLSwapBuffersCallback;
 extern ImImplVoidDelegate gImGuiPostDrawGLSwapBuffersCallback;
-typedef void (*ImImplVoidDelegateTakingVoidPtr)();
+typedef void (*ImImplVoidDelegateTakingVoidPtr)(void*);
 extern ImImplVoidDelegateTakingVoidPtr gImGuiUserEventCallback; // Implemented only in the SDL2 binding ATM
 // --------------------------------------------------------------------------------------------------------------
 
