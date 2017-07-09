@@ -329,6 +329,9 @@ static void ImImplMainLoopFrame(void* pDone)	{
             emscripten_cancel_main_loop();
 #				endif //
             break;
+        case SDL_USEREVENT:
+           if (gImGuiUserEventCallback) gImGuiUserEventCallback((void)&event);
+           break;
         default:
             break;
         }

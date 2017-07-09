@@ -17,6 +17,7 @@ ImImplVoidDelegate gImGuiPostInitGLCallback   = NULL;
 ImImplVoidDelegate gImGuiPreDrawGLCallback    = NULL;
 ImImplVoidDelegate gImGuiPreDrawGLSwapBuffersCallback = NULL;
 ImImplVoidDelegate gImGuiPostDrawGLSwapBuffersCallback = NULL;
+ImImplVoidDelegateTakingVoidPtr gImGuiUserEventCallback = NULL;
 // --------------------------------------------------------------------------------------------------------------
 
 #ifdef IMIMPL_BUILD_SDF
