@@ -89,6 +89,11 @@ NOTES:
  *                                            (it requires libtiff to be installed in your system) to load/save
  *                                            .tiff files. Still: check out libtiff license and be warned that this
  *                                            format might contain patented algorithms.
+ *                                            [Experimental]: when IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS is defined,
+ *                                            you can further define IMGUI_USE_LIBWEBP
+ *                                            (it requires libwebp to be installed in your system) to load/save
+ *                                            .webp files. Still: check out libwebp license and be warned that this
+ *                                            format might contain patented algorithms.
  * IMGUIIMAGEEDITOR_LOAD_ONLY_SAVABLE_FORMATS - does what it says
  * stb_image definitions can be used too (for example STBI_NO_GIF,etc.), but please make sure that you can load back
  * all the savable image formats.
@@ -105,6 +110,12 @@ NOTES:
 */
 
 /* CHANGELOG:
+ IMGUIIMAGEEDITOR_VERSION 0.3
+ * Added optional support for the WebP format. Issues:
+ * -> In an animated webp, no frame is loaded.
+ * -> Saving quality is hardcoded at 75 ATM (don't know how to expose it).
+ * -> It's not possible to save a RGB webp image as RGBA, because the webp encoder strips the alpha channel when it's not used.
+
  IMGUIIMAGEEDITOR_VERSION 0.25
  * Changed the license to the default MIT license (it's actually shorter than before)
  * Added a (slow and buggy) normal map filter
@@ -146,7 +157,7 @@ NOTES:
  * Added an optional callback SetImageEditorEventCallback(...)
 */
 
-#define IMGUIIMAGEEDITOR_VERSION 0.20
+#define IMGUIIMAGEEDITOR_VERSION 0.30
 
 namespace ImGui {
 

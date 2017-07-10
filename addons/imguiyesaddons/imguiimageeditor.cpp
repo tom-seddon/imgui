@@ -33,7 +33,8 @@ SOFTWARE.
 //#define IMGUIIMAGEEDITOR_DEV_ONLY   // TO COMMENT OUT (mandatory)
 #ifdef IMGUIIMAGEEDITOR_DEV_ONLY
 #define IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS
-#define IMGUI_USE_LIBTIFF
+//#define IMGUI_USE_LIBTIFF
+#define IMGUI_USE_LIBWEBP
 //-----------------------------------------------------------------------------------------------------------------
 // TO REMOVE! (used to force intellisense on Qt Creator)--
 #include "../../imgui.h"
@@ -257,6 +258,14 @@ extern "C" {
 
 */
 
+#ifdef IMGUI_USE_LIBWEBP    // This needs libwebp
+extern "C" {
+#include <webp/decode.h>
+#include <webp/encode.h>
+}
+#define _WEBP_
+#endif //IMGUI_USE_LIBWEBP
+
 #endif //IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS
 
 #endif //IMGUIIMAGEEDITOR_NO_PLUGINS
@@ -422,6 +431,66 @@ that the pixel information is stored a row at a time!
     return data;
 }
 #endif //_TIFF_
+
+#ifdef _WEBP_
+// If quality<0 or quality>100, a lossless save is performed. [But how to expose it in the GUI?]
+static bool webp_save_to_memory(const unsigned char* pixels,int w,int h,int c,ImVector<char>& rv,float quality=75) {
+    rv.clear();
+    if (!pixels || w<=0 || h<=0 || (c!=3 && c!=4)) return false;
+
+    uint8_t* output = NULL;
+    size_t size = 0;
+    if (quality<0 || quality>100) {
+        if      (c==3) size = WebPEncodeLosslessBGR( (const uint8_t*) pixels,w,h,w*c,&output);
+        else if (c==4) size = WebPEncodeLosslessBGRA((const uint8_t*) pixels,w,h,w*c,&output);
+    }
+    else {
+        if      (c==3) size = WebPEncodeRGB( (const uint8_t*) pixels,w,h,w*c,quality,&output);
+        else if (c==4) size = WebPEncodeRGBA((const uint8_t*) pixels,w,h,w*c,quality,&output);
+    }
+
+    if (output) {
+        if (size>0) {
+            rv.resize(size);
+            memcpy(&rv[0],output,size);
+        }
+        //WebPFree(output); // This is present in newer versions only...
+        free(output);
+        output = NULL;
+    }
+
+    const bool checkAlpha = false;  // This check shows that it's not possible to save a RGB image as RGBA using webp: (the encoder strips the alpha channel if it's not used).
+    if (checkAlpha && c==4 && rv.size()>0) {
+        WebPBitstreamFeatures webpFreatures;
+        if (WebPGetFeatures((const uint8_t*) &rv[0],(size_t) rv.size(),&webpFreatures)==VP8_STATUS_OK) {
+            IM_ASSERT(webpFreatures.width = w);
+            IM_ASSERT(webpFreatures.height = h);
+            IM_ASSERT(webpFreatures.has_alpha);
+        }
+    }
+
+    return size>0;
+}
+static unsigned char* webp_load_from_memory(const char* buffer,int size,int& w,int& h,int &c) {
+    if (!buffer || size<=0) return NULL;
+    w=h=0;c=4;
+    WebPBitstreamFeatures webpFreatures;
+    if (WebPGetFeatures((const uint8_t*) buffer,(size_t) size,&webpFreatures)!=VP8_STATUS_OK) return NULL;
+    if (webpFreatures.has_animation) return NULL;   // Maybe we can load the 1st frame in some way...
+    w = webpFreatures.width;
+    h = webpFreatures.height;
+    c = webpFreatures.has_alpha ? 4 : 3;
+
+    unsigned char* data = (unsigned char*)STBI_MALLOC(w*h*c);
+
+    uint8_t* rv = NULL;
+    if (c==3)       rv = WebPDecodeRGBInto( (const uint8_t*) buffer,(size_t) size,(uint8_t*) data,w*h*c,w*c);
+    else if (c==4)  rv = WebPDecodeRGBAInto((const uint8_t*) buffer,(size_t) size,(uint8_t*) data,w*h*c,w*c);
+    if (!rv) {STBI_FREE(data);data=NULL;}
+
+    return data;
+}
+#endif //_WEBP_
 
 // Some old compilers don't have round
 static float round(float x) {return x >= 0.0f ? floor(x + 0.5f) : ceil(x - 0.5f);}
@@ -771,6 +840,11 @@ static void InitSupportedFileExtensions() {
         //strcat(p[3],".tiff;.tif;");
         strcat(p[4],".tiff;.tif;");
 #       endif //_TIFF_
+#       ifdef _WEBP_
+        strcat(p[0],".webp;");
+        strcat(p[3],".webp;");
+        strcat(p[4],".webp;");
+#       endif //_WEBP_
         for (int i=0;i<5;i++)   {
             const int len = strlen(p[i]);
             if (len>0) p[i][len-1]='\0';   // trim last ';'
@@ -803,6 +877,9 @@ static void InitSupportedFileExtensions() {
 #       endif
 #       ifdef _TIFF_
         strcat(p,".tiff;.tif;");
+#       endif
+#       ifdef _WEBP_
+        strcat(p,".webp;");
 #       endif
 #       ifndef STBI_NO_BMP
         strcat(p,".bmp;");
@@ -4861,6 +4938,11 @@ struct StbImage {
             image = ImGuiIE::tiff_load_from_memory((const char*) buffer,size,w,h,c);
 #           endif //_TIFF_
         }
+        else if (ext && ((strcmp(ext,".webp")==0) || (strcmp(ext,".webp")==0)))   {
+#           ifdef _WEBP_
+            image = ImGuiIE::webp_load_from_memory((const char*) buffer,size,w,h,c);
+#           endif //_WEBP_
+        }
         else if (!image) image = stbi_load_from_memory(buffer,size,&w,&h,&c,0);
         if (!image) return false;
         if (c!=1 && c!=3 && c<4) {
@@ -5060,6 +5142,17 @@ struct StbImage {
                 }
             }
 #           endif //_TIFF_
+        }
+        else if (strcmp(feh.ext,".webp")==0 || strcmp(feh.ext,".webp")==0) {
+            IM_ASSERT(c==3 || c==4);
+#           ifdef _WEBP_
+            if (!rv) {
+                ImVector<char> outBuf;
+                if (ImGuiIE::webp_save_to_memory(image,w,h,c,outBuf)) {
+                    rv = ImGuiIE::SetFileContent(path,(const unsigned char*)&outBuf[0],outBuf.size());
+                }
+            }
+#           endif //_WEBP_
         }
 
         if (rv) {
