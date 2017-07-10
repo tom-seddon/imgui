@@ -113,7 +113,7 @@ NOTES:
  IMGUIIMAGEEDITOR_VERSION 0.3
  * Added optional support for the WebP format. Issues:
  * -> In an animated webp, no frame is loaded.
- * -> Saving quality is hardcoded at 75 ATM (don't know how to expose it).
+ * -> Saving quality is hardcoded at 80 for RGB and LossLess for RGBA images.
  * -> It's not possible to save a RGB webp image as RGBA, because the webp encoder strips the alpha channel when it's not used.
 
  IMGUIIMAGEEDITOR_VERSION 0.25

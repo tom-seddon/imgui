@@ -433,16 +433,16 @@ that the pixel information is stored a row at a time!
 #endif //_TIFF_
 
 #ifdef _WEBP_
-// If quality<0 or quality>100, a lossless save is performed. [But how to expose it in the GUI?]
-static bool webp_save_to_memory(const unsigned char* pixels,int w,int h,int c,ImVector<char>& rv,float quality=75) {
+static bool webp_save_to_memory(const unsigned char* pixels,int w,int h,int c,ImVector<char>& rv) {
     rv.clear();
     if (!pixels || w<=0 || h<=0 || (c!=3 && c!=4)) return false;
 
     uint8_t* output = NULL;
     size_t size = 0;
+    const float quality = c==3 ? 80 : -1;   // If quality<0 or quality>100, a lossless save is performed.
     if (quality<0 || quality>100) {
-        if      (c==3) size = WebPEncodeLosslessBGR( (const uint8_t*) pixels,w,h,w*c,&output);
-        else if (c==4) size = WebPEncodeLosslessBGRA((const uint8_t*) pixels,w,h,w*c,&output);
+        if      (c==3) size = WebPEncodeLosslessRGB( (const uint8_t*) pixels,w,h,w*c,&output);
+        else if (c==4) size = WebPEncodeLosslessRGBA((const uint8_t*) pixels,w,h,w*c,&output);
     }
     else {
         if      (c==3) size = WebPEncodeRGB( (const uint8_t*) pixels,w,h,w*c,quality,&output);
