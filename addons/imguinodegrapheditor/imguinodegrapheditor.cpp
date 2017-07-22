@@ -2205,16 +2205,20 @@ template<typename T> inline static T GetDegsToRadians() {
 bool FieldInfo::render(int nodeWidth)   {
     FieldInfo& f = *this;
     ImGui::PushID((const void*) &f);
-    static const int precisionStrSize = 16;static char precisionStr[precisionStrSize];int precisionLastCharIndex;
+    static const int precisionStrSize = 16;
+    static char precisionStr[precisionStrSize];
+    int precisionLastCharIndex;
     const char* label = (/*f.label &&*/ f.label[0]!='\0') ? &f.label[0] : "##DummyLabel";
-    if (f.precision>0) {
-        strcpy(precisionStr,"%.");
-        snprintf(&precisionStr[2], precisionStrSize-2,"%ds",f.precision);
-        precisionLastCharIndex = strlen(precisionStr)-1;
-    }
-    else {
-        strcpy(precisionStr,"%s");
-        precisionLastCharIndex = 1;
+    if (f.type!=FT_UNSIGNED && f.type!=FT_INT)  {
+        if (f.precision>0) {
+            strcpy(precisionStr,"%.");
+            snprintf(&precisionStr[2], precisionStrSize-2,"%ds",f.precision);
+            precisionLastCharIndex = strlen(precisionStr)-1;
+        }
+        else {
+            strcpy(precisionStr,"%s");
+            precisionLastCharIndex = 1;
+        }
     }
 
     float dragSpeed = (float)(f.maxValue-f.minValue)/200.f;if (dragSpeed<=0) dragSpeed=1.f;
@@ -2291,7 +2295,7 @@ bool FieldInfo::render(int nodeWidth)   {
     }
         break;
     case FT_UNSIGNED: {
-        //precisionStr[precisionLastCharIndex]='d';
+        strcpy(precisionStr,"%1.0f");
         const int minValue = (int) f.minValue;
         const int maxValue = (int) f.maxValue;
         unsigned* pField = (unsigned*) f.pdata;
@@ -2324,7 +2328,7 @@ bool FieldInfo::render(int nodeWidth)   {
     }
         break;
     case FT_INT: {
-        //precisionStr[precisionLastCharIndex]='d';
+        strcpy(precisionStr,"%1.0f");
         const int minValue = (int) f.minValue;
         const int maxValue = (int) f.maxValue;
         int* pField = (int*) f.pdata;
@@ -2693,7 +2697,7 @@ class ColorNode : public Node {
         node->init("ColorNode",pos,"","r;g;b;a",TYPE);
 
         // 3) init fields ( this uses the node->fields variable; otherwise we should have overridden other virtual methods (to render and serialize) )
-	node->fields.addFieldColor(&node->Color.x,true,"Color","color with alpha");
+        node->fields.addFieldColor(&node->Color.x,true,"Color","color with alpha");
 
         // 4) set (or load) field values
         node->Color = ImColor(255,255,0,255);
