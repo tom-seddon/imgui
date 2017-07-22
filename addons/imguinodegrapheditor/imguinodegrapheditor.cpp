@@ -468,6 +468,15 @@ inline static float GetSquaredDistanceToBezierCurve(const ImVec2& point,const Im
     return minSquaredDistance;
 }
 
+static ImVec2 gNodeGraphEditorWindowPadding(8.f,8.f);
+inline static void NodeGraphEditorSetTooltip(const char* tooltip) {
+    ImGuiStyle& igStyle = ImGui::GetStyle();
+    igStyle.WindowPadding.x = gNodeGraphEditorWindowPadding.x;
+    igStyle.WindowPadding.y = gNodeGraphEditorWindowPadding.y;
+    ImGui::SetTooltip("%s",tooltip);
+    igStyle.WindowPadding.x = igStyle.WindowPadding.y = 0.f;
+}
+
 void NodeGraphEditor::render()
 {
     if (!inited) inited=true;
@@ -696,9 +705,9 @@ void NodeGraphEditor::render()
             ImGui::PopStyleVar(2);
         }
 
-
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1,1));
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
+	gNodeGraphEditorWindowPadding = ImGui::GetStyle().WindowPadding;
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1,1));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
         ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.color_background);
         if (ImGui::BeginChild("scrolling_region", ImVec2(0,0), true, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollWithMouse))  {
 
@@ -707,7 +716,7 @@ void NodeGraphEditor::render()
 
             // New: to ensure font scaling in subchilds of the nodes too, we MUST track g.Font->Scale,
             // instead of ImGui::GetCurrentWindow()->FontWindowScale.
-            // Note that this change could break io.FontAllowUserScaling==true (To test, but it didn't work as expacted anyway)
+	    // Note that this change could break io.FontAllowUserScaling==true (To test, but it didn't work as expacted anyway)
             float oldFontScaleToReset = g.Font->Scale;      // We'll clean up at the bottom
             float fontScaleStored = oldFontWindowScale ? oldFontWindowScale : oldFontScaleToReset;
             float& fontScaleToTrack = g.Font->Scale;
@@ -900,7 +909,12 @@ void NodeGraphEditor::render()
                     ImGui::Text("%s",node->Name);
                     if (ImGui::IsItemHovered()) {
                         const char* tooltip = node->getTooltip();
-                        if (tooltip && tooltip[0]!='\0') ImGui::SetTooltip("%s",tooltip);
+			if (tooltip && tooltip[0]!='\0') {
+			    ImGuiStyle& igStyle = ImGui::GetStyle();
+			    igStyle.WindowPadding.x = igStyle.WindowPadding.y =4.f;
+			    ImGui::SetTooltip("%s",tooltip);
+			    igStyle.WindowPadding.x = igStyle.WindowPadding.y =0.f;
+			}
                         if (isLMBDoubleClicked) {
                             nodeThatIsBeingEditing = node;
                             node->isInEditingMode = mustStartEditingNodeName = true;
@@ -944,7 +958,7 @@ void NodeGraphEditor::render()
                             if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[2])) {
                                 node_to_paste_from_copy_source = node_hovered_in_scene = node;
                             }
-                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
+			    if (ImGui::IsItemHovered()) NodeGraphEditorSetTooltip("Paste");
                             ImGui::SameLine(0);
                         }
                         if (canCopy)	{
@@ -952,7 +966,7 @@ void NodeGraphEditor::render()
                                 node_hovered_in_scene = node;
                                 copyNode(node);
                             }
-                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
+			    if (ImGui::IsItemHovered()) NodeGraphEditorSetTooltip("Copy");
                             ImGui::SameLine(0);
                         }
                     }
@@ -964,8 +978,8 @@ void NodeGraphEditor::render()
                             open_delete_only_context_menu = true;  // will ask to delete node later
                         }
                     }
-                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Delete");
-                    if (show_node_copy_paste_buttons) ImGui::PopStyleVar(2);
+		    if (ImGui::IsItemHovered()) NodeGraphEditorSetTooltip("Delete");
+		    if (show_node_copy_paste_buttons) ImGui::PopStyleVar(2);
                     ImGui::PopID();
                     ImGui::PopStyleColor(4);
                     //== End actual code to draw buttons (same code is copied below) ====================
@@ -1032,7 +1046,7 @@ void NodeGraphEditor::render()
                             if (ImGui::SmallButton(NodeGraphEditor::CloseCopyPasteChars[2])) {
                                 node_to_paste_from_copy_source = node_hovered_in_scene = node;
                             }
-                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Paste");
+			    if (ImGui::IsItemHovered()) NodeGraphEditorSetTooltip("Paste");
                             ImGui::SameLine(0);
                         }
                         if (canCopy)	{
@@ -1040,7 +1054,7 @@ void NodeGraphEditor::render()
                                 node_hovered_in_scene = node;
                                 copyNode(node);
                             }
-                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Copy");
+			    if (ImGui::IsItemHovered()) NodeGraphEditorSetTooltip("Copy");
                             ImGui::SameLine(0);
                         }
                     }
@@ -1052,7 +1066,7 @@ void NodeGraphEditor::render()
                             open_delete_only_context_menu = true;  // will ask to delete node later
                         }
                     }
-                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Delete");
+		    if (ImGui::IsItemHovered()) NodeGraphEditorSetTooltip("Delete");
                     if (show_node_copy_paste_buttons) ImGui::PopStyleVar(2);
                     ImGui::PopID();
                     ImGui::PopStyleColor(4);
@@ -1591,8 +1605,7 @@ void NodeGraphEditor::render()
         }
         ImGui::EndChild();  // scrolling_region
         ImGui::PopStyleColor();
-        ImGui::PopStyleVar(2);
-
+	ImGui::PopStyleVar(2);
     }
     ImGui::EndChild();  // GraphNodeChildWindow
 
@@ -2398,7 +2411,7 @@ bool FieldInfo::render(int nodeWidth)   {
             changed|=ImGui::InputText("##DummyLabelInputText",txtField,f.precision,flags);
             ImGui::PopItemWidth();
             if (addBrowseButton)	{
-                if (/*f.tooltip &&*/ f.tooltip[0]!='\0' && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",f.tooltip);
+		if (/*f.tooltip &&*/ f.tooltip[0]!='\0' && ImGui::IsItemHovered()) NodeGraphEditorSetTooltip(f.tooltip);
                 skipTooltip = true;
                 ImGui::SameLine(0,4);
                 ImGui::PushItemWidth(browseBtnWidth);
@@ -2407,7 +2420,7 @@ bool FieldInfo::render(int nodeWidth)   {
                     widgetIndex = 1;
                 }
                 ImGui::PopItemWidth();
-                //if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Browse");
+		//if (ImGui::IsItemHovered()) NodeGraphEditorSetTooltip("Browse");
             }
         }
         else changed|=ImGui::InputTextMultiline("##DummyLabelInputText",txtField,f.precision,ImVec2(width,maxHeight),flags);
@@ -2427,7 +2440,7 @@ bool FieldInfo::render(int nodeWidth)   {
         break;
     }
     if (!skipTooltip && f.type!=FT_CUSTOM)  {
-        if (/*f.tooltip &&*/ f.tooltip[0]!='\0' && ImGui::IsItemHovered()) ImGui::SetTooltip("%s",f.tooltip);
+	if (/*f.tooltip &&*/ f.tooltip[0]!='\0' && ImGui::IsItemHovered()) NodeGraphEditorSetTooltip(f.tooltip);
     }
     if (changed && f.editedFieldDelegate) f.editedFieldDelegate(f,widgetIndex);
     ImGui::PopID();
