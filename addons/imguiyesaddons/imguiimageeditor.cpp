@@ -177,7 +177,7 @@ SOFTWARE.
 // BTW: Now, if you activate it, it still works, because it's not used (png saves go through stb_image_write.h)
 // It's only used in the Undo stack
 
-/*#if (!defined(IMGUIIMAGEEDITOR_NO_LODEPNG_PLUGIN) && !defined(IMGUIIMAGEEDITOR_NO_LODE_PNG_PLUGIN))
+#if (!defined(IMGUIIMAGEEDITOR_NO_LODEPNG_PLUGIN) && !defined(IMGUIIMAGEEDITOR_NO_LODE_PNG_PLUGIN))
 #ifndef LODEPNG_H
 #if (!defined(IMGUIIMAGEEDITOR_NO_LODEPNG_IMPLEMENTATION) && !defined(IMGUIIMAGEEDITOR_NO_LODE_PNG_IMPLEMENTATION))
 #include "imguiimageeditor_plugins/lodepng.cpp"
@@ -185,7 +185,7 @@ SOFTWARE.
 #include "imguiimageeditor_plugins/loadpng.h"
 #endif //IMGUIIMAGEEDITOR_NO_LODEPNG_IMPLEMENTATION
 #endif //LODEPNG_H
-#endif //IMGUIIMAGEEDITOR_NO_LODEPNG_PLUGIN*/
+#endif //IMGUIIMAGEEDITOR_NO_LODEPNG_PLUGIN
 /*
   DECODER (unused):
 
@@ -816,7 +816,7 @@ static void InitSupportedFileExtensions() {
         strcat(p[3],".tga;");
         strcat(p[4],".tga;");
 #       endif
-#       if (!defined(STBI_NO_JPEG) && defined(TJE_H))
+#       if (!defined(STBI_NO_JPEG) && (defined(TJE_H) || defined(INCLUDE_STB_IMAGE_WRITE_H)))
         strcat(p[0],".jpg;.jpeg;");
         strcat(p[3],".jpg;.jpeg;");
 #       endif
@@ -5049,15 +5049,6 @@ struct StbImage {
 
 
         if (strcmp(feh.ext,".png")==0) {
-#           ifdef INCLUDE_STB_IMAGE_WRITE_H
-            if (!rv) {
-                FILE* f = ImFileOpen(path,"wb");
-                if (f) {
-                    rv = stbi_write_png_to_func(&StbImage::stbi_write_callback,(void*)f,w,h,c,image,w*c)==1;
-                    fflush(f);fclose(f);
-                }
-            }
-#           endif // INCLUDE_STB_IMAGE_WRITE_H
 #           ifdef LODEPNG_H
             // I had problems putting this branch above stbiw.
             // The saved png was valid (and a bit smaller in size), but then stbi loaded it incorrectly
@@ -5072,6 +5063,15 @@ struct StbImage {
                 if (png) free(png);
             }
 #           endif // LODEPNG_H
+#           ifdef INCLUDE_STB_IMAGE_WRITE_H
+            if (!rv) {
+                FILE* f = ImFileOpen(path,"wb");
+                if (f) {
+                    rv = stbi_write_png_to_func(&StbImage::stbi_write_callback,(void*)f,w,h,c,image,w*c)==1;
+                    fflush(f);fclose(f);
+                }
+            }
+#           endif // INCLUDE_STB_IMAGE_WRITE_H
         }
         else if (strcmp(feh.ext,".tga")==0) {
 #           ifdef INCLUDE_STB_IMAGE_WRITE_H
@@ -5101,6 +5101,15 @@ struct StbImage {
 #           ifdef TJE_H
             if (!rv) rv = tje_encode_to_file(path, w, h, c, image);
 #           endif //TJE_H
+#           ifdef INCLUDE_STB_IMAGE_WRITE_H
+            if (!rv) {
+                FILE* f = ImFileOpen(path,"wb");
+                if (f) {
+                    rv = stbi_write_jpg_to_func(&StbImage::stbi_write_callback,(void*)f,w,h,c,image,0)==1;
+                    fflush(f);fclose(f);
+                }
+            }
+#           endif // INCLUDE_STB_IMAGE_WRITE_H
         }
         else if (strcmp(feh.ext,".gif")==0) {
             IM_ASSERT(c==3 || c==4);

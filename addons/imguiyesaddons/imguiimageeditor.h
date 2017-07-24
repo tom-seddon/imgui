@@ -35,7 +35,7 @@ SOFTWARE.
  *
  * It uses:
  * <stb_image.h> to load all image formats-
- * <stb_image_write.h> to save .png, .tga and .bmp formats-
+ * <stb_image_write.h> to save .png, .tga, .bmp and .jpg formats (.png anf .jpg encoders can be overridden)-
  * <stb_image_resize.h> to resize images (it can be optionally disabled)-
  * Other non-stb plugins can be optionally included (see below).
 */
@@ -75,15 +75,23 @@ NOTES:
 // Project Options Optional Definitions:
 /*
  * IMGUIIMAGEEDITOR_STBIMAGE_PATH           - (default:"./addons/imguibindings/stb_image.h")
- * IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS  - Enables support for saving .jpg and .gif and for loading/saving .ico files
+ *
+ * IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS  - Enables support for saving .gif and for loading/saving .ico files
+ *                                          - Overrides the .png and .jpg encoders from <stb_image_write.h> to
+ *                                            lodePng.h and tiny_jpeg.h (Each can be reverted by defining
+ *                                            IMGUIIMAGEEDITOR_NO_LODEPNG_PLUGIN and/or
+ *                                            IMGUIIMAGEEDITOR_NO_TINY_JPEG_PLUGIN).
+ *
  *                                            ===>> WARNING <<==
  *                                            These are all proprietary formats that MIGHT contain PATENTED algorithms.
  *                                            ====>>> USE THEM AT YOUR OWN RISK!!! <<<====
  *                                            You can further filter the non-stb plugins by using:
- *                                            IMGUIIMAGEEDITOR_NO_TINY_JPEG_PLUGIN
+ *                                            IMGUIIMAGEEDITOR_NO_LODEPNG_PLUGIN        // <stb_image_write.h> fallback
+ *                                            IMGUIIMAGEEDITOR_NO_TINY_JPEG_PLUGIN      // <stb_image_write.h> fallback
  *                                            IMGUIIMAGEEDITOR_NO_JO_GIF_PLUGIN
  *                                            IMGUIIMAGEEDITOR_NO_TINY_ICO_PLUGIN
  *                                            When not used, these plugins can be safely deleted from the plugin folder.
+ *
  *                                            [Experimental]: when IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS is defined,
  *                                            you can further define IMGUI_USE_LIBTIFF
  *                                            (it requires libtiff to be installed in your system) to load/save
@@ -94,7 +102,17 @@ NOTES:
  *                                            (it requires libwebp to be installed in your system) to load/save
  *                                            .webp files. Still: check out libwebp license and be warned that this
  *                                            format might contain patented algorithms.
+ *
+ *                                            Since version 0.31, when IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS is defined,
+ *                                            it's even possible to disable <stb_image_write.h> completely by defining:
+ *                                            IMGUIIMAGEEDITOR_NO_STB_IMAGE_WRITE_PLUGIN (if you don't need .tga and .bmp support,
+ *                                            and you use other plugins for .png and .jpg). However, since tiny_ico.h needs a png
+ *                                            encoder, and it currently supports only <stb_image_write.h>, this is currently possible
+ *                                            only if you disable .ico support with IMGUIIMAGEEDITOR_NO_TINY_ICON_PLUGIN too.
+ *                                            A modification of tiny_ico.h that use the lodePng encoder can be added, if somebody requests it.
+ *
  * IMGUIIMAGEEDITOR_LOAD_ONLY_SAVABLE_FORMATS - does what it says
+ *
  * stb_image definitions can be used too (for example STBI_NO_GIF,etc.), but please make sure that you can load back
  * all the savable image formats.
  *
@@ -110,6 +128,11 @@ NOTES:
 */
 
 /* CHANGELOG:
+ IMGUIIMAGEEDITOR_VERSION 0.31
+ * Updated stb_image.h, stb_image_write.h, stb_image_resize.h. Added lodepng.h/cpp.
+ *
+ *
+
  IMGUIIMAGEEDITOR_VERSION 0.3
  * Added optional support for the WebP format. Issues:
  * -> In an animated webp, no frame is loaded.
@@ -157,7 +180,7 @@ NOTES:
  * Added an optional callback SetImageEditorEventCallback(...)
 */
 
-#define IMGUIIMAGEEDITOR_VERSION 0.30
+#define IMGUIIMAGEEDITOR_VERSION 0.31
 
 namespace ImGui {
 
