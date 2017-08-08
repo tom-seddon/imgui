@@ -675,7 +675,7 @@ void DrawGL()	// Mandatory
         static ImVec4 chosenColor(1,1,1,1);
         static bool openColorChooser = false;
         ImGui::AlignFirstTextHeightToWidgets();ImGui::Text("Please choose a color:");ImGui::SameLine();
-        openColorChooser|=ImGui::ColorButton(chosenColor);
+        openColorChooser|=ImGui::ColorButton("color button",chosenColor);
         //if (openColorChooser) chosenColor.z=0.f;
         if (ImGui::ColorChooser(&openColorChooser,&chosenColor)) {
             // choice OK here

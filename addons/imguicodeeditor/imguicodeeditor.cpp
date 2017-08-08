@@ -2121,7 +2121,7 @@ void CodeEditor::render()   {
             ImGui::Spacing();
             ImGui::Separator();
             if (ImGui::CollapsingHeader("Style Editor##styleEditor",NULL,false))   {
-                ImGui::Separator();
+                /*ImGui::Separator();
                 // Color Mode
                 static const char* btnlbls[2]={"HSV##myColorBtnType","RGB##myColorBtnType"};
                 if (colorEditMode!=ImGuiColorEditMode_RGB)  {
@@ -2136,10 +2136,10 @@ void CodeEditor::render()   {
                         ImGui::ColorEditMode(colorEditMode);
                     }
                 }
-                ImGui::SameLine(0);ImGui::Text("Color Mode");
+                ImGui::SameLine(0);ImGui::Text("Color Mode");*/
                 ImGui::Separator();
                 ImGui::Spacing();
-                ImGui::ColorEditMode(colorEditMode);
+                //ImGui::ColorEditMode(colorEditMode);
                 Style::Edit(this->style);
                 ImGui::Separator();
 #if             (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))

@@ -209,11 +209,11 @@ public:
     bool show_left_pane;
     bool show_style_editor;
     bool show_load_save_buttons;            // TODO
-    mutable ImGuiColorEditMode colorEditMode;
+    //mutable ImGuiColorEditMode colorEditMode;
 
     CodeEditor() : inited(false),showIconMargin(true),
     showLineNumbers(true),enableTextFolding(true),scrollToLine(-1),
-    show_left_pane(false),show_style_editor(true),show_load_save_buttons(true),colorEditMode(ImGuiColorEditMode_RGB),
+    show_left_pane(false),show_style_editor(true),show_load_save_buttons(true),/*colorEditMode(ImGuiColorEditMode_RGB),*/
     lang(LANG_NONE) {}
     void render();
     static void SetFonts(const ImFont* normal,const ImFont* bold=NULL,const ImFont* italic=NULL,const ImFont* boldItalic=NULL);

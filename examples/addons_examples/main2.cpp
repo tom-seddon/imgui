@@ -96,7 +96,7 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
     if (tab) {
         ImGui::PushID(tab);
         if (tab->matchLabel("TabLabelStyle"))  {
-            // Color Mode
+            /*// Color Mode
             static int colorEditMode = ImGuiColorEditMode_RGB;
             static const char* btnlbls[2]={"HSV##myColorBtnType1","RGB##myColorBtnType1"};
             if (colorEditMode!=ImGuiColorEditMode_RGB)  {
@@ -112,9 +112,9 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
                 }
             }
             ImGui::SameLine(0);ImGui::Text("Color Mode");
-            ImGui::Separator();
+            ImGui::Separator();*/
             ImGui::Spacing();
-            ImGui::ColorEditMode(colorEditMode);
+            //ImGui::ColorEditMode(colorEditMode);
             bool changed = ImGui::TabLabelStyle::Edit(ImGui::TabLabelStyle::Get());
             ImGui::Separator();         
 #if             (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))

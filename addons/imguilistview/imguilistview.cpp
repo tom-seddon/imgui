@@ -281,7 +281,7 @@ bool ListViewBase::render(float listViewHeight, const ImVector<int> *pOptionalCo
                         break;
                     case HT_COLOR:  {
                         float* pColor = (float*) cd.fieldPtr;
-                        ImGui::ColorEditMode(colorEditingMode);
+                        //ImGui::ColorEditMode(colorEditingMode);
                         if (hdType.numArrayElements==3) ImGui::ColorEdit3("##ColorEdit3Editor",pColor);
                         else ImGui::ColorEdit4("##ColorEdit4Editor",pColor);
                     }
@@ -305,7 +305,7 @@ bool ListViewBase::render(float listViewHeight, const ImVector<int> *pOptionalCo
                             const float *pFloat = (const float*) cd.fieldPtr;
                             const ImVec4 color = ImVec4(*pFloat,*(pFloat+1),*(pFloat+2),hdType.numArrayElements==3?1.f:(*(pFloat+3)));
                             ImGui::PushStyleColor(ImGuiCol_Button,color);
-                            partOfTheCellClicked = ImGui::ColorButton(color,true);if (txt) ImGui::SameLine();
+                            partOfTheCellClicked = ImGui::ColorButton("",color,true);if (txt) ImGui::SameLine();
                         }
                         else if (hdType.headerType==HT_ICON)    {
                             const CellData::IconData* pIconData = (const CellData::IconData*) cd.fieldPtr;

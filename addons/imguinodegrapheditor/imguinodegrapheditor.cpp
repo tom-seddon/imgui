@@ -565,7 +565,7 @@ void NodeGraphEditor::render()
             ImGui::Separator();
             if (ImGui::CollapsingHeader("Style Editor##styleEditor",NULL,false))   {
                 ImGui::Separator();
-                ImGui::ColorEditMode(colorEditMode);
+                //ImGui::ColorEditMode(colorEditMode);
                 Style::Edit(this->style);
                 ImGui::Separator();
 #if             (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
@@ -685,7 +685,7 @@ void NodeGraphEditor::render()
             ImGui::SameLine(ImGui::GetWindowWidth()-120);
             ImGui::Checkbox("Show grid", &show_grid);
             ImGui::Text("%s","Double-click LMB on slots to remove their links (or SHIFT+LMB on links).");
-            ImGui::SameLine(ImGui::GetWindowWidth()-120);
+            /*ImGui::SameLine(ImGui::GetWindowWidth()-120);
             // Color Mode
             static const char* btnlbls[2]={"HSV##myColorBtnType","RGB##myColorBtnType"};
             if (colorEditMode!=ImGuiColorEditMode_RGB)  {
@@ -700,7 +700,7 @@ void NodeGraphEditor::render()
                     ImGui::ColorEditMode(colorEditMode);
                 }
             }
-            ImGui::SameLine(0);ImGui::Text("Color Mode");
+            ImGui::SameLine(0);ImGui::Text("Color Mode");*/
             // ------------------
             ImGui::PopStyleVar(2);
         }
@@ -846,7 +846,7 @@ void NodeGraphEditor::render()
             // Display nodes
             //ImGui::PushStyleColor(ImGuiCol_Header,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderActive,transparent);ImGui::PushStyleColor(ImGuiCol_HeaderHovered,transparent);    // moved inside the loop to wrap the ImGui::TreeNode()
             bool isSomeNodeMoving = false;bool mustDeleteANodeSoon = false;
-            ImGui::ColorEditMode(colorEditMode);
+            //ImGui::ColorEditMode(colorEditMode);
 
             const float nodeTitleBarBgHeight = ImGui::GetTextLineHeightWithSpacing() + NODE_WINDOW_PADDING.y;
             Node* nodeThatIsBeingEditing = NULL;

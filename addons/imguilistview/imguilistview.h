@@ -277,7 +277,7 @@ public:
     // end virtual methods that can/must be implemented by derived classes:-----------
 
     // ctr dctr
-    ListViewBase() : selectedRow(-1),selectedColumn(-1),editingModePresent(false),editorAllowed(false),scrollToRow(-1),lastSortedColumn(-1),firstTimeDrawingRows(true),colorEditingMode(ImGuiColorEditMode_RGB),popupMenuOpenAtSelectedColumn(-1),selectedRowPopupMenu(NULL),selectedRowPopupMenuUserData(NULL) {}
+    ListViewBase() : selectedRow(-1),selectedColumn(-1),editingModePresent(false),editorAllowed(false),scrollToRow(-1),lastSortedColumn(-1),firstTimeDrawingRows(true),/*colorEditingMode(ImGuiColorEditMode_RGB),*/popupMenuOpenAtSelectedColumn(-1),selectedRowPopupMenu(NULL),selectedRowPopupMenuUserData(NULL) {}
     virtual ~ListViewBase() {}
 
     // (single) selection API
@@ -363,8 +363,8 @@ public:
         return ImGui::GetTextLineHeightWithSpacing()*((float)getNumRows()+0.25f);
     }
 
-    ImGuiColorEditMode getColorEditingMode() const {return colorEditingMode;}
-    void setColorEditingMode(ImGuiColorEditMode mode) {colorEditingMode = mode;}
+    //ImGuiColorEditMode getColorEditingMode() const {return colorEditingMode;}
+    //void setColorEditingMode(ImGuiColorEditMode mode) {colorEditingMode = mode;}
 
     void setupPopupMenu(PopupMenuDelegate menu,void* menuUserData=NULL) {selectedRowPopupMenu=menu;selectedRowPopupMenuUserData=menuUserData;}
     void hidePopupMenu() {popupMenuOpenAtSelectedColumn=-1;}
@@ -375,7 +375,7 @@ private:
     mutable ImVector<float> m_columnOffsets;
     mutable int lastSortedColumn;
     mutable bool firstTimeDrawingRows;
-    mutable ImGuiColorEditMode colorEditingMode;
+    //mutable ImGuiColorEditMode colorEditingMode;
     mutable int popupMenuOpenAtSelectedColumn;
     PopupMenuDelegate selectedRowPopupMenu;
     void* selectedRowPopupMenuUserData;
