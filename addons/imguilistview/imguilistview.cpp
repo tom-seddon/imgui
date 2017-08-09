@@ -93,7 +93,8 @@ bool ListViewBase::render(float listViewHeight, const ImVector<int> *pOptionalCo
         skipDisplaying = !ImGui::BeginChild("##ListViewRows",ImVec2(0,listViewHeight));//,false,ImGuiWindowFlags_HorizontalScrollbar);
     }
     if (!skipDisplaying) {
-        float itemHeight = ImGui::GetTextLineHeightWithSpacing();
+        const float textLineHeight = ImGui::GetTextLineHeight();
+        float itemHeight = ImGui::GetTextLineHeightWithSpacing();        
         int displayStart = 0, displayEnd = (int) numRows;
 
         ImGui::CalcListClipping(numRows, itemHeight, &displayStart, &displayEnd);
@@ -282,8 +283,8 @@ bool ListViewBase::render(float listViewHeight, const ImVector<int> *pOptionalCo
                     case HT_COLOR:  {
                         float* pColor = (float*) cd.fieldPtr;
                         //ImGui::ColorEditMode(colorEditingMode);
-                        if (hdType.numArrayElements==3) ImGui::ColorEdit3("##ColorEdit3Editor",pColor);
-                        else ImGui::ColorEdit4("##ColorEdit4Editor",pColor);
+                        if (hdType.numArrayElements==3) ImGui::ColorEdit3("##ColorEdit3Editor",pColor,ImGuiColorEditFlags_NoAlpha);
+                        else ImGui::ColorEdit4("##ColorEdit4Editor",pColor,ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_AlphaPreview);
                     }
                     default: break;
                     }
@@ -305,13 +306,15 @@ bool ListViewBase::render(float listViewHeight, const ImVector<int> *pOptionalCo
                             const float *pFloat = (const float*) cd.fieldPtr;
                             const ImVec4 color = ImVec4(*pFloat,*(pFloat+1),*(pFloat+2),hdType.numArrayElements==3?1.f:(*(pFloat+3)));
                             ImGui::PushStyleColor(ImGuiCol_Button,color);
-                            partOfTheCellClicked = ImGui::ColorButton("",color,true);if (txt) ImGui::SameLine();
+                            //partOfTheCellClicked = ImGui::ColorButton("",color,true);
+                            partOfTheCellClicked = ImGui::ColorButton("",color,ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | (hdType.numArrayElements==3 ? ImGuiColorEditFlags_NoAlpha : 0),ImVec2(0,textLineHeight));
+                            if (txt) ImGui::SameLine();
                         }
                         else if (hdType.headerType==HT_ICON)    {
                             const CellData::IconData* pIconData = (const CellData::IconData*) cd.fieldPtr;
                             if (pIconData->user_texture_id) {
                                 ImVec2 iconSize;
-                                iconSize.x = iconSize.y = ImGui::GetTextLineHeight();
+                                iconSize.x = iconSize.y = textLineHeight;
                                 partOfTheCellClicked = ImGui::ImageButton(pIconData->user_texture_id,iconSize,pIconData->uv0,pIconData->uv1,0,pIconData->bg_col,pIconData->tint_col);
                                 if (txt) ImGui::SameLine();
                             }

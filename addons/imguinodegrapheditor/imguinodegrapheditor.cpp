@@ -2428,8 +2428,8 @@ bool FieldInfo::render(int nodeWidth)   {
         break;
     case FT_COLOR:  {
         float* pColor = (float*) f.pdata;
-        if (f.numArrayElements==3) changed|=ImGui::ColorEdit3(label,pColor);
-        else changed|=ImGui::ColorEdit4(label,pColor);
+        if (f.numArrayElements==3) changed|=ImGui::ColorEdit3(label,pColor,ImGuiColorEditFlags_NoAlpha);
+        else changed|=ImGui::ColorEdit4(label,pColor,ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_AlphaPreview);
     }
     case FT_CUSTOM: {
         if (f.renderFieldDelegate) changed = f.renderFieldDelegate(f);
