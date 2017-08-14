@@ -3534,7 +3534,7 @@ bool BeginTimeline(const char* str_id, float max_value, int num_visible_rows, in
     }
     const float row_height = ImGui::GetTextLineHeightWithSpacing();
     const bool rv = BeginChild(str_id,ImVec2(0,num_visible_rows>=0 ? (row_height*num_visible_rows) : (ImGui::GetContentRegionAvail().y-row_height)),false);
-    ImGui::PushStyleColor(ImGuiCol_Column,GImGui->Style.Colors[ImGuiCol_Border]);
+    ImGui::PushStyleColor(ImGuiCol_Separator,GImGui->Style.Colors[ImGuiCol_Border]);
     ImGui::Columns(2,str_id);
     const float contentRegionWidth = ImGui::GetWindowContentRegionWidth();
     if (ImGui::GetColumnOffset(1)>=contentRegionWidth*0.48f) ImGui::SetColumnOffset(1,contentRegionWidth*0.15f);
@@ -3564,7 +3564,7 @@ bool TimelineEvent(const char* str_id, float* values,bool keep_range_constant)
     ImGuiWindow* win = GetCurrentWindow();
     const ImU32 inactive_color = ColorConvertFloat4ToU32(GImGui->Style.Colors[ImGuiCol_Button]);
     const ImU32 active_color = ColorConvertFloat4ToU32(GImGui->Style.Colors[ImGuiCol_ButtonHovered]);
-    const ImU32 line_color = ColorConvertFloat4ToU32(GImGui->Style.Colors[ImGuiCol_ColumnActive]);
+    const ImU32 line_color = ColorConvertFloat4ToU32(GImGui->Style.Colors[ImGuiCol_SeparatorActive]);
     bool changed = false;
     bool hovered = false;
     bool active = false;
@@ -3680,7 +3680,7 @@ void EndTimeline(int num_vertical_grid_lines,float current_time,ImU32 timeline_r
     ImU32 color = ColorConvertFloat4ToU32(GImGui->Style.Colors[ImGuiCol_Button]);
     ImU32 line_color = ColorConvertFloat4ToU32(GImGui->Style.Colors[ImGuiCol_Border]);
     ImU32 text_color = ColorConvertFloat4ToU32(GImGui->Style.Colors[ImGuiCol_Text]);
-    ImU32 moving_line_color = ColorConvertFloat4ToU32(GImGui->Style.Colors[ImGuiCol_ColumnActive]);
+    ImU32 moving_line_color = ColorConvertFloat4ToU32(GImGui->Style.Colors[ImGuiCol_SeparatorActive]);
     const float rounding = GImGui->Style.ScrollbarRounding;
     const float startY = ImGui::GetWindowHeight() + win->Pos.y;
 

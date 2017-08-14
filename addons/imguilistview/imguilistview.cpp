@@ -38,7 +38,7 @@ bool ListViewBase::render(float listViewHeight, const ImVector<int> *pOptionalCo
 
     // Column headers
     float columnWidthSum = 0;
-    ImGui::PushStyleColor(ImGuiCol_Border,style.Colors[ImGuiCol_Column]);
+    ImGui::PushStyleColor(ImGuiCol_Border,style.Colors[ImGuiCol_Separator]);
     ImGui::Separator();
     ImGui::PopStyleColor();
     ImGui::Columns(maxNumColumnToDisplay);
@@ -81,7 +81,7 @@ bool ListViewBase::render(float listViewHeight, const ImVector<int> *pOptionalCo
     }
     ImGui::PopStyleColor(3);
     ImGui::Columns(1);
-    ImGui::PushStyleColor(ImGuiCol_Border,style.Colors[ImGuiCol_Column]);
+    ImGui::PushStyleColor(ImGuiCol_Border,style.Colors[ImGuiCol_Separator]);
     ImGui::Separator();
     ImGui::PopStyleColor();
 
@@ -397,7 +397,7 @@ bool ListViewBase::render(float listViewHeight, const ImVector<int> *pOptionalCo
     }   // skipDisplaying
     if (!useFullHeight) ImGui::EndChild();
 
-    ImGui::PushStyleColor(ImGuiCol_Border,style.Colors[ImGuiCol_Column]);
+    ImGui::PushStyleColor(ImGuiCol_Border,style.Colors[ImGuiCol_Separator]);
     ImGui::Separator();
     ImGui::PopStyleColor();
 

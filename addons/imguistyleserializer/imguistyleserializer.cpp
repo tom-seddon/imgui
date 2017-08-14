@@ -203,6 +203,24 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
 			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
 			    break;
 			}
+			else if (strcmp(name,"Column")==0)	{
+			    npf = 4;
+			    ImVec4& color = style.Colors[ImGuiCol_Separator];
+			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
+			    break;
+			}
+			else if (strcmp(name,"ColumnActive")==0)	{
+			    npf = 4;
+			    ImVec4& color = style.Colors[ImGuiCol_SeparatorActive];
+			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
+			    break;
+			}
+			else if (strcmp(name,"ColumnHovered")==0)	{
+			    npf = 4;
+			    ImVec4& color = style.Colors[ImGuiCol_SeparatorHovered];
+			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
+			    break;
+			}
 			// -----------------------------------------------------------
                     }
                 }
@@ -405,9 +423,9 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_Header]                = ImVec4(0.11f, 0.37f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_HeaderHovered]         = ImVec4(0.40f, 0.50f, 0.25f, 1.00f);
 	style.Colors[ImGuiCol_HeaderActive]          = ImVec4(0.51f, 0.63f, 0.27f, 1.00f);
-	style.Colors[ImGuiCol_Column]                = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
-	style.Colors[ImGuiCol_ColumnHovered]         = ImVec4(0.60f, 0.40f, 0.40f, 1.00f);
-	style.Colors[ImGuiCol_ColumnActive]          = ImVec4(0.80f, 0.50f, 0.50f, 1.00f);
+	style.Colors[ImGuiCol_Separator]	     = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+	style.Colors[ImGuiCol_SeparatorHovered]	     = ImVec4(0.60f, 0.40f, 0.40f, 1.00f);
+	style.Colors[ImGuiCol_SeparatorActive]	     = ImVec4(0.80f, 0.50f, 0.50f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGrip]            = ImVec4(1.00f, 0.33f, 0.38f, 0.37f);
 	style.Colors[ImGuiCol_ResizeGripHovered]     = ImVec4(1.00f, 0.73f, 0.69f, 0.41f);
 	style.Colors[ImGuiCol_ResizeGripActive]      = ImVec4(1.00f, 1.00f, 0.75f, 0.90f);
@@ -473,9 +491,9 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_Header]                = ImVec4(0.42f, 0.47f, 0.88f, 1.00f);
 	style.Colors[ImGuiCol_HeaderHovered]         = ImVec4(0.44f, 0.51f, 0.93f, 1.00f);
 	style.Colors[ImGuiCol_HeaderActive]          = ImVec4(0.50f, 0.62f, 1.00f, 1.00f);
-	style.Colors[ImGuiCol_Column]                = ImVec4(0.13f, 0.14f, 0.11f, 1.00f);
-	style.Colors[ImGuiCol_ColumnHovered]         = ImVec4(0.73f, 0.75f, 0.61f, 1.00f);
-	style.Colors[ImGuiCol_ColumnActive]          = ImVec4(0.89f, 0.90f, 0.70f, 1.00f);
+	style.Colors[ImGuiCol_Separator]                = ImVec4(0.13f, 0.14f, 0.11f, 1.00f);
+	style.Colors[ImGuiCol_SeparatorHovered]         = ImVec4(0.73f, 0.75f, 0.61f, 1.00f);
+	style.Colors[ImGuiCol_SeparatorActive]          = ImVec4(0.89f, 0.90f, 0.70f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGrip]            = ImVec4(0.61f, 0.22f, 0.22f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGripHovered]     = ImVec4(0.69f, 0.24f, 0.24f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGripActive]      = ImVec4(0.80f, 0.28f, 0.28f, 1.00f);
@@ -522,9 +540,9 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_Header]                = ImVec4(0.26f, 0.59f, 0.98f, 0.31f);
 	style.Colors[ImGuiCol_HeaderHovered]         = ImVec4(0.26f, 0.59f, 0.98f, 0.80f);
 	style.Colors[ImGuiCol_HeaderActive]          = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-	style.Colors[ImGuiCol_Column]                = ImVec4(0.39f, 0.39f, 0.39f, 1.00f);
-	style.Colors[ImGuiCol_ColumnHovered]         = ImVec4(0.26f, 0.59f, 0.98f, 0.78f);
-	style.Colors[ImGuiCol_ColumnActive]          = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	style.Colors[ImGuiCol_Separator]                = ImVec4(0.39f, 0.39f, 0.39f, 1.00f);
+	style.Colors[ImGuiCol_SeparatorHovered]         = ImVec4(0.26f, 0.59f, 0.98f, 0.78f);
+	style.Colors[ImGuiCol_SeparatorActive]          = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGrip]            = ImVec4(1.00f, 1.00f, 1.00f, 0.00f);
 	style.Colors[ImGuiCol_ResizeGripHovered]     = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
 	style.Colors[ImGuiCol_ResizeGripActive]      = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
@@ -593,9 +611,9 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_Header]                = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
 	style.Colors[ImGuiCol_HeaderHovered]         = ImVec4(0.35f, 0.35f, 0.35f, 1.00f);
 	style.Colors[ImGuiCol_HeaderActive]          = ImVec4(0.42f, 0.42f, 0.43f, 1.00f);
-	style.Colors[ImGuiCol_Column]                = ImVec4(0.84f, 0.84f, 0.84f, 0.90f);
-	style.Colors[ImGuiCol_ColumnHovered]         = ImVec4(0.90f, 0.90f, 0.90f, 0.95f);
-	style.Colors[ImGuiCol_ColumnActive]          = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+	style.Colors[ImGuiCol_Separator]                = ImVec4(0.84f, 0.84f, 0.84f, 0.90f);
+	style.Colors[ImGuiCol_SeparatorHovered]         = ImVec4(0.90f, 0.90f, 0.90f, 0.95f);
+	style.Colors[ImGuiCol_SeparatorActive]          = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGrip]            = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
 	style.Colors[ImGuiCol_ResizeGripHovered]     = ImVec4(1.00f, 1.00f, 1.00f, 0.60f);
 	style.Colors[ImGuiCol_ResizeGripActive]      = ImVec4(1.00f, 1.00f, 1.00f, 0.90f);
@@ -646,9 +664,9 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_Header]                = ImVec4(0.26f, 0.59f, 0.98f, 0.31f);
 	style.Colors[ImGuiCol_HeaderHovered]         = ImVec4(0.26f, 0.59f, 0.98f, 0.80f);
 	style.Colors[ImGuiCol_HeaderActive]          = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-	style.Colors[ImGuiCol_Column]                = ImVec4(0.39f, 0.39f, 0.39f, 1.00f);
-	style.Colors[ImGuiCol_ColumnHovered]         = ImVec4(0.26f, 0.59f, 0.98f, 0.78f);
-	style.Colors[ImGuiCol_ColumnActive]          = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	style.Colors[ImGuiCol_Separator]                = ImVec4(0.39f, 0.39f, 0.39f, 1.00f);
+	style.Colors[ImGuiCol_SeparatorHovered]         = ImVec4(0.26f, 0.59f, 0.98f, 0.78f);
+	style.Colors[ImGuiCol_SeparatorActive]          = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGrip]            = ImVec4(1.00f, 1.00f, 1.00f, 0.50f);
 	style.Colors[ImGuiCol_ResizeGripHovered]     = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
 	style.Colors[ImGuiCol_ResizeGripActive]      = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
@@ -721,9 +739,9 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_Header]                = ImVec4(0.25f, 1.00f, 0.00f, 0.76f);
 	style.Colors[ImGuiCol_HeaderHovered]         = ImVec4(0.25f, 1.00f, 0.00f, 0.86f);
 	style.Colors[ImGuiCol_HeaderActive]          = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
-	style.Colors[ImGuiCol_Column]                = ImVec4(0.00f, 0.00f, 0.00f, 0.32f);
-	style.Colors[ImGuiCol_ColumnHovered]         = ImVec4(0.25f, 1.00f, 0.00f, 0.78f);
-	style.Colors[ImGuiCol_ColumnActive]          = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
+	style.Colors[ImGuiCol_Separator]                = ImVec4(0.00f, 0.00f, 0.00f, 0.32f);
+	style.Colors[ImGuiCol_SeparatorHovered]         = ImVec4(0.25f, 1.00f, 0.00f, 0.78f);
+	style.Colors[ImGuiCol_SeparatorActive]          = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGrip]            = ImVec4(0.00f, 0.00f, 0.00f, 0.04f);
 	style.Colors[ImGuiCol_ResizeGripHovered]     = ImVec4(0.25f, 1.00f, 0.00f, 0.78f);
 	style.Colors[ImGuiCol_ResizeGripActive]      = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
@@ -771,9 +789,9 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_Header]                = ImVec4(0.34f, 0.34f, 0.34f, 1.00f);
 	style.Colors[ImGuiCol_HeaderHovered]         = ImVec4(0.42f, 0.42f, 0.42f, 1.00f);
 	style.Colors[ImGuiCol_HeaderActive]          = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-	style.Colors[ImGuiCol_Column]                = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-	style.Colors[ImGuiCol_ColumnHovered]         = ImVec4(0.70f, 0.60f, 0.60f, 1.00f);
-	style.Colors[ImGuiCol_ColumnActive]          = ImVec4(0.90f, 0.70f, 0.70f, 1.00f);
+	style.Colors[ImGuiCol_Separator]                = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+	style.Colors[ImGuiCol_SeparatorHovered]         = ImVec4(0.70f, 0.60f, 0.60f, 1.00f);
+	style.Colors[ImGuiCol_SeparatorActive]          = ImVec4(0.90f, 0.70f, 0.70f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGrip]            = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
 	style.Colors[ImGuiCol_ResizeGripHovered]     = ImVec4(1.00f, 1.00f, 1.00f, 0.60f);
 	style.Colors[ImGuiCol_ResizeGripActive]      = ImVec4(1.00f, 1.00f, 1.00f, 0.90f);
@@ -823,9 +841,9 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_Header]                = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 	style.Colors[ImGuiCol_HeaderHovered]         = ImVec4(0.92f, 0.92f, 0.92f, 1.00f);
 	style.Colors[ImGuiCol_HeaderActive]          = ImVec4(0.84f, 0.84f, 0.84f, 1.00f);
-	style.Colors[ImGuiCol_Column]                = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-	style.Colors[ImGuiCol_ColumnHovered]         = ImVec4(0.70f, 0.60f, 0.60f, 1.00f);
-	style.Colors[ImGuiCol_ColumnActive]          = ImVec4(0.90f, 0.70f, 0.70f, 1.00f);
+	style.Colors[ImGuiCol_Separator]                = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+	style.Colors[ImGuiCol_SeparatorHovered]         = ImVec4(0.70f, 0.60f, 0.60f, 1.00f);
+	style.Colors[ImGuiCol_SeparatorActive]          = ImVec4(0.90f, 0.70f, 0.70f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGrip]            = ImVec4(0.00f, 0.00f, 0.00f, 0.30f);
 	style.Colors[ImGuiCol_ResizeGripHovered]     = ImVec4(0.00f, 0.00f, 0.00f, 0.37f);
 	style.Colors[ImGuiCol_ResizeGripActive]      = ImVec4(0.00f, 0.00f, 0.00f, 0.47f);
@@ -878,9 +896,9 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_Header]                = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
 	style.Colors[ImGuiCol_HeaderHovered]         = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
 	style.Colors[ImGuiCol_HeaderActive]          = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
-	style.Colors[ImGuiCol_Column]                = ImVec4(0.39f, 0.39f, 0.39f, 1.00f);
-	style.Colors[ImGuiCol_ColumnHovered]         = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-	style.Colors[ImGuiCol_ColumnActive]          = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	style.Colors[ImGuiCol_Separator]                = ImVec4(0.39f, 0.39f, 0.39f, 1.00f);
+	style.Colors[ImGuiCol_SeparatorHovered]         = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	style.Colors[ImGuiCol_SeparatorActive]          = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGrip]            = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGripHovered]     = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGripActive]      = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
