@@ -1931,7 +1931,7 @@ void SdfRender(const ImVec4* pViewportOverride) {
         if (c->textBits.size()==0 || !c->checkVisibleAndEvalutateAnimationIfNecessary(globalTime)) continue;
         hasRegularFonts|=(c->buffer->type==0 || (c->buffer->type&(SDF_BT_SHADOWED)));
         hasOutlineFonts|=(c->buffer->type&(SDF_BT_OUTLINE));
-        if (hasRegularFonts && hasOutlineFonts) break;
+        //if (hasRegularFonts && hasOutlineFonts) break;    // We cannot exit early, because we must evalutate checkVisibleAndEvalutateAnimationIfNecessary(...) for all the text chunks
     }
 
     if (!hasRegularFonts && !hasOutlineFonts) return;
