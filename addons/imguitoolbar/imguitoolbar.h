@@ -247,7 +247,8 @@ public:
                 {
                     if (!tooltipsDisabled && strlen(tb.tooltip)>0)   {
                         //if (!inWindowMode) ImGui::SetNextWindowFocus();
-                        ImGui::SetTooltip("%s",tb.tooltip);
+                        if (!inWindowMode) ToolbarSetTooltip(tb.tooltip,oldWindowPadding);
+                        else ImGui::SetTooltip("%s",tb.tooltip);
 
                         /*SetNextWindowPos(ImGui::GetIO().MousePos);
                         ImGui::BeginTooltip();
@@ -357,6 +358,14 @@ public:
     bool tooltipsDisabled;
 
     friend struct PanelManager;
+
+    inline static void ToolbarSetTooltip(const char* tooltip,const ImVec2& windowPadding) {
+        ImGuiStyle& igStyle = ImGui::GetStyle();
+        igStyle.WindowPadding.x = windowPadding.x;
+        igStyle.WindowPadding.y = windowPadding.y;
+        ImGui::SetTooltip("%s",tooltip);
+        igStyle.WindowPadding.x = igStyle.WindowPadding.y = 0.f;
+    }
 
 };
 typedef Toolbar::Button Toolbutton;

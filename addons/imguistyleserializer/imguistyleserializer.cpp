@@ -423,7 +423,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_Header]                = ImVec4(0.11f, 0.37f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_HeaderHovered]         = ImVec4(0.40f, 0.50f, 0.25f, 1.00f);
 	style.Colors[ImGuiCol_HeaderActive]          = ImVec4(0.51f, 0.63f, 0.27f, 1.00f);
-	style.Colors[ImGuiCol_Separator]	     = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+	style.Colors[ImGuiCol_Separator]	     = ImVec4(1.00f, 1.00f, 1.00f, 0.45f);
 	style.Colors[ImGuiCol_SeparatorHovered]	     = ImVec4(0.60f, 0.40f, 0.40f, 1.00f);
 	style.Colors[ImGuiCol_SeparatorActive]	     = ImVec4(0.80f, 0.50f, 0.50f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGrip]            = ImVec4(1.00f, 0.33f, 0.38f, 0.37f);
