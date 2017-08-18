@@ -24,6 +24,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: increase minimum size of a window with menus or fix the menu rendering so that it doesn't look odd.
  - window: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - window: expose contents size. (#1045)
+ - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
 !- scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y)
 
@@ -74,6 +75,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - layout: more generic alignment state (left/right/centered) for single items?
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
  - layout: BeginGroup() needs a border option.
+ - layout: vertical alignement of mixed height items (e.g. buttons) within a same line (#1284)
  
  - columns: sizing policy (e.g. for each column: fixed size, %, fill, distribute default size among fills) (#513, #125)
  - columns: add a conditional parameter to SetColumnOffset() (#513, #125)

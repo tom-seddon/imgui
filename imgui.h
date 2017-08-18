@@ -903,7 +903,7 @@ public:
     inline const value_type&    back() const                    { IM_ASSERT(Size > 0); return Data[Size-1]; }
     inline void                 swap(ImVector<T>& rhs)          { int rhs_size = rhs.Size; rhs.Size = Size; Size = rhs_size; int rhs_cap = rhs.Capacity; rhs.Capacity = Capacity; Capacity = rhs_cap; value_type* rhs_data = rhs.Data; rhs.Data = Data; Data = rhs_data; }
 
-    inline int                  _grow_capacity(int new_size)    { int new_capacity = Capacity ? (Capacity + Capacity/2) : 8; return new_capacity > new_size ? new_capacity : new_size; }
+    inline int                  _grow_capacity(int size) const  { int new_capacity = Capacity ? (Capacity + Capacity/2) : 8; return new_capacity > size ? new_capacity : size; }
 
     inline void                 resize(int new_size)            { if (new_size > Capacity) reserve(_grow_capacity(new_size)); Size = new_size; }
     inline void                 reserve(int new_capacity)
@@ -964,11 +964,11 @@ struct ImGuiTextFilter
     ImVector<TextRange> Filters;
     int                 CountGrep;
 
-    ImGuiTextFilter(const char* default_filter = "");
-    ~ImGuiTextFilter() {}
+    IMGUI_API           ImGuiTextFilter(const char* default_filter = "");
+                        ~ImGuiTextFilter() {}
     void                Clear() { InputBuf[0] = 0; Build(); }
-    bool                Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);    // Helper calling InputText+Build
-    bool                PassFilter(const char* text, const char* text_end = NULL) const;
+    IMGUI_API bool      Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);    // Helper calling InputText+Build
+    IMGUI_API bool      PassFilter(const char* text, const char* text_end = NULL) const;
     bool                IsActive() const { return !Filters.empty(); }
     IMGUI_API void      Build();
 };
@@ -1388,10 +1388,22 @@ struct ImFontAtlas
     ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
 
-    // Private
+    // [Private] User rectangle for packing custom texture data into the atlas.
+    struct CustomRect
+    {
+        unsigned int    ID;             // Input    // User ID. <0x10000 for font mapped data (WIP/UNSUPPORTED), >=0x10000 for other texture data
+        unsigned short  Width, Height;  // Input    // Desired rectangle dimension
+        unsigned short  X, Y;           // Output   // Packed position in Atlas
+        CustomRect()            { ID = 0xFFFFFFFF; Width = Height = 0; X = Y = 0xFFFF; }
+        bool IsPacked() const   { return X != 0xFFFF; }
+    };
+
+    // [Private] Members
+    ImVector<CustomRect>        CustomRects;        // Rectangles for packing custom texture data into the atlas.
     ImVector<ImFontConfig>      ConfigData;         // Internal data
     IMGUI_API bool              Build();            // Build pixels data. This is automatically for you by the GetTexData*** functions.
-    IMGUI_API void              RenderCustomTexData(int pass, void* rects);
+    IMGUI_API int               CustomRectRegister(unsigned int id, int width, int height);
+    IMGUI_API void              CustomRectCalcUV(const CustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max);
 };
 
 // Font runtime data and rendering
