@@ -242,6 +242,9 @@ private:
 bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 flags=0,const ImVector<ImU32>* pOptionalFlagVector=NULL) {
     using namespace ImGui;
     IM_ASSERT( atlas->ConfigData.Size > 0 );
+    IM_ASSERT(atlas->TexGlyphPadding == 1); // Not supported
+
+    ImFontAtlasBuildRegisterDefaultCustomRects(atlas);
 
     atlas->TexID = NULL;
     atlas->TexWidth = atlas->TexHeight = 0;
@@ -250,11 +253,11 @@ bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 flags=0,const ImVector<ImU32>* pO
 
     FreeTypeFont* tmp_array = ( FreeTypeFont* )ImGui::MemAlloc( ( size_t )atlas->ConfigData.Size * sizeof( FreeTypeFont ) );
 
-    ImVec2 maxGlyphSize(1.0f, 1.0f);
+    ImVec2 max_glyph_size(1.0f, 1.0f);
 
     // Initialize font information early (so we can error without any cleanup) + count glyphs
-    int total_glyph_count = 0;
-    int total_glyph_range_count = 0;
+    int total_glyphs_count = 0;
+    int total_ranges_count = 0;
     for( int input_i = 0; input_i < atlas->ConfigData.Size; input_i++ ) {
         ImFontConfig& cfg = atlas->ConfigData[ input_i ];
         FreeTypeFont& fontFace = tmp_array[ input_i ];
@@ -262,74 +265,57 @@ bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 flags=0,const ImVector<ImU32>* pO
         IM_ASSERT( cfg.DstFont && ( !cfg.DstFont->IsLoaded() || cfg.DstFont->ContainerAtlas == atlas ) );
 
         fontFace.Init( ( uint8_t* )cfg.FontData, ( uint32_t )cfg.FontDataSize, cfg.FontNo, ( uint32_t )cfg.SizePixels );
-        maxGlyphSize.x = ImMax( maxGlyphSize.x, fontFace.fontInfo.maxAdvanceWidth );
-        maxGlyphSize.y = ImMax( maxGlyphSize.y, fontFace.fontInfo.ascender - fontFace.fontInfo.descender );
+        max_glyph_size.x = ImMax( max_glyph_size.x, fontFace.fontInfo.maxAdvanceWidth );
+        max_glyph_size.y = ImMax( max_glyph_size.y, fontFace.fontInfo.ascender - fontFace.fontInfo.descender );
 
         // Count glyphs
         if( !cfg.GlyphRanges )
             cfg.GlyphRanges = atlas->GetGlyphRangesDefault();
-        for( const ImWchar* in_range = cfg.GlyphRanges; in_range[ 0 ] && in_range[ 1 ]; in_range += 2 ) {
-            total_glyph_count += ( in_range[ 1 ] - in_range[ 0 ] ) + 1;
-            total_glyph_range_count++;
-        }
+        for (const ImWchar* in_range = cfg.GlyphRanges; in_range[0] && in_range[ 1 ]; in_range += 2, total_ranges_count++)
+            total_glyphs_count += (in_range[1] - in_range[0]) + 1;
     }
 
-    // Start packing. We need a known width for the skyline algorithm. Using a cheap heuristic here to decide of width. User can override TexDesiredWidth if they wish.
-    // After packing is done, width shouldn't matter much, but some API/GPU have texture size limitations and increasing width can decrease height.
-    atlas->TexWidth = ( atlas->TexDesiredWidth > 0 ) ? atlas->TexDesiredWidth : ( total_glyph_count > 4000 ) ? 4096 : ( total_glyph_count > 2000 ) ? 2048 : ( total_glyph_count > 1000 ) ? 1024 : 512;
+    // We need a width for the skyline algorithm. Using a dumb heuristic here to decide of width. User can override TexDesiredWidth and TexGlyphPadding if they wish.
+    // Width doesn't really matter much, but some API/GPU have texture size limitations and increasing width can decrease height.
+    atlas->TexWidth = (atlas->TexDesiredWidth > 0) ? atlas->TexDesiredWidth : (total_glyphs_count > 4000) ? 4096 : (total_glyphs_count > 2000) ? 2048 : (total_glyphs_count > 1000) ? 1024 : 512;
 
-    // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
-    ImVector<stbrp_rect> extra_rects;
-    atlas->RenderCustomTexData( 0, &extra_rects );
-    const int TotalRects = total_glyph_count + extra_rects.size();
-
-    // #Vuhdo: Now, I won't do the original first pass to determine texture height, but just rough estimate.
-    // Looks ugly inaccurate and excessive, but AFAIK with FreeType we actually need to render glyphs to get exact sizes.
-    // Alternatively, we could just render all glyphs into a big shadow buffer, get their sizes, do the rectangle
-    // packing and just copy back from the shadow buffer to the texture buffer.
-    // Will give us an accurate texture height, but eat a lot of temp memory.
-    // Probably no one will notice.
-    float MinRectsPerRow = ceilf( ( atlas->TexWidth / ( maxGlyphSize.x + 1.0f ) ) );
-    float MinRectsPerColumn = ceilf( TotalRects / MinRectsPerRow );
-    atlas->TexHeight = ( int )( MinRectsPerColumn * ( maxGlyphSize.y + 1.0f ) );
-    atlas->TexHeight = ImUpperPowerOfTwo( atlas->TexHeight );
-
-    stbrp_context context;
-    stbrp_node* nodes = ( stbrp_node* )ImGui::MemAlloc( TotalRects * sizeof( stbrp_node ) );
-    stbrp_init_target( &context, atlas->TexWidth, atlas->TexHeight, nodes, TotalRects );
-
-    stbrp_pack_rects( &context, &extra_rects[ 0 ], extra_rects.Size );
-    for( int i = 0; i < extra_rects.Size; i++ )
-        if( extra_rects[ i ].was_packed )
-            atlas->TexHeight = ImMax( atlas->TexHeight, extra_rects[ i ].y + extra_rects[ i ].h );
+    // (Vuhdo: Now, I won't do the original first pass to determine texture height, but just rough estimate.
+    //  Looks ugly inaccurate and excessive, but AFAIK with FreeType we actually need to render glyphs to get exact sizes.
+    //  Alternatively, we could just render all glyphs into a big shadow buffer, get their sizes, do the rectangle packing and just copy back from the
+    //  shadow buffer to the texture buffer. Will give us an accurate texture height, but eat a lot of temp memory. Probably no one will notice.)
+    const int total_rects = total_glyphs_count + atlas->CustomRects.size();
+    float min_rects_per_row = ceilf((atlas->TexWidth / (max_glyph_size.x + 1.0f)));
+    float min_rects_per_column = ceilf(total_rects / min_rects_per_row);
+    atlas->TexHeight = (int)(min_rects_per_column * (max_glyph_size.y + 1.0f));
 
     // Create texture
-    atlas->TexPixelsAlpha8 = ( unsigned char* )ImGui::MemAlloc( atlas->TexWidth * atlas->TexHeight );
-    memset( atlas->TexPixelsAlpha8, 0, atlas->TexWidth * atlas->TexHeight );
+    atlas->TexHeight = ImUpperPowerOfTwo(atlas->TexHeight);
+    atlas->TexPixelsAlpha8 = (unsigned char*)ImGui::MemAlloc(atlas->TexWidth * atlas->TexHeight);
+    memset(atlas->TexPixelsAlpha8, 0, atlas->TexWidth * atlas->TexHeight);
+
+    // Start packing
+    stbrp_node* pack_nodes = (stbrp_node*)ImGui::MemAlloc(total_rects * sizeof(stbrp_node));
+    stbrp_context context;
+    stbrp_init_target(&context, atlas->TexWidth, atlas->TexHeight, pack_nodes, total_rects);
+
+    // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
+    ImFontAtlasBuildPackCustomRects(atlas, &context);
 
     // render characters, setup ImFont and glyphs for runtime
     for( int input_i = 0; input_i < atlas->ConfigData.Size; input_i++ ) {
         ImFontConfig& cfg = atlas->ConfigData[ input_i ];
-        FreeTypeFont& fontFace = tmp_array[ input_i ];
+        FreeTypeFont& font_face = tmp_array[ input_i ];
         ImFont* dst_font = cfg.DstFont;
 
-        float ascent = fontFace.fontInfo.ascender;
-        float descent = fontFace.fontInfo.descender;
-        if( !cfg.MergeMode ) {
-            dst_font->ContainerAtlas = atlas;
-            dst_font->ConfigData = &cfg;
-            dst_font->ConfigDataCount = 0;
-            dst_font->FontSize = cfg.SizePixels;
-            dst_font->Ascent = ascent;
-            dst_font->Descent = descent;
-            dst_font->Glyphs.resize( 0 );
-        }
-        dst_font->ConfigDataCount++;
-        float off_y = ( cfg.MergeMode && cfg.MergeGlyphCenterV ) ? ( ascent - dst_font->Ascent ) * 0.5f : 0.0f;
+        float ascent = font_face.fontInfo.ascender;
+        float descent = font_face.fontInfo.descender;
+        ImFontAtlasBuildSetupFont(atlas, dst_font, &cfg, ascent, descent);
+        float off_x = cfg.GlyphOffset.x;
+        float off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
 
         dst_font->FallbackGlyph = NULL; // Always clear fallback so FindGlyph can return NULL. It will be set again in BuildLookupTable()
 		
-	const uint32_t flag = (pOptionalFlagVector && pOptionalFlagVector->size()>input_i) ? (*pOptionalFlagVector)[input_i] : flags;
+        const uint32_t flag = (pOptionalFlagVector && pOptionalFlagVector->size()>input_i) ? (*pOptionalFlagVector)[input_i] : flags;
         for( const ImWchar* in_range = cfg.GlyphRanges; in_range[ 0 ] && in_range[ 1 ]; in_range += 2 ) {
             for( uint32_t codepoint = in_range[ 0 ]; codepoint <= in_range[ 1 ]; ++codepoint ) {
 
@@ -338,7 +324,7 @@ bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 flags=0,const ImVector<ImU32>* pO
 
                 GlyphInfo glyphInfo;
                 GlyphBitmap glyphBitmap;
-                fontFace.RasterizeGlyph( codepoint, glyphInfo, glyphBitmap, flag );
+                font_face.RasterizeGlyph( codepoint, glyphInfo, glyphBitmap, flag );
 
                 // blit to texture
                 stbrp_rect rect;
@@ -353,23 +339,22 @@ bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 flags=0,const ImVector<ImU32>* pO
                     dst += atlas->TexWidth;
                 }
 
-                dst_font->Glyphs.resize( dst_font->Glyphs.Size + 1 );
+                dst_font->Glyphs.resize(dst_font->Glyphs.Size + 1);
                 ImFont::Glyph& glyph = dst_font->Glyphs.back();
-                glyph.Codepoint = ( ImWchar )codepoint;
-                glyph.X0 = glyphInfo.offsetX;
-                glyph.Y0 = glyphInfo.offsetY;
+                glyph.Codepoint = (ImWchar)codepoint;
+                glyph.X0 = glyphInfo.offsetX + off_x;
+                glyph.Y0 = glyphInfo.offsetY + off_y;
                 glyph.X1 = glyph.X0 + glyphInfo.width;
                 glyph.Y1 = glyph.Y0 + glyphInfo.height;
-                glyph.U0 = rect.x / ( float )atlas->TexWidth;
-                glyph.V0 = rect.y / ( float )atlas->TexHeight;
-                glyph.U1 = ( rect.x + glyphInfo.width ) / ( float )atlas->TexWidth;
-                glyph.V1 = ( rect.y + glyphInfo.height ) / ( float )atlas->TexHeight;
-                glyph.Y0 += ( float )( int )( dst_font->Ascent + off_y + 0.5f );
-                glyph.Y1 += ( float )( int )( dst_font->Ascent + off_y + 0.5f );
-                glyph.XAdvance = ( glyphInfo.advanceX + cfg.GlyphExtraSpacing.x );  // Bake spacing into XAdvance
+                glyph.U0 = rect.x / (float)atlas->TexWidth;
+                glyph.V0 = rect.y / (float)atlas->TexHeight;
+                glyph.U1 = (rect.x + glyphInfo.width) / (float)atlas->TexWidth;
+                glyph.V1 = (rect.y + glyphInfo.height) / (float)atlas->TexHeight;
+                glyph.XAdvance = (glyphInfo.advanceX + cfg.GlyphExtraSpacing.x);  // Bake spacing into XAdvance
 
-                if( cfg.PixelSnapH )
-                    glyph.XAdvance = ( float )( int )( glyph.XAdvance + 0.5f );
+                if (cfg.PixelSnapH)
+                    glyph.XAdvance = (float)(int)(glyph.XAdvance + 0.5f);
+                dst_font->MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * atlas->TexWidth + 1.99f) * (int)((glyph.V1 - glyph.V0) * atlas->TexHeight + 1.99f); // +1 to account for average padding, +0.99 to round
             }
         }
         cfg.DstFont->BuildLookupTable();
@@ -378,12 +363,11 @@ bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 flags=0,const ImVector<ImU32>* pO
     // Cleanup temporaries
     for( int n = 0; n < atlas->ConfigData.Size; ++n )
         tmp_array[ n ].Shutdown();
+    ImGui::MemFree(pack_nodes);
     ImGui::MemFree( tmp_array );
 
     // Render into our custom data block
-    atlas->RenderCustomTexData( 1, &extra_rects );
-
-    ImGui::MemFree(nodes);
+    ImFontAtlasBuildRenderDefaultTexData(atlas);
 
     return true;
 }
