@@ -8,8 +8,6 @@
 
 // b2 branch - SDL
 
-#define ImDrawIdx unsigned int
-
 #define IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT \
 struct ImDrawVert {\
     ImVec2 pos;\
