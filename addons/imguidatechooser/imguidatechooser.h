@@ -34,13 +34,13 @@ struct tm;  // defined in <time.h>
 namespace ImGui {
 
 // Some example of date formats: "%d/%m/%Y" "%A %d %b %Y"
-bool DateChooser(const char* label,tm& dateOut,const char* dateFormat="%d/%m/%Y",bool closeWhenMouseLeavesIt=true,bool* pSetStartDateToDateOutThisFrame=NULL,const char* leftArrow="<",const char* rightArrow=">",const char* upArrowString="   ^   ",const char* downArrowString="   v   ");
+IMGUI_API bool DateChooser(const char* label,tm& dateOut,const char* dateFormat="%d/%m/%Y",bool closeWhenMouseLeavesIt=true,bool* pSetStartDateToDateOutThisFrame=NULL,const char* leftArrow="<",const char* rightArrow=">",const char* upArrowString="   ^   ",const char* downArrowString="   v   ");
 // Some helper methods (note that I cannot use tm directly in this hader file, so we can't initialize a static date directly with these methods)
-void SetDateZero(tm* date);
-void SetDateToday(tm* date);
+IMGUI_API void SetDateZero(tm* date);
+IMGUI_API void SetDateToday(tm* date);
 
 
-void TestDateChooser(const char* dateFormat="%d/%m/%Y",bool closeWhenMouseLeavesIt=true,const char* leftArrow="<",const char* rightArrow=">",const char* upArrowString="   ^   ",const char* downArrowString="   v   ");
+IMGUI_API void TestDateChooser(const char* dateFormat="%d/%m/%Y",bool closeWhenMouseLeavesIt=true,const char* leftArrow="<",const char* rightArrow=">",const char* upArrowString="   ^   ",const char* downArrowString="   v   ");
 
 
 } // namespace ImGui

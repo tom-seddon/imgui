@@ -212,7 +212,7 @@ struct ImImpl_InitParams	{
     ImVector<FontData> fonts;
     bool forceAddDefaultFontAsFirstFont;
     bool skipBuildingFonts;
-    ImImpl_InitParams(
+    IMGUI_API ImImpl_InitParams(
             int windowWidth=1270,
             int windowHeight=720,
             const char* windowTitle=NULL,
@@ -249,7 +249,7 @@ struct ImImpl_InitParams	{
         else if (_pOptionalReferenceToTTFFileInMemory && _pOptionalSizeOfTTFFileInMemory>0)
             fonts.push_back(FontData(_pOptionalReferenceToTTFFileInMemory,_pOptionalSizeOfTTFFileInMemory,FontData::COMP_NONE,OptionalTTFFontSizeInPixels,OptionalTTFGlyphRanges,pFontConfig));
 	}
-    ImImpl_InitParams(
+    IMGUI_API ImImpl_InitParams(
             int windowWidth,
             int windowHeight,
             const char* windowTitle,
@@ -280,7 +280,7 @@ struct ImImpl_InitParams	{
 
     private:
     // Retrieve list of range (2 int per range, values are inclusive)
-    static const ImWchar*   GetGlyphRangesDefault()
+    inline static const ImWchar*   GetGlyphRangesDefault()
     {
         static const ImWchar ranges[] =
         {
@@ -349,26 +349,26 @@ protected:
     bool mBindAttributes;
 public:
     // This interface allows prepending the shader source with runtime definition (e.g. #define MY_VAR 12 [untested], or just #define MY_VAR [tested]):
-    void addPreprocessorDefinition(const ImString& name,const ImString& value="");  // TODO: [Untested value!=""]
-    void removePreprocessorDefinition(const ImString& name);
-    void updatePreprocessorDefinitions();   // mandatory after a set of add/remove calls to generate an usable "mPreprocessorAdditionalShaderCode"
+    IMGUI_API void addPreprocessorDefinition(const ImString& name,const ImString& value="");  // TODO: [Untested value!=""]
+    IMGUI_API void removePreprocessorDefinition(const ImString& name);
+    IMGUI_API void updatePreprocessorDefinitions();   // mandatory after a set of add/remove calls to generate an usable "mPreprocessorAdditionalShaderCode"
     inline const char* getPreprocessorDefinitionAdditionalCode() const {return mPreprocessorAdditionalShaderCode.c_str();}
     inline int getNumPreprocessorDefinitionAdditionalLines() const {return mNumPreprocessorAdditionalLines;}
-    void resetPreprocessorDefinitions();
+    IMGUI_API void resetPreprocessorDefinitions();
 
     // This interface allows binding attribute locations before linking the program:
-    void bindAttributeLocation(const ImString& attribute,GLuint bindingLocation);
-    void resetBindAttributeLocations();
+    IMGUI_API void bindAttributeLocation(const ImString& attribute,GLuint bindingLocation);
+    IMGUI_API void resetBindAttributeLocations();
     inline void processBindAttributeLocationsOn(GLuint program) const;
 
-    void reset() {resetShaderOptions();resetPreprocessorDefinitions();resetBindAttributeLocations();}
+    inline void reset() {resetShaderOptions();resetPreprocessorDefinitions();resetBindAttributeLocations();}
 #else  //NO_IMGUISTRING
 public:
-    void reset()  {resetShaderOptions();}
+    inline void reset()  {resetShaderOptions();}
 #endif //NO_IMGUISTRING
 public:
-    void resetShaderOptions() {vertexShaderOverride = fragmentShaderOverride = programOverride = 0;dontLinkProgram = dontDeleteAttachedShaders = false;}
-    ImImpl_CompileShaderStruct() {reset();}
+    inline void resetShaderOptions() {vertexShaderOverride = fragmentShaderOverride = programOverride = 0;dontLinkProgram = dontDeleteAttachedShaders = false;}
+    inline ImImpl_CompileShaderStruct() {reset();}
 };
 // returns the shader program ID. "optionalShaderCodePrefix" (if present) is just copied before the source of both shaders. "pOptionalOptions" can be used to tune dynamic definitions inside the shader code and some shader compilation and linking processing steps.
 extern GLuint ImImpl_CompileShadersFromMemory(const GLchar** vertexShaderSource, const GLchar** fragmentShaderSource,ImImpl_CompileShaderStruct* pOptionalOptions=NULL, const GLchar** optionalVertexShaderCodePrefix=NULL, const GLchar** optionalFragmentShaderCodePrefix=NULL);

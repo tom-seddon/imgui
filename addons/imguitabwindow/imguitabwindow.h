@@ -215,31 +215,31 @@ bool tabWindowLabelShowAreaSeparator;
 ImVec4 tabWindowSplitterColor;
 float tabWindowSplitterSize;
 
-TabLabelStyle();
+IMGUI_API TabLabelStyle();
 
 void reset() {Reset(*this);}
-static bool Edit(TabLabelStyle& style=TabLabelStyle::Get());
-static bool EditFast(TabLabelStyle &s=TabLabelStyle::Get());
+IMGUI_API static bool Edit(TabLabelStyle& style=TabLabelStyle::Get());
+IMGUI_API static bool EditFast(TabLabelStyle &s=TabLabelStyle::Get());
 static void Reset(TabLabelStyle& style=TabLabelStyle::Get()) {style = TabLabelStyle();}
 
 // These modify the style: some operation are not loseless!
-static void InvertSelectedLook(TabLabelStyle& style=TabLabelStyle::Get());
-static void ShiftHue(TabLabelStyle& style,float amountIn0_1);
-static void InvertColors(TabLabelStyle& style=TabLabelStyle::Get(),float saturationThreshould=0.1f); // in [0.f,0.5f] AFAIR
-static void LightenBackground(TabLabelStyle& style=TabLabelStyle::Get(),float amount=0.15f);
-static void DarkenBackground(TabLabelStyle& style=TabLabelStyle::Get(),float amount=0.15f);
+IMGUI_API static void InvertSelectedLook(TabLabelStyle& style=TabLabelStyle::Get());
+IMGUI_API static void ShiftHue(TabLabelStyle& style,float amountIn0_1);
+IMGUI_API static void InvertColors(TabLabelStyle& style=TabLabelStyle::Get(),float saturationThreshould=0.1f); // in [0.f,0.5f] AFAIR
+IMGUI_API static void LightenBackground(TabLabelStyle& style=TabLabelStyle::Get(),float amount=0.15f);
+IMGUI_API static void DarkenBackground(TabLabelStyle& style=TabLabelStyle::Get(),float amount=0.15f);
 
 
 #if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-static bool Save(const TabLabelStyle& style,ImGuiHelper::Serializer& s);
+IMGUI_API static bool Save(const TabLabelStyle& style,ImGuiHelper::Serializer& s);
 static inline bool Save(const TabLabelStyle &style, const char *filename)    {
     ImGuiHelper::Serializer s(filename);
     return Save(style,s);
 }
 #endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-static bool Load(TabLabelStyle& style, ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart=NULL);
+IMGUI_API static bool Load(TabLabelStyle& style, ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart=NULL);
 static inline bool Load(TabLabelStyle& style,const char* filename) {
     ImGuiHelper::Deserializer d(filename);
     return Load(style,d);
@@ -251,18 +251,18 @@ static inline bool Load(TabLabelStyle& style,const char* filename) {
 // Gets the default style instance (same as TabLabelStyle::style)
 inline static TabLabelStyle& Get() {return style;}
 // Gets a new instance = default style instance blended with ImGui::GetStyle().Alpha
-static const TabLabelStyle& GetMergedWithWindowAlpha();
+IMGUI_API static const TabLabelStyle& GetMergedWithWindowAlpha();
 static TabLabelStyle style;
 static const char* ColorNames[Col_TabLabel_Count];
 static const char* FontStyleNames[FONT_STYLE_COUNT];
 static const char* TabStateNames[TAB_STATE_COUNT];
 static const ImFont* ImGuiFonts[FONT_STYLE_COUNT];
 };
-bool ResetTabLabelStyle(int tabLabelStyleEnum, TabLabelStyle& style);
-const char** GetDefaultTabLabelStyleNames();   // ImGuiTabLabelStyle_Count names re returned
+IMGUI_API bool ResetTabLabelStyle(int tabLabelStyleEnum, TabLabelStyle& style);
+IMGUI_API const char** GetDefaultTabLabelStyleNames();   // ImGuiTabLabelStyle_Count names re returned
 // satThresholdForInvertingLuminance: in [0,1] if == 0.f luminance is not inverted at all
 // shiftHue: in [0,1] if == 0.f hue is not changed at all
-void ChangeTabLabelStyleColors(TabLabelStyle& style,float satThresholdForInvertingLuminance=.1f,float shiftHue=0.f);
+IMGUI_API void ChangeTabLabelStyleColors(TabLabelStyle& style,float satThresholdForInvertingLuminance=.1f,float shiftHue=0.f);
 
 
 class TabWindow {
@@ -297,7 +297,7 @@ protected:
         if (tooltip) {ImGui::MemFree(tooltip);tooltip=NULL;}
         if (userText) {ImGui::MemFree(userText);userText=NULL;}
     }
-    static void DestroyTabLabel(TabLabel*& tab);
+    IMGUI_API static void DestroyTabLabel(TabLabel*& tab);
 public:
     inline const char* getLabel() const {return label;}
     inline bool matchLabel(const char* match) const {return modified ? (strncmp(match,label,strlen(label)-1)==0) : (strcmp(match,label)==0);}
@@ -373,7 +373,7 @@ struct TabWindowNode* activeNode; // reference
 ImVector<TabWindow*> tabWindowsToExclude;// can't exchange tab labels with these
 bool isolatedMode;  // can't exchange tab labels outside
 bool init;
-void clearNodes();
+IMGUI_API void clearNodes();
 
 public:
 static TabLabelCallback WindowContentDrawerCb;
@@ -390,28 +390,28 @@ static TabLabelFileCallback TabLabelSaveCb;
 
 
 public:
-TabWindow();
-~TabWindow();
+IMGUI_API TabWindow();
+IMGUI_API ~TabWindow();
 
 // Handy for initialization before calling render() the firsat time
 bool isInited() const {return init;}
 
 // Here "label" is NOT used as ImGui ID (you shouldn't worry about it): it's just the text you want to display
 // If "TabLabelFactoryCb" is present, it will be used in the following method:
-TabLabel* addTabLabel(const char* label,const char* tooltip=NULL,bool closable=true,bool draggable=true,void* userPtr=NULL,const char* userText=NULL,int userInt=0,int ImGuiWindowFlagsForContent=0);
-TabLabel* addTabLabel(TabLabel* tabLabel,bool checkIfAlreadyPresent=true);  // use it only if you extend TabLabel
-bool removeTabLabel(TabLabel* tab);
-void clear();
+IMGUI_API TabLabel* addTabLabel(const char* label,const char* tooltip=NULL,bool closable=true,bool draggable=true,void* userPtr=NULL,const char* userText=NULL,int userInt=0,int ImGuiWindowFlagsForContent=0);
+IMGUI_API TabLabel* addTabLabel(TabLabel* tabLabel,bool checkIfAlreadyPresent=true);  // use it only if you extend TabLabel
+IMGUI_API bool removeTabLabel(TabLabel* tab);
+IMGUI_API void clear();
 
 // Find methods (untested)
-TabLabel* findTabLabelFromLabel(const char* label) const;   // trimming the last trailing asterisk
-TabLabel* findTabLabelFromTooltip(const char* tooltip) const;
-TabLabel* findTabLabelFromUserPtr(void* userPtr) const;
-TabLabel* findTabLabelFromUserText(const char* userText) const;
-static TabLabel* FindTabLabelFromLabel(const char* label,const TabWindow* pTabWindows,int numTabWindows,int* pOptionalTabWindowIndexOut);   // trimming the last trailing asterisk
-static TabLabel* FindTabLabelFromTooltip(const char* tooltip,const TabWindow* pTabWindows,int numTabWindows,int* pOptionalTabWindowIndexOut);
-static TabLabel* FindTabLabelFromUserPtr(void* userPtr,const TabWindow* pTabWindows,int numTabWindows,int* pOptionalTabWindowIndexOut);
-static TabLabel* FindTabLabelFromUserText(const char* userText,const TabWindow* pTabWindows,int numTabWindows,int* pOptionalTabWindowIndexOut);
+IMGUI_API TabLabel* findTabLabelFromLabel(const char* label) const;   // trimming the last trailing asterisk
+IMGUI_API TabLabel* findTabLabelFromTooltip(const char* tooltip) const;
+IMGUI_API TabLabel* findTabLabelFromUserPtr(void* userPtr) const;
+IMGUI_API TabLabel* findTabLabelFromUserText(const char* userText) const;
+IMGUI_API static TabLabel* FindTabLabelFromLabel(const char* label,const TabWindow* pTabWindows,int numTabWindows,int* pOptionalTabWindowIndexOut);   // trimming the last trailing asterisk
+IMGUI_API static TabLabel* FindTabLabelFromTooltip(const char* tooltip,const TabWindow* pTabWindows,int numTabWindows,int* pOptionalTabWindowIndexOut);
+IMGUI_API static TabLabel* FindTabLabelFromUserPtr(void* userPtr,const TabWindow* pTabWindows,int numTabWindows,int* pOptionalTabWindowIndexOut);
+IMGUI_API static TabLabel* FindTabLabelFromUserText(const char* userText,const TabWindow* pTabWindows,int numTabWindows,int* pOptionalTabWindowIndexOut);
 
 // Callbacks
 static void SetWindowContentDrawerCallback(TabLabelCallback _windowContentDrawer,void* userPtr=NULL) {
@@ -439,7 +439,7 @@ inline static const char* GetTabLabelAskForDeletionModalWindowName() {return "Sa
 
 
 // Main method
-void render();
+IMGUI_API void render();
 
 // Texture And Memory Png Data
 static const unsigned char* GetDockPanelIconImagePng(int* bufferSizeOut=NULL); // Manually redrawn based on the ones in https://github.com/dockpanelsuite/dockpanelsuite (that is MIT licensed). So no copyright issues for this AFAIK, but I'm not a lawyer and I cannot guarantee it.
@@ -448,24 +448,24 @@ static ImTextureID DockPanelIconTextureID;  // User must load it (using GetDockP
 // These are just optional "filtering" methods
 bool isIsolated() const {return isolatedMode;}          // can't exchange tab labels outside
 void setIsolatedMode(bool flag) {isolatedMode=flag;}
-void excludeTabWindow(TabWindow& tw);                   // can't exchange tab labels with...
-void includeTabWindow(TabWindow& tw);                   // removes from the "exclude list"...
+IMGUI_API void excludeTabWindow(TabWindow& tw);                   // can't exchange tab labels with...
+IMGUI_API void includeTabWindow(TabWindow& tw);                   // removes from the "exclude list"...
 const ImVector<TabWindow*>& getTabWindowsToExclude() const {return tabWindowsToExclude;}
-bool canExchangeTabLabelsWith(TabWindow* tw);
+IMGUI_API bool canExchangeTabLabelsWith(TabWindow* tw);
 
-bool isMergeble(struct TabWindowNode* node);
-int getNumTabs(struct TabWindowNode* node);
-int getNumClosableTabs(struct TabWindowNode* node);
-bool merge(struct TabWindowNode* node);        // Warning: it invalidates "node" after the call
+IMGUI_API bool isMergeble(struct TabWindowNode* node);
+IMGUI_API int getNumTabs(struct TabWindowNode* node);
+IMGUI_API int getNumClosableTabs(struct TabWindowNode* node);
+IMGUI_API bool merge(struct TabWindowNode* node);        // Warning: it invalidates "node" after the call
 
-static void GetAllTabLabels(TabWindow* pTabWindowsIn, int numTabWindowsIn, ImVector<TabLabel*>& tabsOut, ImVector<TabWindow*>& parentsOut, bool onlyClosableTabs=false, bool onlyModifiedTabs=false);
+IMGUI_API static void GetAllTabLabels(TabWindow* pTabWindowsIn, int numTabWindowsIn, ImVector<TabLabel*>& tabsOut, ImVector<TabWindow*>& parentsOut, bool onlyClosableTabs=false, bool onlyModifiedTabs=false);
 inline static void SaveAll(ImVector<TabLabel*>& tabs, ImVector<TabWindow*>& parents) {CloseTabLabelsHelper(tabs,parents,true,false,false,true);}
 inline static bool StartCloseAllDialog(ImVector<TabLabel*>& tabs, ImVector<TabWindow*>& parents,bool allowCancelDialog=true) {return CloseTabLabelsHelper(tabs,parents,true,true,allowCancelDialog,false);}
-static bool AreSomeDialogsOpen();
+IMGUI_API static bool AreSomeDialogsOpen();
 
-void getAllTabLabels(ImVector<TabLabel*>& tabsOut,bool onlyClosableTabs=false, bool onlyModifiedTabs=false);
-void saveAll(ImVector<TabLabel*>* ptabs=NULL);
-bool startCloseAllDialog(ImVector<TabLabel*>* ptabs=NULL,bool allowCancelDialog=true);
+IMGUI_API void getAllTabLabels(ImVector<TabLabel*>& tabsOut,bool onlyClosableTabs=false, bool onlyModifiedTabs=false);
+IMGUI_API void saveAll(ImVector<TabLabel*>* ptabs=NULL);
+IMGUI_API bool startCloseAllDialog(ImVector<TabLabel*>* ptabs=NULL,bool allowCancelDialog=true);
 
 mutable void* userPtr;
 
@@ -475,23 +475,23 @@ static ImGuiWindowFlags ExtraWindowFlags;
 #       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 public:
-        bool save(ImGuiHelper::Serializer& s);
-        bool save(const char* filename);
-        static bool Save(const char* filename,TabWindow* pTabWindows,int numTabWindows);
+        IMGUI_API bool save(ImGuiHelper::Serializer& s);
+        IMGUI_API bool save(const char* filename);
+        IMGUI_API static bool Save(const char* filename,TabWindow* pTabWindows,int numTabWindows);
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
 public:
-        bool load(ImGuiHelper::Deserializer& d,const char ** pOptionalBufferStart=NULL);
-        bool load(const char* filename);
-        static bool Load(const char* filename,TabWindow* pTabWindows,int numTabWindows);
+        IMGUI_API bool load(ImGuiHelper::Deserializer& d,const char ** pOptionalBufferStart=NULL);
+        IMGUI_API bool load(const char* filename);
+        IMGUI_API static bool Load(const char* filename,TabWindow* pTabWindows,int numTabWindows);
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 //--------------------------------------------------------------------------------
 
 protected:
 
-TabLabel* createTabLabel(const char* label,const char* tooltip=NULL,bool closable=true,bool draggable=true,void* userPtr=NULL,const char* userText=NULL,int userInt=0,int ImGuiWindowFlagsForContent=0);
-static bool CloseTabLabelsHelper(ImVector<TabLabel*>& tabs, ImVector<TabWindow*>& parents, bool saveAll, bool askForSaving, bool allowCancelDialog, bool dontCloseTabs);
+IMGUI_API TabLabel* createTabLabel(const char* label,const char* tooltip=NULL,bool closable=true,bool draggable=true,void* userPtr=NULL,const char* userText=NULL,int userInt=0,int ImGuiWindowFlagsForContent=0);
+IMGUI_API static bool CloseTabLabelsHelper(ImVector<TabLabel*>& tabs, ImVector<TabWindow*>& parents, bool saveAll, bool askForSaving, bool allowCancelDialog, bool dontCloseTabs);
 
 
 friend struct TabLabel;
@@ -499,9 +499,9 @@ friend struct TabWindowNode;
 friend struct TabWindowDragData;
 
 private:
-static bool ModalDialogSaveDisplay(const char* dialogName,ImVector<TabWindow::TabLabel*>& TabsToAskFor,ImVector<TabWindow*>& TabsToAskForParents,
-bool closeTabsAfterSaving,bool allowCancel,bool * pMustCloseDialogOut=NULL,const char* btnDoNotSaveName="Do not save",const char* btnSaveName="Save",const char* btnCancelName="Cancel",
-const char* dialogTitleLine1="The following tab labels have unsaved changes.",const char* dialogTitleLine2="Do you want to save them ?");
+IMGUI_API static bool ModalDialogSaveDisplay(const char* dialogName,ImVector<TabWindow::TabLabel*>& TabsToAskFor,ImVector<TabWindow*>& TabsToAskForParents,
+IMGUI_API bool closeTabsAfterSaving,bool allowCancel,bool * pMustCloseDialogOut=NULL,const char* btnDoNotSaveName="Do not save",const char* btnSaveName="Save",const char* btnCancelName="Cancel",
+IMGUI_API const char* dialogTitleLine1="The following tab labels have unsaved changes.",const char* dialogTitleLine2="Do you want to save them ?");
 
 };
 typedef TabWindow::TabLabel TabWindowLabel;
@@ -518,18 +518,18 @@ typedef TabWindow::TabLabel TabWindowLabel;
  * pOptionalClosedTabIndex (requires allowTabClosing): out variable (int pointer) that returns the index of the closed tab in last call or -1.
  * pOptionalClosedTabIndexInsideItemOrdering (requires allowTabClosing): same as above, but index inside the pOptionalItemOrdering array. Users can use this value to prevent single tabs from closing when their close button is clicked (since we can't mix closable and non-closable tabs here).
 */
-bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const char** tabLabelTooltips=NULL , bool wrapMode=true, int* pOptionalHoveredIndex=NULL, int* pOptionalItemOrdering=NULL, bool allowTabReorder=true, bool allowTabClosing=false, int* pOptionalClosedTabIndex=NULL,int * pOptionalClosedTabIndexInsideItemOrdering=NULL);
+IMGUI_API bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const char** tabLabelTooltips=NULL , bool wrapMode=true, int* pOptionalHoveredIndex=NULL, int* pOptionalItemOrdering=NULL, bool allowTabReorder=true, bool allowTabClosing=false, int* pOptionalClosedTabIndex=NULL,int * pOptionalClosedTabIndexInsideItemOrdering=NULL);
 
 // Untested attempt to provide serialization for ImGui::TabLabels(...): only "selectedIndex" and "pOptionalItemOrdering" are serialized.
 //-------------------------------------------------------------------------------
 #   if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-        bool TabLabelsSave(ImGuiHelper::Serializer& s,int selectedIndex,const int* pOptionalItemOrdering=NULL,int numTabs=0);
-        bool TabLabelsSave(const char* filename,int selectedIndex,const int* pOptionalItemOrdering=NULL,int numTabs=0);
+        IMGUI_API bool TabLabelsSave(ImGuiHelper::Serializer& s,int selectedIndex,const int* pOptionalItemOrdering=NULL,int numTabs=0);
+        IMGUI_API bool TabLabelsSave(const char* filename,int selectedIndex,const int* pOptionalItemOrdering=NULL,int numTabs=0);
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-        bool TabLabelsLoad(ImGuiHelper::Deserializer& d,int* pSelectedIndex,int* pOptionalItemOrdering=NULL,int numTabs=0,const char ** pOptionalBufferStart=NULL);
-        bool TabLabelsLoad(const char* filename,int* pSelectedIndex,int* pOptionalItemOrdering=NULL,int numTabs=0);
+        IMGUI_API bool TabLabelsLoad(ImGuiHelper::Deserializer& d,int* pSelectedIndex,int* pOptionalItemOrdering=NULL,int numTabs=0,const char ** pOptionalBufferStart=NULL);
+        IMGUI_API bool TabLabelsLoad(const char* filename,int* pSelectedIndex,int* pOptionalItemOrdering=NULL,int numTabs=0);
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #   endif //NO_IMGUIHELPER_SERIALIZATION
 //--------------------------------------------------------------------------------
@@ -539,8 +539,8 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
 // Tip: IMGUIHELPER_HAS_VERTICAL_TEXT_SUPPORT is a read-only definition that summarizes the definitions above
 
 // ImGui::TabLabelsVertical() are similiar to ImGui::TabLabels(), but they do not support WrapMode.
-bool TabLabelsVertical(bool textIsRotatedCCW,int numTabs, const char** tabLabels, int& selectedIndex, const char** tabLabelTooltips=NULL, int* pOptionalHoveredIndex=NULL, int* pOptionalItemOrdering=NULL, bool allowTabReorder=false, bool allowTabClosing=false, int* pOptionalClosedTabIndex=NULL,int * pOptionalClosedTabIndexInsideItemOrdering=NULL,bool invertRounding=false);
-float CalcVerticalTabLabelsWidth();
+IMGUI_API bool TabLabelsVertical(bool textIsRotatedCCW,int numTabs, const char** tabLabels, int& selectedIndex, const char** tabLabelTooltips=NULL, int* pOptionalHoveredIndex=NULL, int* pOptionalItemOrdering=NULL, bool allowTabReorder=false, bool allowTabClosing=false, int* pOptionalClosedTabIndex=NULL,int * pOptionalClosedTabIndexInsideItemOrdering=NULL,bool invertRounding=false);
+IMGUI_API float CalcVerticalTabLabelsWidth();
 #endif // (defined(IMGUIHELPER_H_) && ...)
 
 } // namespace ImGui

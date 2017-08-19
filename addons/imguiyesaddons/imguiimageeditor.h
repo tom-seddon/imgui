@@ -198,25 +198,25 @@ public:
         ET_IMAGE_SAVED      // Called when an image is saved
     };
 
-    ImageEditor();
-    ImageEditor(bool hideImageNamePanel,bool forbidLoadingNewImagesIfAvailable=false,bool forbidBrowsingInsideFolderIfAvailable=false,bool forbidSaveAsIfAvailable=false);
+    IMGUI_API ImageEditor();
+    IMGUI_API ImageEditor(bool hideImageNamePanel,bool forbidLoadingNewImagesIfAvailable=false,bool forbidBrowsingInsideFolderIfAvailable=false,bool forbidSaveAsIfAvailable=false);
 #if (defined(IMGUITABWINDOW_H_) && !defined(IMGUIIMAGEEDITOR_NO_TABLABEL))
-    virtual ~ImageEditor();
+    IMGUI_API virtual ~ImageEditor();
     #else //IMGUITABWINDOW_H_
-    ~ImageEditor();
-    bool getModified() const;       // so that this method is always available
+    IMGUI_API ~ImageEditor();
+    IMGUI_API bool getModified() const;       // so that this method is always available
 #   endif //IMGUITABWINDOW_H_
 
     bool isInited() const {return init;}
 
-    bool loadFromFile(const char* path);
-    bool saveAs(const char* path=NULL);
+    IMGUI_API bool loadFromFile(const char* path);
+    IMGUI_API bool saveAs(const char* path=NULL);
 
-    void render(const ImVec2 &size);    // to be called inside an ImGui::Window. Makes isInited() return true;
+    IMGUI_API void render(const ImVec2 &size);    // to be called inside an ImGui::Window. Makes isInited() return true;
     void render() {render(ImVec2(0,0));}
 
-    void destroy();         // clears instance textures and frees memory
-    static void Destroy();  // clears shared textures and frees shared memory
+    IMGUI_API void destroy();         // clears instance textures and frees memory
+    IMGUI_API static void Destroy();  // clears shared textures and frees shared memory
 
     typedef void (*FreeTextureDelegate)(ImTextureID& texid);
     typedef void (*GenerateOrUpdateTextureDelegate)(ImTextureID& imtexid,int width,int height,int channels,const unsigned char* pixels,bool useMipmapsIfPossible,bool wraps,bool wrapt,bool minFilterNearest, bool magFilterNearest);
@@ -232,7 +232,7 @@ public:
         ImVec4 splitterColor;    // default: .x<0
         char arrowsChars[4][5];   // default: "<",">","^","v"
         int keySave;             // default: (int)'s'. The ImGui key index for saving the image when CTRL is down
-        Style();
+        IMGUI_API Style();
         static Style style;
         inline static Style& Get() {return style;}        
     };
@@ -241,17 +241,17 @@ public:
     bool getShowImageNamePanel() const {return showImageNamePanel;}
     void setShowImageNamePanel(bool flag) {showImageNamePanel=flag;}
 
-    const char* getImageFilePath() const;           // gets the current image file path [e.g. "./myImage.png"]. It's absolute when imguifilesystem is available.
-    const char* getImageFileName() const;           // gets the current image file name [e.g. "myImage.png"]. It's the path suffix withouth slashes.
-    const char* getImageFileFileExtension() const;  // gets the current image file extension [e.g. ".png"]. It's always lowercase.
-    void getImageInfo(int* w,int* h,int* c) const;  // gets image width, height and num channels (1,3 or 4)
-    const unsigned char* getImagePixels() const;    // get the internal data [size is w*h*c]
-    const ImTextureID* getImageTexture() const;     // get a pointer to the texture that is used and owned by the ImageEditor (a bit dangerous...)
+    IMGUI_API const char* getImageFilePath() const;           // gets the current image file path [e.g. "./myImage.png"]. It's absolute when imguifilesystem is available.
+    IMGUI_API const char* getImageFileName() const;           // gets the current image file name [e.g. "myImage.png"]. It's the path suffix withouth slashes.
+    IMGUI_API const char* getImageFileFileExtension() const;  // gets the current image file extension [e.g. ".png"]. It's always lowercase.
+    IMGUI_API void getImageInfo(int* w,int* h,int* c) const;  // gets image width, height and num channels (1,3 or 4)
+    IMGUI_API const unsigned char* getImagePixels() const;    // get the internal data [size is w*h*c]
+    IMGUI_API const ImTextureID* getImageTexture() const;     // get a pointer to the texture that is used and owned by the ImageEditor (a bit dangerous...)
 
     // user must free the returned texture
     // Warning: this is not usually what user expects (for example when c=1 we get a RGB grayscale texture):
     // manually creating it using getImagePixels() is usually better
-    ImTextureID getClonedImageTexID(bool useMipmapsIfPossible=false,bool wraps=false,bool wrapt=false,bool minFilterNearest=false, bool magFilterNearest=false) const;
+    IMGUI_API ImTextureID getClonedImageTexID(bool useMipmapsIfPossible=false,bool wraps=false,bool wrapt=false,bool minFilterNearest=false, bool magFilterNearest=false) const;
 
     void* userPtr;                                  // yours
 

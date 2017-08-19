@@ -132,23 +132,23 @@ struct Dialog {
     public:
 
     // default arguments are usually what most users expect (better not touch them in most cases)
-    Dialog(bool noKnownDirectoriesSection=false,bool noCreateDirectorySection=false,bool noFilteringSection=false,bool detectKnownDirectoriesAtEachOpening=false,bool addDisplayByOption=false,bool dontFilterSaveFilePathsEnteredByTheUser=false);
-    ~Dialog();
+    IMGUI_API Dialog(bool noKnownDirectoriesSection=false,bool noCreateDirectorySection=false,bool noFilteringSection=false,bool detectKnownDirectoriesAtEachOpening=false,bool addDisplayByOption=false,bool dontFilterSaveFilePathsEnteredByTheUser=false);
+    IMGUI_API ~Dialog();
 
     // "dialogTriggerButton" is usually a bool variable connected to a ImGui::Button(...).
     // returns the chosen path (internally stored). Users can check when the returned path has strlen()>0.
     // "fileFilterExtensionString" can be something like ".png;.jpg;.jpeg;.bmp;.tga;.gif;.tiff;.txt". It's case insensitive.
     // "directory" and "startingFileNameEntry" (only available in saveFileDialog(...)) are quite flexible and can be set to almost everything: the method will use the most resonable choice.
-    const char* chooseFileDialog(bool dialogTriggerButton,const char* directory=NULL,const char* fileFilterExtensionString=NULL,const char* windowTitle=NULL,const ImVec2& windowSize=ImVec2(-1,-1),const ImVec2& windowPos=ImVec2(-1,-1),const float windowAlpha=0.875f);
-    const char* chooseFolderDialog(bool dialogTriggerButton,const char* directory=NULL,const char* windowTitle=NULL,const ImVec2& windowSize=ImVec2(-1,-1),const ImVec2& windowPos=ImVec2(-1,-1),const float windowAlpha=0.875f);
-    const char* saveFileDialog(bool dialogTriggerButton,const char* directory=NULL,const char* startingFileNameEntry=NULL,const char* fileFilterExtensionString=NULL,const char* windowTitle=NULL,const ImVec2& windowSize=ImVec2(-1,-1),const ImVec2& windowPos=ImVec2(-1,-1),const float windowAlpha=0.875f);
+    IMGUI_API const char* chooseFileDialog(bool dialogTriggerButton,const char* directory=NULL,const char* fileFilterExtensionString=NULL,const char* windowTitle=NULL,const ImVec2& windowSize=ImVec2(-1,-1),const ImVec2& windowPos=ImVec2(-1,-1),const float windowAlpha=0.875f);
+    IMGUI_API const char* chooseFolderDialog(bool dialogTriggerButton,const char* directory=NULL,const char* windowTitle=NULL,const ImVec2& windowSize=ImVec2(-1,-1),const ImVec2& windowPos=ImVec2(-1,-1),const float windowAlpha=0.875f);
+    IMGUI_API const char* saveFileDialog(bool dialogTriggerButton,const char* directory=NULL,const char* startingFileNameEntry=NULL,const char* fileFilterExtensionString=NULL,const char* windowTitle=NULL,const ImVec2& windowSize=ImVec2(-1,-1),const ImVec2& windowPos=ImVec2(-1,-1),const float windowAlpha=0.875f);
 
     // gets the chosen path (internally stored). It's valid (its strlen()>0) after the user performs a valid selection, until the user performs an invalid selection (e.g. closes the dialog with the close button).
-    const char* getChosenPath() const;
+    IMGUI_API const char* getChosenPath() const;
     // returns the last directory browsed by the user using this class (internally stored). Can be passed as "directory" parameter in the methods above to reuse last used directory.
-    const char* getLastDirectory() const;
+    IMGUI_API const char* getLastDirectory() const;
     // returns "true" the exact frame a user has clicked "cancel" or the "dialog close button".
-    bool hasUserJustCancelledDialog() const;
+    IMGUI_API bool hasUserJustCancelledDialog() const;
 
     // static variables that are usually OK as they are
     static bool WrapMode;           // (true)

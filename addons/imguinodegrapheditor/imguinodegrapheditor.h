@@ -125,7 +125,7 @@ enum FieldType {
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 //--------------------------------------------------------------------------------
-        bool render(int nodeWidth);
+        IMGUI_API bool render(int nodeWidth);
 
     protected:
         FieldInfo() {}
@@ -156,14 +156,14 @@ enum FieldType {
                     numArrayElements == f.numArrayElements);   // Warning: we can't use numArrayElements for other purposes when it's not used....
         }
         //bool copyFrom(const FieldInfo& f);
-        bool copyPDataValueFrom(const FieldInfo& f);
+        IMGUI_API bool copyPDataValueFrom(const FieldInfo& f);
 //-------------------------------------------------------------------------------
 #       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-        bool serialize(ImGuiHelper::Serializer& s) const;
+        IMGUI_API bool serialize(ImGuiHelper::Serializer& s) const;
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-        const char* deserialize(const ImGuiHelper::Deserializer& d,const char* start);
+        IMGUI_API const char* deserialize(const ImGuiHelper::Deserializer& d,const char* start);
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 //--------------------------------------------------------------------------------
@@ -174,17 +174,17 @@ enum FieldType {
     class FieldInfoVector : public ImVector < FieldInfo >    {
     public:
     // Warning: returned reference might not stay valid for long in these methods
-    FieldInfo& addField(int* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=0,int lowerLimit=0,int upperLimit=100,void* userData=NULL);
-    FieldInfo& addField(unsigned* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=0,unsigned lowerLimit=0,unsigned upperLimit=100,void* userData=NULL);
-    FieldInfo& addField(float* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,float lowerLimit=0,float upperLimit=1,void* userData=NULL,bool needsRadiansToDegs=false);
-    FieldInfo& addField(double* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,double lowerLimit=0,double upperLimit=100,void* userData=NULL,bool needsRadiansToDegs=false);
+    IMGUI_API FieldInfo& addField(int* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=0,int lowerLimit=0,int upperLimit=100,void* userData=NULL);
+    IMGUI_API FieldInfo& addField(unsigned* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=0,unsigned lowerLimit=0,unsigned upperLimit=100,void* userData=NULL);
+    IMGUI_API FieldInfo& addField(float* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,float lowerLimit=0,float upperLimit=1,void* userData=NULL,bool needsRadiansToDegs=false);
+    IMGUI_API FieldInfo& addField(double* pdata,int numArrayElements=1,const char* label=NULL,const char* tooltip=NULL,int precision=3,double lowerLimit=0,double upperLimit=100,void* userData=NULL,bool needsRadiansToDegs=false);
 
-    FieldInfo& addFieldEnum(int* pdata,int numEnumElements,FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
-    FieldInfo& addFieldEnum(int* pdata,FieldInfo::GetNumEnumElementsDelegate getNumEnumElementsFunctionPtr,FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
-    FieldInfo& addFieldEnum(int *pdata, int numEnumElements, const char* const* items, const char *label=NULL, const char *tooltip=NULL);
-    FieldInfo& addFieldEnum(int *pdata,const char* items_separated_by_zeros, const char *label=NULL, const char *tooltip=NULL);     // separate items with \0, end item-list with \0\0
-    FieldInfo& addField(bool* pdata,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
-    FieldInfo& addFieldColor(float* pdata,bool useAlpha=true,const char* label=NULL,const char* tooltip=NULL,int precision=3,void* userData=NULL);
+    IMGUI_API FieldInfo& addFieldEnum(int* pdata,int numEnumElements,FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
+    IMGUI_API FieldInfo& addFieldEnum(int* pdata,FieldInfo::GetNumEnumElementsDelegate getNumEnumElementsFunctionPtr,FieldInfo::TextFromEnumDelegate textFromEnumFunctionPtr,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
+    IMGUI_API FieldInfo& addFieldEnum(int *pdata, int numEnumElements, const char* const* items, const char *label=NULL, const char *tooltip=NULL);
+    IMGUI_API FieldInfo& addFieldEnum(int *pdata,const char* items_separated_by_zeros, const char *label=NULL, const char *tooltip=NULL);     // separate items with \0, end item-list with \0\0
+    IMGUI_API FieldInfo& addField(bool* pdata,const char* label=NULL,const char* tooltip=NULL,void* userData=NULL);
+    IMGUI_API FieldInfo& addFieldColor(float* pdata,bool useAlpha=true,const char* label=NULL,const char* tooltip=NULL,int precision=3,void* userData=NULL);
     FieldInfo& addFieldTextEdit(char* pdata, int textLength=0, const char* label=NULL, const char* tooltip=NULL, int flags=ImGuiInputTextFlags_EnterReturnsTrue, void* userData=NULL) {
         return addField(pdata,textLength,label,tooltip,flags,false,-1.f,userData);
     }
@@ -198,7 +198,7 @@ enum FieldType {
         return addField(pdata,textLength,label,tooltip,flags,false,-1.f,userData,true);
     }
 
-    FieldInfo& addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,FieldInfo::CopyFieldDelegate copyFieldDelegate,void* userData
+    IMGUI_API FieldInfo& addFieldCustom(FieldInfo::RenderFieldDelegate renderFieldDelegate,FieldInfo::CopyFieldDelegate copyFieldDelegate,void* userData
 //-------------------------------------------------------------------------------
 #       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
@@ -246,7 +246,7 @@ enum FieldType {
 //--------------------------------------------------------------------------------
 
 protected:
-    FieldInfo& addField(char* pdata, int textLength=0, const char* label=NULL, const char* tooltip=NULL, int flags=ImGuiInputTextFlags_EnterReturnsTrue, bool multiline=false,float optionalHeight=-1.f, void* userData=NULL,bool isSingleEditWithBrowseButton=false);
+    IMGUI_API FieldInfo& addField(char* pdata, int textLength=0, const char* label=NULL, const char* tooltip=NULL, int flags=ImGuiInputTextFlags_EnterReturnsTrue, bool multiline=false,float optionalHeight=-1.f, void* userData=NULL,bool isSingleEditWithBrowseButton=false);
     friend class Node;
 };
 //--------------------------------------------------------------------------------------------
@@ -319,7 +319,7 @@ class Node
     bool isInEditingMode;
 
     Node() : Pos(0,0),Size(0,0),isSelected(false),baseWidthOverride(-1),mustOverrideName(false),mustOverrideInputSlots(false),mustOverrideOutputSlots(false),overrideTitleTextColor(0),overrideTitleBgColor(0),overrideTitleBgColorGradient(-1.f),isInEditingMode(false),parentNodeGraphEditor(NULL) {}
-    void init(const char* name, const ImVec2& pos,const char* inputSlotNamesSeparatedBySemicolons=NULL,const char* outputSlotNamesSeparatedBySemicolons=NULL,int _nodeTypeID=0/*,float currentWindowFontScale=-1.f*/);
+    IMGUI_API void init(const char* name, const ImVec2& pos,const char* inputSlotNamesSeparatedBySemicolons=NULL,const char* outputSlotNamesSeparatedBySemicolons=NULL,int _nodeTypeID=0/*,float currentWindowFontScale=-1.f*/);
 
     inline ImVec2 GetInputSlotPos(int slot_no,float currentFontWindowScale=1.f) const   { return ImVec2(Pos.x*currentFontWindowScale,           Pos.y*currentFontWindowScale + Size.y * ((float)slot_no+1) / ((float)InputsCount+1)); }
     inline ImVec2 GetOutputSlotPos(int slot_no,float currentFontWindowScale=1.f) const  { return ImVec2(Pos.x*currentFontWindowScale + Size.x,  Pos.y*currentFontWindowScale + Size.y * ((float)slot_no+1) / ((float)OutputsCount+1)); }
@@ -471,19 +471,19 @@ class NodeGraphEditor
             node_slots_num_segments = 12;
         }
 
-        static bool Edit(Style& style);
+        IMGUI_API static bool Edit(Style& style);
         static void Reset(Style& style) {style = Style();}
 
 #       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-        static bool Save(const Style& style,ImGuiHelper::Serializer& s);
+        IMGUI_API static bool Save(const Style& style,ImGuiHelper::Serializer& s);
         static inline bool Save(const Style &style, const char *filename)    {
             ImGuiHelper::Serializer s(filename);
             return Save(style,s);
         }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-        static bool Load(Style& style, ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart=NULL);
+        IMGUI_API static bool Load(Style& style, ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart=NULL);
         static inline bool Load(Style& style,const char* filename) {
             ImGuiHelper::Deserializer d(filename);
             return Load(style,d);
@@ -586,7 +586,7 @@ class NodeGraphEditor
     bool isEmpty() const {return nodes.size()==0;}
 
     // nodeTypeNames must point to a block of static memory: it's not owned, nor copied. pOptionalNodeTypesToUse is copied.
-    void registerNodeTypes(const char* nodeTypeNames[], int numNodeTypeNames, NodeFactoryDelegate _nodeFactoryFunctionPtr, const int* pOptionalNodeTypesToUse=NULL, int numNodeTypesToUse=-1, const int* pOptionalMaxNumAllowedInstancesToUse=NULL, int numMaxNumAllowedInstancesToUse=0, bool sortEntriesAlphabetically=true);
+    IMGUI_API void registerNodeTypes(const char* nodeTypeNames[], int numNodeTypeNames, NodeFactoryDelegate _nodeFactoryFunctionPtr, const int* pOptionalNodeTypesToUse=NULL, int numNodeTypesToUse=-1, const int* pOptionalMaxNumAllowedInstancesToUse=NULL, int numMaxNumAllowedInstancesToUse=0, bool sortEntriesAlphabetically=true);
     inline int getNumAvailableNodeTypes() const {return availableNodesInfo.size();}
     bool registerNodeTypeMaxAllowedInstances(int nodeType,int maxAllowedNodeTypeInstances=-1) {
         AvailableNodeInfo* ni = fetchAvailableNodeInfo(nodeType);
@@ -638,17 +638,17 @@ class NodeGraphEditor
         if (ok) ok = removeLinkAt(link_idx);
         return ok;
     }
-    void removeAnyLinkFromNode(Node* node,bool removeInputLinks=true,bool removeOutputLinks=true);
-    bool isLinkPresent(Node* inputNode, int input_slot, Node* outputNode, int output_slot,int* pOptionalIndexInLinkArrayOut=NULL) const;
+    IMGUI_API void removeAnyLinkFromNode(Node* node,bool removeInputLinks=true,bool removeOutputLinks=true);
+    IMGUI_API bool isLinkPresent(Node* inputNode, int input_slot, Node* outputNode, int output_slot,int* pOptionalIndexInLinkArrayOut=NULL) const;
 
     // To be called INSIDE a window
-    void render();
+    IMGUI_API void render();
 
     // Optional helper methods:
     Node* getHoveredNode() {return menuNode;}  // This is actually not strictly the hovered node, but the node called 'menuNode'
     const Node* getHoveredNode() const {return menuNode;}
-    int getSelectedNodes(ImVector<Node*>& rv);  // returns rv.size(). The active node should be contained inside rv (the first AFAIK).
-    int getSelectedNodes(ImVector<const Node*>& rv) const;
+    IMGUI_API int getSelectedNodes(ImVector<Node*>& rv);  // returns rv.size(). The active node should be contained inside rv (the first AFAIK).
+    IMGUI_API int getSelectedNodes(ImVector<const Node*>& rv) const;
     Node* getActiveNode() {return activeNode;}  // The 'active' node is the first of the selected nodes
     const Node* getActiveNode() const {return activeNode;}
     const char* getActiveNodeInfo() const {return activeNode->getInfo();}
@@ -659,15 +659,15 @@ class NodeGraphEditor
     void unselectAllNodes() {selectAllNodesPrivate(false);}
     bool isNodeSelected(const Node* node) const {return (node && node->isSelected);}
 
-    void getOutputNodesForNodeAndSlot(const Node* node,int output_slot,ImVector<Node*>& returnValueOut,ImVector<int>* pOptionalReturnValueInputSlotOut=NULL) const;
-    void getInputNodesForNodeAndSlot(const Node* node,int input_slot,ImVector<Node*>& returnValueOut,ImVector<int>* pOptionalReturnValueOutputSlotOut=NULL) const;
+    IMGUI_API void getOutputNodesForNodeAndSlot(const Node* node,int output_slot,ImVector<Node*>& returnValueOut,ImVector<int>* pOptionalReturnValueInputSlotOut=NULL) const;
+    IMGUI_API void getInputNodesForNodeAndSlot(const Node* node,int input_slot,ImVector<Node*>& returnValueOut,ImVector<int>* pOptionalReturnValueOutputSlotOut=NULL) const;
     // if allowOnlyOneLinkPerInputSlot == true:
-    Node* getInputNodeForNodeAndSlot(const Node* node,int input_slot,int* pOptionalReturnValueOutputSlotOut=NULL) const;
-    bool isNodeReachableFrom(const Node *node1, int slot1, bool goBackward,const Node* nodeToFind,int* pOptionalNodeToFindSlotOut=NULL) const;
-    bool isNodeReachableFrom(const Node *node1, bool goBackward,const Node* nodeToFind,int* pOptionalNode1SlotOut=NULL,int* pOptionalNodeToFindSlotOut=NULL) const;
-    bool hasLinks(Node* node) const;
-    int getAllNodesOfType(int typeID,ImVector<Node*>* pNodesOut=NULL,bool clearNodesOutBeforeUsage=true);
-    int getAllNodesOfType(int typeID,ImVector<const Node*>* pNodesOut=NULL,bool clearNodesOutBeforeUsage=true) const;
+    IMGUI_API Node* getInputNodeForNodeAndSlot(const Node* node,int input_slot,int* pOptionalReturnValueOutputSlotOut=NULL) const;
+    IMGUI_API bool isNodeReachableFrom(const Node *node1, int slot1, bool goBackward,const Node* nodeToFind,int* pOptionalNodeToFindSlotOut=NULL) const;
+    IMGUI_API bool isNodeReachableFrom(const Node *node1, bool goBackward,const Node* nodeToFind,int* pOptionalNode1SlotOut=NULL,int* pOptionalNodeToFindSlotOut=NULL) const;
+    IMGUI_API bool hasLinks(Node* node) const;
+    IMGUI_API int getAllNodesOfType(int typeID,ImVector<Node*>* pNodesOut=NULL,bool clearNodesOutBeforeUsage=true);
+    IMGUI_API int getAllNodesOfType(int typeID,ImVector<const Node*>* pNodesOut=NULL,bool clearNodesOutBeforeUsage=true) const;
     int getNumNodes() const {return nodes.size();}
     Node* getNode(int index) {return (index>=0 && index<nodes.size()) ? nodes[index] : NULL;}
     const Node* getNode(int index) const {return (index>=0 && index<nodes.size()) ? nodes[index] : NULL;}
@@ -683,14 +683,14 @@ class NodeGraphEditor
 //-------------------------------------------------------------------------------
 #       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-        bool save(ImGuiHelper::Serializer& s);
+        IMGUI_API bool save(ImGuiHelper::Serializer& s);
         inline bool save(const char *filename)    {
             ImGuiHelper::Serializer s(filename);
             return save(s);
         }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-        bool load(ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart=NULL);
+        IMGUI_API bool load(ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart=NULL);
         inline bool load(const char* filename) {
             ImGuiHelper::Deserializer d(filename);
             return load(d);
@@ -700,10 +700,10 @@ class NodeGraphEditor
 //--------------------------------------------------------------------------------
 
     // I suggest we don not use these 3; however we can:
-    bool overrideNodeName(Node* node,const char* newName);
-    void overrideNodeTitleBarColors(Node* node,const ImU32* pTextColor,const ImU32* pBgColor,const float* pBgColorGradient);    // default values can be reset using 0 for colors and -1 for gradient
-    bool overrideNodeInputSlots(Node* node,const char* slotNamesSeparatedBySemicolons);
-    bool overrideNodeOutputSlots(Node* node,const char* slotNamesSeparatedBySemicolons);
+    IMGUI_API bool overrideNodeName(Node* node,const char* newName);
+    IMGUI_API void overrideNodeTitleBarColors(Node* node,const ImU32* pTextColor,const ImU32* pBgColor,const float* pBgColorGradient);    // default values can be reset using 0 for colors and -1 for gradient
+    IMGUI_API bool overrideNodeInputSlots(Node* node,const char* slotNamesSeparatedBySemicolons);
+    IMGUI_API bool overrideNodeOutputSlots(Node* node,const char* slotNamesSeparatedBySemicolons);
 
     // This are the chars used as buttons in the nodes' titlebars. Users might want to change them.
     static char CloseCopyPasteChars[3][5];  // By default = {"x","^","v"};
@@ -743,8 +743,8 @@ class NodeGraphEditor
         }
         return justCreatedNode;
     }
-    void copyNode(Node* n);
-    bool removeLinkAt(int link_idx);
+    IMGUI_API void copyNode(Node* n);
+    IMGUI_API bool removeLinkAt(int link_idx);
     // Warning: node index changes when a node becomes active!
     inline int getNodeIndex(const Node* node) {
         for (int i=0;i<nodes.size();i++)    {
@@ -787,7 +787,7 @@ class NodeGraphEditor
 
 
 #ifndef IMGUINODEGRAPHEDITOR_NOTESTDEMO
-void TestNodeGraphEditor();
+IMGUI_API void TestNodeGraphEditor();
 #endif //IMGUINODEGRAPHEDITOR_NOTESTDEMO
 
 

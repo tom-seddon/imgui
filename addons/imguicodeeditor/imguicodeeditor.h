@@ -114,7 +114,7 @@ enum FoldingType {
 class FoldingTag   {
 public:
     // ex: FoldingTag("{","}","{...}",FOLDING_TYPE_PARENTHESIS,true);   // last arg should be true only for paranthesis AFAIR
-    FoldingTag(const ImString& s,const ImString& e,const ImString& _title,FoldingType t,bool _gainOneLineWhenPossible=false);
+    IMGUI_API FoldingTag(const ImString& s,const ImString& e,const ImString& _title,FoldingType t,bool _gainOneLineWhenPossible=false);
 
 protected:
     FoldingTag() : start(""),end(""),title(""),kind(FOLDING_TYPE_PARENTHESIS),gainOneLineWhenPossible(false) {}
@@ -174,20 +174,20 @@ public:
     Lines(const ImString& text="") {cr="\n";clear();setText(text);}
     ~Lines() {destroy();}
     void clear() {destroy(true);}
-    Line* add(int lineNum=-1);
-    bool remove(int lineNum);
+    IMGUI_API Line* add(int lineNum=-1);
+    IMGUI_API bool remove(int lineNum);
     inline const Line* get(int LineNum) const {return (LineNum<0 || LineNum>=size())?NULL:(*this)[LineNum];}
     inline Line* get(int lineNum) {return (lineNum<0 || lineNum>=size())?NULL:(*this)[lineNum];}
 
-    void getText(ImString& rv,int startLineNum=0,int startLineOffsetBytes=0,int endLineNum=-1,int endLineOffsetBytes=-1) const;
-    void getText(ImString& rv,int startTotalOffsetInBytes,int endTotalOffsetBytes) const;
-    void setText(const char* text);
+    IMGUI_API void getText(ImString& rv,int startLineNum=0,int startLineOffsetBytes=0,int endLineNum=-1,int endLineOffsetBytes=-1) const;
+    IMGUI_API void getText(ImString& rv,int startTotalOffsetInBytes,int endTotalOffsetBytes) const;
+    IMGUI_API void setText(const char* text);
     void setText(const ImString& text) {setText(text.c_str());}
 
 protected:
-    void destroy(bool keepFirstLine=false);
+    IMGUI_API void destroy(bool keepFirstLine=false);
     void push_back(const Line*) {}
-    static void SplitText(const char* text, ImVector<Line *> &lines, ImString *pOptionalCRout=NULL);
+    IMGUI_API static void SplitText(const char* text, ImVector<Line *> &lines, ImString *pOptionalCRout=NULL);
     ImString cr;  // "\n" or "\r\n"
     friend class CodeEditor;
     friend class FoldSegment;
@@ -215,21 +215,21 @@ public:
     showLineNumbers(true),enableTextFolding(true),scrollToLine(-1),
     show_left_pane(false),show_style_editor(true),show_load_save_buttons(true),/*colorEditMode(ImGuiColorEditMode_RGB),*/
     lang(LANG_NONE) {}
-    void render();
-    static void SetFonts(const ImFont* normal,const ImFont* bold=NULL,const ImFont* italic=NULL,const ImFont* boldItalic=NULL);
+    IMGUI_API void render();
+    IMGUI_API static void SetFonts(const ImFont* normal,const ImFont* bold=NULL,const ImFont* italic=NULL,const ImFont* boldItalic=NULL);
 
     bool isInited() const {return inited;}
-    void init();    // optional call
+    IMGUI_API void init();    // optional call
 
-    void setText(const char* text,Language _lang=LANG_NONE);
+    IMGUI_API void setText(const char* text,Language _lang=LANG_NONE);
     void setText(const ImString& text,Language _lang=LANG_NONE) {setText(text.c_str(),_lang);}
 
 
 #   ifndef NO_IMGUICODEEDITOR_SAVE
-    bool save(const char* filename);
+    IMGUI_API bool save(const char* filename);
 #   endif //NO_IMGUICODEEDITOR_SAVE
 #   ifndef NO_IMGUICODEEDITOR_LOAD
-    bool load(const char* filename,Language optionalLanguage=LANG_COUNT);
+    IMGUI_API bool load(const char* filename,Language optionalLanguage=LANG_COUNT);
 #   endif //NO_IMGUICODEEDITOR_LOAD
 
 
@@ -259,21 +259,21 @@ public:
         ImU32 color_folded_region_background;
         float folded_region_contour_thickness;
 
-        Style();
+        IMGUI_API Style();
 
-        static bool Edit(Style& style);
+        IMGUI_API static bool Edit(Style& style);
         static void Reset(Style& style) {style = Style();}
 
 #       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-        static bool Save(const Style& style,ImGuiHelper::Serializer& s);
+        IMGUI_API static bool Save(const Style& style,ImGuiHelper::Serializer& s);
         static inline bool Save(const Style &style, const char *filename)    {
             ImGuiHelper::Serializer s(filename);
             return Save(style,s);
         }
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-        static bool Load(Style& style, ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart=NULL);
+        IMGUI_API static bool Load(Style& style, ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart=NULL);
         static inline bool Load(Style& style,const char* filename) {
             ImGuiHelper::Deserializer d(filename);
             return Load(style,d);
@@ -290,12 +290,12 @@ public:
     // Folding Support And Syntax Highlighting
     // --------
     // WARNING: This method must be called BEFORE any instance of CodeEditor is initialized (otherwise the program might crash due to ImVectorEx reallocations)    
-    static bool SetFoldingSupportForLanguage(Language language,const ImVectorEx<FoldingTag>& foldingTags,bool mergeAdditionalTrailingCharIfPossible=false,char additionalTrailingChar=';');
-    static bool HasFoldingSupportForLanguage(Language language);
-    static bool AddSyntaxHighlightingTokens(Language language,SyntaxHighlightingType type,const char** tokens,int numTokens);
-    static bool ClearSyntaxHighlightingTokens(Language language,SyntaxHighlightingType type);
-    static bool SetSyntaxHighlightingExtraStuff(Language language,const char* singleLineComment=NULL,const char* stringDelimiters=NULL,const char* logicalOperators=NULL,const char* mathOperators=NULL,const char* punctuation=NULL);
-    static Language GetLanguageFromFilename(const char* filename);
+    IMGUI_API static bool SetFoldingSupportForLanguage(Language language,const ImVectorEx<FoldingTag>& foldingTags,bool mergeAdditionalTrailingCharIfPossible=false,char additionalTrailingChar=';');
+    IMGUI_API static bool HasFoldingSupportForLanguage(Language language);
+    IMGUI_API static bool AddSyntaxHighlightingTokens(Language language,SyntaxHighlightingType type,const char** tokens,int numTokens);
+    IMGUI_API static bool ClearSyntaxHighlightingTokens(Language language,SyntaxHighlightingType type);
+    IMGUI_API static bool SetSyntaxHighlightingExtraStuff(Language language,const char* singleLineComment=NULL,const char* stringDelimiters=NULL,const char* logicalOperators=NULL,const char* mathOperators=NULL,const char* punctuation=NULL);
+    IMGUI_API static Language GetLanguageFromFilename(const char* filename);
     // End Static Stuff -------------------------------------------------------------------------------------
 
     static Style style;
@@ -305,18 +305,18 @@ public:
     //typedef ImHashMapConstCString MyKeywordMapType; // Map from a string token (const char*) to a SyntaxHighlightingType.   [const chars are not copied inside map]
 
     protected:
-    void ParseTextForFolding(bool forceAllSegmentsFoldedOrNot = false, bool foldingStateToForce = true);
+    IMGUI_API void ParseTextForFolding(bool forceAllSegmentsFoldedOrNot = false, bool foldingStateToForce = true);
     Language lang;
     MyKeywordMapType shTypeKeywordMap;
     ImHashMapChar    shTypePunctuationMap;
 private:
     static bool StaticInited;
-    void RenderTextLineWrappedWithSH(ImVec2 &pos, const char *text, const char *text_end, bool skipLineCommentProcessing=false);
-    void TextLineUnformattedWithSH(const char *text, const char *text_end);
-    void TextLineWithSHV(const char *fmt, va_list args);
-    void TextLineWithSH(const char *fmt...);
+    IMGUI_API void RenderTextLineWrappedWithSH(ImVec2 &pos, const char *text, const char *text_end, bool skipLineCommentProcessing=false);
+    IMGUI_API void TextLineUnformattedWithSH(const char *text, const char *text_end);
+    IMGUI_API void TextLineWithSHV(const char *fmt, va_list args);
+    IMGUI_API void TextLineWithSH(const char *fmt...);
 
-    static void StaticInit();
+    IMGUI_API static void StaticInit();
     friend bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang,const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data);
 
 };
@@ -328,7 +328,7 @@ private:
 namespace ImGuiCe {
 
 
-bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
+IMGUI_API bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
 
 
 } // namespace ImGuiCe

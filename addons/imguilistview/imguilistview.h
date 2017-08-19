@@ -551,7 +551,7 @@ public:
     // listViewHeight: if >= 0 the maximum height of the list view is clipped to this value in pixels. Handy if you want to display something below it.
     // pOptionalColumnReorderVector: can be used to reorder columns in the view (but 'real' column indices won't be changed)
     // maxNumColumnToDisplay: can be used to reduce the number of columns that are displayed.
-    virtual bool render(float listViewHeight=-1,const ImVector<int> *pOptionalColumnReorderVector=NULL, int maxNumColumnToDisplay=-1) const;
+    IMGUI_API virtual bool render(float listViewHeight=-1,const ImVector<int> *pOptionalColumnReorderVector=NULL, int maxNumColumnToDisplay=-1) const;
 };
 
 
@@ -719,7 +719,7 @@ public:
         else cellDataOut.customText = NULL;
     }
 
-    bool sort(size_t column);
+    IMGUI_API bool sort(size_t column);
 
     size_t getNumColumns() const {return headers.size();}
     size_t getNumRows() const {return items.size();}
@@ -737,7 +737,7 @@ typedef ImGui::ListView::CellData::IconData ListViewIconData;
 
 #ifndef IMGUILISTVIEW_NOTESTDEMO
 // A handy method just to test the classes above. Can be removed otherwise.
-void TestListView();
+IMGUI_API void TestListView();
 #endif //IMGUILISTVIEW_NOTESTDEMO
 
 } // namespace ImGui

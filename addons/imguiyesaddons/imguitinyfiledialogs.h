@@ -86,9 +86,14 @@ misrepresented as being the original software.
 #ifndef IMGUITINYFILEDIALOGS_H
 #define IMGUITINYFILEDIALOGS_H
 
+// Define attributes of all API symbols declarations, e.g. for DLL under Windows.
+#ifndef IMGUI_API
+#define IMGUI_API
+#endif
+
 namespace tfd	{
 
-int messageBox (
+IMGUI_API int messageBox (
   char const * const aTitle , /* "" */
   char const * const aMessage , /* "" may contain \n \t */
   char const * const aDialogType , /* "ok" "okcancel" "yesno" */
@@ -96,13 +101,13 @@ int messageBox (
   int const aDefaultButton ) ; /* 0 for cancel/no , 1 for ok/yes */
 	/* returns 0 for cancel/no , 1 for ok/yes */
 
-char const * inputBox (
+IMGUI_API char const * inputBox (
 	char const * const aTitle , /* "" */
 	char const * const aMessage , /* "" may NOT contain \n \t on windows */
 	char const * const aDefaultInput ) ;  /* "" , if NULL it's a passwordBox */
 	/* returns NULL on cancel */
 
-char const * saveFileDialog (
+IMGUI_API char const * saveFileDialog (
   char const * const aTitle , /* "" */
   char const * const aDefaultPathAndFile , /* "" */
   int const aNumOfFilterPatterns , /* 0 */
@@ -110,7 +115,7 @@ char const * saveFileDialog (
   char const * const aSingleFilterDescription ) ; /* NULL | "text files" */
 	/* returns NULL on cancel */
 
-char const * openFileDialog (
+IMGUI_API char const * openFileDialog (
   char const * const aTitle , /* "" */
   char const * const aDefaultPathAndFile , /* "" */
   int const aNumOfFilterPatterns , /* 0 */
@@ -120,12 +125,12 @@ char const * openFileDialog (
 	/* in case of multiple files, the separator is | */
 	/* returns NULL on cancel */
 
-char const * selectFolderDialog (
+IMGUI_API char const * selectFolderDialog (
 	char const * const aTitle , /* "" */
   char const * const aDefaultPath ) ; /* "" */
 	/* returns NULL on cancel */
 
-char const * colorChooser(
+IMGUI_API char const * colorChooser(
 	char const * const aTitle , /* "" */
 	char const * const aDefaultHexRGB , /* NULL or "#FF0000" */
 	unsigned char const aDefaultRGB[3] , /* { 0 , 255 , 255 } */
@@ -137,7 +142,7 @@ char const * colorChooser(
 	/* returns NULL on cancel */
 
 /* not cross platform - zenity only */
-char const * arrayDialog (
+IMGUI_API char const * arrayDialog (
 	char const * const aTitle , /* "" */
 	int const aNumOfColumns , /* 2 */
 	char const * const * const aColumns , /* {"Column 1","Column 2"} */

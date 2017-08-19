@@ -102,7 +102,7 @@ namespace ImGuiMiniGames {
 */
     class Mine {
         public:
-        void render();
+        IMGUI_API void render();
 
         struct Style {
             enum Color {
@@ -138,11 +138,11 @@ namespace ImGuiMiniGames {
             int keyPause;                       // This depends on your key-mapping in ImGui. (default == 'p')
             static Style style;
             inline static Style& Get() {return style;}
-            Style();
+            IMGUI_API Style();
             void reset() {*this=Style();}
         };
-        Mine();
-        ~Mine();
+        IMGUI_API Mine();
+        IMGUI_API ~Mine();
         protected:
         struct MineHS* imp;
     };
@@ -171,7 +171,7 @@ namespace ImGuiMiniGames {
 
     class Sudoku {
         public:
-        void render();
+        IMGUI_API void render();
 
         struct Style {
             enum Color {
@@ -191,14 +191,14 @@ namespace ImGuiMiniGames {
             int keyPause;                       // This depends on your key-mapping in ImGui. (default == 'p')
             static Style style;
             inline static Style& Get() {return style;}
-            Style();
+            IMGUI_API Style();
             void reset() {*this=Style();}
 #           ifndef NO_IMGUIMINIGAMES_MINE
-            void setFromMineGameStyle(const Mine::Style& ms);
+            IMGUI_API void setFromMineGameStyle(const Mine::Style& ms);
 #           endif //NO_IMGUIMINIGAMES_MINE
         };
-        Sudoku();
-        ~Sudoku();
+        IMGUI_API Sudoku();
+        IMGUI_API ~Sudoku();
         protected:
         struct SudokuHS* imp;
     };

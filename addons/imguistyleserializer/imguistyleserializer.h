@@ -30,17 +30,17 @@ namespace ImGui	{
 // The drawback is that it's not possible to serialize/deserialize a style together with other stuff (for example 2 styles together) into/from a single file.
 // And it's not possible to serialize/deserialize a style into/from a memory buffer too.
 #ifndef NO_IMGUISTYLESERIALIZER_SAVESTYLE
-bool SaveStyle(const char* filename,const ImGuiStyle& style=ImGui::GetStyle());
+IMGUI_API bool SaveStyle(const char* filename,const ImGuiStyle& style=ImGui::GetStyle());
 #endif //NO_IMGUISTYLESERIALIZER_SAVESTYLE
 #ifndef NO_IMGUISTYLESERIALIZER_LOADSTYLE
-bool LoadStyle(const char* filename,ImGuiStyle& style=ImGui::GetStyle());
+IMGUI_API bool LoadStyle(const char* filename,ImGuiStyle& style=ImGui::GetStyle());
 #endif //NO_IMGUISTYLESERIALIZER_LOADSTYLE
-bool ResetStyle(int styleEnum, ImGuiStyle& style=ImGui::GetStyle());
-const char** GetDefaultStyleNames();   // ImGuiStyle_Count names re returned
+IMGUI_API bool ResetStyle(int styleEnum, ImGuiStyle& style=ImGui::GetStyle());
+IMGUI_API const char** GetDefaultStyleNames();   // ImGuiStyle_Count names re returned
 
 // satThresholdForInvertingLuminance: in [0,1] if == 0.f luminance is not inverted at all
 // shiftHue: in [0,1] if == 0.f hue is not changed at all
-void ChangeStyleColors(ImGuiStyle& style,float satThresholdForInvertingLuminance=.1f,float shiftHue=0.f);
+IMGUI_API void ChangeStyleColors(ImGuiStyle& style,float satThresholdForInvertingLuminance=.1f,float shiftHue=0.f);
 } // namespace ImGui
 
 #endif //IMGUISTYLESERIALIZER_H_

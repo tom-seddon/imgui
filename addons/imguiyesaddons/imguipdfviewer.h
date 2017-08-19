@@ -37,23 +37,23 @@ class PdfViewer
 #endif //IMGUITABWINDOW_H_
 {
 public:
-    PdfViewer();
+    IMGUI_API PdfViewer();
 #	if (defined(IMGUITABWINDOW_H_) && !defined(IMGUIPDFVIEWER_NO_TABLABEL))
-	virtual	~PdfViewer();
+    IMGUI_API virtual	~PdfViewer();
     bool saveAs(const char* savePath=NULL) {return true;}	// A viewer does not use this, nor the setModified(...) flag.
 #	else  //IMGUITABWINDOW_H_
-	~PdfViewer();	
+    IMGUI_API ~PdfViewer();
 #	endif //IMGUITABWINDOW_H_
     
 
     bool isInited() const {return init;}
 
-    bool loadFromFile(const char* path);
+    IMGUI_API bool loadFromFile(const char* path);
 
-    void destroy();
+    IMGUI_API void destroy();
 
     // returns true if some user action has been processed
-    bool render(const ImVec2 &size);    // to be called inside an ImGui::Window. Makes isInited() return true;
+    IMGUI_API bool render(const ImVec2 &size);    // to be called inside an ImGui::Window. Makes isInited() return true;
 	void render() {render(ImVec2(0,0));} // changed the return value to void, so that it matches the TabLabel contract too
 
     static const double IMAGE_DPI;// = 150;	(moved definition to .cpp file)

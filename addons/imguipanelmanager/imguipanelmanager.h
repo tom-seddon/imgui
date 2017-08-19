@@ -10,6 +10,9 @@ If you want to include this addon in your code without using the IMGUI_INCLUDE_I
 you can't because imguitoolbar.cpp includes some methods that are static inside imgui.cpp, and are not exposed by imgui_internal.h.
 */
 
+#ifndef IMGUI_API
+#include <imgui.h>
+#endif //IMGUI_API
 
 namespace ImGui {
 
@@ -64,8 +67,8 @@ struct PanelManager {
              {}
             bool isValid() const {return windowDrawer!=NULL && windowName!=NULL;}
 
-            void updateSizeInHoverMode(const PanelManager& mgr,const Pane& pane,size_t winAndBarIndex) const;
-            void draw(const PanelManager& mgr,const Pane& pane,size_t winAndBarIndex) const;
+            IMGUI_API void updateSizeInHoverMode(const PanelManager& mgr,const Pane& pane,size_t winAndBarIndex) const;
+            IMGUI_API void draw(const PanelManager& mgr,const Pane& pane,size_t winAndBarIndex) const;
         };
         ImVector<AssociatedWindow> windows; // must be one per "bar" button
         Position pos;
@@ -83,19 +86,19 @@ struct PanelManager {
             windows.clear();
         }
         // returns pane.getSize();
-        size_t addButtonAndWindow(const Toolbutton& button,const AssociatedWindow& window,int insertPosition=-1);
+        IMGUI_API size_t addButtonAndWindow(const Toolbutton& button,const AssociatedWindow& window,int insertPosition=-1);
         // returns pane.getSize();
-        size_t addSeparator(float pixels=16, int insertPosition=-1);
+        IMGUI_API size_t addSeparator(float pixels=16, int insertPosition=-1);
         // returns pane.getSize();  No window is associated to that button (user must manually check its state)
-        size_t addButtonOnly(const Toolbutton& button, int insertPosition=-1);
+        IMGUI_API size_t addButtonOnly(const Toolbutton& button, int insertPosition=-1);
         // this helps moving the same window to different panes. Cloning toggle Buttons is NOT supported (sync them ON would imply drawing the same toggle-window more than once).
-        size_t addClonedButtonAndWindow(const Pane& sourcePane,const size_t sourcePaneEntryIndex,bool flipButtonHorizontally=false);
+        IMGUI_API size_t addClonedButtonAndWindow(const Pane& sourcePane,const size_t sourcePaneEntryIndex,bool flipButtonHorizontally=false);
 
-        size_t addClonedPane(const Pane& sourcePane,bool flipButtonHorizontally=false,int sourcePaneEntryStartIndex=0,int sourcePaneEntryEndIndex=-1);
+        IMGUI_API size_t addClonedPane(const Pane& sourcePane,bool flipButtonHorizontally=false,int sourcePaneEntryStartIndex=0,int sourcePaneEntryEndIndex=-1);
 
-        size_t deleteButtonAt(int index);
+        IMGUI_API size_t deleteButtonAt(int index);
 
-        size_t getSize() const;
+        IMGUI_API size_t getSize() const;
 
         void setVisible(bool flag) {visible=flag;}
         bool getVisible() const {return visible;}
@@ -106,22 +109,22 @@ struct PanelManager {
         void setToolbarScaling(float scalingX,float scalingY) {bar.setScaling(scalingX,scalingY);}
         ImVec2 getToolbarScaling() const {return bar.getScaling();}
 
-        void setToolbarProperties(bool _keepAButtonSelected=true,bool _lightAllBarWhenHovered=false,const ImVec2& _hvAlignmentsIn01=ImVec2(-1000,-1000),const ImVec2& _opacityOffAndOn=ImVec2(-1.f,-1.f),const ImVec4& _bg_col=ImVec4(1,1,1,1),const ImVec4& _displayPortion=ImVec4(0,0,-1,-1));
-        void setDisplayProperties(const ImVec2& _opacityOffAndOn=ImVec2(-1.f,-1.f),const ImVec4& _bg_col=ImVec4(1,1,1,1));
+        IMGUI_API void setToolbarProperties(bool _keepAButtonSelected=true,bool _lightAllBarWhenHovered=false,const ImVec2& _hvAlignmentsIn01=ImVec2(-1000,-1000),const ImVec2& _opacityOffAndOn=ImVec2(-1.f,-1.f),const ImVec4& _bg_col=ImVec4(1,1,1,1),const ImVec4& _displayPortion=ImVec4(0,0,-1,-1));
+        IMGUI_API void setDisplayProperties(const ImVec2& _opacityOffAndOn=ImVec2(-1.f,-1.f),const ImVec4& _bg_col=ImVec4(1,1,1,1));
 
-        const char* getWindowName(int index) const;     // Can return NULL
-        int findWindowIndex(const char* windowName) const;  // Can return -1
+        IMGUI_API const char* getWindowName(int index) const;     // Can return NULL
+        IMGUI_API int findWindowIndex(const char* windowName) const;  // Can return -1
 
-        bool isButtonPressed(int index) const;
-        bool isButtonPressed(const char* windowName) const;
-        bool setButtonPressed(int index,bool flag=true);
-        bool setButtonPressed(const char* windowName,bool flag=true);
+        IMGUI_API bool isButtonPressed(int index) const;
+        IMGUI_API bool isButtonPressed(const char* windowName) const;
+        IMGUI_API bool setButtonPressed(int index,bool flag=true);
+        IMGUI_API bool setButtonPressed(const char* windowName,bool flag=true);
 
         // getButtonAndWindow(...) methods return references
-        void getButtonAndWindow(size_t index,Toolbutton** pToolbutton=NULL,AssociatedWindow** pAssociatedWindow=NULL);
-        void getButtonAndWindow(size_t index,const Toolbutton** pToolbutton=NULL,const AssociatedWindow** pAssociatedWindow=NULL)  const;
-        void getButtonAndWindow(const char* windowName,Toolbutton** pToolbutton=NULL,AssociatedWindow** pAssociatedWindow=NULL);
-        void getButtonAndWindow(const char* windowName,const Toolbutton** pToolbutton=NULL,const AssociatedWindow** pAssociatedWindow=NULL)  const;
+        IMGUI_API void getButtonAndWindow(size_t index,Toolbutton** pToolbutton=NULL,AssociatedWindow** pAssociatedWindow=NULL);
+        IMGUI_API void getButtonAndWindow(size_t index,const Toolbutton** pToolbutton=NULL,const AssociatedWindow** pAssociatedWindow=NULL)  const;
+        IMGUI_API void getButtonAndWindow(const char* windowName,Toolbutton** pToolbutton=NULL,AssociatedWindow** pAssociatedWindow=NULL);
+        IMGUI_API void getButtonAndWindow(const char* windowName,const Toolbutton** pToolbutton=NULL,const AssociatedWindow** pAssociatedWindow=NULL)  const;
 
 
         // protected:
@@ -150,11 +153,11 @@ struct PanelManager {
         paneLeft = paneRight = paneTop = paneBottom = NULL;
     }
 
-    Pane* addPane(Position pos,const char* toolbarName);
+    IMGUI_API Pane* addPane(Position pos,const char* toolbarName);
 
     // Optional arguments if provided are not NULL (or !=-1) on output only at the exact frame in which a Toolbutton is pressed (handy in case of Toolbutton without any associated windows)
     // Returns "true" a few instants after a manual resize of the "innerQuadPos" central space [use getCentralQuadPlacement() to retrieve it]
-    bool render(Pane **pPanePressedOut=NULL, int* pPaneToolbuttonPressedIndexOut=NULL) const;
+    IMGUI_API bool render(Pane **pPanePressedOut=NULL, int* pPaneToolbuttonPressedIndexOut=NULL) const;
 
     void setVisible(bool flag) {visible=flag;}
     bool getVisible() const {return visible;}
@@ -169,10 +172,10 @@ struct PanelManager {
     bool getDockedWindowsNoTitleBar() const {return (dockedWindowsExtraFlags&ImGuiWindowFlags_NoTitleBar);}
     int getDockedWindowsExtraFlags() const {return dockedWindowsExtraFlags;}    // Basically it handles ImGuiWindowFlags_ShowBorders and ImGuiWindowFlags_NoTitleBar together
 
-    size_t getNumPanes() const;
+    IMGUI_API size_t getNumPanes() const;
     bool isEmpty() const {return getNumPanes()==0;}
-    const Pane* getPane(Position pos) const;
-    Pane* getPane(Position pos);
+    IMGUI_API const Pane* getPane(Position pos) const;
+    IMGUI_API Pane* getPane(Position pos);
     const Pane* getPaneLeft() const {return paneLeft;}
     const Pane* getPaneRight() const {return paneRight;}
     const Pane* getPaneTop() const {return paneTop;}
@@ -184,12 +187,12 @@ struct PanelManager {
     const Pane* getPaneFromIndex(int index) const {return (index>=0 && index<panes.size()) ? &panes[index] : NULL;}
     Pane* getPaneFromIndex(int index)  {return (index>=0 && index<panes.size()) ? &panes[index] : NULL;}
 
-    void setToolbarsScaling(float scalingX,float scalingY);
-    void overrideAllExistingPanesDisplayProperties(const ImVec2& _opacityOffAndOn=ImVec2(-1.f,-1.f),const ImVec4& _bg_col=ImVec4(1,1,1,1));
+    IMGUI_API void setToolbarsScaling(float scalingX,float scalingY);
+    IMGUI_API void overrideAllExistingPanesDisplayProperties(const ImVec2& _opacityOffAndOn=ImVec2(-1.f,-1.f),const ImVec4& _bg_col=ImVec4(1,1,1,1));
 
 
-    void updateSizes() const;
-    void closeHoverWindow();
+    IMGUI_API void updateSizes() const;
+    IMGUI_API void closeHoverWindow();
     void recalculatePositionAndSizes() {
         innerBarQuadSize.x=innerBarQuadSize.y=0;
         updateSizes();
@@ -197,16 +200,16 @@ struct PanelManager {
 
     // These are what users usually need for filling the central space with a window
     // Better check the values before using them
-    const ImVec2& getCentralQuadPosition() const;
-    const ImVec2& getCentralQuadSize() const;
+    IMGUI_API const ImVec2& getCentralQuadPosition() const;
+    IMGUI_API const ImVec2& getCentralQuadSize() const;
 
     // These return the blank space inside the toolbars, without considering any pane window.
-    const ImVec2& getToolbarCentralQuadPosition() const;
-    const ImVec2& getToolbarCentralQuadSize() const;
+    IMGUI_API const ImVec2& getToolbarCentralQuadPosition() const;
+    IMGUI_API const ImVec2& getToolbarCentralQuadSize() const;
 
     // Don't call this every frame
     // values < 0 are relative to to ImGui::GetIO()::DisplaySize
-    void setDisplayPortion(const ImVec4& _displayPortion);
+    IMGUI_API void setDisplayPortion(const ImVec4& _displayPortion);
 
 
 #   if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
@@ -214,14 +217,14 @@ struct PanelManager {
 //  Thus these methods cannot construct a PanelManager for you!
 //  Hp) ImGui::GetIO().displaySize must be valid on both load and save
 #   ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-    static bool Save(const PanelManager& mgr,ImGuiHelper::Serializer& s);
+    IMGUI_API static bool Save(const PanelManager& mgr,ImGuiHelper::Serializer& s);
     static inline bool Save(const PanelManager &mgr, const char *filename)    {
         ImGuiHelper::Serializer s(filename);
         return Save(mgr,s);
     }
 #   endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #   ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-    static bool Load(PanelManager& mgr, ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart=NULL);
+    IMGUI_API static bool Load(PanelManager& mgr, ImGuiHelper::Deserializer& d, const char ** pOptionalBufferStart=NULL);
     static inline bool Load(PanelManager& mgr,const char* filename) {
         ImGuiHelper::Deserializer d(filename);
         return Load(mgr,d);
@@ -230,7 +233,7 @@ struct PanelManager {
 #   endif //NO_IMGUIHELPER_SERIALIZATION
 
     protected:
-    void calculateInnerBarQuadPlacement() const;
+    IMGUI_API void calculateInnerBarQuadPlacement() const;
 
 
 };

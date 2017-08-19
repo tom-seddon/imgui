@@ -54,9 +54,9 @@ struct SdfCharsetProperties {
 };
 // Tip: load the texture into fntTexture (owned by you), before calling these methods
 #if (!defined(NO_IMGUISDF_LOAD) || (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD)))
-struct SdfCharset* SdfAddCharsetFromFile(const char* fntFilePath,ImTextureID fntTexture,const SdfCharsetProperties& properties=SdfCharsetProperties());
+IMGUI_API struct SdfCharset* SdfAddCharsetFromFile(const char* fntFilePath,ImTextureID fntTexture,const SdfCharsetProperties& properties=SdfCharsetProperties());
 #endif // (!defined(NO_IMGUISDF_LOAD) ...)
-struct SdfCharset* SdfAddCharsetFromMemory(const void* data,unsigned int data_size,ImTextureID fntTexture,const SdfCharsetProperties& properties=SdfCharsetProperties());
+IMGUI_API struct SdfCharset* SdfAddCharsetFromMemory(const void* data,unsigned int data_size,ImTextureID fntTexture,const SdfCharsetProperties& properties=SdfCharsetProperties());
 //-------------------------------------------------------------------------------------------------
 
 // TextChunks -------------------------------------------------------------------------------------
@@ -92,15 +92,15 @@ struct SdfTextChunkProperties {
         valign = _valign;
     }
 };
-struct SdfTextChunk* SdfAddTextChunk(struct SdfCharset* _charset,int sdfBufferType=SDF_BT_OUTLINE, const SdfTextChunkProperties& properties=SdfTextChunkProperties(),bool preferStreamDrawBufferUsage=false);
-SdfTextChunkProperties& SdfTextChunkGetProperties(struct SdfTextChunk* textChunk);
-const SdfTextChunkProperties& SdfTextChunkGetProperties(const struct SdfTextChunk* textChunk);
-void SdfTextChunkSetStyle(struct SdfTextChunk* textChunk,int sdfTextBufferType=SDF_BT_OUTLINE);
-int SdfTextChunkGetStyle(const struct SdfTextChunk* textChunk);
-void SdfTextChunkSetMute(struct SdfTextChunk* textChunk,bool flag); // Mute makes it invisible
-bool SdfTextChunkGetMute(const struct SdfTextChunk* textChunk);
-void SdfRemoveTextChunk(struct SdfTextChunk* chunk);
-void SdfRemoveAllTextChunks();
+IMGUI_API struct SdfTextChunk* SdfAddTextChunk(struct SdfCharset* _charset,int sdfBufferType=SDF_BT_OUTLINE, const SdfTextChunkProperties& properties=SdfTextChunkProperties(),bool preferStreamDrawBufferUsage=false);
+IMGUI_API SdfTextChunkProperties& SdfTextChunkGetProperties(struct SdfTextChunk* textChunk);
+IMGUI_API const SdfTextChunkProperties& SdfTextChunkGetProperties(const struct SdfTextChunk* textChunk);
+IMGUI_API void SdfTextChunkSetStyle(struct SdfTextChunk* textChunk,int sdfTextBufferType=SDF_BT_OUTLINE);
+IMGUI_API int SdfTextChunkGetStyle(const struct SdfTextChunk* textChunk);
+IMGUI_API void SdfTextChunkSetMute(struct SdfTextChunk* textChunk,bool flag); // Mute makes it invisible
+IMGUI_API bool SdfTextChunkGetMute(const struct SdfTextChunk* textChunk);
+IMGUI_API void SdfRemoveTextChunk(struct SdfTextChunk* chunk);
+IMGUI_API void SdfRemoveAllTextChunks();
 //--------------------------------------------------------------------------------------------------
 
 // Text---------------------------------------------------------------------------------------------
@@ -113,16 +113,16 @@ struct SdfTextColor {
     SdfTextColor(const ImVec4& colorTop,const ImVec4& colorBottom) : colorTopLeft(colorTop),colorTopRight(colorTop),colorBottomLeft(colorBottom),colorBottomRight(colorBottom) {}
     SdfTextColor(const ImVec4& _colorTopLeft,const ImVec4& _colorTopRight,const ImVec4& _colorBottomLeft,const ImVec4& _colorBottomRight)
     : colorTopLeft(_colorTopLeft),colorTopRight(_colorTopRight),colorBottomLeft(_colorBottomLeft),colorBottomRight(_colorBottomRight) {}
-    static void SetDefault(const SdfTextColor& defaultColor, bool updateAllExistingTextChunks=false);
+    IMGUI_API static void SetDefault(const SdfTextColor& defaultColor, bool updateAllExistingTextChunks=false);
 };
 static SdfTextColor SdfTextDefaultColor;
-void SdfAddText(struct SdfTextChunk* chunk,const char* startText,bool italic=false,const SdfTextColor* pSdfTextColor=NULL,const ImVec2* textScaling=NULL,const char* endText=NULL,const SDFHAlignment* phalignOverride=NULL,bool fakeBold=false);
-void SdfAddTextWithTags(struct SdfTextChunk* chunk,const char* startText,const char* endText=NULL);
-void SdfClearText(struct SdfTextChunk* chunk);
+IMGUI_API void SdfAddText(struct SdfTextChunk* chunk,const char* startText,bool italic=false,const SdfTextColor* pSdfTextColor=NULL,const ImVec2* textScaling=NULL,const char* endText=NULL,const SDFHAlignment* phalignOverride=NULL,bool fakeBold=false);
+IMGUI_API void SdfAddTextWithTags(struct SdfTextChunk* chunk,const char* startText,const char* endText=NULL);
+IMGUI_API void SdfClearText(struct SdfTextChunk* chunk);
 //---------------------------------------------------------------------------------------------------
 
 
-void SdfRender(const ImVec4 *pViewportOverride=NULL);   //pViewportOverride, if provided, is [x,y,width,height] in screen coordinates, not in framebuffer coords.
+IMGUI_API void SdfRender(const ImVec4 *pViewportOverride=NULL);   //pViewportOverride, if provided, is [x,y,width,height] in screen coordinates, not in framebuffer coords.
 
 
 // Optional/Extra methods:---------------------------------------------------------------
@@ -161,11 +161,11 @@ struct SdfAnimationKeyFrame {
     {}
 };
 struct SdfAnimation* SdfAddAnimation();
-void SdfAnimationSetLoopingParams(struct SdfAnimation* animation,bool mustLoop,bool mustHideTextWhenFinishedIfNotLooping=true);
-float SdfAnimationAddKeyFrame(struct SdfAnimation* animation,const SdfAnimationKeyFrame& keyFrame); // returns the animation total length in seconds so far
-void SdfAnimationClear(struct SdfAnimation* animation);     // clears all SdfKeyFrames
-void SdfRemoveAnimation(struct SdfAnimation* animation);    // "animation" no more usable
-void SdfRemoveAllAnimations();
+IMGUI_API void SdfAnimationSetLoopingParams(struct SdfAnimation* animation,bool mustLoop,bool mustHideTextWhenFinishedIfNotLooping=true);
+IMGUI_API float SdfAnimationAddKeyFrame(struct SdfAnimation* animation,const SdfAnimationKeyFrame& keyFrame); // returns the animation total length in seconds so far
+IMGUI_API void SdfAnimationClear(struct SdfAnimation* animation);     // clears all SdfKeyFrames
+IMGUI_API void SdfRemoveAnimation(struct SdfAnimation* animation);    // "animation" no more usable
+IMGUI_API void SdfRemoveAllAnimations();
 
 
 struct SdfAnimationParams {
@@ -192,23 +192,23 @@ struct SdfGlobalParams {
 // Once an animation is active (from its mode), it plays if the text chunk is not mute.
 // When it ends the mode can be set to SDF_AM_NONE and the text chunk BAN be set to mute.
 // Only a manual animation can have a looping mode.
-void SdfTextChunkSetManualAnimation(struct SdfTextChunk* chunk,struct SdfAnimation* animation);
-const struct SdfAnimation* SdfTextChunkGetManualAnimation(const struct SdfTextChunk* chunk);
-struct SdfAnimation* SdfTextChunkGetManualAnimation(struct SdfTextChunk* chunk);
-void SdfTextChunkSetAnimationParams(struct SdfTextChunk* chunk,const SdfAnimationParams& params=SdfAnimationParams());
-const SdfAnimationParams& SdfTextChunkGetAnimationParams(const struct SdfTextChunk* chunk);
-SdfAnimationParams& SdfTextChunkGetAnimationParams(struct SdfTextChunk* chunk);
-void SdfTextChunkSetGlobalParams(struct SdfTextChunk* chunk,const SdfGlobalParams& params=SdfGlobalParams());
-const SdfGlobalParams& SdfTextChunkGetGlobalParams(const struct SdfTextChunk* chunk);
-SdfGlobalParams& SdfTextChunkGetGlobalParams(struct SdfTextChunk* chunk);
-void SdfTextChunkSetAnimationMode(struct SdfTextChunk* chunk,SDFAnimationMode mode=SDF_AM_NONE);
-SDFAnimationMode SdfTextChunkGetAnimationMode(const struct SdfTextChunk* chunk);
+IMGUI_API void SdfTextChunkSetManualAnimation(struct SdfTextChunk* chunk,struct SdfAnimation* animation);
+IMGUI_API const struct SdfAnimation* SdfTextChunkGetManualAnimation(const struct SdfTextChunk* chunk);
+IMGUI_API struct SdfAnimation* SdfTextChunkGetManualAnimation(struct SdfTextChunk* chunk);
+IMGUI_API void SdfTextChunkSetAnimationParams(struct SdfTextChunk* chunk,const SdfAnimationParams& params=SdfAnimationParams());
+IMGUI_API const SdfAnimationParams& SdfTextChunkGetAnimationParams(const struct SdfTextChunk* chunk);
+IMGUI_API SdfAnimationParams& SdfTextChunkGetAnimationParams(struct SdfTextChunk* chunk);
+IMGUI_API void SdfTextChunkSetGlobalParams(struct SdfTextChunk* chunk,const SdfGlobalParams& params=SdfGlobalParams());
+IMGUI_API const SdfGlobalParams& SdfTextChunkGetGlobalParams(const struct SdfTextChunk* chunk);
+IMGUI_API SdfGlobalParams& SdfTextChunkGetGlobalParams(struct SdfTextChunk* chunk);
+IMGUI_API void SdfTextChunkSetAnimationMode(struct SdfTextChunk* chunk,SDFAnimationMode mode=SDF_AM_NONE);
+IMGUI_API SDFAnimationMode SdfTextChunkGetAnimationMode(const struct SdfTextChunk* chunk);
 //------------------------------------------------------------------------------------------
 
 
 
 #ifndef NO_IMGUISDF_EDIT
-bool SdfTextChunkEdit(SdfTextChunk* sdfTextChunk,char* buffer,int bufferSize);
+IMGUI_API bool SdfTextChunkEdit(SdfTextChunk* sdfTextChunk,char* buffer,int bufferSize);
 #endif //NO_IMGUISDF_EDIT
 
 } //namespace

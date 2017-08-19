@@ -203,7 +203,7 @@ inline void printCodePointsWIthErrorRecovery(uint8_t* s) {
 
 }
 
-int IsUTF8(uint8_t* s) {
+inline int IsUTF8(uint8_t* s) {
     uint32_t codepoint, state = 0;
     while (*s) decode(&state, &codepoint, *s++);
     return state == UTF8_ACCEPT;

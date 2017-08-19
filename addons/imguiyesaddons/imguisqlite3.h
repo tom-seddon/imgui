@@ -45,6 +45,11 @@
 #include <imgui.h>
 #endif //IMGUI_API*/
 
+// Define attributes of all API symbols declarations, e.g. for DLL under Windows.
+#ifndef IMGUI_API
+#define IMGUI_API
+#endif
+
 
 //#include <sqlite3.h>	// see if we can remove it
 // Attempt to move "sqlite3.h" to imguisqlite3.cpp:----
@@ -72,13 +77,13 @@ class Exception
 {
 public:
 
-    Exception(const int nErrCode,
+    IMGUI_API Exception(const int nErrCode,
                     const char* szErrMess,
                     bool bDeleteMsg=true);
 
-    Exception(const Exception&  e);
+    IMGUI_API Exception(const Exception&  e);
 
-    virtual ~Exception();
+    IMGUI_API virtual ~Exception();
 
     int errorCode() const { return mnErrCode; }
 
@@ -97,15 +102,15 @@ class Buffer
 {
 public:
 
-    Buffer();
+    IMGUI_API Buffer();
 
-    ~Buffer();
+    IMGUI_API ~Buffer();
 
-    const char* format(const char* szFormat, ...);
+    IMGUI_API const char* format(const char* szFormat, ...);
 
     operator const char*() const { return mpBuf; }
 
-    void clear();
+    IMGUI_API void clear();
 
 private:
 
@@ -117,21 +122,21 @@ class Binary
 {
 public:
 
-    Binary();
+    IMGUI_API Binary();
 
-    ~Binary();
+    IMGUI_API ~Binary();
 
-    void setBinary(const unsigned char* pBuf, int nLen);
-    void setEncoded(const unsigned char* pBuf);
+    IMGUI_API void setBinary(const unsigned char* pBuf, int nLen);
+    IMGUI_API void setEncoded(const unsigned char* pBuf);
 
-    const unsigned char* getEncoded();
-    const unsigned char* getBinary();
+    IMGUI_API const unsigned char* getEncoded();
+    IMGUI_API const unsigned char* getBinary();
 
-    int getBinaryLength();
+    IMGUI_API int getBinaryLength();
 
-    unsigned char* allocBuffer(int nLen);
+    IMGUI_API unsigned char* allocBuffer(int nLen);
 
-    void clear();
+    IMGUI_API void clear();
 
 private:
 
@@ -147,53 +152,53 @@ class Query
 {
 public:
 
-    Query();
+    IMGUI_API Query();
 
-    Query(const Query& rQuery);
+    IMGUI_API Query(const Query& rQuery);
 
-    Query(sqlite3* pDB,
+    IMGUI_API Query(sqlite3* pDB,
                 sqlite3_stmt* pVM,
                 bool bEof,
                 bool bOwnVM=true);
 
-    Query& operator=(const Query& rQuery);
+    IMGUI_API Query& operator=(const Query& rQuery);
 
-    virtual ~Query();
+    IMGUI_API virtual ~Query();
 
-    int numFields() const;
+    IMGUI_API int numFields() const;
 
-    int fieldIndex(const char* szField) const;
-    const char* fieldName(int nCol) const;
+    IMGUI_API int fieldIndex(const char* szField) const;
+    IMGUI_API const char* fieldName(int nCol) const;
 
-    const char* fieldDeclType(int nCol) const;
-    int fieldDataType(int nCol) const;
+    IMGUI_API const char* fieldDeclType(int nCol) const;
+    IMGUI_API int fieldDataType(int nCol) const;
 
-    const char* fieldValue(int nField) const;
-    const char* fieldValue(const char* szField) const;
+    IMGUI_API const char* fieldValue(int nField) const;
+    IMGUI_API const char* fieldValue(const char* szField) const;
 
-    int getIntField(int nField, int nNullValue=0) const;
-    int getIntField(const char* szField, int nNullValue=0) const;
+    IMGUI_API int getIntField(int nField, int nNullValue=0) const;
+    IMGUI_API int getIntField(const char* szField, int nNullValue=0) const;
 
-    long long getInt64Field(int nField, long long nNullValue=0) const;
-    long long getInt64Field(const char* szField, long long nNullValue=0) const;
+    IMGUI_API long long getInt64Field(int nField, long long nNullValue=0) const;
+    IMGUI_API long long getInt64Field(const char* szField, long long nNullValue=0) const;
 
-    double getFloatField(int nField, double fNullValue=0.0) const;
-    double getFloatField(const char* szField, double fNullValue=0.0) const;
+    IMGUI_API double getFloatField(int nField, double fNullValue=0.0) const;
+    IMGUI_API double getFloatField(const char* szField, double fNullValue=0.0) const;
 
-    const char* getStringField(int nField, const char* szNullValue="") const;
-    const char* getStringField(const char* szField, const char* szNullValue="") const;
+    IMGUI_API const char* getStringField(int nField, const char* szNullValue="") const;
+    IMGUI_API const char* getStringField(const char* szField, const char* szNullValue="") const;
 
-    const unsigned char* getBlobField(int nField, int& nLen) const;
-    const unsigned char* getBlobField(const char* szField, int& nLen) const;
+    IMGUI_API const unsigned char* getBlobField(int nField, int& nLen) const;
+    IMGUI_API const unsigned char* getBlobField(const char* szField, int& nLen) const;
 
-    bool fieldIsNull(int nField) const;
-    bool fieldIsNull(const char* szField) const;
+    IMGUI_API bool fieldIsNull(int nField) const;
+    IMGUI_API bool fieldIsNull(const char* szField) const;
 
-    bool eof() const;
+    IMGUI_API bool eof() const;
 
-    void nextRow();
+    IMGUI_API void nextRow();
 
-    void finalize();
+    IMGUI_API void finalize();
 
 private:
 
@@ -211,40 +216,40 @@ class Table
 {
 public:
 
-    Table();
+    IMGUI_API Table();
 
-    Table(const Table& rTable);
+    IMGUI_API Table(const Table& rTable);
 
-    Table(char** paszResults, int nRows, int nCols);
+    IMGUI_API Table(char** paszResults, int nRows, int nCols);
 
-    virtual ~Table();
+    IMGUI_API virtual ~Table();
 
-    Table& operator=(const Table& rTable);
+    IMGUI_API Table& operator=(const Table& rTable);
 
-    int numFields() const;
+    IMGUI_API int numFields() const;
 
-    int numRows() const;
+    IMGUI_API int numRows() const;
 
-    const char* fieldName(int nCol) const;
+    IMGUI_API const char* fieldName(int nCol) const;
 
-    const char* fieldValue(int nField) const;
-    const char* fieldValue(const char* szField) const;
+    IMGUI_API const char* fieldValue(int nField) const;
+    IMGUI_API const char* fieldValue(const char* szField) const;
 
-    int getIntField(int nField, int nNullValue=0) const;
-    int getIntField(const char* szField, int nNullValue=0) const;
+    IMGUI_API int getIntField(int nField, int nNullValue=0) const;
+    IMGUI_API int getIntField(const char* szField, int nNullValue=0) const;
 
-    double getFloatField(int nField, double fNullValue=0.0) const;
-    double getFloatField(const char* szField, double fNullValue=0.0) const;
+    IMGUI_API double getFloatField(int nField, double fNullValue=0.0) const;
+    IMGUI_API double getFloatField(const char* szField, double fNullValue=0.0) const;
 
-    const char* getStringField(int nField, const char* szNullValue="") const;
-    const char* getStringField(const char* szField, const char* szNullValue="") const;
+    IMGUI_API const char* getStringField(int nField, const char* szNullValue="") const;
+    IMGUI_API const char* getStringField(const char* szField, const char* szNullValue="") const;
 
-    bool fieldIsNull(int nField) const;
-    bool fieldIsNull(const char* szField) const;
+    IMGUI_API bool fieldIsNull(int nField) const;
+    IMGUI_API bool fieldIsNull(const char* szField) const;
 
-    void setRow(int nRow);
+    IMGUI_API void setRow(int nRow);
 
-    void finalize();
+    IMGUI_API void finalize();
 
 private:
 
@@ -261,30 +266,30 @@ class Statement
 {
 public:
 
-    Statement();
+    IMGUI_API Statement();
 
-    Statement(const Statement& rStatement);
+    IMGUI_API Statement(const Statement& rStatement);
 
-    Statement(sqlite3* pDB, sqlite3_stmt* pVM);
+    IMGUI_API Statement(sqlite3* pDB, sqlite3_stmt* pVM);
 
-    virtual ~Statement();
+    IMGUI_API virtual ~Statement();
 
-    Statement& operator=(const Statement& rStatement);
+    IMGUI_API Statement& operator=(const Statement& rStatement);
 
-    int execDML();
+    IMGUI_API int execDML();
 
-    Query execQuery();
+    IMGUI_API Query execQuery();
 
-    void bind(int nParam, const char* szValue);
-    void bind(int nParam, const int nValue);
-    void bind(int nParam, const long long nValue);
-    void bind(int nParam, const double dwValue);
-    void bind(int nParam, const unsigned char* blobValue, int nLen);
-    void bindNull(int nParam);
+    IMGUI_API void bind(int nParam, const char* szValue);
+    IMGUI_API void bind(int nParam, const int nValue);
+    IMGUI_API void bind(int nParam, const long long nValue);
+    IMGUI_API void bind(int nParam, const double dwValue);
+    IMGUI_API void bind(int nParam, const unsigned char* blobValue, int nLen);
+    IMGUI_API void bindNull(int nParam);
 
-    void reset();
+    IMGUI_API void reset();
 
-    void finalize();
+    IMGUI_API void finalize();
 
 private:
 
@@ -300,33 +305,33 @@ class DB
 {
 public:
 
-    DB();
+    IMGUI_API DB();
 
-    virtual ~DB();
+    IMGUI_API virtual ~DB();
 
-    void open(const char* szFile);
+    IMGUI_API void open(const char* szFile);
 
-    void close();
+    IMGUI_API void close();
 
-    bool tableExists(const char* szTable);
+    IMGUI_API bool tableExists(const char* szTable);
 
-    int execDML(const char* szSQL);
+    IMGUI_API int execDML(const char* szSQL);
 
-    Query execQuery(const char* szSQL);
+    IMGUI_API Query execQuery(const char* szSQL);
 
-    int execScalar(const char* szSQL);
+    IMGUI_API int execScalar(const char* szSQL);
 
-    Table getTable(const char* szSQL);
+    IMGUI_API Table getTable(const char* szSQL);
 
-    Statement compileStatement(const char* szSQL);
+    IMGUI_API Statement compileStatement(const char* szSQL);
 
-    sqlite_int64 lastRowId() const;
+    IMGUI_API sqlite_int64 lastRowId() const;
 
-    void interrupt();
+    IMGUI_API void interrupt();
 
-    void setBusyTimeout(int nMillisecs);
+    IMGUI_API void setBusyTimeout(int nMillisecs);
 
-    static const char* SQLiteVersion();
+    IMGUI_API static const char* SQLiteVersion();
 
 private:
 

@@ -9,51 +9,51 @@
 namespace ImGui {
 
 // Experimental: tested on Ubuntu only. Should work with urls, folders and files.
-bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS=false);
+IMGUI_API bool OpenWithDefaultApplication(const char* url,bool exploreModeForWindowsOS=false);
 
-void CloseAllPopupMenus();  // Never Tested
+IMGUI_API void CloseAllPopupMenus();  // Never Tested
 
-bool IsItemActiveLastFrame();
-bool IsItemJustReleased();
+IMGUI_API bool IsItemActiveLastFrame();
+IMGUI_API bool IsItemJustReleased();
 
 
 #ifndef NO_IMGUIHELPER_FONT_METHODS
-const ImFont* GetFont(int fntIndex);
-void PushFont(int fntIndex);    // using the index of the font instead of a ImFont* is easier (you can set up an enum).
-void TextColoredV(int fntIndex,const ImVec4& col, const char* fmt, va_list args);
-void TextColored(int fntIndex,const ImVec4& col, const char* fmt, ...) IM_PRINTFARGS(3);
-void TextV(int fntIndex,const char* fmt, va_list args);
-void Text(int fntIndex,const char* fmt, ...) IM_PRINTFARGS(2);
+IMGUI_API const ImFont* GetFont(int fntIndex);
+IMGUI_API void PushFont(int fntIndex);    // using the index of the font instead of a ImFont* is easier (you can set up an enum).
+IMGUI_API void TextColoredV(int fntIndex,const ImVec4& col, const char* fmt, va_list args);
+IMGUI_API void TextColored(int fntIndex,const ImVec4& col, const char* fmt, ...) IM_PRINTFARGS(3);
+IMGUI_API void TextV(int fntIndex,const char* fmt, va_list args);
+IMGUI_API void Text(int fntIndex,const char* fmt, ...) IM_PRINTFARGS(2);
 
 // Handy if we want to use ImGui::Image(...) or ImGui::ImageButton(...) with a glyph
-bool GetTexCoordsFromGlyph(unsigned short glyph,ImVec2& uv0,ImVec2& uv1);
+IMGUI_API bool GetTexCoordsFromGlyph(unsigned short glyph,ImVec2& uv0,ImVec2& uv1);
 // Returns the height of the main menu based on the current font and style
-float CalcMainMenuHeight();
+IMGUI_API float CalcMainMenuHeight();
 #endif //NO_IMGUIHELPER_FONT_METHODS
 
 #ifndef NO_IMGUIHELPER_DRAW_METHODS
 // Extensions to ImDrawList
-void ImDrawListAddConvexPolyFilledWithVerticalGradient(ImDrawList* dl, const ImVec2* points, const int points_count, ImU32 colTop, ImU32 colBot, bool anti_aliased, float miny=-1.f, float maxy=-1.f);
-void ImDrawListPathFillWithVerticalGradientAndStroke(ImDrawList* dl, const ImU32& fillColorTop, const ImU32& fillColorBottom, const ImU32& strokeColor, bool strokeClosed=false, float strokeThickness = 1.0f, bool antiAliased = true, float miny=-1.f, float maxy=-1.f);
-void ImDrawListPathFillAndStroke(ImDrawList* dl,const ImU32& fillColor,const ImU32& strokeColor,bool strokeClosed=false, float strokeThickness = 1.0f, bool antiAliased = true);
-void ImDrawListAddRect(ImDrawList* dl,const ImVec2& a, const ImVec2& b,const ImU32& fillColor,const ImU32& strokeColor,float rounding = 0.0f, int rounding_corners = ~0,float strokeThickness = 1.0f,bool antiAliased = true);
-void ImDrawListAddRectWithVerticalGradient(ImDrawList* dl,const ImVec2& a, const ImVec2& b,const ImU32& fillColorTop,const ImU32& fillColorBottom,const ImU32& strokeColor,float rounding = 0.0f, int rounding_corners = ~0,float strokeThickness = 1.0f,bool antiAliased = true);
-void ImDrawListAddRectWithVerticalGradient(ImDrawList* dl,const ImVec2& a, const ImVec2& b,const ImU32& fillColor,float fillColorGradientDeltaIn0_05,const ImU32& strokeColor,float rounding = 0.0f, int rounding_corners = ~0,float strokeThickness = 1.0f,bool antiAliased = true);
-void ImDrawListPathArcTo(ImDrawList* dl,const ImVec2& centre,const ImVec2& radii, float amin, float amax, int num_segments = 10);
-void ImDrawListAddEllipse(ImDrawList* dl,const ImVec2& centre, const ImVec2& radii,const ImU32& fillColor,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
-void ImDrawListAddEllipseWithVerticalGradient(ImDrawList* dl,const ImVec2& centre, const ImVec2& radii,const ImU32& fillColorTop,const ImU32& fillColorBottom,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
-void ImDrawListAddCircle(ImDrawList* dl,const ImVec2& centre, float radius,const ImU32& fillColor,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
-void ImDrawListAddCircleWithVerticalGradient(ImDrawList* dl,const ImVec2& centre, float radius,const ImU32& fillColorTop,const ImU32& fillColorBottom,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
+IMGUI_API void ImDrawListAddConvexPolyFilledWithVerticalGradient(ImDrawList* dl, const ImVec2* points, const int points_count, ImU32 colTop, ImU32 colBot, bool anti_aliased, float miny=-1.f, float maxy=-1.f);
+IMGUI_API void ImDrawListPathFillWithVerticalGradientAndStroke(ImDrawList* dl, const ImU32& fillColorTop, const ImU32& fillColorBottom, const ImU32& strokeColor, bool strokeClosed=false, float strokeThickness = 1.0f, bool antiAliased = true, float miny=-1.f, float maxy=-1.f);
+IMGUI_API void ImDrawListPathFillAndStroke(ImDrawList* dl,const ImU32& fillColor,const ImU32& strokeColor,bool strokeClosed=false, float strokeThickness = 1.0f, bool antiAliased = true);
+IMGUI_API void ImDrawListAddRect(ImDrawList* dl,const ImVec2& a, const ImVec2& b,const ImU32& fillColor,const ImU32& strokeColor,float rounding = 0.0f, int rounding_corners = ~0,float strokeThickness = 1.0f,bool antiAliased = true);
+IMGUI_API void ImDrawListAddRectWithVerticalGradient(ImDrawList* dl,const ImVec2& a, const ImVec2& b,const ImU32& fillColorTop,const ImU32& fillColorBottom,const ImU32& strokeColor,float rounding = 0.0f, int rounding_corners = ~0,float strokeThickness = 1.0f,bool antiAliased = true);
+IMGUI_API void ImDrawListAddRectWithVerticalGradient(ImDrawList* dl,const ImVec2& a, const ImVec2& b,const ImU32& fillColor,float fillColorGradientDeltaIn0_05,const ImU32& strokeColor,float rounding = 0.0f, int rounding_corners = ~0,float strokeThickness = 1.0f,bool antiAliased = true);
+IMGUI_API void ImDrawListPathArcTo(ImDrawList* dl,const ImVec2& centre,const ImVec2& radii, float amin, float amax, int num_segments = 10);
+IMGUI_API void ImDrawListAddEllipse(ImDrawList* dl,const ImVec2& centre, const ImVec2& radii,const ImU32& fillColor,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
+IMGUI_API void ImDrawListAddEllipseWithVerticalGradient(ImDrawList* dl,const ImVec2& centre, const ImVec2& radii,const ImU32& fillColorTop,const ImU32& fillColorBottom,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
+IMGUI_API void ImDrawListAddCircle(ImDrawList* dl,const ImVec2& centre, float radius,const ImU32& fillColor,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
+IMGUI_API void ImDrawListAddCircleWithVerticalGradient(ImDrawList* dl,const ImVec2& centre, float radius,const ImU32& fillColorTop,const ImU32& fillColorBottom,const ImU32& strokeColor,int num_segments = 12,float strokeThickness = 1.f,bool antiAliased = true);
 // Overload of ImDrawList::addPolyLine(...) that takes offset and scale:
-void ImDrawListAddPolyLine(ImDrawList *dl,const ImVec2* polyPoints,int numPolyPoints,ImU32 strokeColor=IM_COL32_WHITE,float strokeThickness=1.f,bool strokeClosed=false, const ImVec2 &offset=ImVec2(0,0), const ImVec2& scale=ImVec2(1,1),bool antiAliased=false);
+IMGUI_API void ImDrawListAddPolyLine(ImDrawList *dl,const ImVec2* polyPoints,int numPolyPoints,ImU32 strokeColor=IM_COL32_WHITE,float strokeThickness=1.f,bool strokeClosed=false, const ImVec2 &offset=ImVec2(0,0), const ImVec2& scale=ImVec2(1,1),bool antiAliased=false);
 
 
-void ImDrawListAddConvexPolyFilledWithHorizontalGradient(ImDrawList *dl, const ImVec2 *points, const int points_count, ImU32 colLeft, ImU32 colRight, bool anti_aliased,float minx=-1.f,float maxx=-1.f);
-void ImDrawListPathFillWithHorizontalGradientAndStroke(ImDrawList *dl, const ImU32 &fillColorLeft, const ImU32 &fillColorRight, const ImU32 &strokeColor, bool strokeClosed=false, float strokeThickness = 1.0f, bool antiAliased = true,float minx=-1.f,float maxx=-1.f);
-void ImDrawListAddRectWithHorizontalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColorLeft, const ImU32 &fillColoRight, const ImU32 &strokeColor, float rounding = 0.0f, int rounding_corners = ~0, float strokeThickness = 1.0f, bool antiAliased = true);
-void ImDrawListAddEllipseWithHorizontalGradient(ImDrawList *dl, const ImVec2 &centre, const ImVec2 &radii, const ImU32 &fillColorLeft, const ImU32 &fillColorRight, const ImU32 &strokeColor, int num_segments = 12, float strokeThickness = 1.0f, bool antiAliased = true);
-void ImDrawListAddCircleWithHorizontalGradient(ImDrawList *dl, const ImVec2 &centre, float radius, const ImU32 &fillColorLeft, const ImU32 &fillColorRight, const ImU32 &strokeColor, int num_segments = 12, float strokeThickness = 1.0f, bool antiAliased = true);
-void ImDrawListAddRectWithHorizontalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColor, float fillColorGradientDeltaIn0_05, const ImU32 &strokeColor, float rounding = 0.0f, int rounding_corners = ~0, float strokeThickness = 1.0f, bool antiAliased = true);
+IMGUI_API void ImDrawListAddConvexPolyFilledWithHorizontalGradient(ImDrawList *dl, const ImVec2 *points, const int points_count, ImU32 colLeft, ImU32 colRight, bool anti_aliased,float minx=-1.f,float maxx=-1.f);
+IMGUI_API void ImDrawListPathFillWithHorizontalGradientAndStroke(ImDrawList *dl, const ImU32 &fillColorLeft, const ImU32 &fillColorRight, const ImU32 &strokeColor, bool strokeClosed=false, float strokeThickness = 1.0f, bool antiAliased = true,float minx=-1.f,float maxx=-1.f);
+IMGUI_API void ImDrawListAddRectWithHorizontalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColorLeft, const ImU32 &fillColoRight, const ImU32 &strokeColor, float rounding = 0.0f, int rounding_corners = ~0, float strokeThickness = 1.0f, bool antiAliased = true);
+IMGUI_API void ImDrawListAddEllipseWithHorizontalGradient(ImDrawList *dl, const ImVec2 &centre, const ImVec2 &radii, const ImU32 &fillColorLeft, const ImU32 &fillColorRight, const ImU32 &strokeColor, int num_segments = 12, float strokeThickness = 1.0f, bool antiAliased = true);
+IMGUI_API void ImDrawListAddCircleWithHorizontalGradient(ImDrawList *dl, const ImVec2 &centre, float radius, const ImU32 &fillColorLeft, const ImU32 &fillColorRight, const ImU32 &strokeColor, int num_segments = 12, float strokeThickness = 1.0f, bool antiAliased = true);
+IMGUI_API void ImDrawListAddRectWithHorizontalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColor, float fillColorGradientDeltaIn0_05, const ImU32 &strokeColor, float rounding = 0.0f, int rounding_corners = ~0, float strokeThickness = 1.0f, bool antiAliased = true);
 
 
 #ifndef NO_IMGUIHELPER_VERTICAL_TEXT_METHODS
@@ -62,11 +62,11 @@ void ImDrawListAddRectWithHorizontalGradient(ImDrawList *dl, const ImVec2 &a, co
 #   else //IMGUIHELPER_HAS_VERTICAL_TEXT_SUPPORT
 #       define IMGUIHELPER_HAS_VERTICAL_TEXT_SUPPORT
 #   endif //IMGUIHELPER_HAS_VERTICAL_TEXT_SUPPORT
-ImVec2 CalcVerticalTextSize(const char* text, const char* text_end = NULL, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
-void RenderTextVertical(const ImFont* font,ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end=NULL, float wrap_width=0.0f, bool cpu_fine_clip=false, bool rotateCCW=false);
-void AddTextVertical(ImDrawList* drawList,const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end=NULL, float wrap_width=0.0f, const ImVec4* cpu_fine_clip_rect=NULL,bool rotateCCW = false);
-void AddTextVertical(ImDrawList* drawList,const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end=NULL,bool rotateCCW = false);
-void RenderTextVerticalClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known,const ImVec2& align =  ImVec2(0.0f,0.0f), const ImVec2* clip_min=NULL, const ImVec2* clip_max=NULL,bool rotateCCW=false);
+IMGUI_API ImVec2 CalcVerticalTextSize(const char* text, const char* text_end = NULL, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
+IMGUI_API void RenderTextVertical(const ImFont* font,ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end=NULL, float wrap_width=0.0f, bool cpu_fine_clip=false, bool rotateCCW=false);
+IMGUI_API void AddTextVertical(ImDrawList* drawList,const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end=NULL, float wrap_width=0.0f, const ImVec4* cpu_fine_clip_rect=NULL,bool rotateCCW = false);
+IMGUI_API void AddTextVertical(ImDrawList* drawList,const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end=NULL,bool rotateCCW = false);
+IMGUI_API void RenderTextVerticalClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known,const ImVec2& align =  ImVec2(0.0f,0.0f), const ImVec2* clip_min=NULL, const ImVec2* clip_max=NULL,bool rotateCCW=false);
 #endif //NO_IMGUIHELPER_VERTICAL_TEXT_METHODS
 #endif //NO_IMGUIHELPER_DRAW_METHODS
 
@@ -74,28 +74,28 @@ void RenderTextVerticalClipped(const ImVec2& pos_min, const ImVec2& pos_max, con
 // if optionalRootWindowName==NULL, they refer to the current window
 // P.S. This methods are never used anywhere, and it's not clear to me when
 // PutInForeground() is better then ImGui::SetWindowFocus()
-void PutInBackground(const char* optionalRootWindowName=NULL);
-void PutInForeground(const char* optionalRootWindowName=NULL);
+IMGUI_API void PutInBackground(const char* optionalRootWindowName=NULL);
+IMGUI_API void PutInForeground(const char* optionalRootWindowName=NULL);
 
 
 #   ifdef IMGUI_USE_ZLIB	// requires linking to library -lZlib
 // Two methods that fill rv and return true on success
 #       ifndef NO_IMGUIHELPER_SERIALIZATION
 #           ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-bool GzDecompressFromFile(const char* filePath,ImVector<char>& rv,bool clearRvBeforeUsage=true);
+IMGUI_API bool GzDecompressFromFile(const char* filePath,ImVector<char>& rv,bool clearRvBeforeUsage=true);
 #   ifdef YES_IMGUISTRINGIFIER
-bool GzBase64DecompressFromFile(const char* filePath,ImVector<char>& rv);
-bool GzBase85DecompressFromFile(const char* filePath,ImVector<char>& rv);
+IMGUI_API bool GzBase64DecompressFromFile(const char* filePath,ImVector<char>& rv);
+IMGUI_API bool GzBase85DecompressFromFile(const char* filePath,ImVector<char>& rv);
 #   endif //#YES_IMGUISTRINGIFIER
 #           endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
-bool GzDecompressFromMemory(const char* memoryBuffer,int memoryBufferSize,ImVector<char>& rv,bool clearRvBeforeUsage=true);
-bool GzCompressFromMemory(const char* memoryBuffer,int memoryBufferSize,ImVector<char>& rv,bool clearRvBeforeUsage=true);
+IMGUI_API bool GzDecompressFromMemory(const char* memoryBuffer,int memoryBufferSize,ImVector<char>& rv,bool clearRvBeforeUsage=true);
+IMGUI_API bool GzCompressFromMemory(const char* memoryBuffer,int memoryBufferSize,ImVector<char>& rv,bool clearRvBeforeUsage=true);
 #   ifdef YES_IMGUISTRINGIFIER
-bool GzBase64DecompressFromMemory(const char* input,ImVector<char>& rv);
-bool GzBase85DecompressFromMemory(const char* input,ImVector<char>& rv);
-bool GzBase64CompressFromMemory(const char* input,int inputSize,ImVector<char>& output,bool stringifiedMode=false,int numCharsPerLineInStringifiedMode=112);
-bool GzBase85CompressFromMemory(const char* input,int inputSize,ImVector<char>& output,bool stringifiedMode=false,int numCharsPerLineInStringifiedMode=112);
+IMGUI_API bool GzBase64DecompressFromMemory(const char* input,ImVector<char>& rv);
+IMGUI_API bool GzBase85DecompressFromMemory(const char* input,ImVector<char>& rv);
+IMGUI_API bool GzBase64CompressFromMemory(const char* input,int inputSize,ImVector<char>& output,bool stringifiedMode=false,int numCharsPerLineInStringifiedMode=112);
+IMGUI_API bool GzBase85CompressFromMemory(const char* input,int inputSize,ImVector<char>& output,bool stringifiedMode=false,int numCharsPerLineInStringifiedMode=112);
 #   endif //#YES_IMGUISTRINGIFIER
 #   endif //IMGUI_USE_ZLIB
 
@@ -103,10 +103,10 @@ bool GzBase85CompressFromMemory(const char* input,int inputSize,ImVector<char>& 
 // Two methods that fill rv and return true on success
 #       ifndef NO_IMGUIHELPER_SERIALIZATION
 #           ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-bool Bz2DecompressFromFile(const char* filePath,ImVector<char>& rv,bool clearRvBeforeUsage=true);
+IMGUI_API bool Bz2DecompressFromFile(const char* filePath,ImVector<char>& rv,bool clearRvBeforeUsage=true);
 #   ifdef YES_IMGUISTRINGIFIER
-bool Bz2Base64DecompressFromFile(const char* filePath, ImVector<char>& rv);
-bool Bz2Base85DecompressFromFile(const char* filePath,ImVector<char>& rv);
+IMGUI_API bool Bz2Base64DecompressFromFile(const char* filePath, ImVector<char>& rv);
+IMGUI_API bool Bz2Base85DecompressFromFile(const char* filePath,ImVector<char>& rv);
 #   endif //#YES_IMGUISTRINGIFIER
 #           endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
@@ -117,8 +117,8 @@ bool Bz2Base85DecompressFromFile(const char* filePath,ImVector<char>& rv);
 // Two methods that fill rv and return true on success
 #       ifndef NO_IMGUIHELPER_SERIALIZATION
 #           ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-bool Base64DecodeFromFile(const char* filePath,ImVector<char>& rv);
-bool Base85DecodeFromFile(const char* filePath,ImVector<char>& rv);
+IMGUI_API bool Base64DecodeFromFile(const char* filePath,ImVector<char>& rv);
+IMGUI_API bool Base85DecodeFromFile(const char* filePath,ImVector<char>& rv);
 #           endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 #   endif //YES_IMGUISTRINGIFIER
@@ -149,8 +149,8 @@ typedef ImGui::FieldType FieldType;
 #ifndef NO_IMGUIHELPER_SERIALIZATION
 
 #ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-bool GetFileContent(const char* filePath,ImVector<char>& contentOut,bool clearContentOutBeforeUsage=true,const char* modes="rb",bool appendTrailingZeroIfModesIsNotBinary=true);
-bool FileExists(const char* filePath);
+IMGUI_API bool GetFileContent(const char* filePath,ImVector<char>& contentOut,bool clearContentOutBeforeUsage=true,const char* modes="rb",bool appendTrailingZeroIfModesIsNotBinary=true);
+IMGUI_API bool FileExists(const char* filePath);
 
 class Deserializer {
     char* f_data;
@@ -159,11 +159,11 @@ class Deserializer {
     bool loadFromFile(const char* filename);
     bool allocate(size_t sizeToAllocate,const char* optionalTextToCopy=NULL,size_t optionalTextToCopySize=0);
     public:
-    Deserializer() : f_data(NULL),f_size(0) {}
-    Deserializer(const char* filename);                     // From file
-    Deserializer(const char* text,size_t textSizeInBytes);  // From memory (and optionally from file through GetFileContent(...))
-    ~Deserializer() {clear();}
-    bool isValid() const {return (f_data && f_size>0);}
+    IMGUI_API Deserializer() : f_data(NULL),f_size(0) {}
+    IMGUI_API Deserializer(const char* filename);                     // From file
+    IMGUI_API Deserializer(const char* text,size_t textSizeInBytes);  // From memory (and optionally from file through GetFileContent(...))
+    IMGUI_API ~Deserializer() {clear();}
+    IMGUI_API bool isValid() const {return (f_data && f_size>0);}
 
     // returns whether to stop parsing or not
     typedef bool (*ParseCallback)(FieldType ft,int numArrayElements,void* pValue,const char* name,void* userPtr);   // (*)
@@ -184,7 +184,7 @@ protected:
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 
 #ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-bool SetFileContent(const char *filePath, const unsigned char* content, int contentSize,const char* modes="wb");
+IMGUI_API bool SetFileContent(const char *filePath, const unsigned char* content, int contentSize,const char* modes="wb");
 
 class ISerializable;
 class Serializer {
@@ -193,34 +193,34 @@ class Serializer {
     void clear();
 
     public:
-    Serializer(const char* filename);               // To file
-    Serializer(int memoryBufferCapacity=2048);      // To memory (and optionally to file through WriteBufferToFile(...))
-    ~Serializer();
+    IMGUI_API Serializer(const char* filename);               // To file
+    IMGUI_API Serializer(int memoryBufferCapacity=2048);      // To memory (and optionally to file through WriteBufferToFile(...))
+    IMGUI_API ~Serializer();
     bool isValid() const {return (f);}
 
-    bool save(FieldType ft, const float* pValue, const char* name, int numArrayElements=1,int prec=3);
-    bool save(FieldType ft, const int* pValue, const char* name, int numArrayElements=1,int prec=-1);
+    IMGUI_API bool save(FieldType ft, const float* pValue, const char* name, int numArrayElements=1,int prec=3);
+    IMGUI_API bool save(FieldType ft, const int* pValue, const char* name, int numArrayElements=1,int prec=-1);
     bool save(const float* pValue,const char* name,int numArrayElements=1,int prec=3)    {
         return save(ImGui::FT_FLOAT,pValue,name,numArrayElements,prec);
     }
     bool save(const int* pValue,const char* name,int numArrayElements=1,int prec=-1)  {
         return save(ImGui::FT_INT,pValue,name,numArrayElements,prec);
     }
-    bool save(const char* pValue,const char* name,int pValueSize=-1);
-    bool save(const unsigned* pValue, const char* name, int numArrayElements=1,int prec=-1);
-    bool save(const double* pValue, const char* name, int numArrayElements=1,int prec=-1);
-    bool save(const bool* pValue, const char* name, int numArrayElements=1);
-    bool saveTextLines(const char* pValue,const char* name); // Splits the string into N lines: each line is passed by the deserializer into a single element in the callback
-    bool saveTextLines(int numValues,bool (*items_getter)(void* data, int idx, const char** out_text),void* data,const char* name);
+    IMGUI_API bool save(const char* pValue,const char* name,int pValueSize=-1);
+    IMGUI_API bool save(const unsigned* pValue, const char* name, int numArrayElements=1,int prec=-1);
+    IMGUI_API bool save(const double* pValue, const char* name, int numArrayElements=1,int prec=-1);
+    IMGUI_API bool save(const bool* pValue, const char* name, int numArrayElements=1);
+    IMGUI_API bool saveTextLines(const char* pValue,const char* name); // Splits the string into N lines: each line is passed by the deserializer into a single element in the callback
+    IMGUI_API bool saveTextLines(int numValues,bool (*items_getter)(void* data, int idx, const char** out_text),void* data,const char* name);
 
     // To serialize FT_CUSTOM:
-    bool saveCustomFieldTypeHeader(const char* name, int numTextLines=1); //e.g. for 4 lines "[CUSTOM-4:MyCustomFieldTypeName]\n". Then add 4 lines using getPointer() below.
+    IMGUI_API bool saveCustomFieldTypeHeader(const char* name, int numTextLines=1); //e.g. for 4 lines "[CUSTOM-4:MyCustomFieldTypeName]\n". Then add 4 lines using getPointer() below.
 
     // These 2 are only available when this class is constructed with the
     // Serializer(int memoryBufferCapacity) constructor
-    const char* getBuffer() const;
-    int getBufferSize() const;
-    static bool WriteBufferToFile(const char* filename, const char* buffer, int bufferSize);
+    IMGUI_API const char* getBuffer() const;
+    IMGUI_API int getBufferSize() const;
+    IMGUI_API static bool WriteBufferToFile(const char* filename, const char* buffer, int bufferSize);
 
 protected:
     void operator=(const Serializer&) {}
@@ -232,13 +232,13 @@ protected:
 
 // Optional String Helper methods:
 // "destText" must be released with ImGui::MemFree(destText). It should always work.
-void StringSet(char*& destText,const char* text,bool allowNullDestText=true);
+IMGUI_API void StringSet(char*& destText,const char* text,bool allowNullDestText=true);
 // "destText" must be released with ImGui::MemFree(destText). It should always work.
-void StringAppend(char*& destText, const char* textToAppend, bool allowNullDestText=true, bool prependLineFeedIfDestTextIsNotEmpty = true, bool mustAppendLineFeed = false);
+IMGUI_API void StringAppend(char*& destText, const char* textToAppend, bool allowNullDestText=true, bool prependLineFeedIfDestTextIsNotEmpty = true, bool mustAppendLineFeed = false);
 // Appends a formatted string to a char vector (= no need to free memory)
 // v can't be empty (it must at least be: v.size()==1 && v[0]=='\0')
 // returns the number of chars appended.
-int StringAppend(ImVector<char>& v,const char* fmt, ...);
+IMGUI_API int StringAppend(ImVector<char>& v,const char* fmt, ...);
 
 } // ImGuiHelper
 

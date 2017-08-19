@@ -48,7 +48,7 @@ IMGUI_API bool SmallCheckButton(const char* label,bool* pvalue);
 IMGUI_API float ProgressBar(const char* optionalPrefixText,float value,const float minValue=0.f,const float maxValue=1.f,const char* format="%1.0f%%",const ImVec2& sizeOfBarWithoutTextInPixels=ImVec2(-1,-1),
                  const ImVec4& colorLeft=ImVec4(0,1,0,0.8),const ImVec4& colorRight=ImVec4(0,0.4,0,0.8),const ImVec4& colorBorder=ImVec4(0.25,0.25,1.0,1));
 
-void TestProgressBar();
+IMGUI_API void TestProgressBar();
 
 // Single column popup menu without icon support. It disappears when the mouse goes away.
 // Returns -1 when no entries has been selected.
@@ -78,7 +78,7 @@ friend int PopupMenuSimple(PopupMenuSimpleParams& params,const char** pTotalEntr
 
 IMGUI_API int PopupMenuSimple(PopupMenuSimpleParams& params,const char** pTotalEntries,int numTotalEntries,int numAllowedEntries,bool reverseItems=false,const char* optionalTitle=NULL,const char* scrollUpEntryText="   ^   ",const char* scrollDownEntryText="   v   ");
 
-void TestPopupMenuSimple(const char* scrollUpEntryText="   ^   ",const char* scrollDownEntryText="   v   ");
+IMGUI_API void TestPopupMenuSimple(const char* scrollUpEntryText="   ^   ",const char* scrollDownEntryText="   v   ");
 
 // Single column popup menu with icon support. It disappears when the mouse goes away. Never tested.
 // User is supposed to create a static instance of it, add entries once, and then call "render()".
@@ -267,26 +267,26 @@ struct AnimatedImage {
     void SetGenerateOrUpdateTextureCallback(GenerateOrUpdateTextureDelegate generateOrUpdateTextureCb) {GenerateOrUpdateTextureCb=generateOrUpdateTextureCb;}
 
 #	ifndef STBI_NO_GIF
-    AnimatedImage(char const *filename,bool useHoverModeIfSupported=false); // 'hoverMode' is supported only if all frames fit 'MaxPersistentTextureSize'
+    IMGUI_API AnimatedImage(char const *filename,bool useHoverModeIfSupported=false); // 'hoverMode' is supported only if all frames fit 'MaxPersistentTextureSize'
 #	endif //STBI_NO_GIF
-    AnimatedImage(ImTextureID myTexId,int animationImageWidth,int animationImageHeight,int numFrames,int numFramesPerRowInTexture,int numFramesPerColumnInTexture,float delayBetweenFramesInCs,bool useHoverMode=false); // 'hoverMode' always available. 'myTexId' is yours.
-    AnimatedImage();    // You'll need to manually call 'load' o 'create'
-    ~AnimatedImage();   // calls 'clear'
-    void clear();   // releases the textures that are created inside the class
+    IMGUI_API AnimatedImage(ImTextureID myTexId,int animationImageWidth,int animationImageHeight,int numFrames,int numFramesPerRowInTexture,int numFramesPerColumnInTexture,float delayBetweenFramesInCs,bool useHoverMode=false); // 'hoverMode' always available. 'myTexId' is yours.
+    IMGUI_API AnimatedImage();    // You'll need to manually call 'load' o 'create'
+    IMGUI_API ~AnimatedImage();   // calls 'clear'
+    IMGUI_API void clear();   // releases the textures that are created inside the class
 
     // Main methods
-    void render(ImVec2 size=ImVec2(0,0), const ImVec2& uv0=ImVec2(0,0), const ImVec2& uv1=ImVec2(1,1), const ImVec4& tint_col=ImVec4(1,1,1,1), const ImVec4& border_col=ImVec4(0,0,0,0)) const;
-    bool renderAsButton(const char* label,ImVec2 size=ImVec2(0,0), const ImVec2& uv0 = ImVec2(0,0),  const ImVec2& uv1 = ImVec2(1,1), int frame_padding = -1, const ImVec4& bg_col = ImVec4(0,0,0,0), const ImVec4& tint_col = ImVec4(1,1,1,1));    // <0 frame_padding uses default frame padding settings. 0 for no padding
+    IMGUI_API void render(ImVec2 size=ImVec2(0,0), const ImVec2& uv0=ImVec2(0,0), const ImVec2& uv1=ImVec2(1,1), const ImVec4& tint_col=ImVec4(1,1,1,1), const ImVec4& border_col=ImVec4(0,0,0,0)) const;
+    IMGUI_API bool renderAsButton(const char* label,ImVec2 size=ImVec2(0,0), const ImVec2& uv0 = ImVec2(0,0),  const ImVec2& uv1 = ImVec2(1,1), int frame_padding = -1, const ImVec4& bg_col = ImVec4(0,0,0,0), const ImVec4& tint_col = ImVec4(1,1,1,1));    // <0 frame_padding uses default frame padding settings. 0 for no padding
 
     // Less useful methods
 #	ifndef STBI_NO_GIF
-    bool load(char const *filename,bool useHoverModeIfSupported=false); // 'hoverMode' is supported only if all frames fit 'MaxPersistentTextureSize'
+    IMGUI_API bool load(char const *filename,bool useHoverModeIfSupported=false); // 'hoverMode' is supported only if all frames fit 'MaxPersistentTextureSize'
 #	endif //STBI_NO_GIF
-    bool create(ImTextureID myTexId,int animationImageWidth,int animationImageHeight,int numFrames,int numFramesPerRowInTexture,int numFramesPerColumnInTexture,float delayBetweenFramesInCs,bool useHoverMode=false); // 'hoverMode' always available. 'myTexId' is yours.
-    int getWidth() const;
-    int getHeight() const;
-    int getNumFrames() const;
-    bool areAllFramesInASingleTexture() const;  // when true, 'hoverMode' was available in ctr/load/create (but it can't change at runtime)
+    IMGUI_API bool create(ImTextureID myTexId,int animationImageWidth,int animationImageHeight,int numFrames,int numFramesPerRowInTexture,int numFramesPerColumnInTexture,float delayBetweenFramesInCs,bool useHoverMode=false); // 'hoverMode' always available. 'myTexId' is yours.
+    IMGUI_API int getWidth() const;
+    IMGUI_API int getHeight() const;
+    IMGUI_API int getNumFrames() const;
+    IMGUI_API bool areAllFramesInASingleTexture() const;  // when true, 'hoverMode' was available in ctr/load/create (but it can't change at runtime)
 
     static ImVec2 MaxPersistentTextureSize;   // 2048,2048 (Enlarge the buffer if needed for 'hoverMode': but using smaller animated images and less frames is better)
 
@@ -409,8 +409,8 @@ class InputTextWithAutoCompletionData  {
     friend int DefaultInputTextAutoCompletionCallback(ImGuiTextEditCallbackData *data);
 
     // Some useful helper methods
-    static int HelperGetItemInsertionPosition(const char* txt,bool (*items_getter)(void*, int, const char**), int items_count, void* user_data=NULL,bool* item_is_already_present_out=NULL);
-    static int HelperInsertItem(const char* txt,bool (*items_getter)(void*, int, const char**),bool (*items_inserter)(void*, int,const char*), int items_count, void* user_data=NULL,bool* item_is_already_present_out=NULL);
+    IMGUI_API static int HelperGetItemInsertionPosition(const char* txt,bool (*items_getter)(void*, int, const char**), int items_count, void* user_data=NULL,bool* item_is_already_present_out=NULL);
+    IMGUI_API static int HelperInsertItem(const char* txt,bool (*items_getter)(void*, int, const char**),bool (*items_inserter)(void*, int,const char*), int items_count, void* user_data=NULL,bool* item_is_already_present_out=NULL);
 };
 IMGUI_API bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size, InputTextWithAutoCompletionData* pAutocompletion_data, bool (*autocompletion_items_getter)(void*, int, const char**), int autocompletion_items_size, void* autocompletion_user_data=NULL, int num_visible_autocompletion_items=-1);
 
@@ -548,9 +548,9 @@ public:
 
 protected:
 
-    static TreeViewNode* CreateNode(const Data& _data,TreeViewNode* _parentNode=NULL,int nodeIndex=-1,bool addEmptyChildNodeVector=false);
+    IMGUI_API static TreeViewNode* CreateNode(const Data& _data,TreeViewNode* _parentNode=NULL,int nodeIndex=-1,bool addEmptyChildNodeVector=false);
 
-    void render(void *ptr, int numIndents=1);
+    IMGUI_API void render(void *ptr, int numIndents=1);
 
 public:
 
@@ -561,36 +561,36 @@ public:
         IM_ASSERT(parentNode);
         return CreateNode(_data,parentNode,parentNodeIndex);
     }
-    static void DeleteNode(TreeViewNode* n);
+    IMGUI_API static void DeleteNode(TreeViewNode* n);
 
-    class TreeView& getTreeView();              // slightly slow
-    const class TreeView& getTreeView() const;  // slightly slow
-    TreeViewNode* getParentNode();
-    const TreeViewNode* getParentNode() const;
-    int getNodeIndex() const;
-    void moveNodeTo(int nodeIndex);
+    IMGUI_API class TreeView& getTreeView();              // slightly slow
+    IMGUI_API const class TreeView& getTreeView() const;  // slightly slow
+    IMGUI_API TreeViewNode* getParentNode();
+    IMGUI_API const TreeViewNode* getParentNode() const;
+    IMGUI_API int getNodeIndex() const;
+    IMGUI_API void moveNodeTo(int nodeIndex);
     inline bool isLeafNode() const {return childNodes==NULL;}       // Please note that non-leaf nodes can have childNodes->size()==0
     inline bool isRootNode() const {return !parentNode || !parentNode->parentNode;}
     inline int getNumChildNodes() const {return childNodes ? childNodes->size() : 0;}
     inline TreeViewNode* getChildNode(int index=0) {return (childNodes && childNodes->size()>index) ? (*childNodes)[index] : NULL;}
     inline const TreeViewNode* getChildNode(int index=0) const {return (childNodes && childNodes->size()>index) ? (*childNodes)[index] : NULL;}
-    void deleteAllChildNodes(bool leaveEmptyChildNodeVector=false);
-    void addEmptyChildNodeVector();         // Only works if "childNodes==NULL" (and allocates it)
-    void removeEmptyChildNodeVector();      // Only works if (childNodes->size()==0" (and deallocates it)
-    int getNumSiblings(bool includeMe=true) const;
-    TreeViewNode* getSiblingNode(int nodeIndexInParentHierarchy=-1);
-    const TreeViewNode* getSiblingNode(int nodeIndexInParentHierarchy=-1) const;
-    int getDepth() const;   // root nodes have depth = 0
+    IMGUI_API void deleteAllChildNodes(bool leaveEmptyChildNodeVector=false);
+    IMGUI_API void addEmptyChildNodeVector();         // Only works if "childNodes==NULL" (and allocates it)
+    IMGUI_API void removeEmptyChildNodeVector();      // Only works if (childNodes->size()==0" (and deallocates it)
+    IMGUI_API int getNumSiblings(bool includeMe=true) const;
+    IMGUI_API TreeViewNode* getSiblingNode(int nodeIndexInParentHierarchy=-1);
+    IMGUI_API const TreeViewNode* getSiblingNode(int nodeIndexInParentHierarchy=-1) const;
+    IMGUI_API int getDepth() const;   // root nodes have depth = 0
 
-    static void Swap(TreeViewNode*& n1,TreeViewNode*& n2); // untested
-    void startRenamingMode();       // starts renaming the node
-    bool isInRenamingMode() const;
+    IMGUI_API static void Swap(TreeViewNode*& n1,TreeViewNode*& n2); // untested
+    IMGUI_API void startRenamingMode();       // starts renaming the node
+    IMGUI_API bool isInRenamingMode() const;
 
-    void sortChildNodes(bool recursive,int (*comp)(const void *, const void *));
-    void sortChildNodesByDisplayName(bool recursive=false,bool reverseOrder=false);
-    void sortChildNodesByTooltip(bool recursive=false,bool reverseOrder=false);
-    void sortChildNodesByUserText(bool recursive=false,bool reverseOrder=false);
-    void sortChildNodesByUserId(bool recursive=false,bool reverseOrder=false);
+    IMGUI_API void sortChildNodes(bool recursive,int (*comp)(const void *, const void *));
+    IMGUI_API void sortChildNodesByDisplayName(bool recursive=false,bool reverseOrder=false);
+    IMGUI_API void sortChildNodesByTooltip(bool recursive=false,bool reverseOrder=false);
+    IMGUI_API void sortChildNodesByUserText(bool recursive=false,bool reverseOrder=false);
+    IMGUI_API void sortChildNodesByUserId(bool recursive=false,bool reverseOrder=false);
 
     inline void addState(int stateFlag) const {state|=stateFlag;}
     inline void removeState(int stateFlag) const {state&=~stateFlag;}
@@ -598,26 +598,26 @@ public:
     inline bool isStatePresent(int stateFlag) const {return ((state&stateFlag)==stateFlag);}
     inline bool isStateMissing(int stateFlag) const {return ((state&stateFlag)!=stateFlag);}
 
-    void addStateToAllChildNodes(int stateFlag, bool recursive = false) const;
-    void removeStateFromAllChildNodes(int stateFlag, bool recursive = false) const;
-    bool isStatePresentInAllChildNodes(int stateFlag) const;
-    bool isStateMissingInAllChildNodes(int stateFlag) const;
+    IMGUI_API void addStateToAllChildNodes(int stateFlag, bool recursive = false) const;
+    IMGUI_API void removeStateFromAllChildNodes(int stateFlag, bool recursive = false) const;
+    IMGUI_API bool isStatePresentInAllChildNodes(int stateFlag) const;
+    IMGUI_API bool isStateMissingInAllChildNodes(int stateFlag) const;
 
     void addStateToAllDescendants(int stateFlag) const {addStateToAllChildNodes(stateFlag,true);}
     void removeStateFromAllDescendants(int stateFlag) const {removeStateFromAllChildNodes(stateFlag,true);}
-    bool isStatePresentInAllDescendants(int stateFlag) const;
-    bool isStateMissingInAllDescendants(int stateFlag) const;
+    IMGUI_API bool isStatePresentInAllDescendants(int stateFlag) const;
+    IMGUI_API bool isStateMissingInAllDescendants(int stateFlag) const;
 
     // These return the first matching parentNode (if "recursive==false" they return node->parentNode or NULL).
-    TreeViewNode* getFirstParentNodeWithState(int stateFlag,bool recursive=true);
-    const TreeViewNode* getFirstParentNodeWithState(int stateFlag,bool recursive=true) const;
-    TreeViewNode* getFirstParentNodeWithoutState(int stateFlag,bool recursive=true);
-    const TreeViewNode* getFirstParentNodeWithoutState(int stateFlag,bool recursive=true) const;
+    IMGUI_API TreeViewNode* getFirstParentNodeWithState(int stateFlag,bool recursive=true);
+    IMGUI_API const TreeViewNode* getFirstParentNodeWithState(int stateFlag,bool recursive=true) const;
+    IMGUI_API TreeViewNode* getFirstParentNodeWithoutState(int stateFlag,bool recursive=true);
+    IMGUI_API const TreeViewNode* getFirstParentNodeWithoutState(int stateFlag,bool recursive=true) const;
 
     // if "recursive==true" deleting the "result nodes" in order shouldn't work, but probably it works in the reverse order (TO TEST)
-    void getAllChildNodesWithState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false, bool returnOnlyLeafNodes=false, bool clearResultBeforeUsage=true) const;
-    void getAllChildNodesWithoutState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false, bool returnOnlyLeafNodes=false, bool clearResultBeforeUsage=true) const;
-    void getAllChildNodes(ImVector<TreeViewNode*>& result,bool recursive = false,bool returnOnlyLeafNodes=false,bool clearResultBeforeUsage=true) const;
+    IMGUI_API void getAllChildNodesWithState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false, bool returnOnlyLeafNodes=false, bool clearResultBeforeUsage=true) const;
+    IMGUI_API void getAllChildNodesWithoutState(ImVector<TreeViewNode*>& result,int stateFlag,bool recursive = false, bool returnOnlyLeafNodes=false, bool clearResultBeforeUsage=true) const;
+    IMGUI_API void getAllChildNodes(ImVector<TreeViewNode*>& result,bool recursive = false,bool returnOnlyLeafNodes=false,bool clearResultBeforeUsage=true) const;
 
     // Deleting the "result nodes" in order shouldn't work, but probably it works in the reverse order (TO TEST)
     void getAllDescendants(ImVector<TreeViewNode*>& result,bool clearResultBeforeUsage=true) const {return getAllChildNodes(result,true,false,clearResultBeforeUsage);}
@@ -661,8 +661,8 @@ public:
 
 protected:
 
-    TreeViewNode(const TreeViewNode::Data& _data=TreeViewNode::Data(), TreeViewNode* _parentNode=NULL, int nodeIndex=-1, bool addEmptyChildNodeVector=false);
-    virtual ~TreeViewNode();
+    IMGUI_API TreeViewNode(const TreeViewNode::Data& _data=TreeViewNode::Data(), TreeViewNode* _parentNode=NULL, int nodeIndex=-1, bool addEmptyChildNodeVector=false);
+    IMGUI_API virtual ~TreeViewNode();
 
     Data data;
 
@@ -690,10 +690,10 @@ friend class TreeViewNode;
 friend struct MyTreeViewHelperStruct;
 public:
 
-    TreeView(Mode _selectionMode=MODE_ALL,bool _allowMultipleSelection=false,Mode _checkboxMode=MODE_NONE,bool _allowAutoCheckboxBehaviour=true,bool _inheritDisabledLook=true);
-    virtual ~TreeView();
+    IMGUI_API TreeView(Mode _selectionMode=MODE_ALL,bool _allowMultipleSelection=false,Mode _checkboxMode=MODE_NONE,bool _allowAutoCheckboxBehaviour=true,bool _inheritDisabledLook=true);
+    IMGUI_API virtual ~TreeView();
     bool isInited() {return inited;}
-    bool render();  // Main method (makes inited = true). Returns "lastEvent", containing the node that's changed in some way (e.g. double-clicked, end-edited or basic state changed)
+    IMGUI_API bool render();  // Main method (makes inited = true). Returns "lastEvent", containing the node that's changed in some way (e.g. double-clicked, end-edited or basic state changed)
     inline Event& getLastEvent() const {return lastEvent;}
 
     inline int getNumRootNodes() const {return childNodes->size();}
@@ -705,7 +705,7 @@ public:
     }
     inline static void DeleteNode(TreeViewNode* n) {TreeViewNode::DeleteNode(n);}    
 
-    void clear();
+    IMGUI_API void clear();
 
     // sorting
     void sortRootNodes(bool recursive,int (*comp)(const void *, const void *))  {TreeViewNode::sortChildNodes(recursive,comp);}
@@ -766,31 +766,31 @@ public:
 
     void *userPtr;                  // user stuff, not mine
 
-    ImVec4* getTextColorForStateColor(int aStateColorFlag) const;
-    ImVec4* getTextDisabledColorForStateColor(int aStateColorFlag) const;
+    IMGUI_API ImVec4* getTextColorForStateColor(int aStateColorFlag) const;
+    IMGUI_API ImVec4* getTextDisabledColorForStateColor(int aStateColorFlag) const;
 
-    void setTextColorForStateColor(int aStateColorFlag,const ImVec4& textColor,float disabledTextColorAlphaFactor=0.5f) const;
+    IMGUI_API void setTextColorForStateColor(int aStateColorFlag,const ImVec4& textColor,float disabledTextColorAlphaFactor=0.5f) const;
 
 //-------------------------------------------------------------------------------
 #       if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
 public:
-        bool save(ImGuiHelper::Serializer& s);
-        bool save(const char* filename);
-        static bool Save(const char* filename, TreeView **pTreeViews, int numTreeviews);
+        IMGUI_API bool save(ImGuiHelper::Serializer& s);
+        IMGUI_API bool save(const char* filename);
+        IMGUI_API static bool Save(const char* filename, TreeView **pTreeViews, int numTreeviews);
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
 public:
-        bool load(ImGuiHelper::Deserializer& d,const char** pOptionalBufferStart=NULL);
-        bool load(const char* filename);
-        static bool Load(const char* filename,TreeView** pTreeViews,int numTreeviews);
+        IMGUI_API bool load(ImGuiHelper::Deserializer& d,const char** pOptionalBufferStart=NULL);
+        IMGUI_API bool load(const char* filename);
+        IMGUI_API static bool Load(const char* filename,TreeView** pTreeViews,int numTreeviews);
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 //--------------------------------------------------------------------------------
 
-    static void SetFontCheckBoxGlyphs(const char* emptyState,const char* fillState);
+    IMGUI_API static void SetFontCheckBoxGlyphs(const char* emptyState,const char* fillState);
     static inline bool HasCustomCheckBoxGlyphs() {return FontCheckBoxGlyphs[0][0]!='\0';}
-    static void SetFontArrowGlyphs(const char* leftArrow,const char* downArrow);
+    IMGUI_API static void SetFontArrowGlyphs(const char* leftArrow,const char* downArrow);
     static inline bool HasCustomArrowGlyphs() {return FontArrowGlyphs[0][0]!='\0';}
 
 
