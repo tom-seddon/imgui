@@ -179,9 +179,15 @@ IMGUIBINDINGS_RESTORE_GL_STATE			# restores the glViewport (and most of other GL
 						# Without it the user must specify its own viewport at the beginning of DrawGL() (if it's different from full screen),
 						# and the openGL state is not fully restored, but it's just set to some "commonly used" values.
 
-IMIMPL_USE_FONT_TEXTURE_LINEAR_FILTERING	# By default the font texture now uses GL_NEAREST filtering (so that scaled text looks better using the embedded imgui font). This definition sets it to GL_LINEAR, that might be better with custom fonts.
+IMIMPL_USE_FONT_TEXTURE_LINEAR_FILTERING	# By default the font texture now uses GL_NEAREST filtering (so that scaled text looks better using the embedded imgui font).
+						# This definition sets it to GL_LINEAR, that might be better with custom fonts.
+						# That's why this definition is important, but often forgotten.
+
 IMIMPL_USE_ALPHA_SHARPENER_SHADER		# shader uses a different fragment shader that improves the quality of zoomed fonts a bit. It forces GL_LINEAR filtering too (unless IMIMPL_USE_FONT_TEXTURE_NEAREST_FILTERING is defined by the user, and it shouldn't).
 IMIMPL_USE_SDF_SHADER				# shader uses a more complex (= slower) fragment shader, that improves the quality of zoomed fonts a bit. It forces GL_LINEAR filtering too (unless IMIMPL_USE_FONT_TEXTURE_NEAREST_FILTERING is defined by the user, and it shouldn't).
+						# Warning: ARTIFACTS will appear when displaying any user ImTextureID fragment with ALPHA inside the range (0,255) (edges excluded).
+						# This also affects all the images displayed in the imguiimageeditor addon, when their ALPHA is not 0 or 255.
+						# (This happens because we use a single shader to display everything).
 
 IMIMPL_BUILD_SDF				# builds Signed Distance Fonts for ImGui. To display them correctly:
 						# -> use an OpenGL binding with shader support (don't define IMIMPL_SHADER_NONE)
@@ -189,6 +195,9 @@ IMIMPL_BUILD_SDF				# builds Signed Distance Fonts for ImGui. To display them co
 						# -> set the font's ImFontConfig::OversampleH==ImFontConfig::OversampleV (tested with 1 only. Note that this is NOT the default for custom fonts [it's 3,1]).
 						# -> if you use the outline shader, don't use too thin fonts (like the default one).
 						# -> you can tune the values in the shader using the global functions: const ImVec4* ImImpl_SdfShaderGetParams();bool ImImpl_SdfShaderSetParams(const ImVec4& sdfParams);bool ImImpl_EditSdfParams(). See main.cpp for further info.
+						# Warning: ARTIFACTS will appear when displaying any user ImTextureID fragment with ALPHA inside the range (0,255) (edges excluded).
+						# This also affects all the images displayed in the imguiimageeditor addon, when their ALPHA is not 0 or 255.
+						# (This happens because we use a single shader to display everything).
 
 IMGUIBINDINGS_DONT_CLEAR_INPUT_DATA_SOON:	# Normally ImGui::GetIO()->Fonts->ClearInputData() and ImGui::GetIO()->Fonts->ClearTexData() are called as soon as possible saving some memory.
 						# However this prevents you from appending new fonts later (e.g. in InitGL() instead of in the main() method).

@@ -278,6 +278,8 @@ struct ImImpl_InitParams	{
         else strcat(gWindowTitle,"ImGui OpenGL Example");
     }
 
+    static float DefaultFontSizeOverrideInPixels;   // If we want to override the size of the default font (13.f)
+
     private:
     // Retrieve list of range (2 int per range, values are inclusive)
     inline static const ImWchar*   GetGlyphRangesDefault()

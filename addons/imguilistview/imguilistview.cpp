@@ -14,7 +14,7 @@
 
 namespace ImGui {
 
-bool ListViewBase::render(float listViewHeight, const ImVector<int> *pOptionalColumnReorderVector, int maxNumColumnToDisplay) const {
+bool ListViewBase::render(float listViewHeight, const ImVector<int> *pOptionalColumnReorderVector, int maxNumColumnToDisplay, float contentRegionWidthForHorizontalScrolling) const {
     //if (listViewHeight<0) listViewHeight = getMaxPossibleHeight();  // Hack to fix an issue, but I leave it to the user, and comment it out
     ImGui::PushID(this);
 
@@ -31,7 +31,7 @@ bool ListViewBase::render(float listViewHeight, const ImVector<int> *pOptionalCo
 
     int columnSortingIndex = -1;
 
-    static ImColor transparentColor(1,1,1,0);
+    static ImVec4 transparentColor(1,1,1,0);
     const bool useFullHeight = listViewHeight <0;
     const ImGuiStyle& style = ImGui::GetStyle();
     const float columnHeaderDeltaOffsetX = style.WindowPadding.x;
@@ -90,7 +90,8 @@ bool ListViewBase::render(float listViewHeight, const ImVector<int> *pOptionalCo
     bool skipDisplaying = false;
     if (!useFullHeight) {
         //ImGui::SetNextWindowContentWidth(ImGui::GetWindowContentRegionWidth() + 50);    // Last number is hard-coded! Bad!
-        skipDisplaying = !ImGui::BeginChild("##ListViewRows",ImVec2(0,listViewHeight));//,false,ImGuiWindowFlags_HorizontalScrollbar);
+        if (contentRegionWidthForHorizontalScrolling>0) ImGui::SetNextWindowContentWidth(contentRegionWidthForHorizontalScrolling);
+        skipDisplaying = !ImGui::BeginChild("##ListViewRows",ImVec2(0,listViewHeight),false,contentRegionWidthForHorizontalScrolling>0 ? ImGuiWindowFlags_HorizontalScrollbar : 0);
     }
     if (!skipDisplaying) {
         const float textLineHeight = ImGui::GetTextLineHeight();

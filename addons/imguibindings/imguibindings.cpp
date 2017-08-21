@@ -344,14 +344,20 @@ static void AddFontFromMemoryTTFCloningFontData(ImGuiIO& io, ImVector<char>& buf
     if (!my_font) {ImGui::MemFree(tempBuffer);tempBuffer=NULL;bufferToFeedImGui=NULL;}
 }
 
+float ImImpl_InitParams::DefaultFontSizeOverrideInPixels = 0.f;	// static variable definition
 void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     if (pOptionalInitParams && pOptionalInitParams->skipBuildingFonts) return;
     ImGuiIO& io = ImGui::GetIO();
     DestroyImGuiFontTexture();	// reentrant
 
+    ImFontConfig defaultFontConfig;
+    defaultFontConfig.OversampleH=defaultFontConfig.OversampleV=1;defaultFontConfig.PixelSnapH = true;
+    defaultFontConfig.SizePixels = ImImpl_InitParams::DefaultFontSizeOverrideInPixels;
+    const ImFontConfig* pDefaultFontConfig = ImImpl_InitParams::DefaultFontSizeOverrideInPixels==0.f ? NULL : &defaultFontConfig;
+
     if (pOptionalInitParams)    {
         const ImImpl_InitParams& P = *pOptionalInitParams;
-        if (P.forceAddDefaultFontAsFirstFont) io.Fonts->AddFontDefault();
+        if (P.forceAddDefaultFontAsFirstFont) io.Fonts->AddFontDefault(pDefaultFontConfig);
 
         const float screenHeight = io.DisplaySize.y;
         for (int i=0,isz=(int)P.fonts.size();i<isz;i++)   {
@@ -360,7 +366,7 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
             ImFont* my_font = NULL;
             const bool hasValidPath = strlen(fd.filePath)>0;
             const bool hasValidMemory = fd.pMemoryData && fd.memoryDataSize>0;
-            //if (i==0 && !P.forceAddDefaultFontAsFirstFont && (hasValidPath || hasValidMemory) && fd.useFontConfig && fd.fontConfig.MergeMode) io.Fonts->AddFontDefault();
+            //if (i==0 && !P.forceAddDefaultFontAsFirstFont && (hasValidPath || hasValidMemory) && fd.useFontConfig && fd.fontConfig.MergeMode) io.Fonts->AddFontDefault(pDefaultFontConfig);
             if (hasValidPath)  {
                 char* ttfExt = strrchr((char*) fd.filePath,'.');
                 char* innerExt = ttfExt ? strrchr(ttfExt,'.') : NULL;
@@ -488,10 +494,10 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
             if (!my_font)   fprintf(stderr,"An error occurred while trying to load font %d\n",i);
         }
 
-        if (!P.forceAddDefaultFontAsFirstFont && P.fonts.size()==0) io.Fonts->AddFontDefault();
+        if (!P.forceAddDefaultFontAsFirstFont && P.fonts.size()==0) io.Fonts->AddFontDefault(pDefaultFontConfig);
 
     }
-    else io.Fonts->AddFontDefault();
+    else io.Fonts->AddFontDefault(pDefaultFontConfig);
 
     // Load font texture
     unsigned char* pixels;
@@ -518,7 +524,7 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     magFilterNearest = true;
     //printf("Using nearest filtering for ImGui Font Texture\n");
 #   endif // (!defined(IMGUI_USE_SDL_SHADER) && ! !defined(IMGUI_USE_ALPHA_SHARPENER_SHADER))
-    ImImpl_GenerateOrUpdateTexture(gImImplPrivateParams.fontTex,width,height,4,pixels,false,true,true,minFilterNearest,magFilterNearest);
+    ImImpl_GenerateOrUpdateTexture(gImImplPrivateParams.fontTex,width,height,4,pixels,false,false,false,minFilterNearest,magFilterNearest);
 
 
 

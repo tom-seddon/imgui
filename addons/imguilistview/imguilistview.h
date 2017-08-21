@@ -551,7 +551,10 @@ public:
     // listViewHeight: if >= 0 the maximum height of the list view is clipped to this value in pixels. Handy if you want to display something below it.
     // pOptionalColumnReorderVector: can be used to reorder columns in the view (but 'real' column indices won't be changed)
     // maxNumColumnToDisplay: can be used to reduce the number of columns that are displayed.
-    IMGUI_API virtual bool render(float listViewHeight=-1,const ImVector<int> *pOptionalColumnReorderVector=NULL, int maxNumColumnToDisplay=-1) const;
+    // contentRegionWidthForHorizontalScrolling: if > 0, the ImGuiWindowFlags_HorizontalScrollbar flag will be added. Note that the value passed (in pixels) must be
+    //                                           bigger than the width of the ImGui window for the scrollbar to show up. Also, in some cases its amount should be
+    //                                           proportional to the font size, if we want the size of the columns to grow when the font scales.
+    IMGUI_API virtual bool render(float listViewHeight=-1, const ImVector<int> *pOptionalColumnReorderVector=NULL, int maxNumColumnToDisplay=-1, float contentRegionWidthForHorizontalScrolling=-1) const;
 };
 
 

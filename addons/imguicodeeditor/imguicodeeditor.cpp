@@ -2358,7 +2358,7 @@ void CodeEditor::render()   {
                         }
                     }
                     ImGui::PushFont(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]));
-                    ImGui::PushStyleColor(ImGuiCol_Text,ImColor(style.color_syntax_highlighting[sht]));
+                    ImGui::PushStyleColor(ImGuiCol_Text,style.color_syntax_highlighting[sht]);
                     if (line->foldingStartTag->title.size()>0) {
                         // See if we must draw the bg:
                         const ImU32 bgColor = line->foldingStartTag->kind == FOLDING_TYPE_COMMENT ? style.color_folded_comment_background : line->foldingStartTag->kind == FOLDING_TYPE_PARENTHESIS ? style.color_folded_parenthesis_background : 0;
@@ -2407,7 +2407,7 @@ void CodeEditor::render()   {
                     // draw the rest of the line directly as SH_COMMENT (using ImGui::Text(...), without parsing it with this->TextLineWithSH(...))
                     const SyntaxHighlightingType sht = SH_COMMENT;
                     ImGui::PushFont(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]));
-                    ImGui::PushStyleColor(ImGuiCol_Text,ImColor(style.color_syntax_highlighting[sht]));
+                    ImGui::PushStyleColor(ImGuiCol_Text,style.color_syntax_highlighting[sht]);
                     ImGui::Text("%s",&line->text[line->foldingStartOffset]);
                     ImGui::PopStyleColor();
                     ImGui::PopFont();
@@ -2426,7 +2426,7 @@ void CodeEditor::render()   {
                     // draw the start of the line directly as SH_COMMENT (using ImGui::Text(...), without parsing it with this->TextLineWithSH(...))
                     const SyntaxHighlightingType sht = SH_COMMENT;
                     ImGui::PushFont(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]));
-                    ImGui::PushStyleColor(ImGuiCol_Text,ImColor(style.color_syntax_highlighting[sht]));
+                    ImGui::PushStyleColor(ImGuiCol_Text,style.color_syntax_highlighting[sht]);
                     ImGui::Text("%.*s",line->foldingEndOffset+line->foldingStartLine->foldingStartTag->end.size(),line->text.c_str());
                     ImGui::PopStyleColor();
                     ImGui::PopFont();
@@ -2441,7 +2441,7 @@ void CodeEditor::render()   {
                 // Internal lines of an unfolded comment region
                 const SyntaxHighlightingType sht = SH_COMMENT;
                 ImGui::PushFont(const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]));
-                ImGui::PushStyleColor(ImGuiCol_Text,ImColor(style.color_syntax_highlighting[sht]));
+                ImGui::PushStyleColor(ImGuiCol_Text,style.color_syntax_highlighting[sht]);
                 ImGui::Text("%s",line->text.c_str());
                 ImGui::PopStyleColor();
                 ImGui::PopFont();
@@ -2621,7 +2621,7 @@ void CodeEditor::render()   {
                     }
                 }
                 const bool wasFolded = foldableLine->isFolded();
-                ImGui::PushStyleColor(ImGuiCol_Text,ImColor(style.color_syntax_highlighting[sht]));
+                ImGui::PushStyleColor(ImGuiCol_Text,style.color_syntax_highlighting[sht]);
                 ImGui::SetNextTreeNodeOpen(!wasFolded,ImGuiSetCond_Always);
                 if (!ImGui::TreeNode(line,"%s",""))  {
                     if (!wasFolded)   {

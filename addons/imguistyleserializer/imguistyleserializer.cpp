@@ -92,7 +92,7 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
     for (size_t i = 0; i != ImGuiCol_COUNT; i++)
     {
 		const ImVec4& c = style.Colors[i];
-        fprintf(f, "[%s]\n", ImGui::GetStyleColName(i));//ImGuiColNames[i]);
+	fprintf(f, "[%s]\n", ImGui::GetStyleColorName(i));//ImGuiColNames[i]);
         fprintf(f, "%1.3f %1.3f %1.3f %1.3f\n",c.x,c.y,c.z,c.w);
     }
 
@@ -190,7 +190,7 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
                 // all the colors here
                 else {
                     for (int j=0;j<ImGuiCol_COUNT;j++)    {
-                        if (strcmp(name,ImGui::GetStyleColName(j))==0)    {
+			if (strcmp(name,ImGui::GetStyleColorName(j))==0)    {
                             npf = 4;
                             ImVec4& color = style.Colors[j];
                             pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
