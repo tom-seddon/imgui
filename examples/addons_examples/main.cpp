@@ -645,7 +645,7 @@ void DrawGL()	// Mandatory
         ImGui::AlignFirstTextHeightToWidgets();
         ImGui::Text("Choose a date:");
         ImGui::SameLine();
-        static tm myDate={0};       // IMPORTANT: must be static! (plenty of compiler warnings here...)
+        static tm myDate={};       // IMPORTANT: must be static! (plenty of compiler warnings here if we write: static tm myDate={0}; Is there any difference?)
         if (ImGui::DateChooser("Date Chooser##MyDateChooser",myDate,"%d/%m/%Y",true)) {
             // A new date has been chosen
             //fprintf(stderr,"A new date has been chosen exacty now: \"%.2d-%.2d-%.4d\"\n",myDate.tm_mday,myDate.tm_mon+1,myDate.tm_year+1900);

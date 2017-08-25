@@ -124,6 +124,7 @@ typedef char GLchar;    // Is this needed for all GL bindings ?
 
 #include <string.h>
 #include <stdio.h>
+#include <float.h> //FLT_MAX
 
 extern void InitGL();
 extern void ResizeGL(int w,int h);

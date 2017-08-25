@@ -6754,10 +6754,10 @@ struct StbImage {
                         const float penThicknessTotal = penThicknessPixel*penWidth;
                         const float deltaPenWidth = penThicknessPixel * (int) (penWidth*0.5f);
                         ImRect penSelectionInMouseCoords(imageToMouseCoords(penSelection.Min),imageToMouseCoords(penSelection.Max));
-                        penSelectionInMouseCoords.Clip(bb);
+                        penSelectionInMouseCoords.ClipWith(bb);
                         if (mustLimitPenToImageSelection) {
                             const ImRect imageSelectionInMouseCoords(imageToMouseCoords(imageSelection.Min),imageToMouseCoords(imageSelection.Max));
-                            penSelectionInMouseCoords.Clip(imageSelectionInMouseCoords);
+                            penSelectionInMouseCoords.ClipWith(imageSelectionInMouseCoords);
                         }
                         window->DrawList->PushClipRect(penSelectionInMouseCoords.Min,penSelectionInMouseCoords.Max,false);
                         const bool mustPaintCheckersBg = penColorToUse.w<1 && (c==4 || (c==3 && penOverlayMode));
@@ -6853,10 +6853,10 @@ struct StbImage {
                         const float penThicknessTotal = penThicknessPixel*penWidth;
                         const float deltaPenWidth = penThicknessPixel * (int) (penWidth*0.5f);
                         ImRect penSelectionInMouseCoords(imageToMouseCoords(penSelection.Min),imageToMouseCoords(penSelection.Max));
-                        penSelectionInMouseCoords.Clip(bb);
+                        penSelectionInMouseCoords.ClipWith(bb);
                         if (mustLimitPenToImageSelection) {
                             const ImRect imageSelectionInMouseCoords(imageToMouseCoords(imageSelection.Min),imageToMouseCoords(imageSelection.Max));
-                            penSelectionInMouseCoords.Clip(imageSelectionInMouseCoords);
+                            penSelectionInMouseCoords.ClipWith(imageSelectionInMouseCoords);
                         }
                         window->DrawList->PushClipRect(penSelectionInMouseCoords.Min,penSelectionInMouseCoords.Max,false);
                         const bool mustPaintCheckersBg = penColorToUse.w<1 && (c==4 || (c==3 && penOverlayMode));

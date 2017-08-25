@@ -77,10 +77,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (wParam>=0 && wParam<0x10000) io.AddInputCharacter((unsigned short)wParam);
         return 0;
     case WM_MOUSEMOVE:
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
         return 0;
     case WM_MOUSELEAVE:
-        io.MousePos.x = io.MousePos.y = -1.0f;
+        io.MousePos.x = io.MousePos.y = -FLT_MAX;
         return 0;
     case WM_MOUSEWHEEL:
         io.KeyCtrl = (wParam&MK_CONTROL);
@@ -96,63 +96,63 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         io.KeyShift = (wParam&MK_SHIFT);
         io.KeyAlt = (wParam&MK_ALT);
         gImGuiBindingMouseDblClicked[0] = true;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
         return 0;
     case WM_MBUTTONDBLCLK:
         io.KeyCtrl = (wParam&MK_CONTROL);
         io.KeyShift = (wParam&MK_SHIFT);
         io.KeyAlt = (wParam&MK_ALT);
         gImGuiBindingMouseDblClicked[2] = true;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
         return 0;
     case WM_RBUTTONDBLCLK:
         io.KeyCtrl = (wParam&MK_CONTROL);
         io.KeyShift = (wParam&MK_SHIFT);
         io.KeyAlt = (wParam&MK_ALT);
         gImGuiBindingMouseDblClicked[1] = true;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
         return 0;
     case WM_LBUTTONDOWN:
         io.KeyCtrl = (wParam&MK_CONTROL);
         io.KeyShift = (wParam&MK_SHIFT);
         io.KeyAlt = (wParam&MK_ALT);
         io.MouseDown[0] = true;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
         return 0;
     case WM_LBUTTONUP:
         io.KeyCtrl = (wParam&MK_CONTROL);
         io.KeyShift = (wParam&MK_SHIFT);
         io.KeyAlt = (wParam&MK_ALT);
         io.MouseDown[0] = false;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
         return 0;
     case WM_MBUTTONDOWN:
         io.KeyCtrl = (wParam&MK_CONTROL);
         io.KeyShift = (wParam&MK_SHIFT);
         io.KeyAlt = (wParam&MK_ALT);
         io.MouseDown[2] = true;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
         return 0;
     case WM_MBUTTONUP:
         io.KeyCtrl = (wParam&MK_CONTROL);
         io.KeyShift = (wParam&MK_SHIFT);
         io.KeyAlt = (wParam&MK_ALT);
         io.MouseDown[2] = false;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
         return 0;
     case WM_RBUTTONDOWN:
         io.KeyCtrl = (wParam&MK_CONTROL);
         io.KeyShift = (wParam&MK_SHIFT);
         io.KeyAlt = (wParam&MK_ALT);
         io.MouseDown[1] = true;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
         return 0;
     case WM_RBUTTONUP:
         io.KeyCtrl = (wParam&MK_CONTROL);
         io.KeyShift = (wParam&MK_SHIFT);
         io.KeyAlt = (wParam&MK_ALT);
         io.MouseDown[1] = false;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
         return 0;
     default:
         return DefWindowProc( hWnd, message, wParam, lParam );

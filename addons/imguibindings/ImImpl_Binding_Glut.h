@@ -68,7 +68,7 @@ static void GlutEntryFunc(int a)   {
     //fprintf(stderr,"GlutEntryFunc %d\n",a);
     if (a==0){
         ImGuiIO& io = ImGui::GetIO();
-        io.MousePos.x = io.MousePos.y = -1;
+        io.MousePos.x = io.MousePos.y = -FLT_MAX;
     }
 }
 static bool gImGuiAppIconized = false;  // stays always false (I'm not able to detect when the user minimizes a window)

@@ -195,12 +195,12 @@ static void glfw_char_callback(GLFWwindow* /*window*/, unsigned int c)	{
 static void glfw_mouse_enter_leave_callback(GLFWwindow* /*window*/, int entered)	{
     if (entered==GL_FALSE) {
         ImGuiIO& io = ImGui::GetIO();
-        io.MousePos.x=io.MousePos.y=-1.f;
+        io.MousePos.x=io.MousePos.y=-FLT_MAX;
     }
 }
 static void glfw_mouse_move_callback(GLFWwindow* /*window*/, double x,double y)	{
     ImGuiIO& io = ImGui::GetIO();
-    io.MousePos = ImVec2((float)x * mousePosScale.x, (float)y * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+    io.MousePos = ImVec2((float)x * mousePosScale.x, (float)y * mousePosScale.y);
 }
 static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     int w, h;

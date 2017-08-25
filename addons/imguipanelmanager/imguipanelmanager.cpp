@@ -339,7 +339,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 if (window->AutoFitFramesY > 0)
                     window->SizeFull.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
                 if (!(flags & ImGuiWindowFlags_NoSavedSettings))
-                    MarkIniSettingsDirty();
+                    MarkIniSettingsDirty(window);
             }
             window->Size = window->SizeFull;
         }
@@ -405,7 +405,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 {
                     window->PosFloat += g.IO.MouseDelta;
                     if (!(flags & ImGuiWindowFlags_NoSavedSettings))
-                        MarkIniSettingsDirty();
+                        MarkIniSettingsDirty(window);
                 }
                 IM_ASSERT(g.MovedWindow != NULL);
                 FocusWindow(g.MovedWindow);
@@ -587,7 +587,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             if (!(flags & ImGuiWindowFlags_NoTitleBar)) {
 #               if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
                 if (gImGuiDockpanelManagerExtendedStyle)    {
-                    ImU32 col = GetColorU32((g.FocusedWindow && window->RootNonPopupWindow == g.FocusedWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
+                    ImU32 col = GetColorU32((g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
                     ImGui::ImDrawListAddRectWithVerticalGradient(window->DrawList,
                         title_bar_rect.GetTL(), title_bar_rect.GetBR(),col,0.15f,0,
                         window_rounding, ImGuiCorner_TopLeft|ImGuiCorner_TopRight,1.f,ImGui::GetStyle().AntiAliasedShapes
@@ -596,7 +596,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 else
 #               endif // (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
                 {
-                    window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32((g.FocusedWindow && window->RootNonPopupWindow == g.FocusedWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, ImGuiCorner_TopLeft|ImGuiCorner_TopRight);
+                    window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32((g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, ImGuiCorner_TopLeft|ImGuiCorner_TopRight);
                 }
             }
 
@@ -730,7 +730,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
         window->WindowRectClipped = window->Rect();
-        window->WindowRectClipped.Clip(window->ClipRect);
+        window->WindowRectClipped.ClipWith(window->ClipRect);
 
         // Pressing CTRL+C while holding on a window copy its content to the clipboard
         // This works but 1. doesn't handle multiple Begin/End pairs, 2. recursing into another Begin/End pair - so we need to work that out and add better logging scope.
