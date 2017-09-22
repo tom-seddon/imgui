@@ -370,7 +370,7 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
             if (hasValidPath)  {
                 char* ttfExt = strrchr((char*) fd.filePath,'.');
                 char* innerExt = ttfExt ? strrchr(ttfExt,'.') : NULL;
-                const int innerExtLen = innerExt ? (strlen(innerExt)-strlen(ttfExt)) : 0;
+                const int innerExtLen = innerExt ? ((int)strlen(innerExt)-(int)strlen(ttfExt)) : 0;
                 ImVector<char> buffVec;
                 // Actually in many of these methods I clone the Font Data to make ImGui own them (see AddFontFromMemoryTTFCloningFontData(...) above):
 #               if (defined(IMGUI_USE_ZLIB) && !defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
@@ -1735,6 +1735,10 @@ void ImImpl_NewFramePaused()    {
     g.IO.Framerate = 1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame));
 
     g.IO.WantCaptureKeyboard = g.IO.WantCaptureMouse = g.IO.WantTextInput = false;
+
+    // New:
+    g.IO.WantTextInput = 0;
+    g.WantCaptureMouseNextFrame = g.WantCaptureKeyboardNextFrame = g.WantTextInputNextFrame = -1;
 
 
 }

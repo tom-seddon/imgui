@@ -12,15 +12,15 @@
 
 // TODO: Clean this code, it's a mess!
 
-#  if (!defined(alloca))
-#      ifdef _WIN32
-#          include <malloc.h>     // alloca
-#      elif (defined(__FreeBSD__) || defined(FreeBSD_kernel) || defined(__DragonFly__)) && !defined(__GLIBC__)
-#          include <stdlib.h>     // alloca. FreeBSD uses stdlib.h unless GLIBC
-#      else //_WIN32
-#           include <alloca.h>     // alloca
-#       endif //_WIN32
-#  endif // alloca
+#if !defined(alloca)
+#   ifdef _WIN32
+#       include <malloc.h>     // alloca
+#   elif defined(__GLIBC__) || defined(__sun)
+#       include <alloca.h>     // alloca
+#   else
+#       include <stdlib.h>     // alloca
+#   endif
+#endif //alloca
 
 
 namespace ImGui {
@@ -726,7 +726,7 @@ static bool TabButton(const char *label, bool selected, bool *pCloseButtonPresse
         if (!ItemAdd(bb, &id)) {if (fontOverride) ImGui::PopFont();return false;}
     }
 
-    //if (window->DC.ButtonRepeat) flags |= ImGuiButtonFlags_Repeat;    // What's this ?
+    //if (window->DC.ItemFlags & ImGuiItemFlags_ButtonRepeat) flags |= ImGuiButtonFlags_Repeat;    // What's this ?
     bool hovered=false, held=false;
     bool pressed = isFakeControl ? false : ButtonBehavior(bb, id, &hovered, &held, flags);
     bool btnHovered = false;
@@ -2841,7 +2841,7 @@ static bool TabButtonVertical(bool rotateCCW,const char *label, bool selected, b
         if (!ItemAdd(bb, &id)) {if (fontOverride) ImGui::PopFont();return false;}
     }
 
-    //if (window->DC.ButtonRepeat) flags |= ImGuiButtonFlags_Repeat;    // What's this ?
+    //if (window->DC.ItemFlags & ImGuiItemFlags_ButtonRepeat) flags |= ImGuiButtonFlags_Repeat;    // What's this ?
     bool hovered=false, held=false;
     bool pressed = isFakeControl ? false : ButtonBehavior(bb, id, &hovered, &held, flags);
     bool btnHovered = false;

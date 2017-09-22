@@ -109,7 +109,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window_is_new = true;
     }
 
-    const int current_frame = ImGui::GetFrameCount();
+    const int current_frame = g.FrameCount;//ImGui::GetFrameCount();
     const bool first_begin_of_the_frame = (window->LastFrameActive != current_frame);
     if (first_begin_of_the_frame)
         window->Flags = (ImGuiWindowFlags)flags;
@@ -123,12 +123,12 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     CheckStacksSize(window, true);
     IM_ASSERT(parent_window != NULL || !(flags & ImGuiWindowFlags_ChildWindow));
 
-    bool window_was_visible = (window->LastFrameActive == current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
+    bool window_just_activated_by_user = (window->LastFrameActive < current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
     if (flags & ImGuiWindowFlags_Popup)
     {
         ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.CurrentPopupStack.Size];
-        window_was_visible &= (window->PopupId == popup_ref.PopupId);
-        window_was_visible &= (window == popup_ref.Window);
+        window_just_activated_by_user |= (window->PopupId != popup_ref.PopupId); // We recycle popups so treat window as activated if popup id changed
+        window_just_activated_by_user |= (window != popup_ref.Window);
         popup_ref.Window = window;
         g.CurrentPopupStack.push_back(popup_ref);
         window->PopupId = popup_ref.PopupId;
@@ -138,8 +138,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     bool window_pos_set_by_api = false, window_size_set_by_api = false;
     if (g.SetNextWindowPosCond)
     {
-        const ImVec2 backup_cursor_pos = window->DC.CursorPos;                  // FIXME: not sure of the exact reason of this anymore :( need to look into that.
-        if (!window_was_visible) window->SetWindowPosAllowFlags |= ImGuiSetCond_Appearing;
+        //const ImVec2 backup_cursor_pos = window->DC.CursorPos;                  // FIXME: not sure of the exact reason of this anymore :( need to look into that.
+        if (window_just_activated_by_user) window->SetWindowPosAllowFlags |= ImGuiSetCond_Appearing;
         window_pos_set_by_api = (window->SetWindowPosAllowFlags & g.SetNextWindowPosCond) != 0;
         if (window_pos_set_by_api && ImLengthSqr(g.SetNextWindowPosVal - ImVec2(-FLT_MAX,-FLT_MAX)) < 0.001f)
         {
@@ -150,12 +150,12 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         {
             ImGui::SetWindowPos(g.SetNextWindowPosVal, g.SetNextWindowPosCond);
         }
-        window->DC.CursorPos = backup_cursor_pos;
+        //window->DC.CursorPos = backup_cursor_pos;
         g.SetNextWindowPosCond = 0;
     }
     if (g.SetNextWindowSizeCond)
     {
-        if (!window_was_visible) window->SetWindowSizeAllowFlags |= ImGuiSetCond_Appearing;
+        if (window_just_activated_by_user) window->SetWindowSizeAllowFlags |= ImGuiSetCond_Appearing;
         window_size_set_by_api = (window->SetWindowSizeAllowFlags & g.SetNextWindowSizeCond) != 0;
         ImGui::SetWindowSize(g.SetNextWindowSizeVal, g.SetNextWindowSizeCond);
         g.SetNextWindowSizeCond = 0;
@@ -171,7 +171,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     }
     if (g.SetNextWindowCollapsedCond)
     {
-        if (!window_was_visible) window->SetWindowCollapsedAllowFlags |= ImGuiSetCond_Appearing;
+        if (window_just_activated_by_user) window->SetWindowCollapsedAllowFlags |= ImGuiSetCond_Appearing;
         ImGui::SetWindowCollapsed(g.SetNextWindowCollapsedVal, g.SetNextWindowCollapsedCond);
         g.SetNextWindowCollapsedCond = 0;
     }
@@ -215,7 +215,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             PushClipRect(fullscreen_rect.Min, fullscreen_rect.Max, true);
 
         // New windows appears in front
-        if (!window_was_visible)
+        if (window_just_activated_by_user)
         {
             window->AutoPosLastDirection = -1;
 
@@ -270,7 +270,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         //else window->Collapsed = false;
 
 
-        const bool window_appearing_after_being_hidden = (window->HiddenFrames == 1);
+        const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFrames == 1);
+        window->Appearing = (window_just_activated_by_user || window_just_appearing_after_hidden_for_resize);
         if (window->HiddenFrames > 0)
             window->HiddenFrames--;
 
@@ -281,7 +282,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->SizeContents.y = (window->SizeContentsExplicit.y != 0.0f) ? window->SizeContentsExplicit.y : ((window_is_new ? 0.0f : window->DC.CursorMaxPos.y - window->Pos.y) + window->Scroll.y);
 
         // Hide popup/tooltip window when first appearing while we measure size (because we recycle them)
-        if ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0 && !window_was_visible)
+        if ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0 && window_just_activated_by_user)
         {
             window->HiddenFrames = 1;
             if (flags & ImGuiWindowFlags_AlwaysAutoResize)
@@ -365,7 +366,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         bool window_pos_center = false;
         window_pos_center |= (window->SetWindowPosCenterWanted && window->HiddenFrames == 0);
-        window_pos_center |= ((flags & ImGuiWindowFlags_Modal) && !window_pos_set_by_api && window_appearing_after_being_hidden);
+        window_pos_center |= ((flags & ImGuiWindowFlags_Modal) && !window_pos_set_by_api && window_just_appearing_after_hidden_for_resize);
         if (window_pos_center)
         {
             // Center (any sort of window)
@@ -382,7 +383,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 rect_to_avoid = ImRect(parent_window->Pos.x + style.ItemSpacing.x, -FLT_MAX, parent_window->Pos.x + parent_window->Size.x - style.ItemSpacing.x - parent_window->ScrollbarSizes.x, FLT_MAX); // We want some overlap to convey the relative depth of each popup (here hard-coded to 4)
             window->PosFloat = FindBestPopupWindowPos(window->PosFloat, window->Size,  &window->AutoPosLastDirection, rect_to_avoid);
         }
-        else if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api && window_appearing_after_being_hidden)
+        else if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api && window_just_appearing_after_hidden_for_resize)
         {
             ImRect rect_to_avoid(window->PosFloat.x - 1, window->PosFloat.y - 1, window->PosFloat.x + 1, window->PosFloat.y + 1);
             window->PosFloat = FindBestPopupWindowPos(window->PosFloat, window->Size,  &window->AutoPosLastDirection, rect_to_avoid);
@@ -656,13 +657,11 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
         window->DC.ChildWindows.resize(0);
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
+        window->DC.ItemFlags = ImGuiItemFlags_Default_;
         window->DC.ItemWidth = window->ItemWidthDefault;
         window->DC.TextWrapPos = -1.0f; // disabled
-        window->DC.AllowKeyboardFocus = true;
-        window->DC.ButtonRepeat = false;
+        window->DC.ItemFlagsStack.resize(0);
         window->DC.ItemWidthStack.resize(0);
-        window->DC.AllowKeyboardFocusStack.resize(0);
-        window->DC.ButtonRepeatStack.resize(0);
         window->DC.TextWrapPosStack.resize(0);
         window->DC.ColumnsCurrent = 0;
         window->DC.ColumnsCount = 1;
@@ -672,7 +671,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->DC.StateStorage = &window->StateStorage;
         window->DC.GroupStack.resize(0);
         //window->DC.ColorEditMode = ImGuiColorEditMode_UserSelect;
-        window->MenuColumns.Update(3, style.ItemSpacing.x, !window_was_visible);
+        window->MenuColumns.Update(3, style.ItemSpacing.x, window_just_activated_by_user);
 
         if (window->AutoFitFramesX > 0)
             window->AutoFitFramesX--;

@@ -20,15 +20,15 @@
 #include <imgui_internal.h>
 
 #ifndef NO_IMGUIHELPER_DRAW_METHODS
-#  if (!defined(alloca))
-#      ifdef _WIN32
-#          include <malloc.h>     // alloca
-#      elif (defined(__FreeBSD__) || defined(FreeBSD_kernel) || defined(__DragonFly__)) && !defined(__GLIBC__)
-#          include <stdlib.h>     // alloca. FreeBSD uses stdlib.h unless GLIBC
-#      else //_WIN32
-#           include <alloca.h>     // alloca
-#       endif //_WIN32
-#  endif // alloca
+#if !defined(alloca)
+#   ifdef _WIN32
+#       include <malloc.h>     // alloca
+#   elif defined(__GLIBC__) || defined(__sun)
+#       include <alloca.h>     // alloca
+#   else
+#       include <stdlib.h>     // alloca
+#   endif
+#endif //alloca
 #endif //NO_IMGUIHELPER_DRAW_METHODS
 
 

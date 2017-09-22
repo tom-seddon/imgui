@@ -89,9 +89,12 @@ struct GlyphBitmap {
 
 
 //
-template< class OutputType, class FreeTypeFixed >
+template< class OutputType, class FreeTypeFixed > inline static
 OutputType Round26Dot6( FreeTypeFixed v ) {
-    return ( OutputType )round( v / 64.0f );
+    //return ( OutputType )round( v / 64.0f );
+    return (OutputType) (((v + 63) & -64) / 64);
+//  From SDL_ttf: Handy routines for converting from fixed point
+//  #define FT_CEIL(X)  (((X + 63) & -64) / 64)
 }
 
 //
@@ -239,7 +242,7 @@ private:
 };
 
 
-bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 flags=0,const ImVector<ImU32>* pOptionalFlagVector=NULL) {
+bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 extra_flags=0,const ImVector<ImU32>* pOptionalFlagVector=NULL) {
     using namespace ImGui;
     IM_ASSERT( atlas->ConfigData.Size > 0 );
     IM_ASSERT(atlas->TexGlyphPadding == 1); // Not supported
@@ -307,15 +310,19 @@ bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 flags=0,const ImVector<ImU32>* pO
         FreeTypeFont& font_face = tmp_array[ input_i ];
         ImFont* dst_font = cfg.DstFont;
 
-        float ascent = font_face.fontInfo.ascender;
-        float descent = font_face.fontInfo.descender;
+        const float ascent = font_face.fontInfo.ascender;
+        const float descent = font_face.fontInfo.descender;
         ImFontAtlasBuildSetupFont(atlas, dst_font, &cfg, ascent, descent);
-        float off_x = cfg.GlyphOffset.x;
-        float off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
+        const float off_x = cfg.GlyphOffset.x;
+        const float off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
+
+        bool multiply_enabled = (cfg.RasterizerMultiply != 1.0f);
+        unsigned char multiply_table[256];
+        if (multiply_enabled)   ImFontAtlasBuildMultiplyCalcLookupTable(multiply_table, cfg.RasterizerMultiply);
 
         dst_font->FallbackGlyph = NULL; // Always clear fallback so FindGlyph can return NULL. It will be set again in BuildLookupTable()
 		
-        const uint32_t flag = (pOptionalFlagVector && pOptionalFlagVector->size()>input_i) ? (*pOptionalFlagVector)[input_i] : flags;
+        const uint32_t flag = cfg.RasterizerFlags | ((pOptionalFlagVector && pOptionalFlagVector->size()>input_i) ? (*pOptionalFlagVector)[input_i] : extra_flags);
         for( const ImWchar* in_range = cfg.GlyphRanges; in_range[ 0 ] && in_range[ 1 ]; in_range += 2 ) {
             for( uint32_t codepoint = in_range[ 0 ]; codepoint <= in_range[ 1 ]; ++codepoint ) {
 
@@ -338,6 +345,8 @@ bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 flags=0,const ImVector<ImU32>* pO
                     src += glyphBitmap.pitch;
                     dst += atlas->TexWidth;
                 }
+
+                if (multiply_enabled)   ImFontAtlasBuildMultiplyRectAlpha8(multiply_table, atlas->TexPixelsAlpha8, rect.x, rect.y, rect.w, rect.h, atlas->TexWidth);
 
                 dst_font->Glyphs.resize(dst_font->Glyphs.Size + 1);
                 ImFont::Glyph& glyph = dst_font->Glyphs.back();
