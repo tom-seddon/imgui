@@ -858,7 +858,7 @@ IMGUI_API void EndTimeline(int num_vertical_grid_lines=5.f,float current_time=0.
 // size: is the width and height of the widget in pixels
 // colors: please copy defaultColors in the definition (.cpp file), and modify it as needed.
 typedef int ImGuiPasswordDrawerFlags;
-bool PasswordDrawer(char* password, int passwordSize, ImGuiPasswordDrawerFlags flags=0, const float size=0, const ImU32 colors[7]=NULL);
+IMGUI_API bool PasswordDrawer(char* password, int passwordSize, ImGuiPasswordDrawerFlags flags=0, const float size=0, const ImU32 colors[7]=NULL);
 
 
 

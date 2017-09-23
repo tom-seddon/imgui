@@ -3871,12 +3871,13 @@ bool PasswordDrawer(char *password, int passwordSize,ImGuiPasswordDrawerFlags fl
     // Here we draw the circles (and optional Quads)
     const float imageQuadWidth = image_bb.GetWidth()/(float)numRows;
     const float radius = imageQuadWidth*0.25f;
+    const float radiusSquared = radius*radius;
     const float quadHalfSize = radius*0.175f;
     int num_segments = radius*(42.f/100.f);
     if (num_segments<5) num_segments=5;
     else if (num_segments>24) num_segments = 24;
     float thickness = radius*0.05f;
-    ImVec2 center(0,0);int cnt=0;
+    ImVec2 center(0,0),tmp(0,0);int cnt=0;
     unsigned char charToAdd = 0;
     for (int row=0;row<numRows;row++)   {
         center.y = bb.Min.y+(imageQuadWidth*row)+imageQuadWidth*0.5f;
@@ -3899,9 +3900,10 @@ bool PasswordDrawer(char *password, int passwordSize,ImGuiPasswordDrawerFlags fl
                 window->DrawList->AddCircle(center,radius,pColors[4],num_segments,thickness);
                 window->DrawList->AddRectFilled(ImVec2(center.x-quadHalfSize,center.y-quadHalfSize),ImVec2(center.x+quadHalfSize,center.y+quadHalfSize),pColors[4]);
                 if (held && mouseIsHoveringRect && draggingState==id && charToAdd==0 && (passwordLen==0 || password[passwordLen-1]!=(char)(minChar+cnt)))   {
-                    if (io.MousePos.x>center.x-radius && io.MousePos.x<center.x+radius &&
-                    io.MousePos.y>center.y-radius && io.MousePos.y<center.y+radius) {
-                        charToAdd = minChar+cnt+1;
+		    tmp.x = io.MousePos.x-center.x;tmp.y = io.MousePos.y-center.y;
+		    if (tmp.x>-radius && tmp.x<radius && tmp.y>-radius && tmp.y<radius) {
+			tmp.x*=tmp.x;tmp.y*=tmp.y;
+			if (tmp.x+tmp.y<radiusSquared) charToAdd = minChar+cnt+1;
                     }
                 }
             }
