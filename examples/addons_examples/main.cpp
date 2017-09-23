@@ -1147,64 +1147,94 @@ void DrawGL()	// Mandatory
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Text("Timeline (https://github.com/nem0/LumixEngine/blob/timeline_gui/external/imgui/imgui_user.inl):");
-	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Lumix Engine's Timeline\nUse CTRL+MW to zoom\nUse CTRL+RMB drag to pan\nUse CTRL+MMB to reset pan and zoom");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Lumix Engine's Timeline\nUse CTRL+MW to zoom\nUse CTRL+RMB drag to pan\nUse CTRL+MMB to reset pan and zoom");
         ImGui::Separator();
-	static ImVec2 pan_and_zoom(0.f,1.f);	// optional (CTRL+RMB drag: pan in [0.f,1.f]; CTRL+MW: zoom in [0.25f,4.f]). Thanks @meshula!
-	if (ImGui::BeginTimeline("MyTimeline",50.f,4,6,&pan_and_zoom))  // label, max_value, num_visible_rows, opt_exact_num_rows (for item culling)
-	{
-	    static float events[12]={10.f,20.f,0.5f,30.f,40.f,50.f,20.f,40.f,15.f,22.5f,35.f,45.f};
-	    if (ImGui::TimelineEvent("Event1",&events[0])) {/*events[0] and/or events[1] modified*/}
-	    ImGui::TimelineEvent("Event2",&events[2]);
-	    ImGui::TimelineEvent("Event3",&events[4],true);    // Event3 can only be shifted
-	    ImGui::TimelineEvent("Event4",&events[6]);
-	    ImGui::TimelineEvent("Event5",&events[8]);
-	    ImGui::TimelineEvent("Event6",&events[10]);
-	}
-	static float timeline_elapsed_time = 0.f;
-	ImGui::EndTimeline(5,timeline_elapsed_time);  // num_vertical_grid_lines, current_time (optional), timeline_running_color (optional)
+        static ImVec2 pan_and_zoom(0.f,1.f);	// optional (CTRL+RMB drag: pan in [0.f,1.f]; CTRL+MW: zoom in [0.25f,4.f]). Thanks @meshula!
+        if (ImGui::BeginTimeline("MyTimeline",50.f,4,6,&pan_and_zoom))  // label, max_value, num_visible_rows, opt_exact_num_rows (for item culling)
+        {
+            static float events[12]={10.f,20.f,0.5f,30.f,40.f,50.f,20.f,40.f,15.f,22.5f,35.f,45.f};
+            if (ImGui::TimelineEvent("Event1",&events[0])) {/*events[0] and/or events[1] modified*/}
+            ImGui::TimelineEvent("Event2",&events[2]);
+            ImGui::TimelineEvent("Event3",&events[4],true);    // Event3 can only be shifted
+            ImGui::TimelineEvent("Event4",&events[6]);
+            ImGui::TimelineEvent("Event5",&events[8]);
+            ImGui::TimelineEvent("Event6",&events[10]);
+        }
+        static float timeline_elapsed_time = 0.f;
+        ImGui::EndTimeline(5,timeline_elapsed_time);  // num_vertical_grid_lines, current_time (optional), timeline_running_color (optional)
 
-	// COMPLETELY Optional (And Manual): Timeline Start/Pause Buttons:-------
-	static ImU32 timeline_state = 0;    // Manually handled by us (0 = stopped, 1 = playing, 2 = paused)
-	static float timeline_begin_time = ImGui::GetTime();
-	if (timeline_state==1) {
-	    // It's playing
-	    timeline_elapsed_time = ImGui::GetTime()-timeline_begin_time;
-	    if (timeline_elapsed_time>50.f) {
-		// We reset the timer after 50.f seconds here
-		timeline_state=0;   // Stopped
-		timeline_elapsed_time=0.f;
-	    }
-	}
-	ImGui::SetCursorPosY(ImGui::GetCursorPosY()-ImGui::GetTextLineHeightWithSpacing()); // Go up one line
-	if (ImGui::Button(timeline_state==1 ?  " || ###timeline_play" : " > ###timeline_play")) {
-	    if (timeline_state==1) timeline_state=2;	// Paused
-	    else if (timeline_state==0)  {
-		// Was stopped
-		timeline_state=1;   // Now playing
-		timeline_begin_time = ImGui::GetTime();	// From zero time
-	    }
-	    else {
-		// Was paused
-		timeline_state=1;   // Now playing
-		const float pausedTime = ImGui::GetTime() - timeline_begin_time - timeline_elapsed_time;
-		timeline_begin_time+= pausedTime;	// From last time
-	    }
-	}
-	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s",timeline_state==1 ? "Pause" : "Play");
-	if (timeline_state!=0)	{
-	    ImGui::SameLine(0,0);
-	    if (ImGui::Button(" O ###timeline_stop")) {
-		timeline_state=0;   // Stopped
-		timeline_elapsed_time=0.f;  // We reset the timer
-	    }
-	    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Stop");
-	}
-	// End COMPLETELY Optional (And Manual) Stuff-----------------------------
+        // COMPLETELY Optional (And Manual): Timeline Start/Pause Buttons:-------
+        static ImU32 timeline_state = 0;    // Manually handled by us (0 = stopped, 1 = playing, 2 = paused)
+        static float timeline_begin_time = ImGui::GetTime();
+        if (timeline_state==1) {
+            // It's playing
+            timeline_elapsed_time = ImGui::GetTime()-timeline_begin_time;
+            if (timeline_elapsed_time>50.f) {
+                // We reset the timer after 50.f seconds here
+                timeline_state=0;   // Stopped
+                timeline_elapsed_time=0.f;
+            }
+        }
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY()-ImGui::GetTextLineHeightWithSpacing()); // Go up one line
+        if (ImGui::Button(timeline_state==1 ?  " || ###timeline_play" : " > ###timeline_play")) {
+            if (timeline_state==1) timeline_state=2;	// Paused
+            else if (timeline_state==0)  {
+                // Was stopped
+                timeline_state=1;   // Now playing
+                timeline_begin_time = ImGui::GetTime();	// From zero time
+            }
+            else {
+                // Was paused
+                timeline_state=1;   // Now playing
+                const float pausedTime = ImGui::GetTime() - timeline_begin_time - timeline_elapsed_time;
+                timeline_begin_time+= pausedTime;	// From last time
+            }
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s",timeline_state==1 ? "Pause" : "Play");
+        if (timeline_state!=0)	{
+            ImGui::SameLine(0,0);
+            if (ImGui::Button(" O ###timeline_stop")) {
+                timeline_state=0;   // Stopped
+                timeline_elapsed_time=0.f;  // We reset the timer
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Stop");
+        }
+        // End COMPLETELY Optional (And Manual) Stuff-----------------------------
+
+        // Password Drawer
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Text("Password Drawer Widget:");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Basically it's a widget you can\ndraw a password in, by mouse dragging.");
+        ImGui::Separator();
+
+        static char password[37] = "";
+        static int gridComboSelection = 1;  // We start with option 1 -> 3x3 grid
+        static int passwordSize = (2+gridComboSelection)*(2+gridComboSelection)+1;  // +1 -> trailing '\0'
+        ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.1f);
+        static const char* gridComboItemNames[5]= {"2","3","4","5","6"};
+        if (ImGui::Combo("Grid Size##MobileLockGridSize",&gridComboSelection,gridComboItemNames,5))   {
+            passwordSize = 2+gridComboSelection;
+            passwordSize*=passwordSize;
+            passwordSize+=1;  // +1 -> trailing '\0'
+            password[0]='\0';   // reset password
+        }
+        ImGui::PopItemWidth();
+        static char passwordDisplayedBelow[37] = "";
+        if (ImGui::PasswordDrawer(password,passwordSize))   {
+            strcpy(passwordDisplayedBelow,password);
+            password[0]='\0';   // reset password
+        }
+        //ImGui::Text("Live Password: %s",password);// DBG
+        if (strlen(passwordDisplayedBelow)>0) ImGui::Text("Password: %s",passwordDisplayedBelow);
+
+        // A commented out example of a read-only version [note that must be: passwordSize = gridSize*gridSize+1, even if password it's shorter]
+        //ImGui::Spacing();ImGui::Separator();if (ImGui::PasswordDrawer((char*)"15984",10,ImGuiPasswordDrawerFlags_ReadOnly,250)) {printf("Whole read-only widget clicked\n");fflush(stdout);}
 
 #       else //NO_IMGUIVARIOUSCONTROLS
-        ImGui::Text("%s","Excluded from this build.\n");
+            ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUIVARIOUSCONTROLS
-        ImGui::TreePop();
+            ImGui::TreePop();
         }
 
         // TabLabels Test:

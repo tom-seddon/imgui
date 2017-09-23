@@ -348,7 +348,22 @@ static void ImImplMainLoopFrame(void* pDone)	{
     // Start the frame
     {
         io.DeltaTime = deltaTime;
-        if (!gImGuiPaused) ImGui::NewFrame();
+        if (!gImGuiPaused) {
+            if (io.WantMoveMouse)  {
+                // Set mouse position if requested by io.WantMoveMouse flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
+                // SDL_WarpMouseInWindow() and SDL_WarpMouseGlobal()
+                SDL_WarpMouseGlobal((int)io.MousePos.x, (int)io.MousePos.y);
+                //SDL_WarpMouseInWindow(window,(int)io.MousePos.x, (int)io.MousePos.y);
+            }
+            /*else    {
+                // Get mouse position in screen coordinates (set to -1,-1 if no mouse / on another screen, etc.)
+                double mouse_x, mouse_y;
+                glfwGetCursorPos(window, &mouse_x, &mouse_y);
+                io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
+            }*/
+
+            ImGui::NewFrame();
+        }
         else {
             ImImpl_NewFramePaused();    // Enables some ImGui queries regardless ImGui::NewFrame() not being called.
             gImGuiCapturesInput = false;

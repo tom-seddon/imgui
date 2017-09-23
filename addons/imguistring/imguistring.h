@@ -273,6 +273,14 @@ public:
         else {for (int i=Size;i<new_size;i++) {IMIMPL_PLACEMENT_NEW(&Data[i]) T();}}
         Size = new_size;
     }
+    void                        resize(int new_size,const T& v)            {
+        if (new_size > Capacity) {
+            reserve(_grow_capacity(new_size));
+        }
+        if (new_size < Size)   {for (int i=new_size;i<Size;i++) Data[i].~T();}
+        else {for (int i=Size;i<new_size;i++) {IMIMPL_PLACEMENT_NEW(&Data[i]) T();Data[i]=v;}}
+        Size = new_size;
+    }
     void                        reserve(int new_capacity)
     {
         if (new_capacity <= Capacity) return;
@@ -288,12 +296,12 @@ public:
         Capacity = new_capacity;
     }
 
-    inline void                 push_back(const value_type& v)  {
+    IMGUI_FORCE_INLINE  void                 push_back(const value_type& v)  {
         if (Size == Capacity) reserve(_grow_capacity(Size+1));
         IMIMPL_PLACEMENT_NEW(&Data[Size]) T();
         Data[Size++] = v;
     }
-    inline void                 pop_back()                      {
+    IMGUI_FORCE_INLINE  void                 pop_back()                      {
         IM_ASSERT(Size > 0);
         if (Size>0) {
             Size--;

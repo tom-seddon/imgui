@@ -3770,4 +3770,182 @@ void EndTimeline(int num_vertical_grid_lines,float current_time,ImU32 timeline_r
 
 }
 // End Timeline =====================================================================================================
+
+
+// Start PasswordDrawer (code based on ImGui::ImageButton(...))==========================================================
+inline static ImU32 PasswordDrawerFadeAlpha(ImU32 color,int fragment,int numFragments) {
+    int a = (IM_COL32_A_MASK&color) >> IM_COL32_A_SHIFT;
+    a = (int) (a*(float)(numFragments-fragment)/(float)numFragments);
+    return (color & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
+}
+inline static ImU32 PasswordDrawerLighten(ImU32 color,int amount) {
+    int rgba[4] = {(unsigned char) (color>>IM_COL32_R_SHIFT),
+		     (unsigned char) (color>>IM_COL32_G_SHIFT),
+		     (unsigned char) (color>>IM_COL32_B_SHIFT),
+		     (unsigned char) (color>>IM_COL32_A_SHIFT)};
+    for (int i=0;i<3;i++) rgba[0]=ImClamp(rgba[i]+amount,0,255);
+    return IM_COL32(rgba[0],rgba[1],rgba[2],rgba[3]);
+}
+bool PasswordDrawer(char *password, int passwordSize,ImGuiPasswordDrawerFlags flags,const float size,const ImU32 colors[7])   {
+    IM_ASSERT(passwordSize>4);
+
+    const ImU32 defaultColors[7] = {
+        IM_COL32(45,148,129,255),   // bg TL
+        IM_COL32(29,86,103,255),    // bg TR
+        IM_COL32(62,48,99,255),     // bg BL
+        IM_COL32(78,62,107,255),    // bg BR
+        IM_COL32(219,216,164,240),  // circles and quads
+        IM_COL32(219,216,124,240),  // filled circles
+        IM_COL32(32,32,0,164)       // lines
+    };
+
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems || passwordSize<5) return false;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+
+    // Default to using password as ID. User can still push string/integer prefixes.
+    PushID((void *)password);
+    const ImGuiID id = window->GetID("#password_drawer");
+    PopID();
+
+    const float itemWidth = size<=0 ? ImGui::CalcItemWidth() : size;
+    const ImVec2 size1(itemWidth,itemWidth);
+    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size1);
+    const ImRect image_bb(window->DC.CursorPos, window->DC.CursorPos + size1);
+    ItemSize(bb);
+    if (!ItemAdd(bb, &id)) return false;
+
+    bool hovered=false, held=false, editable = !(flags&ImGuiPasswordDrawerFlags_ReadOnly);
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+
+    const ImU32* pColors = colors ? colors : defaultColors;
+    const bool border = true;
+    if (editable || (!hovered && !pressed && !held))
+	window->DrawList->AddRectFilledMultiColor(bb.Min, bb.Max ,pColors[0],pColors[1],pColors[3],pColors[2]);
+    else {
+	ImU32 bgColors[4];
+	for (int i=0;i<4;i++) bgColors[i] = PasswordDrawerLighten(pColors[i],(pressed||held) ? 60 : 30);
+	window->DrawList->AddRectFilledMultiColor(bb.Min, bb.Max ,bgColors[0],bgColors[1],bgColors[3],bgColors[2]);
+    }
+    if (border && (window->Flags & ImGuiWindowFlags_ShowBorders))   {
+        window->DrawList->AddRect(bb.Min+ImVec2(1,1), bb.Max+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), style.FrameRounding);
+        window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_Border), style.FrameRounding);
+    }
+
+    if (!editable) {
+	//pressed|=held;
+	held=false;
+    }
+
+    static ImGuiID draggingState = 0;
+    if (draggingState==0 && held) {
+        password[0]='\0';   // reset
+        draggingState = id;
+    }
+    const bool mouseIsHoveringRect = ImGui::IsMouseHoveringRect(image_bb.Min,image_bb.Max);
+
+    // Now we start the control logic
+    static const int numRowsSquared[5] = {4,9,16,25,36};
+    int passwordLen = strlen(password);
+    int numRows = 0;char minChar='1';
+    for (int i=4;i>=0;--i) {
+        if (passwordSize>numRowsSquared[i]) {
+            numRows = 2+i;
+	    if (passwordLen>numRowsSquared[i]) passwordLen=numRowsSquared[i]; // Max 36
+            break;
+        }
+    }
+
+    const ImGuiIO& io = ImGui::GetIO();
+    unsigned char selected[37]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    for (int l=0;l<passwordLen;l++) {
+        const int ch = (const int) (password[l]-minChar);
+        if (ch<passwordSize) {
+            selected[ch]=(unsigned char) (l+1);
+        }
+    }
+
+
+    // Here we draw the circles (and optional Quads)
+    const float imageQuadWidth = image_bb.GetWidth()/(float)numRows;
+    const float radius = imageQuadWidth*0.25f;
+    const float quadHalfSize = radius*0.175f;
+    int num_segments = radius*(42.f/100.f);
+    if (num_segments<5) num_segments=5;
+    else if (num_segments>24) num_segments = 24;
+    float thickness = radius*0.05f;
+    ImVec2 center(0,0);int cnt=0;
+    unsigned char charToAdd = 0;
+    for (int row=0;row<numRows;row++)   {
+        center.y = bb.Min.y+(imageQuadWidth*row)+imageQuadWidth*0.5f;
+        for (int col=0;col<numRows;col++)   {
+            center.x = bb.Min.x+(imageQuadWidth*col)+imageQuadWidth*0.5f;
+
+            const unsigned char isSelected = selected[cnt];
+            if (isSelected) {
+                if (flags&ImGuiPasswordDrawerFlags_NoFilledCircles)  {
+                    // Normal Drawing
+                    window->DrawList->AddCircle(center,radius,pColors[4],num_segments,thickness);
+                }
+                else {
+		    // Filled Drawing
+		    window->DrawList->AddCircleFilled(center,radius,PasswordDrawerFadeAlpha(pColors[5],isSelected-1,passwordLen),num_segments);
+                }
+                window->DrawList->AddRectFilled(ImVec2(center.x-quadHalfSize,center.y-quadHalfSize),ImVec2(center.x+quadHalfSize,center.y+quadHalfSize),pColors[(flags&ImGuiPasswordDrawerFlags_NoLines) ? 4 : 6]);
+            }
+            else {
+                window->DrawList->AddCircle(center,radius,pColors[4],num_segments,thickness);
+                window->DrawList->AddRectFilled(ImVec2(center.x-quadHalfSize,center.y-quadHalfSize),ImVec2(center.x+quadHalfSize,center.y+quadHalfSize),pColors[4]);
+                if (held && mouseIsHoveringRect && draggingState==id && charToAdd==0 && (passwordLen==0 || password[passwordLen-1]!=(char)(minChar+cnt)))   {
+                    if (io.MousePos.x>center.x-radius && io.MousePos.x<center.x+radius &&
+                    io.MousePos.y>center.y-radius && io.MousePos.y<center.y+radius) {
+                        charToAdd = minChar+cnt+1;
+                    }
+                }
+            }
+            ++cnt;
+        }
+    }
+
+    // Draw lines:
+    if (!(flags&ImGuiPasswordDrawerFlags_NoLines))  {
+        const float lineThickness = radius*0.35f;
+        ImVec2 lastCenter(-1,-1);
+        for (int l=0;l<passwordLen;l++) {
+            const int ch = (const int) (password[l]-minChar);
+            if (ch<passwordSize) {
+                const int row = ch/numRows;
+                const int col = ch%numRows;
+                center.x = bb.Min.x+(imageQuadWidth*col)+imageQuadWidth*0.5f;
+                center.y = bb.Min.y+(imageQuadWidth*row)+imageQuadWidth*0.5f;
+                if (l>0) {
+                    window->DrawList->AddLine(lastCenter,center,pColors[6],lineThickness);
+                }
+                lastCenter = center;
+            }
+        }
+	if (editable && passwordLen>0 && mouseIsHoveringRect && passwordLen<numRows*numRows) {
+            // Draw last live line
+            window->DrawList->AddLine(lastCenter,io.MousePos,pColors[6],lineThickness);
+        }
+    }
+
+    if (editable && charToAdd>0) {
+        password[passwordLen] = (char)(charToAdd-1);
+        password[passwordLen+1]='\0';
+    }
+
+
+    if (draggingState==id && !held) {
+        // end
+        draggingState = 0;
+	if (editable) return passwordLen>0;
+    }
+
+    return editable ? 0 : pressed;
+}
+// End MobileLock ===================================================================================================
+
 } // namespace ImGui

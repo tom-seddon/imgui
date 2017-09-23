@@ -853,8 +853,23 @@ IMGUI_API void EndTimeline(int num_vertical_grid_lines=5.f,float current_time=0.
 // End Timeline ======================================================================================
 
 
+// mobile lock control: a very unsafe way of using password
+// passwordSize: must be: gridSize*gridSize+1, where gridSize is in [2,6]
+// size: is the width and height of the widget in pixels
+// colors: please copy defaultColors in the definition (.cpp file), and modify it as needed.
+typedef int ImGuiPasswordDrawerFlags;
+bool PasswordDrawer(char* password, int passwordSize, ImGuiPasswordDrawerFlags flags=0, const float size=0, const ImU32 colors[7]=NULL);
+
+
+
 } // namespace ImGui
 
-
+enum ImGuiPasswordDrawerFlags_  {
+    ImGuiPasswordDrawerFlags_ReadOnly         = 1 << 1,   // password is not touched, it's simply shown. Returns true when the (whole) widget pressed. [Note that passwordSize must still be gridSize*gridSize+1, even if the (untouched) password buffer is shorter]
+    ImGuiPasswordDrawerFlags_NoFilledCircles  = 1 << 2,   // Filled circles are hidden
+    ImGuiPasswordDrawerFlags_NoLines          = 1 << 4,   // Draw lines are hidden
+    ImGuiPasswordDrawerFlags_Hidden           =           // Everything is hidden [to prevent someone from spotting your password]
+    ImGuiPasswordDrawerFlags_NoFilledCircles|ImGuiPasswordDrawerFlags_NoLines
+};
 
 #endif

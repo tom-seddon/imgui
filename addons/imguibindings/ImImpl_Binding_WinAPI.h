@@ -390,6 +390,13 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
             }
 
             if (!gImGuiPaused)	{
+                // Set OS mouse position if requested last frame by io.WantMoveMouse flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
+                if (io.WantMoveMouse)   {
+                    POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
+                    ClientToScreen(hWnd, &pos);
+                    SetCursorPos(pos.x, pos.y);
+                }
+
                 static ImGuiMouseCursor oldCursor = ImGuiMouseCursor_Arrow;
                 static bool oldMustHideCursor = io.MouseDrawCursor;
                 if (oldMustHideCursor!=io.MouseDrawCursor) {
