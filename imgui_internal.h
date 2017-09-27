@@ -48,6 +48,7 @@ typedef int ImGuiLayoutType;      // enum ImGuiLayoutType_
 typedef int ImGuiButtonFlags;     // enum ImGuiButtonFlags_
 typedef int ImGuiTreeNodeFlags;   // enum ImGuiTreeNodeFlags_
 typedef int ImGuiSliderFlags;     // enum ImGuiSliderFlags_
+typedef int ImGuiSeparatorFlags;  // enum ImGuiSeparatorFlags_
 typedef int ImGuiItemFlags;       // enum ImGuiItemFlags_
 
 //-------------------------------------------------------------------------
@@ -201,6 +202,12 @@ enum ImGuiSelectableFlagsPrivate_
     ImGuiSelectableFlags_MenuItem           = 1 << 4,
     ImGuiSelectableFlags_Disabled           = 1 << 5,
     ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 6
+};
+
+enum ImGuiSeparatorFlags_
+{
+    ImGuiSeparatorFlags_Horizontal          = 1 << 0,   // Axis default to current layout type, so generally Horizontal unless e.g. in a menu bar
+    ImGuiSeparatorFlags_Vertical            = 1 << 1
 };
 
 // FIXME: this is in development, not exposed/functional as a generic feature yet.
@@ -437,6 +444,7 @@ struct ImGuiContext
 
     // Storage for SetNexWindow** and SetNextTreeNode*** functions
     ImVec2                  SetNextWindowPosVal;
+    ImVec2                  SetNextWindowPosPivot;
     ImVec2                  SetNextWindowSizeVal;
     ImVec2                  SetNextWindowContentSizeVal;
     bool                    SetNextWindowCollapsedVal;
@@ -696,7 +704,8 @@ struct IMGUI_API ImGuiWindow
     ImGuiCond               SetWindowPosAllowFlags;             // store condition flags for next SetWindowPos() call.
     ImGuiCond               SetWindowSizeAllowFlags;            // store condition flags for next SetWindowSize() call.
     ImGuiCond               SetWindowCollapsedAllowFlags;       // store condition flags for next SetWindowCollapsed() call.
-    bool                    SetWindowPosCenterWanted;
+    ImVec2                  SetWindowPosVal;                    // store window position when using a non-zero Pivot (position set needs to be processed when we know the window size)
+    ImVec2                  SetWindowPosPivot;                  // store window pivot for positioning. ImVec2(0,0) when positioning from top-left corner; ImVec2(0.5f,0.5f) for centering; ImVec2(1,1) for bottom right.
 
     ImGuiDrawContext        DC;                                 // Temporary per-window data, reset at the beginning of the frame
     ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack
@@ -770,11 +779,14 @@ namespace ImGui
     IMGUI_API void          FocusableItemUnregister(ImGuiWindow* window);
     IMGUI_API ImVec2        CalcItemSize(ImVec2 size, float default_x, float default_y);
     IMGUI_API float         CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x);
+    IMGUI_API void          PushMultiItemsWidths(int components, float width_full = 0.0f);
     IMGUI_API void          PushItemFlag(ImGuiItemFlags option, bool enabled);
     IMGUI_API void          PopItemFlag();
 
     IMGUI_API void          OpenPopupEx(ImGuiID id, bool reopen_existing);
+    IMGUI_API void          ClosePopup(ImGuiID id);
     IMGUI_API bool          IsPopupOpen(ImGuiID id);
+    IMGUI_API bool          BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags);
 
     IMGUI_API int           CalcTypematicPressedRepeatAmount(float t, float t_prev, float repeat_delay, float repeat_rate);
 
@@ -784,7 +796,7 @@ namespace ImGui
     IMGUI_API void          PushColumnClipRect(int column_index = -1);
 
     // FIXME-WIP: New Combo API
-    IMGUI_API bool          BeginCombo(const char* label, const char* preview_value, float popup_opened_height);
+    IMGUI_API bool          BeginCombo(const char* label, const char* preview_value, ImVec2 popup_size = ImVec2(0.0f,0.0f));
     IMGUI_API void          EndCombo();
 
     // NB: All position are in absolute pixels coordinates (never using window coordinates internally)
@@ -819,7 +831,8 @@ namespace ImGui
     IMGUI_API bool          InputScalarEx(const char* label, ImGuiDataType data_type, void* data_ptr, void* step_ptr, void* step_fast_ptr, const char* scalar_format, ImGuiInputTextFlags extra_flags);
     IMGUI_API bool          InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label, ImGuiDataType data_type, void* data_ptr, ImGuiID id, int decimal_precision);
 
-    IMGUI_API void          ColorTooltip(const char* text, const float col[4], ImGuiColorEditFlags flags);
+    IMGUI_API void          ColorTooltip(const char* text, const float* col, ImGuiColorEditFlags flags);
+    IMGUI_API void          ColorEditOptionsPopup(const float* col, ImGuiColorEditFlags flags);
 
     IMGUI_API bool          TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end = NULL);
     IMGUI_API bool          TreeNodeBehaviorIsOpen(ImGuiID id, ImGuiTreeNodeFlags flags = 0);                     // Consume previous SetNextTreeNodeOpened() data, if any. May return true when logging
@@ -837,7 +850,7 @@ IMGUI_API bool              ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildRegisterDefaultCustomRects(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* font_config, float ascent, float descent); 
 IMGUI_API void              ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* spc);
-IMGUI_API void              ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas);
+IMGUI_API void              ImFontAtlasBuildFinish(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildMultiplyCalcLookupTable(unsigned char out_table[256], float in_multiply_factor);
 IMGUI_API void              ImFontAtlasBuildMultiplyRectAlpha8(const unsigned char table[256], unsigned char* pixels, int x, int y, int w, int h, int stride);
 
