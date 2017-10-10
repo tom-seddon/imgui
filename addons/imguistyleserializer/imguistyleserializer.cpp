@@ -557,7 +557,12 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_PopupBg]		     = ImVec4(1.00f, 1.00f, 1.00f, 0.94f);
 	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 
-	if (styleEnum == ImGuiStyle_OSXInverse) InvertStyleColors(style);
+	if (styleEnum == ImGuiStyle_OSXInverse) {
+	    InvertStyleColors(style);
+	    // Better Border colors:
+	    style.Colors[ImGuiCol_Border]	     = ImVec4(0.10f, 0.23f, 0.25f, 1.00f);
+	    style.Colors[ImGuiCol_BorderShadow]	     = ImVec4(0.49f, 0.53f, 0.54f, 0.50f);
+	}
     }
     break;
     case ImGuiStyle_DarkOpaque:
@@ -684,6 +689,9 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	if (styleEnum == ImGuiStyle_OSXOpaqueInverse) {
 	    InvertStyleColors(style);
 	    //style.Colors[ImGuiCol_PopupBg]	     = ImVec4(0.3f, 0.3f, 0.4f, 1.00f);
+	    // Better Border colors:
+	    style.Colors[ImGuiCol_Border]	     = ImVec4(0.10f, 0.23f, 0.25f, 1.00f);
+	    style.Colors[ImGuiCol_BorderShadow]	     = ImVec4(0.49f, 0.53f, 0.54f, 0.50f);
 	}
 
     }

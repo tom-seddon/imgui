@@ -434,18 +434,14 @@ typedef unsigned short  UInt16;
 		return BZ2_rNums[i];
 	} 
 
+// Inline CrcTable.c
 #undef BZ2_CRC32TABLE
- //region Inline CrcTable.c If Needed
 /*--
   I think this is an implementation of the AUTODIN-II,
   Ethernet & FDDI 32-bit CRC standard.  Vaguely derived
   from code by Rob Warnock, in Section 51 of the
   comp.compression FAQ.
 --*/
-#ifdef USE_SWHELPER_STATIC_LIBRARY
-	#define BZ2_CRC32TABLE( X ) BZ2_crc32Table[ (X) ]
-	extern UInt32 BZ2_crc32Table[256];
-#else//USE_SWHELPER_STATIC_LIBRARY
 	#define BZ2_CRC32TABLE( X ) GetBZ2_crc32Table( (X) )
 	inline Int32 GetBZ2_crc32Table(UInt32 i)	{
 		static const UInt32 BZ2_crc32Table[256] = {
@@ -519,8 +515,7 @@ typedef unsigned short  UInt16;
 	};
 		return BZ2_crc32Table[i];
 	}	
-#endif//USE_SWHELPER_STATIC_LIBRARY
-//endregion
+
 
 
 

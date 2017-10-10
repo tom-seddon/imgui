@@ -723,7 +723,7 @@ static bool TabButton(const char *label, bool selected, bool *pCloseButtonPresse
                     (pOptionalJustDrawTabButtonGraphicsUnderMouseWithThisOffset ? *pOptionalJustDrawTabButtonGraphicsUnderMouseWithThisOffset : pos) + size);
     if (!pOptionalJustDrawTabButtonGraphicsUnderMouseWithThisOffset) {
         ItemSize(bb, style.FramePadding.y);
-        if (!ItemAdd(bb, &id)) {if (fontOverride) ImGui::PopFont();return false;}
+        if (!ItemAdd(bb, id)) {if (fontOverride) ImGui::PopFont();return false;}
     }
 
     //if (window->DC.ItemFlags & ImGuiItemFlags_ButtonRepeat) flags |= ImGuiButtonFlags_Repeat;    // What's this ?
@@ -2838,7 +2838,7 @@ static bool TabButtonVertical(bool rotateCCW,const char *label, bool selected, b
                     (pOptionalJustDrawTabButtonGraphicsUnderMouseWithThisOffset ? *pOptionalJustDrawTabButtonGraphicsUnderMouseWithThisOffset : pos) + size);
     if (!pOptionalJustDrawTabButtonGraphicsUnderMouseWithThisOffset) {
         ItemSize(bb, 0.f);//style.FramePadding.y);
-        if (!ItemAdd(bb, &id)) {if (fontOverride) ImGui::PopFont();return false;}
+        if (!ItemAdd(bb, id)) {if (fontOverride) ImGui::PopFont();return false;}
     }
 
     //if (window->DC.ItemFlags & ImGuiItemFlags_ButtonRepeat) flags |= ImGuiButtonFlags_Repeat;    // What's this ?

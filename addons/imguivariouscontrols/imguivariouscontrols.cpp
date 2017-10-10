@@ -577,14 +577,14 @@ bool ColorCombo(const char* label,ImVec4 *pColorOut,bool supportsAlpha,float wid
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + totalSize);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max);// + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
     ItemSize(total_bb, style.FramePadding.y);
-    if (!ItemAdd(total_bb, &id)) return false;
+    if (!ItemAdd(total_bb, id)) return false;
     const float windowWidth = frame_bb.Max.x - frame_bb.Min.x - style.FramePadding.x;
 
 
     ImVec4 color = pColorOut ? *pColorOut : ImVec4(0,0,0,1);
     if (!supportsAlpha) color.w=1.f;
 
-    const bool hovered = IsHovered(frame_bb, id);
+    const bool hovered = ItemHoverable(frame_bb, id);
 
     const ImRect value_bb(frame_bb.Min, frame_bb.Max - ImVec2(arrow_size, 0.0f));
     RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
@@ -857,7 +857,7 @@ bool ImageButtonWithText(ImTextureID texId,const char* label,const ImVec2& image
     const ImRect image_bb(start, start + size);
     start = window->DC.CursorPos + padding;start.x+=size.x+innerSpacing;if (size.y>textSize.y) start.y+=(size.y-textSize.y)*.5f;
     ItemSize(bb);
-    if (!ItemAdd(bb, &id))
+    if (!ItemAdd(bb, id))
     return false;
 
     bool hovered=false, held=false;
@@ -1230,7 +1230,7 @@ struct AnimatedImageInternal {
         const ImRect image_bb(start, start + size);
         start = window->DC.CursorPos + padding;start.x+=size.x+innerSpacing;if (size.y>textSize.y) start.y+=(size.y-textSize.y)*.5f;
         ItemSize(bb);
-        if (!ItemAdd(bb, &id))
+        if (!ItemAdd(bb, id))
             return false;
 
         bool hovered=false, held=false;
@@ -1728,7 +1728,7 @@ int PlotHistogram(const char* label, float (*values_getter)(void* data, int idx,
 
         const int total_histograms = values_count * num_histograms;
 
-        const bool isItemHovered = IsHovered(inner_bb, 0);
+        const bool isItemHovered = ItemHoverable(inner_bb, 0);
 
         if (!mustOverrideColors) col_base_embedded[0] = GetColorU32(ImGuiCol_PlotHistogram);
         const ImU32 lineCol = GetColorU32(ImGuiCol_WindowBg);
@@ -1908,7 +1908,7 @@ int PlotCurve(const char* label, float (*values_getter)(void* data, float x,int 
         const ImU32* col_base = mustOverrideColors ? pColorsOverride : col_base_embedded;
         const int num_colors = mustOverrideColors ? numColorsOverride : num_colors_embedded;
 
-        const bool isItemHovered = IsHovered(inner_bb, 0);
+        const bool isItemHovered = ItemHoverable(inner_bb, 0);
 
         if (!mustOverrideColors) col_base_embedded[0] = GetColorU32(ImGuiCol_PlotLines);
 
@@ -2120,7 +2120,7 @@ static void PlotMultiEx(
 
     // Tooltip on hover
     int v_hovered = -1;
-    if (IsHovered(inner_bb, 0))
+    if (ItemHoverable(inner_bb, 0))
     {
         const float t = ImClamp((g.IO.MousePos.x - inner_bb.Min.x) / (inner_bb.Max.x - inner_bb.Min.x), 0.0f, 0.9999f);
         const int v_idx = (int) (t * item_count);
@@ -2528,7 +2528,7 @@ bool InputComboWithAutoCompletion(const char* label, int *current_item, size_t a
         const ImRect label_bb(window->DC.CursorPos,ImVec2(window->DC.CursorPos.x + label_size.x, window->DC.CursorPos.y + label_size.y + ImGui::GetStyle().FramePadding.y*2.0f));
         ImGui::ItemSize(label_bb, ImGui::GetStyle().FramePadding.y);
         const ImGuiID labelID = 0;  // is this allowed ?
-        if (ImGui::ItemAdd(label_bb, &labelID)) pad->itemHovered|=ImGui::IsHovered(label_bb, labelID);
+        if (ImGui::ItemAdd(label_bb, labelID)) pad->itemHovered|=ItemHoverable(label_bb, labelID);
     }
     else {
         // ImGui::InputText(...) here
@@ -3815,7 +3815,7 @@ bool PasswordDrawer(char *password, int passwordSize,ImGuiPasswordDrawerFlags fl
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size1);
     const ImRect image_bb(window->DC.CursorPos, window->DC.CursorPos + size1);
     ItemSize(bb);
-    if (!ItemAdd(bb, &id)) return false;
+    if (!ItemAdd(bb, id)) return false;
 
     bool hovered=false, held=false, editable = !(flags&ImGuiPasswordDrawerFlags_ReadOnly);
     bool pressed = ButtonBehavior(bb, id, &hovered, &held);
@@ -3891,8 +3891,8 @@ bool PasswordDrawer(char *password, int passwordSize,ImGuiPasswordDrawerFlags fl
                     window->DrawList->AddCircle(center,radius,pColors[4],num_segments,thickness);
                 }
                 else {
-		    // Filled Drawing
-		    window->DrawList->AddCircleFilled(center,radius,PasswordDrawerFadeAlpha(pColors[5],isSelected-1,passwordLen),num_segments);
+                    // Filled Drawing
+                    window->DrawList->AddCircleFilled(center,radius,PasswordDrawerFadeAlpha(pColors[5],isSelected-1,passwordLen),num_segments);
                 }
                 window->DrawList->AddRectFilled(ImVec2(center.x-quadHalfSize,center.y-quadHalfSize),ImVec2(center.x+quadHalfSize,center.y+quadHalfSize),pColors[(flags&ImGuiPasswordDrawerFlags_NoLines) ? 4 : 6]);
             }
@@ -3900,10 +3900,11 @@ bool PasswordDrawer(char *password, int passwordSize,ImGuiPasswordDrawerFlags fl
                 window->DrawList->AddCircle(center,radius,pColors[4],num_segments,thickness);
                 window->DrawList->AddRectFilled(ImVec2(center.x-quadHalfSize,center.y-quadHalfSize),ImVec2(center.x+quadHalfSize,center.y+quadHalfSize),pColors[4]);
                 if (held && mouseIsHoveringRect && draggingState==id && charToAdd==0 && (passwordLen==0 || password[passwordLen-1]!=(char)(minChar+cnt)))   {
-		    tmp.x = io.MousePos.x-center.x;tmp.y = io.MousePos.y-center.y;
-		    if (tmp.x>-radius && tmp.x<radius && tmp.y>-radius && tmp.y<radius) {
-			tmp.x*=tmp.x;tmp.y*=tmp.y;
-			if (tmp.x+tmp.y<radiusSquared) charToAdd = minChar+cnt+1;
+                    tmp.x = io.MousePos.x-center.x;tmp.y = io.MousePos.y-center.y;
+                    //if (tmp.x>-radius && tmp.x<radius && tmp.y>-radius && tmp.y<radius) // This line can be commented out (is it faster or not?)
+                    {
+                        tmp.x*=tmp.x;tmp.y*=tmp.y;
+                        if (tmp.x+tmp.y<radiusSquared) charToAdd = minChar+cnt+1;
                     }
                 }
             }

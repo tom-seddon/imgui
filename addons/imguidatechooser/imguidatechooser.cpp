@@ -183,10 +183,10 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y) + style.FramePadding*2.0f);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(style.ItemInnerSpacing.x + label_size.x,0));
     ItemSize(total_bb, style.FramePadding.y);
-    if (!ItemAdd(total_bb, &id)) return false;
+    if (!ItemAdd(total_bb, id)) return false;
 
     const float arrow_size = (g.FontSize + style.FramePadding.x * 2.0f);
-    const bool hovered = IsHovered(frame_bb, id);
+    const bool hovered = ItemHoverable(frame_bb, id);
 
     bool value_changed = false;
     const ImRect value_bb(frame_bb.Min, frame_bb.Max - ImVec2(arrow_size, 0.0f));
