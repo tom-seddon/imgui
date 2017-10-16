@@ -224,7 +224,8 @@ int PopupMenuSimpleCopyCutPasteOnLastItem(bool readOnly) {
     int selectedEntry = PopupMenuSimple(open,entries,readOnly?1:4);
     if (selectedEntry>2) selectedEntry = 2; // Normally separator takes out one space
     return selectedEntry;
-    // About "open": when user exits popup-menu, "open" becomes "false". Please set it to "true" to display it again (we do it using open|=[...])
+    // About "open": when user exits popup-menu, "open" becomes "false".
+    // Please set it to "true" to display it again (we do it using open|=[...])
 }
 
 
@@ -497,9 +498,6 @@ bool ColorChooser(bool* open,ImVec4 *pColorOut,bool supportsAlpha)   {
     return colorSelected;
 
 }
-
-
-
 
 // Based on the code from: https://github.com/benoitjacquier/imgui
 bool ColorCombo(const char* label,ImVec4 *pColorOut,bool supportsAlpha,float width,bool closeWhenMouseLeavesIt)    {

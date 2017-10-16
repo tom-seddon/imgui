@@ -11,7 +11,7 @@ static EmscriptenFileSystemHelper gEmscriptemFileSystemHelper;
 void EmscriptenFileSystemHelper::Init()	 {
     if (!inited)	{
         inited=true;
-        EM_ASM(
+        EM_ASM((
             FS.mkdir('/persistent_folder');
             FS.mount(IDBFS, {}, '/persistent_folder');
 
@@ -22,20 +22,20 @@ void EmscriptenFileSystemHelper::Init()	 {
                       assert(!err);
                       Module.syncdone = 1;
                   });
-        );
+        ));
     }
 }
 
 void EmscriptenFileSystemHelper::Sync() {
   // sync from memory state to persisted and then
   // run 'success'
-  EM_ASM(
+  EM_ASM((
 	Module.syncdone = 0;  
     FS.syncfs(function (err) {
       assert(!err);
       Module.syncdone = 1;
     });
-  );
+  ));
 }
 // ccall('EmscriptemFileSystemHelperSuccess', 'v');
 
