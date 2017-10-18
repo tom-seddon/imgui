@@ -2702,7 +2702,7 @@ void CodeEditor::TextLineUnformattedWithSH(const char* text, const char* text_en
             const ImVec2 text_size(ImGui::MyCalcTextWidth(text_begin, text_end),ImGui::GetTextLineHeight());
             ImRect bb(text_pos, text_pos + text_size);
             ImGui::ItemSize(text_size);
-            if (!ImGui::ItemAdd(bb, NULL))  return;
+            if (!ImGui::ItemAdd(bb, 0))  return;
             gIsCurlineHovered = ImGui::IsItemHovered();
 
             // Render (we don't hide text after ## in this end-user function)
@@ -2717,7 +2717,7 @@ void CodeEditor::TextLineUnformattedWithSH(const char* text, const char* text_en
             const ImVec2 text_size(text_pos.x-old_text_pos.x,ImGui::GetTextLineHeight());
             ImRect bb(old_text_pos, old_text_pos + text_size);
             ImGui::ItemSize(text_size);
-            if (!ImGui::ItemAdd(bb, NULL))  return;
+            if (!ImGui::ItemAdd(bb, 0))  return;
             gIsCurlineHovered = ImGui::IsItemHovered();
         }
     }
@@ -2839,7 +2839,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                         const ImVec2 token_size(token_width,g.FontSize);
                         const ImVec2& token_pos = oldPos;
                         ImRect bb(token_pos, token_pos + token_size);
-                        if (ImGui::ItemAdd(bb, NULL) && ImGui::IsItemHovered()) {
+                        if (ImGui::ItemAdd(bb, 0) && ImGui::IsItemHovered()) {
                             window->DrawList->AddLine(ImVec2(bb.Min.x,bb.Max.y), bb.Max, style.color_syntax_highlighting[SH_STRING], 2.f);
                             //if (ImGui::GetIO().MouseClicked[0])  {fprintf(stderr,"Mouse clicked on token: \"%s\"(%d->\"%s\") curlineStartedWithDiesis=%s line=\"%s\"\n",s,len_tok,tok,curlineStartedWithDiesis?"true":"false",curline->text.c_str());}
                             ImGui::SetTooltip("Token (quotes are included): %.*s\nSH = %s\nLine (%d):\"%s\"\nLine starts with '#': %s",(int)(endStringSH-tk),tk,SyntaxHighlightingTypeStrings[SH_STRING],gCurline->lineNumber+1,gCurline->text.c_str(),gCurlineStartedWithDiesis?"true":"false");
@@ -2961,7 +2961,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                 const ImVec2 token_size(token_width,g.FontSize);// = ImGui::CalcTextSize(tok, tok+len_tok, false, 0.f);
                 const ImVec2& token_pos = oldPos;
                 ImRect bb(token_pos, token_pos + token_size);
-                if (ImGui::ItemAdd(bb, NULL) && ImGui::IsItemHovered()) {
+                if (ImGui::ItemAdd(bb, 0) && ImGui::IsItemHovered()) {
                     window->DrawList->AddLine(ImVec2(bb.Min.x,bb.Max.y), bb.Max, sht>=0 ? style.color_syntax_highlighting[sht] : ImGui::GetColorU32(ImGuiCol_Text), 2.f);
                     if (ImGui::GetIO().MouseClicked[0])  {fprintf(stderr,"Mouse clicked on token: \"%s\"(%d->\"%s\") curlineStartedWithDiesis=%s line=\"%s\"\n",s,len_tok,tok,gCurlineStartedWithDiesis?"true":"false",gCurline->text.c_str());}
                     ImGui::SetTooltip("Token: \"%s\" len=%d\nToken unclamped: \"%s\"\nSH = %s\nLine (%d):\"%s\"\nLine starts with '#': %s",tok,len_tok,s,sht<0 ? "None" : SyntaxHighlightingTypeStrings[sht],gCurline->lineNumber+1,gCurline->text.c_str(),gCurlineStartedWithDiesis?"true":"false");
@@ -3200,7 +3200,7 @@ static void MyRenderTextLineWrappedWithSH(const BadCodeEditorData& ceData,ImVec2
                             const ImVec2 token_size(token_width,g.FontSize);
                             const ImVec2& token_pos = oldPos;
                             ImRect bb(token_pos, token_pos + token_size);
-                            if (ImGui::ItemAdd(bb, NULL) && ImGui::IsItemHovered()) {
+                            if (ImGui::ItemAdd(bb, 0) && ImGui::IsItemHovered()) {
                                 window->DrawList->AddLine(ImVec2(bb.Min.x,bb.Max.y), bb.Max, style.color_syntax_highlighting[SH_STRING], 2.f);
                                 //if (ImGui::GetIO().MouseClicked[0])  {fprintf(stderr,"Mouse clicked on token: \"%s\"(%d->\"%s\") curlineStartedWithDiesis=%s line=\"%s\"\n",s,len_tok,tok,curlineStartedWithDiesis?"true":"false",curline->text.c_str());}
                                 ImGui::SetTooltip("Token (quotes are included): %.*s\nSH = %s\nLine (%d):\"%s\"\nLine starts with '#': %s",(int)(endStringSH-tk),tk,SyntaxHighlightingTypeStrings[SH_STRING],gCurline->lineNumber+1,gCurline->text.c_str(),gCurlineStartedWithDiesis?"true":"false");
@@ -3340,7 +3340,7 @@ static void MyRenderTextLineWrappedWithSH(const BadCodeEditorData& ceData,ImVec2
                 const ImVec2 token_size(token_width,g.FontSize);// = ImGui::CalcTextSize(tok, tok+len_tok, false, 0.f);
                 const ImVec2& token_pos = oldPos;
                 ImRect bb(token_pos, token_pos + token_size);
-                if (ImGui::ItemAdd(bb, NULL) && ImGui::IsItemHovered()) {
+                if (ImGui::ItemAdd(bb, 0) && ImGui::IsItemHovered()) {
                     window->DrawList->AddLine(ImVec2(bb.Min.x,bb.Max.y), bb.Max, sht>=0 ? style.color_syntax_highlighting[sht] : ImGui::GetColorU32(ImGuiCol_Text), 2.f);
                     if (ImGui::GetIO().MouseClicked[0])  {fprintf(stderr,"Mouse clicked on token: \"%s\"(%d->\"%s\") curlineStartedWithDiesis=%s line=\"%s\"\n",s,len_tok,tok,gCurlineStartedWithDiesis?"true":"false",gCurline->text.c_str());}
                     ImGui::SetTooltip("Token: \"%s\" len=%d\nToken unclamped: \"%s\"\nSH = %s\nLine (%d):\"%s\"\nLine starts with '#': %s",tok,len_tok,s,sht<0 ? "None" : SyntaxHighlightingTypeStrings[sht],gCurline->lineNumber+1,gCurline->text.c_str(),gCurlineStartedWithDiesis?"true":"false");

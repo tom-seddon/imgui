@@ -52,6 +52,9 @@ namespace ImGui {
 }
 #endif //TEST_ICONS_INSIDE_TTF
 
+static const ImVec4 gDefaultClearColor(0.8f, 0.6f, 0.6f, 1.0f);
+static ImVec4 gClearColor = gDefaultClearColor;
+
 
 #ifndef NO_IMGUITABWINDOW
 ImGui::TabWindow tabWindows[5]; // 0 = center, 1 = left, 2 = right, 3 = top, 4 = bottom
@@ -190,6 +193,61 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
 #           else //YES_IMGUIIMAGEEDITOR
             ImGui::Text("Disabled for this build.");
 #           endif //YES_IMGUIIMAGEEDITOR
+        }
+        else if (tab->matchLabel("ImGuiStyleChooser")) {
+#           ifndef IMGUISTYLESERIALIZER_H_
+            ImGui::Text("GUI Style Chooser Disabled for this build.");
+            ImGui::Spacing();ImGui::Separator();
+#           endif //IMGUISTYLESERIALIZER_H_
+
+            ImGui::Spacing();
+            ImGui::TextDisabled("%s","Some controls to chenge the GUI style:");
+            ImGui::PushItemWidth(275);
+            ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.2f"); // scale everything
+            ImGui::PopItemWidth();
+            if (ImGui::GetIO().FontGlobalScale!=1.f)    {
+                ImGui::SameLine(0,10);
+                if (ImGui::SmallButton("Reset##glFontGlobalScale")) ImGui::GetIO().FontGlobalScale = 1.f;
+            }
+            ImGui::Spacing();
+
+            ImGui::PushItemWidth(275);
+            ImGui::ColorEdit3("glClearColor",&gClearColor.x);
+            ImGui::PopItemWidth();
+            if (gClearColor.x!=gDefaultClearColor.x || gClearColor.y!=gDefaultClearColor.y || gClearColor.z!=gDefaultClearColor.z)    {
+                ImGui::SameLine(0,10);
+                if (ImGui::SmallButton("Reset##glClearColorReset")) gClearColor = gDefaultClearColor;
+            }
+            ImGui::Spacing();
+
+#           ifdef IMGUISTYLESERIALIZER_H_
+            static int styleEnumNum = 0;
+            ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.25f);
+            if (ImGui::Combo("Main Style Chooser",&styleEnumNum,ImGui::GetDefaultStyleNames(),(int) ImGuiStyle_Count,(int) ImGuiStyle_Count)) {
+                ImGui::ResetStyle(styleEnumNum);
+            }
+            ImGui::PopItemWidth();
+            if (ImGui::IsItemHovered()) {
+                if   (styleEnumNum==ImGuiStyle_Default)      ImGui::SetTooltip("%s","\"Default\"\nThis is the default\nImGui theme");
+                else if (styleEnumNum==ImGuiStyle_Gray)   ImGui::SetTooltip("%s","\"Gray\"\nThis is the default theme of first demo");
+                else if (styleEnumNum==ImGuiStyle_OSX)   ImGui::SetTooltip("%s","\"OSX\"\nPosted by @itamago here:\nhttps://github.com/ocornut/imgui/pull/511\n(hope I can use it)");
+                else if (styleEnumNum==ImGuiStyle_DarkOpaque)   ImGui::SetTooltip("%s","\"DarkOpaque\"\nA dark-grayscale style with\nno transparency (by default)");
+                else if (styleEnumNum==ImGuiStyle_OSXOpaque)   ImGui::SetTooltip("%s","\"OSXOpaque\"\nPosted by @dougbinks here:\nhttps://gist.github.com/dougbinks/8089b4bbaccaaf6fa204236978d165a9\n(hope I can use it)");
+                else if (styleEnumNum==ImGuiStyle_Soft) ImGui::SetTooltip("%s","\"Soft\"\nPosted by @olekristensen here:\nhttps://github.com/ocornut/imgui/issues/539\n(hope I can use it)");
+                else if (styleEnumNum==ImGuiStyle_EdinBlack || styleEnumNum==ImGuiStyle_EdinWhite) ImGui::SetTooltip("%s","Based on an image posted by @edin_p\n(hope I can use it)");
+                else if (styleEnumNum==ImGuiStyle_Maya) ImGui::SetTooltip("%s","\"Maya\"\nPosted by @ongamex here:\nhttps://gist.github.com/ongamex/4ee36fb23d6c527939d0f4ba72144d29\n(hope I can use it)");
+            }
+            ImGui::Spacing();ImGui::Separator();ImGui::Spacing();
+#           endif // IMGUISTYLESERIALIZER_H_
+
+            ImGui::TextDisabled("%s","These are also present in the \"Preferences\" Panel:");
+            ImGui::DragFloat("Window Alpha##WA2",&mgr.getDockedWindowsAlpha(),0.01f,0.f,1.f);
+            ImGui::Spacing();
+            bool border = mgr.getDockedWindowsBorder();
+            if (ImGui::Checkbox("Window Borders##WB2",&border)) mgr.setDockedWindowsBorder(border); // Sets the window border to all the docked windows
+
+
+
         }
         else ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
         ImGui::PopID();
@@ -809,7 +867,7 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
 
 void DrawGL()	// Mandatory
 {
-        ImImpl_ClearColorBuffer(ImVec4(0.8f, 0.6f, 0.6f, 1.0f));    // Warning: it does not clear depth buffer
+        ImImpl_ClearColorBuffer(gClearColor);    // Warning: it does not clear depth buffer
 
         if (gpShowMainMenuBar && *gpShowMainMenuBar) ShowExampleMenuBar(true);
 
@@ -845,6 +903,9 @@ void DrawGL()	// Mandatory
 #                           ifdef YES_IMGUIIMAGEEDITOR
                             tabWindow.addTabLabel("ImGuiImageEditor","a tiny image editor",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 #                           endif //YES_IMGUIIMAGEEDITOR
+#                           ifndef NO_IMGUISTYLESERIALIZER
+                            tabWindow.addTabLabel("ImGuiStyleChooser","Edit the look of the GUI",false);
+#                           endif //NO_IMGUISTYLESERIALIZER
                         }
                     }
                     tabWindow.render(); // Must be called inside "its" window (and sets isInited() to false). [ ChildWindows can't be used here (but can be used inside Tab Pages). Basically all the "Central Window" must be given to 'tabWindow'. ]                    

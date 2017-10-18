@@ -1159,7 +1159,7 @@ struct AnimatedImageInternal {
         if (border_col.w > 0.0f)
             bb.Max += ImVec2(2,2);
         ItemSize(bb);
-        if (!ItemAdd(bb, NULL))
+        if (!ItemAdd(bb, 0))
             return;
 
         updateTexture();

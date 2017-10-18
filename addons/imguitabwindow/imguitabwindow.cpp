@@ -265,7 +265,9 @@ static bool OldBeginChild(const char* str_id, const ImVec2& size_arg = ImVec2(0,
     char title[256];
     ImFormatString(title, IM_ARRAYSIZE(title), "%s.%s", parent_window->Name, str_id);
 
-    bool ret = ImGui::Begin(title, NULL, size, -1.0f, flags);
+    //bool ret = ImGui::Begin(title, NULL, size, -1.0f, flags); // This triggers an asset now, but this is OK:
+    ImGui::SetNextWindowSize(size);
+    bool ret = ImGui::Begin(title, NULL, flags);
 
     ImGuiWindow* child_window = ImGui::GetCurrentWindow();
     child_window->AutoFitChildAxises = auto_fit_axises;
