@@ -199,7 +199,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
     // Default alpha
     if (bg_alpha < 0.0f)
-        bg_alpha = 1.0f; //It was 0.7f (e.g. style.WindowFillAlphaDefault);
+        bg_alpha = 0.7f;    //1.0f; //It was 0.7f (e.g. style.WindowFillAlphaDefault);
 
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     if (first_begin_of_the_frame)
@@ -699,7 +699,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
             if (!(flags & ImGuiWindowFlags_NoCollapse))
-                RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f);
+                RenderTriangle(window->Pos + style.FramePadding, window->Collapsed ? ImGuiDir_Right : ImGuiDir_Down, 1.0f);
+
 
             /*
             ImVec2 text_min = window->Pos + style.FramePadding;

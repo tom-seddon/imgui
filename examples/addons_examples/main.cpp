@@ -1231,6 +1231,28 @@ void DrawGL()	// Mandatory
         // A commented out example of a read-only version [note that must be: passwordSize = gridSize*gridSize+1, even if password it's shorter]
         //ImGui::Spacing();ImGui::Separator();if (ImGui::PasswordDrawer((char*)"15984",10,ImGuiPasswordDrawerFlags_ReadOnly,250)) {printf("Whole read-only widget clicked\n");fflush(stdout);}
 
+        // Password Drawer
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Text("CheckboxFlags() Overload [Experimental]:");
+        ImGui::Separator();
+
+        static int numFlags=16;
+        static int numRows=2;
+        static int numColumns=3;
+        ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.2f);
+        ImGui::SliderInt("Flags##CBF_Flags",&numFlags,1,20);ImGui::SameLine();
+        ImGui::SliderInt("Rows##CBF_Rows",&numRows,1,4);ImGui::SameLine();
+        ImGui::SliderInt("Columns##CBF_Columns",&numColumns,1,5);
+        ImGui::PopItemWidth();
+
+        static unsigned int cbFlags = (unsigned int)  128+32+8+1;
+        static const unsigned int cbAnnotationFlags = 0;//132;   // Optional (default is zero = no annotations)
+        ImGui::CheckboxFlags("Flags###CBF_Overload",&cbFlags,numFlags,numRows,numColumns,cbAnnotationFlags);
+
+        // BUG: This is completely wrong (both x and y position):
+        //ImGui::SameLine(0,0);ImGui::Text("%s","Test");
+
 #       else //NO_IMGUIVARIOUSCONTROLS
             ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUIVARIOUSCONTROLS

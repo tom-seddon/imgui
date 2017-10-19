@@ -592,7 +592,7 @@ bool ColorCombo(const char* label,ImVec4 *pColorOut,bool supportsAlpha,float wid
                 true, style.FrameRounding);
 
     RenderFrame(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y), frame_bb.Max, GetColorU32(hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button), true, style.FrameRounding); // FIXME-ROUNDING
-    RenderCollapseTriangle(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y) + style.FramePadding, true);
+    RenderTriangle(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y) + style.FramePadding, ImGuiDir_Down);
 
     RenderTextClipped(ImVec2(frame_bb.Min.x+color_quad_size,frame_bb.Min.y) + style.FramePadding, value_bb.Max, label, NULL, NULL);
 
@@ -3948,5 +3948,119 @@ bool PasswordDrawer(char *password, int passwordSize,ImGuiPasswordDrawerFlags fl
     return editable ? 0 : pressed;
 }
 // End MobileLock ===================================================================================================
+
+// Start CheckboxFlags ==============================================================================================
+unsigned int CheckboxFlags(const char* label,unsigned int* flags,int numFlags,int numRows,int numColumns,unsigned int flagAnnotations,int* itemHoveredOut,const unsigned int* pFlagsValues)
+{
+    unsigned int itemPressed = 0;
+    if (itemHoveredOut) *itemHoveredOut=0;
+    if (numRows*numColumns*numFlags==0) return itemPressed;
+
+
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems) return itemPressed;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+
+    int numItemsPerRow = numFlags/numRows;if (numFlags%numRows) ++numItemsPerRow;
+    int numItemsPerGroup = numItemsPerRow/numColumns;if (numItemsPerRow%numColumns) ++numItemsPerGroup;
+    numItemsPerRow = numItemsPerGroup * numColumns;
+
+
+    ImGui::BeginGroup();
+    const ImVec2 startCurPos = window->DC.CursorPos;
+    ImVec2 curPos = startCurPos, maxPos = startCurPos;
+    const ImVec2 checkSize(label_size.y,label_size.y);
+    const float pad = ImMax(1.0f, (float)(int)(checkSize.x / 6.0f));
+    unsigned int j=0;int groupItemCnt = 0, groupCnt = 0;
+    const bool buttonPressed = ImGui::IsMouseClicked(0);
+
+    ImU32 annColor;int annSegments;
+    float annThickness,annCenter,annRadius;
+    if (flagAnnotations)    {
+        annColor = GetColorU32(ImGuiCol_Button);
+        annSegments = (int) (checkSize.x * 0.4f);if (annSegments<3) annSegments=3;
+        annThickness = checkSize.x / 6.0f;
+        annCenter = (float)(int)(checkSize.x * 0.5f);
+        annRadius = (float)(int)(checkSize.x / 4.0f);
+    }
+
+    for (int i=0;i<numFlags;i++) {
+        j = pFlagsValues ? pFlagsValues[i] : (1<<i);
+        ImGui::PushID(i);
+        ImGuiID itemID = window->GetID(label);
+        ImGui::PopID();
+
+        bool v = ((*flags & j) == j);
+        const bool vNotif =  ((flagAnnotations & j) == j);
+        ImRect bb(curPos,curPos + checkSize);
+        ItemSize(bb, style.FramePadding.y);
+
+        if (!ItemAdd(bb, itemID)) break;
+
+        bool hovered=false, held= false, pressed = false;
+        // pressed = ButtonBehavior(bb, itemID, &hovered, &held);   // Too slow!
+        hovered = ItemHoverable(bb, itemID);pressed =  buttonPressed && hovered;   // Way faster
+        if (pressed) {
+            v = !v;
+            if (v)  *flags |= j;
+            else    *flags &= ~j;
+            itemPressed = j;
+        }
+        if (itemHoveredOut && hovered) *itemHoveredOut=i;
+
+        RenderFrame(bb.Min, bb.Max, GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), true, style.FrameRounding);
+
+        if (v)  {
+            window->DrawList->AddRectFilled(bb.Min+ImVec2(pad,pad), bb.Max-ImVec2(pad,pad), GetColorU32(ImGuiCol_CheckMark), style.FrameRounding);
+            if (vNotif) window->DrawList->AddCircle(bb.Min+ImVec2(annCenter,annCenter), annRadius, annColor,annSegments,annThickness);
+        }
+        else if (vNotif) window->DrawList->AddCircle(bb.Min+ImVec2(annCenter,annCenter), annRadius, annColor,annSegments,annThickness);
+
+        if (g.LogEnabled) LogRenderedText(&bb.Min, v ? "[x]" : "[ ]");
+
+        curPos.x+=checkSize.x;
+        if (maxPos.x<curPos.x) maxPos.x=curPos.x;
+        if (i<numFlags-1) {
+            ++groupCnt;
+            if (++groupItemCnt==numItemsPerGroup) {
+                groupItemCnt=0;
+                curPos.x+=style.FramePadding.y*2;
+                if (groupCnt>=numItemsPerRow) {
+                    groupCnt=0;
+                    curPos.x = startCurPos.x;
+                    curPos.y+=checkSize.y;
+                    if (maxPos.y<curPos.y) maxPos.y=curPos.y;
+                }
+                else {
+                    ImGui::SameLine(0,0);
+                }
+            }
+            else ImGui::SameLine(0,0);
+        }
+
+    }
+    ImGui::EndGroup();
+
+
+    if (label_size.x > 0) {
+        const float spacing = style.ItemInnerSpacing.x;
+        SameLine(0, spacing);
+        const ImVec2 textStart(maxPos.x+spacing,startCurPos.y);
+        const ImRect text_bb(textStart, textStart + label_size);
+
+
+        ImGuiID itemID = window->GetID(label);
+        ItemSize(text_bb, style.FramePadding.y*numRows);
+        if (ItemAdd(text_bb, itemID)) RenderText(text_bb.Min, label);
+
+
+    }
+
+    return itemPressed;
+}
+// End CheckboxFlags =================================================================================================
 
 } // namespace ImGui

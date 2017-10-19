@@ -872,4 +872,18 @@ enum ImGuiPasswordDrawerFlags_  {
     ImGuiPasswordDrawerFlags_NoFilledCircles|ImGuiPasswordDrawerFlags_NoLines
 };
 
+
+namespace ImGui {
+
+// Experimental: CheckboxFlags(...) overload to handle multiple flags with a single call
+// returns the value of the pressed flag (not the index of the check box), or zero
+// flagAnnotations, when!=0, just displays a circle in the required checkboxes
+// itemHoveredOut, when used, returns the index of the hovered check box (not its flag), or -1.
+// pFlagsValues, when used, must be numFlags long, and must contain the flag values (not the flag indices) that the control must use.
+// KNOWN BUG: When ImGui::SameLine() is used after it, the alignment is broken
+IMGUI_API unsigned int CheckboxFlags(const char* label,unsigned int* flags,int numFlags,int numRows,int numColumns,unsigned int flagAnnotations=0,int* itemHoveredOut=NULL,const unsigned int* pFlagsValues=NULL);
+
+
+} // namespace ImGui
+
 #endif

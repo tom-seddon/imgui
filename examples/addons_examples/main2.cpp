@@ -241,7 +241,7 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
 #           endif // IMGUISTYLESERIALIZER_H_
 
             ImGui::TextDisabled("%s","These are also present in the \"Preferences\" Panel:");
-            ImGui::DragFloat("Window Alpha##WA2",&mgr.getDockedWindowsAlpha(),0.01f,0.f,1.f);
+            ImGui::DragFloat("Window Alpha##WA2", &mgr.getDockedWindowsAlpha(), 0.005f, -0.01f, 1.0f, mgr.getDockedWindowsAlpha() < 0.0f ? "(default)" : "%.3f");
             ImGui::Spacing();
             bool border = mgr.getDockedWindowsBorder();
             if (ImGui::Checkbox("Window Borders##WB2",&border)) mgr.setDockedWindowsBorder(border); // Sets the window border to all the docked windows
@@ -684,8 +684,16 @@ static void ShowExampleMenuBar(bool isMainMenu=false)
             if (ImGui::MenuItem("Copy", "CTRL+C")) {}
             if (ImGui::MenuItem("Paste", "CTRL+V")) {}
             ImGui::Separator();
-            static bool booleanProp=true;
-            ImGui::MenuItem("Boolean Test", NULL, &booleanProp);
+
+            // Just a test to check/uncheck multiple checkItems without closing the Menu (with the RMB)
+            static bool booleanProps[3]={true,false,true};
+            static const char* names[3]={"Boolean Test 1","Boolean Test 2","Boolean Test 3"};
+            const bool isRightMouseButtonClicked = ImGui::IsMouseClicked(1);    // cached
+            for (int i=0;i<3;i++)   {
+                ImGui::MenuItem(names[i], NULL, &booleanProps[i]);
+                if (isRightMouseButtonClicked && ImGui::IsItemHovered()) booleanProps[i]=!booleanProps[i];
+            }
+
             ImGui::EndMenu();
         }
         if (isMainMenu) {
@@ -789,7 +797,7 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
             ImGui::Text("%s\n",wd.name);
         }
         else if (strcmp(wd.name,"Preferences")==0)    {
-            ImGui::DragFloat("Window Alpha",&mgr.getDockedWindowsAlpha(),0.01f,0.f,1.f);
+            ImGui::DragFloat("Window Alpha##WA1", &mgr.getDockedWindowsAlpha(), 0.005f, -0.01f, 1.0f, mgr.getDockedWindowsAlpha() < 0.0f ? "(default)" : "%.3f");
             bool border = mgr.getDockedWindowsBorder();
             if (ImGui::Checkbox("Window Borders",&border)) mgr.setDockedWindowsBorder(border); // Sets the window border to all the docked windows
             ImGui::SameLine();
@@ -1033,6 +1041,7 @@ int main(int argc, char** argv)
 #   ifdef TEST_ICONS_INSIDE_TTF
     static const ImWchar iconFontRanges[] ={ICON_MIN_FA,ICON_MAX_FA,0};
     ImFontConfig fntCfg;fntCfg.MergeMode = true;fntCfg.PixelSnapH = true;
+    fntCfg.OversampleV=fntCfg.OversampleH=1;    // To save texture memory (but commenting it out makes icons look better)
     gImGuiInitParams.fonts.push_back(ImImpl_InitParams::FontData("fonts/Icons/FontAwesome/font.ttf",fontSizeInPixels,&iconFontRanges[0],&fntCfg));
 #   endif //TEST_ICONS_INSIDE_TTF
 

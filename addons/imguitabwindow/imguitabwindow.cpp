@@ -1677,8 +1677,9 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
             if (selection_changed) mhs.tabWindow->activeNode = this;
 
             if (tabStyle.tabWindowLabelShowAreaSeparator) {
-                ImGui::PushStyleColor(ImGuiCol_Border,ImGui::ColorConvertU32ToFloat4(tabStyle.colors[TabLabelStyle::Col_TabLabelText]));
-                ImGui::Separator();
+                const TabLabelStyle::Colors separatorColor = TabLabelStyle::Col_TabLabelText;//TabLabelStyle::Col_TabLabelSelectedBorder
+                ImGui::PushStyleColor(ImGuiCol_Separator,ImGui::ColorConvertU32ToFloat4(tabStyle.colors[separatorColor]));
+                ImGui::Separator(); // We'd need it higher than just one pixel...
                 ImGui::PopStyleColor();
             }
             ImGui::EndGroup();allTabsSize = ImGui::GetItemRectSize();
