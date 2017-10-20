@@ -386,6 +386,8 @@ struct DockContext
                         GetItemRectMin(), GetItemRectMax(), IsItemHovered() ? color_hovered : color);
             PopID();
         }
+
+        //printf("ActiveId = %x; HoveredId = %x; CurrentWindow = %s; HoveredWindow = %s; HoveredRootWindow = %s\n",GImGui->ActiveId,GImGui->HoveredId,GImGui->CurrentWindow?GImGui->CurrentWindow->Name:"-",GImGui->HoveredWindow?GImGui->HoveredWindow->Name:"-",GImGui->HoveredRootWindow?GImGui->HoveredRootWindow->Name:"-");
     }
 
 
