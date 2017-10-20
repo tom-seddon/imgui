@@ -374,6 +374,7 @@ struct DockContext
 
             if (IsItemHovered()) {
                 SetMouseCursor(cursor);
+                SetHoveredID(GImGui->CurrentWindow->DC.LastItemId);
             }
             
             if (IsItemHovered() && IsMouseClicked(0))
