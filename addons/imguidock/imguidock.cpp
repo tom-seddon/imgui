@@ -232,6 +232,7 @@ struct DockContext
     Dock *m_next_parent;
     int m_last_frame;
     EndAction_ m_end_action;
+    bool m_is_begin_open;
     ImVec2 m_workspace_pos;
     ImVec2 m_workspace_size;
     ImGuiDockSlot m_next_dock_slot;
@@ -240,6 +241,7 @@ struct DockContext
         : m_current(NULL)
         , m_next_parent(NULL)
         , m_last_frame(0)
+	, m_is_begin_open(false)
         , m_next_dock_slot(ImGuiDockSlot_Tab)
     {
     }
@@ -576,8 +578,6 @@ struct DockContext
 
         Begin("##Overlay",
               NULL,
-              ImVec2(0, 0),
-              0.f,
               ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove |
               ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings |
               ImGuiWindowFlags_AlwaysAutoResize);
@@ -761,7 +761,8 @@ struct DockContext
             ImU32 color = GetColorU32(ImGuiCol_FrameBg);
             ImU32 color_active = GetColorU32(ImGuiCol_FrameBgActive);
             ImU32 color_hovered = GetColorU32(ImGuiCol_FrameBgHovered);
-            ImU32 text_color = GetColorU32(ImGuiCol_Text);
+	    ImU32 button_hovered = GetColorU32(ImGuiCol_ButtonHovered);
+	    ImU32 text_color = GetColorU32(ImGuiCol_Text);
             float line_height = GetTextLineHeightWithSpacing();
             float tab_base;
 
@@ -786,19 +787,10 @@ struct DockContext
                     dock_tab->status = Status_Dragged;
                 }
 
+		if (dock_tab->active && close_button) size.x += 16 + GetStyle().ItemSpacing.x;
+
                 bool hovered = IsItemHovered();
                 ImVec2 pos = GetItemRectMin();
-                if (dock_tab->active && close_button)
-                {
-                    size.x += 16 + GetStyle().ItemSpacing.x;
-                    SameLine();
-                    tab_closed = InvisibleButton("close", ImVec2(16, 16));
-                    ImVec2 center = (GetItemRectMin() + GetItemRectMax()) * 0.5f;
-                    draw_list->AddLine(
-                                center + ImVec2(-3.5f, -3.5f), center + ImVec2(3.5f, 3.5f), text_color);
-                    draw_list->AddLine(
-                                center + ImVec2(3.5f, -3.5f), center + ImVec2(-3.5f, 3.5f), text_color);
-                }
                 tab_base = pos.y;
                 draw_list->PathClear();
                 draw_list->PathLineTo(pos + ImVec2(-15, size.y));
@@ -812,6 +804,20 @@ struct DockContext
 		draw_list->PathFillConvex(
                             hovered ? color_hovered : (dock_tab->active ? color_active : color));
                 draw_list->AddText(pos + ImVec2(0, 1), text_color, dock_tab->label, text_end);
+
+		if (dock_tab->active && close_button)	{
+		    size.x += 16 + GetStyle().ItemSpacing.x;
+		    SameLine();
+		    tab_closed = InvisibleButton("close", ImVec2(16, 16));
+		    ImVec2 center = (GetItemRectMin() + GetItemRectMax()) * 0.5f;
+		    if (IsItemHovered())    {
+			draw_list->AddRectFilled(center + ImVec2(-6.0f, -6.0f), center + ImVec2(7.0f, 7.0f), button_hovered);
+		    }
+		    draw_list->AddLine(
+				center + ImVec2(-3.5f, -3.5f), center + ImVec2(3.5f, 3.5f), text_color);
+		    draw_list->AddLine(
+				center + ImVec2(3.5f, -3.5f), center + ImVec2(-3.5f, 3.5f), text_color);
+		}
 
                 dock_tab = dock_tab->next_tab;
             }
@@ -1004,6 +1010,8 @@ struct DockContext
 
     bool begin(const char* label, bool* opened, ImGuiWindowFlags extra_flags, const ImVec2& default_size)
     {
+	IM_ASSERT(!m_is_begin_open);
+	m_is_begin_open = true;
         ImGuiDockSlot next_slot = m_next_dock_slot;
         m_next_dock_slot = ImGuiDockSlot_Tab;
 	Dock& dock = getDock(label, !opened || *opened, default_size);
@@ -1052,7 +1060,7 @@ struct DockContext
         if (is_float)
         {
             SetNextWindowPos(dock.pos);
-            SetNextWindowSize(dock.size);
+	    SetNextWindowSize(dock.size, ImGuiCond_FirstUseEver);
             bool ret = Begin(label,
                              opened,
                              dock.size,
@@ -1121,6 +1129,7 @@ struct DockContext
             }
             //endPanel();
         }
+	m_is_begin_open = false;
     }
 
 

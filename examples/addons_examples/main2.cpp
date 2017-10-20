@@ -55,6 +55,31 @@ namespace ImGui {
 static const ImVec4 gDefaultClearColor(0.8f, 0.6f, 0.6f, 1.0f);
 static ImVec4 gClearColor = gDefaultClearColor;
 
+// Here are two static methods useful to handle the change of size of the togglable mainMenu we will use
+// Returns the height of the main menu based on the current font (from: ImGui::CalcMainMenuHeight() in imguihelper.h)
+inline static float CalcMainMenuHeight() {
+    ImGuiIO& io = ImGui::GetIO();
+    ImGuiStyle& style = ImGui::GetStyle();
+    ImFont* font = ImGui::GetFont();
+    if (!font) {
+        if (io.Fonts->Fonts.size()>0) font = io.Fonts->Fonts[0];
+        else return (14)+style.FramePadding.y * 2.0f;
+    }
+    return (io.FontGlobalScale * font->Scale * font->FontSize) + style.FramePadding.y * 2.0f;
+}
+inline static void SetPanelManagerBoundsToIncludeMainMenuIfPresent(int displayX=-1, int displayY=-1)  {
+    if (gpShowMainMenuBar)  {
+    if (displayX<=0) displayX = ImGui::GetIO().DisplaySize.x;
+    if (displayY<=0) displayY = ImGui::GetIO().DisplaySize.y;
+    ImVec4 bounds(0,0,(float)displayX,(float)displayY);   // (0,0,-1,-1) defaults to (0,0,io.DisplaySize.x,io.DisplaySize.y)
+        if (*gpShowMainMenuBar) {
+            const float mainMenuHeight = CalcMainMenuHeight();
+            bounds = ImVec4(0,mainMenuHeight,displayX,displayY-mainMenuHeight);
+        }
+        mgr.setDisplayPortion(bounds);
+    }
+}
+
 
 #ifndef NO_IMGUITABWINDOW
 ImGui::TabWindow tabWindows[5]; // 0 = center, 1 = left, 2 = right, 3 = top, 4 = bottom
@@ -203,11 +228,14 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             ImGui::Spacing();
             ImGui::TextDisabled("%s","Some controls to chenge the GUI style:");
             ImGui::PushItemWidth(275);
-            ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.2f"); // scale everything
+            if (ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.2f")) SetPanelManagerBoundsToIncludeMainMenuIfPresent();  // This is because the Main Menu height changes with the Font Scale
             ImGui::PopItemWidth();
             if (ImGui::GetIO().FontGlobalScale!=1.f)    {
                 ImGui::SameLine(0,10);
-                if (ImGui::SmallButton("Reset##glFontGlobalScale")) ImGui::GetIO().FontGlobalScale = 1.f;
+                if (ImGui::SmallButton("Reset##glFontGlobalScale")) {
+                    ImGui::GetIO().FontGlobalScale = 1.f;
+                    SetPanelManagerBoundsToIncludeMainMenuIfPresent();  // This is because the Main Menu height changes with the Font Scale
+                }
             }
             ImGui::Spacing();
 
@@ -342,31 +370,6 @@ void AddTabWindowIfSupported(ImGui::PanelManagerPane* pane) {
     pane->addButtonAndWindow(ImGui::Toolbutton(names[index],texId,uv0,uv1,buttonSize),              // the 1st arg of Toolbutton is only used as a text for the tooltip.
                 ImGui::PanelManagerPaneAssociatedWindow(names[index],-1,&DrawDockedTabWindows,NULL,ImGuiWindowFlags_NoScrollbar));    //  the 1st arg of PanelManagerPaneAssociatedWindow is the name of the window
 #endif //NO_IMGUITABWINDOW
-}
-
-// Here are two static methods useful to handle the change of size of the togglable mainMenu we will use
-// Returns the height of the main menu based on the current font (from: ImGui::CalcMainMenuHeight() in imguihelper.h)
-inline static float CalcMainMenuHeight() {
-    ImGuiIO& io = ImGui::GetIO();
-    ImGuiStyle& style = ImGui::GetStyle();
-    ImFont* font = ImGui::GetFont();
-    if (!font) {
-        if (io.Fonts->Fonts.size()>0) font = io.Fonts->Fonts[0];
-        else return (14)+style.FramePadding.y * 2.0f;
-    }
-    return (io.FontGlobalScale * font->Scale * font->FontSize) + style.FramePadding.y * 2.0f;
-}
-inline static void SetPanelManagerBoundsToIncludeMainMenuIfPresent(int displayX=-1, int displayY=-1)  {
-    if (gpShowMainMenuBar)  {
-	if (displayX<=0) displayX = ImGui::GetIO().DisplaySize.x;
-	if (displayY<=0) displayY = ImGui::GetIO().DisplaySize.y;
-	ImVec4 bounds(0,0,(float)displayX,(float)displayY);   // (0,0,-1,-1) defaults to (0,0,io.DisplaySize.x,io.DisplaySize.y)
-        if (*gpShowMainMenuBar) {
-            const float mainMenuHeight = CalcMainMenuHeight();
-            bounds = ImVec4(0,mainMenuHeight,displayX,displayY-mainMenuHeight);
-        }
-        mgr.setDisplayPortion(bounds);
-    }
 }
 
 // Here are refactored the load/save methods of the ImGui::PanelManager (mainly the hover and docked sizes of all windows and the button states of the 4 toolbars)
@@ -850,7 +853,8 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
     }
     else {
         // Here we draw our toggle windows (in our case ToggleWindowNames) in the usual way:
-        if (ImGui::Begin(wd.name,&wd.open,wd.pos,-1.f,ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_ShowBorders))  {
+        // We can use -1.f for alpha here, instead of mgr.getDockedWindowsAlpha(), that can be too low (but choose what you like)
+        if (ImGui::Begin(wd.name,&wd.open,wd.size,-1.f,ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_ShowBorders))  {
             if (strcmp(wd.name,ToggleWindowNames[0])==0)   {
                 // Draw Toggle Window 1
                 ImGui::SetWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x*0.15f,ImGui::GetIO().DisplaySize.y*0.24f),ImGuiSetCond_FirstUseEver);
