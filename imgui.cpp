@@ -643,7 +643,7 @@ static void             MarkIniSettingsDirty(ImGuiWindow* window);
 
 static ImRect           GetVisibleRect();
 
-static void             CloseInactivePopups();
+static void             CloseInactivePopups(ImGuiWindow* ref_window);
 static void             ClosePopupToLevel(int remaining);
 static ImGuiWindow*     GetFrontMostModalRootWindow();
 static ImVec2           FindBestPopupWindowPos(const ImVec2& base_pos, const ImVec2& size, int* last_dir, const ImRect& rect_to_avoid);
@@ -2441,7 +2441,7 @@ void ImGui::NewFrame()
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
     g.CurrentWindowStack.resize(0);
     g.CurrentPopupStack.resize(0);
-    CloseInactivePopups();
+    CloseInactivePopups(g.NavWindow);
 
     // Create implicit window - we will only render it if the user has added something to it.
     // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
@@ -2771,25 +2771,35 @@ void ImGui::EndFrame()
         g.CurrentWindow->Active = false;
     ImGui::End();
 
-    // Click to focus window and start moving (after we're done with all our widgets)
-    if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
+    if (g.ActiveId == 0 && g.HoveredId == 0)
     {
-        if (!(g.NavWindow && !g.NavWindow->WasActive && g.NavWindow->Active)) // Unless we just made a popup appear
+        if (!g.NavWindow || !g.NavWindow->Appearing) // Unless we just made a window/popup appear
         {
-            if (g.HoveredRootWindow != NULL)
+            // Click to focus window and start moving (after we're done with all our widgets)
+            if (g.IO.MouseClicked[0])
             {
-                FocusWindow(g.HoveredWindow);
-                if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove))
+                if (g.HoveredRootWindow != NULL)
                 {
-                    g.MovedWindow = g.HoveredWindow;
-                    g.MovedWindowMoveId = g.HoveredWindow->MoveId;
-                    SetActiveID(g.MovedWindowMoveId, g.HoveredRootWindow);
+                    FocusWindow(g.HoveredWindow);
+                    if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoMove))
+                    {
+                        g.MovedWindow = g.HoveredWindow;
+                        g.MovedWindowMoveId = g.HoveredWindow->MoveId;
+                        SetActiveID(g.MovedWindowMoveId, g.HoveredRootWindow);
+                    }
+                }
+                else if (g.NavWindow != NULL && GetFrontMostModalRootWindow() == NULL)
+                {
+                    // Clicking on void disable focus
+                    FocusWindow(NULL);
                 }
             }
-            else if (g.NavWindow != NULL && GetFrontMostModalRootWindow() == NULL)
+
+            // With right mouse button we close popups without changing focus
+            // (The left mouse button path calls FocusWindow which will lead NewFrame->CloseInactivePopups to trigger)
+            if (g.IO.MouseClicked[1])
             {
-                // Clicking on void disable focus
-                FocusWindow(NULL);
+                CloseInactivePopups(g.HoveredWindow);
             }
         }
     }
@@ -3564,7 +3574,7 @@ void ImGui::OpenPopup(const char* str_id)
     OpenPopupEx(g.CurrentWindow->GetID(str_id), false);
 }
 
-static void CloseInactivePopups()
+static void CloseInactivePopups(ImGuiWindow* ref_window)
 {
     ImGuiContext& g = *GImGui;
     if (g.OpenPopupStack.empty())
@@ -3573,7 +3583,7 @@ static void CloseInactivePopups()
     // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it.
     // Don't close our own child popup windows
     int n = 0;
-    if (g.NavWindow)
+    if (ref_window)
     {
         for (n = 0; n < g.OpenPopupStack.Size; n++)
         {
@@ -3586,7 +3596,7 @@ static void CloseInactivePopups()
 
             bool has_focus = false;
             for (int m = n; m < g.OpenPopupStack.Size && !has_focus; m++)
-                has_focus = (g.OpenPopupStack[m].Window && g.OpenPopupStack[m].Window->RootWindow == g.NavWindow->RootWindow);
+                has_focus = (g.OpenPopupStack[m].Window && g.OpenPopupStack[m].Window->RootWindow == ref_window->RootWindow);
             if (!has_focus)
                 break;
         }
@@ -3747,7 +3757,7 @@ bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
     IM_ASSERT(id != 0);                                                  // However, you cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
     if (IsItemHovered() && IsMouseClicked(mouse_button))
         OpenPopupEx(id, false);
-    return BeginPopupEx(id, 0);
+    return BeginPopupEx(id, ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_AlwaysAutoResize);
 }
 
 bool ImGui::BeginPopupContextWindow(const char* str_id, int mouse_button, bool also_over_items)
@@ -3758,7 +3768,7 @@ bool ImGui::BeginPopupContextWindow(const char* str_id, int mouse_button, bool a
     if (IsWindowRectHovered() && IsMouseClicked(mouse_button))
         if (also_over_items || !IsAnyItemHovered())
             OpenPopupEx(id, true);
-    return BeginPopupEx(id, 0);
+    return BeginPopupEx(id, ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_AlwaysAutoResize);
 }
 
 bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
@@ -3768,13 +3778,14 @@ bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
     ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
     if (!IsAnyWindowHovered() && IsMouseClicked(mouse_button))
         OpenPopupEx(id, true);
-    return BeginPopupEx(id, 0);
+    return BeginPopupEx(id, ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_AlwaysAutoResize);
 }
 
 static bool BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
 {
     ImGuiWindow* parent_window = ImGui::GetCurrentWindow();
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_ChildWindow;
+    flags |= (parent_window->Flags & ImGuiWindowFlags_NoMove);  // Inherit the NoMove flag
 
     const ImVec2 content_avail = ImGui::GetContentRegionAvail();
     ImVec2 size = ImFloor(size_arg);
