@@ -88,6 +88,14 @@ typedef enum ImGuiDockSlot {
 
 namespace ImGui{
 
+struct DockContext;
+
+IMGUI_API DockContext *CreateDockContext();
+IMGUI_API void DestroyDockContext(DockContext *dock_context);
+
+IMGUI_API void SetCurrentDockContext(DockContext *dock_context);
+IMGUI_API DockContext *GetCurrentDockContext();
+
 IMGUI_API void BeginDockspace();
 IMGUI_API void EndDockspace();
 IMGUI_API void ShutdownDock();

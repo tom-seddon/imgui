@@ -246,7 +246,17 @@ struct DockContext
 
 
     ~DockContext() {
-	ShutdownDock();//New
+	Shutdown();//New
+    }
+
+    void Shutdown()
+    {
+        for (int i = 0; i < m_docks.size(); ++i)
+        {
+            m_docks[i]->~Dock();
+            MemFree(m_docks[i]);
+        }
+        m_docks.clear();
     }
 
     Dock& getDock(const char* label, bool opened, const ImVec2& default_size)
@@ -1166,28 +1176,58 @@ struct DockContext
 };
 
 
-static DockContext g_dock;
+//static DockContext g_dock;
+static DockContext g_default_dock_context;
+static DockContext *g_dock_context = &g_default_dock_context;
 
+DockContext *CreateDockContext()
+{
+    return new DockContext;
+}
+
+void DestroyDockContext(DockContext *dock_context)
+{
+    if (dock_context == &g_default_dock_context)
+    {
+        // No-op.
+    }
+    else
+    {
+        if (dock_context == g_dock_context)
+            SetCurrentDockContext(nullptr);
+
+        delete dock_context;
+        dock_context = nullptr;
+    }
+}
+
+void SetCurrentDockContext(DockContext *dock_context)
+{
+    if (!dock_context)
+        g_dock_context = &g_default_dock_context;
+    else
+        g_dock_context = dock_context;
+}
+
+DockContext *GetCurrentDockContext()
+{
+    return g_dock_context;
+}
 
 void ShutdownDock()
 {
-    for (int i = 0; i < g_dock.m_docks.size(); ++i)
-    {
-        g_dock.m_docks[i]->~Dock();
-        MemFree(g_dock.m_docks[i]);
-    }
-    g_dock.m_docks.clear();
+    g_dock_context->Shutdown();
 }
 
 void SetNextDock(ImGuiDockSlot slot) {
-    g_dock.m_next_dock_slot = slot;
+    g_dock_context->m_next_dock_slot = slot;
 }
 
 void BeginDockspace() {
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar;
     BeginChild("###workspace", ImVec2(0,0), false, flags);
-    g_dock.m_workspace_pos = GetWindowPos();
-    g_dock.m_workspace_size = GetWindowSize();
+    g_dock_context->m_workspace_pos = GetWindowPos();
+    g_dock_context->m_workspace_size = GetWindowSize();
 }
 
 void EndDockspace() {
@@ -1196,24 +1236,24 @@ void EndDockspace() {
 
 void SetDockActive()
 {
-    g_dock.setDockActive();
+    g_dock_context->setDockActive();
 }
 
 
 bool BeginDock(const char* label, bool* opened, ImGuiWindowFlags extra_flags, const ImVec2& default_size)
 {
-    return g_dock.begin(label, opened, extra_flags, default_size);
+    return g_dock_context->begin(label, opened, extra_flags, default_size);
 }
 
 
 void EndDock()
 {
-    g_dock.end();
+    g_dock_context->end();
 }
 
 void DockDebugWindow()
 {
-    g_dock.debugWindow();
+    g_dock_context->debugWindow();
 }
 
 
@@ -1221,7 +1261,7 @@ void DockDebugWindow()
 #   ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
     bool SaveDock(ImGuiHelper::Serializer& s)	{
 	if (!s.isValid()) return false;
-	DockContext& myDock = g_dock;
+	DockContext& myDock = *g_dock_context;
 	ImVector<DockContext::Dock*>& m_docks = myDock.m_docks;
 
 	int sz = m_docks.size();s.save(&sz,"NumDocks");int id=0;
@@ -1299,7 +1339,7 @@ void DockDebugWindow()
     bool LoadDock(ImGuiHelper::Deserializer& d,const char ** pOptionalBufferStart)  {
 	if (!d.isValid()) return false;
 	const char* amount = pOptionalBufferStart ? (*pOptionalBufferStart) : 0;
-	DockContext& myDock = g_dock;
+	DockContext& myDock = *g_dock_context;
 	ImVector<DockContext::Dock*>& m_docks = myDock.m_docks;
 	// clear
 	for (int i = 0; i < m_docks.size(); ++i)    {
