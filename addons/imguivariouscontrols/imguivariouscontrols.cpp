@@ -4019,7 +4019,8 @@ unsigned int CheckboxFlags(const char* label,unsigned int* flags,int numFlags,in
         }
         else if (vNotif) window->DrawList->AddCircle(bb.Min+ImVec2(annCenter,annCenter), annRadius, annColor,annSegments,annThickness);
 
-        if (g.LogEnabled) LogRenderedText(&bb.Min, v ? "[x]" : "[ ]");
+        // Nope: LogRenderedText is static inside imgui.cpp => we remove it, so that imguivariouscontrols.h/cpp can be used on their own too
+        //if (g.LogEnabled) LogRenderedText(&bb.Min, v ? "[x]" : "[ ]");
 
         curPos.x+=checkSize.x;
         if (maxPos.x<curPos.x) maxPos.x=curPos.x;
