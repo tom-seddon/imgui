@@ -148,8 +148,7 @@ struct DockContext
             if (isHorizontal())
             {
                 s.y = _size.y;
-                s.x = (float)int(
-                            _size.x * children[0]->size.x / (children[0]->size.x + children[1]->size.x));
+                s.x = (float)int(_size.x * children[0]->size.x / (children[0]->size.x + children[1]->size.x));
                 if (s.x < children[0]->getMinSize().x)
                 {
                     s.x = children[0]->getMinSize().x;
@@ -168,8 +167,7 @@ struct DockContext
             else
             {
                 s.x = _size.x;
-                s.y = (float)int(
-                            _size.y * children[0]->size.y / (children[0]->size.y + children[1]->size.y));
+                s.y = (float)int(_size.y * children[0]->size.y / (children[0]->size.y + children[1]->size.y));
                 if (s.y < children[0]->getMinSize().y)
                 {
                     s.y = children[0]->getMinSize().y;
@@ -278,9 +276,9 @@ struct DockContext
         new_dock->setActive();
         new_dock->status = (m_docks.size() == 1)?Status_Docked:Status_Float;
         new_dock->pos = ImVec2(0, 0);
-	//new_dock->size = GetIO().DisplaySize;
-	new_dock->size.x = default_size.x < 0 ? GetIO().DisplaySize.x : default_size.x;
-	new_dock->size.y = default_size.y < 0 ? GetIO().DisplaySize.y : default_size.y;
+	    //new_dock->size = GetIO().DisplaySize;
+	    new_dock->size.x = default_size.x < 0 ? GetIO().DisplaySize.x : default_size.x;
+	    new_dock->size.y = default_size.y < 0 ? GetIO().DisplaySize.y : default_size.y;
         new_dock->opened = opened;
         new_dock->first = true;
         new_dock->last_frame = 0;
@@ -450,8 +448,8 @@ struct DockContext
         switch (dock_slot)
         {
         default: return rect;
-	//case ImGuiDockSlot_Top: return ImRect(rect.Min, ImVec2(rect.Max.x, rect.Min.y + half_size.y));	  //  original
-	case ImGuiDockSlot_Top: return ImRect(rect.Min, rect.Min + ImVec2(rect.Max.x - rect.Min.x, half_size.y)); //  @r-lyeh
+	    //case ImGuiDockSlot_Top: return ImRect(rect.Min, ImVec2(rect.Max.x, rect.Min.y + half_size.y));	  //  original
+	    case ImGuiDockSlot_Top: return ImRect(rect.Min, rect.Min + ImVec2(rect.Max.x - rect.Min.x, half_size.y)); //  @r-lyeh
         case ImGuiDockSlot_Right: return ImRect(rect.Min + ImVec2(half_size.x, 0), rect.Max);
         case ImGuiDockSlot_Bottom: return ImRect(rect.Min + ImVec2(0, half_size.y), rect.Max);
         case ImGuiDockSlot_Left: return ImRect(rect.Min, ImVec2(rect.Min.x + half_size.x, rect.Max.y));
@@ -516,72 +514,71 @@ struct DockContext
     bool dockSlots(Dock& dock, Dock* dest_dock, const ImRect& rect, bool on_border)
     {
         ImDrawList* canvas = GetWindowDrawList();
-	ImU32 color = GetColorU32(ImGuiCol_Button);		    // Color of all the available "spots"
-	ImU32 color_hovered = GetColorU32(ImGuiCol_ButtonHovered);  // Color of the hovered "spot"
-	ImU32 docked_rect_color = color;
-	ImVec2 mouse_pos = GetIO().MousePos;
-	ImTextureID texture = NULL;
-	if (gImGuiDockReuseTabWindowTextureIfAvailable)	{
+	    ImU32 color = GetColorU32(ImGuiCol_Button);		    // Color of all the available "spots"
+	    ImU32 color_hovered = GetColorU32(ImGuiCol_ButtonHovered);  // Color of the hovered "spot"
+	    ImU32 docked_rect_color = color;
+	    ImVec2 mouse_pos = GetIO().MousePos;
+	    ImTextureID texture = NULL;
+	    if (gImGuiDockReuseTabWindowTextureIfAvailable)	{
 #	ifdef IMGUITABWINDOW_H_
-	texture = ImGui::TabWindow::DockPanelIconTextureID;	// Nope. It doesn't look OK.
-	if (texture) {
-	    color = 0x00FFFFFF | 0x90000000;
-	    color_hovered = (color_hovered & 0x00FFFFFF) | 0x90000000;
-	    docked_rect_color = (docked_rect_color &  0x00FFFFFF) | 0x80000000;
+	        texture = ImGui::TabWindow::DockPanelIconTextureID;	// Nope. It doesn't look OK.
+	        if (texture) {
+	            color = 0x00FFFFFF | 0x90000000;
+	            color_hovered = (color_hovered & 0x00FFFFFF) | 0x90000000;
+	            docked_rect_color = (docked_rect_color &  0x00FFFFFF) | 0x80000000;
 
-	    canvas->ChannelsSplit(2);	// Solves overlay order. But won't it break something else ?
-	}
+	            canvas->ChannelsSplit(2);	// Solves overlay order. But won't it break something else ?
+	        }
 #	endif ////IMGUITABWINDOW_H_
-	}
+    	}
         for (int i = 0; i < (on_border ? 4 : 5); ++i)
         {
-	    const ImGuiDockSlot iSlot = (ImGuiDockSlot)i;
-            ImRect r =
-		    on_border ? getSlotRectOnBorder(rect, iSlot) : getSlotRect(rect, iSlot);
+	        const ImGuiDockSlot iSlot = (ImGuiDockSlot)i;
+            ImRect r = on_border ? getSlotRectOnBorder(rect, iSlot) : getSlotRect(rect, iSlot);
             bool hovered = r.Contains(mouse_pos);
-	    ImU32 color_to_use = hovered ? color_hovered : color;
-	    if (!texture) canvas->AddRectFilled(r.Min, r.Max, color_to_use);
-	    else {
+	        ImU32 color_to_use = hovered ? color_hovered : color;
+	        if (!texture) canvas->AddRectFilled(r.Min, r.Max, color_to_use);
+	        else {
 #		ifdef IMGUITABWINDOW_H_
-		canvas->ChannelsSetCurrent(0);	// Background
-		switch (iSlot)	{
-		case ImGuiDockSlot_Left:
-		case ImGuiDockSlot_Right:
-		case ImGuiDockSlot_Top:
-		case ImGuiDockSlot_Bottom:
-		{
-		    const int uvIndex = (i==0)?3:(i==2)?0:(i==3)?2:i;
-		    ImVec2 uv0(0.75f,(float)uvIndex*0.25f),uv1(uv0.x+0.25f,uv0.y+0.25f);
-		    canvas->AddImage(texture,r.Min, r.Max,uv0,uv1,color_to_use);
-		}
-		break;
-		case ImGuiDockSlot_Tab:
-		    canvas->AddImage(texture,r.Min, r.Max,ImVec2(0.22916f,0.22916f),ImVec2(0.45834f,0.45834f),color_to_use);
-		break;
-		default:
-		    canvas->AddRectFilled(r.Min, r.Max, color_to_use);
-		break;
-		}
-		canvas->ChannelsSetCurrent(1);	// Foreground
+        		canvas->ChannelsSetCurrent(0);	// Background
+		        switch (iSlot)	{
+		        case ImGuiDockSlot_Left:
+		        case ImGuiDockSlot_Right:
+		        case ImGuiDockSlot_Top:
+		        case ImGuiDockSlot_Bottom:
+		            {
+		                const int uvIndex = (i==0)?3:(i==2)?0:(i==3)?2:i;
+		                ImVec2 uv0(0.75f,(float)uvIndex*0.25f),uv1(uv0.x+0.25f,uv0.y+0.25f);
+		                canvas->AddImage(texture,r.Min, r.Max,uv0,uv1,color_to_use);
+		            }
+		            break;
+		        case ImGuiDockSlot_Tab:
+		            canvas->AddImage(texture,r.Min, r.Max,ImVec2(0.22916f,0.22916f),ImVec2(0.45834f,0.45834f),color_to_use);
+    		        break;
+	        	default:
+		            canvas->AddRectFilled(r.Min, r.Max, color_to_use);
+		            break;
+		        }
+		        canvas->ChannelsSetCurrent(1);	// Foreground
 #		endif ////IMGUITABWINDOW_H_
-	    }
+	        }
             if (!hovered) continue;
 
             if (!IsMouseDown(0))
             {
 #		ifdef IMGUITABWINDOW_H_
-		if (texture) canvas->ChannelsMerge();
+		        if (texture) canvas->ChannelsMerge();
 #		endif ////IMGUITABWINDOW_H_
-		doDock(dock, dest_dock ? dest_dock : getRootDock(), iSlot);
+		        doDock(dock, dest_dock ? dest_dock : getRootDock(), iSlot);
                 return true;
             }
-	    ImRect docked_rect = getDockedRect(rect, iSlot);
-	    canvas->AddRectFilled(docked_rect.Min, docked_rect.Max, docked_rect_color);
+	        ImRect docked_rect = getDockedRect(rect, iSlot);
+	        canvas->AddRectFilled(docked_rect.Min, docked_rect.Max, docked_rect_color);
         }
 #	ifdef IMGUITABWINDOW_H_
-	if (texture) canvas->ChannelsMerge();
+	    if (texture) canvas->ChannelsMerge();
 #	endif ////IMGUITABWINDOW_H_
-	return false;
+	    return false;
     }
 
 
@@ -601,7 +598,7 @@ struct DockContext
         canvas->PushClipRectFullScreen();
 
         ImU32 docked_color = GetColorU32(ImGuiCol_FrameBg);
-	docked_color = (docked_color & 0x00ffFFFF) | 0x80000000;
+	    docked_color = (docked_color & 0x00ffFFFF) | 0x80000000;
         dock.pos = GetIO().MousePos - m_drag_offset;
         if (dest_dock)
         {
@@ -824,8 +821,7 @@ struct DockContext
                                              pos + ImVec2(size.x + 10, size.y),
                                              pos + ImVec2(size.x + 15, size.y),
                                              10);
-		draw_list->PathFillConvex(
-                            hovered ? color_hovered : (dock_tab->active ? color_active : color));
+		        draw_list->PathFillConvex(hovered ? color_hovered : (dock_tab->active ? color_active : color));
                 draw_list->AddText(pos + ImVec2(0, 1), text_color, dock_tab->label, text_end);
 
                 dock_tab = dock_tab->next_tab;
@@ -1025,7 +1021,7 @@ struct DockContext
     {
         ImGuiDockSlot next_slot = m_next_dock_slot;
         m_next_dock_slot = ImGuiDockSlot_Tab;
-	Dock& dock = getDock(label, !opened || *opened, default_size);
+	    Dock& dock = getDock(label, !opened || *opened, default_size);
         if (!dock.opened && (!opened || *opened)) tryDockToStoredLocation(dock);
         dock.last_frame = ImGui::GetFrameCount();
         if (strcmp(dock.label, label) != 0)
@@ -1282,27 +1278,27 @@ bool AreAnyCurrentDockContextDocksDocked()
 #if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #   ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
     bool SaveDock(ImGuiHelper::Serializer& s)	{
-	if (!s.isValid()) return false;
-	DockContext& myDock = *g_dock_context;
-	ImVector<DockContext::Dock*>& m_docks = myDock.m_docks;
+	    if (!s.isValid()) return false;
+	    DockContext& myDock = *g_dock_context;
+	    ImVector<DockContext::Dock*>& m_docks = myDock.m_docks;
 
-	int sz = m_docks.size();s.save(&sz,"NumDocks");int id=0;
-	for (int i = 0; i < m_docks.size(); ++i)    {
-	    DockContext::Dock& dock = *m_docks[i];
-	    s.save(&i,"index");
-	    if (dock.label) s.save(dock.label,"label");
-	    s.save(&dock.pos.x,"pos",2);
-	    s.save(&dock.size.x,"size",2);
-	    id = (int) dock.status;s.save(ImGui::FT_ENUM,&id,"status");
-	    s.save(&dock.active,"active");
-	    s.save(&dock.opened,"opened");
-	    id = myDock.getDockIndex(dock.prev_tab);s.save(&id,"prev");
-	    id = myDock.getDockIndex(dock.next_tab);s.save(&id,"next");
-	    id = myDock.getDockIndex(dock.children[0]);s.save(&id,"child0");
-	    id = myDock.getDockIndex(dock.children[1]);s.save(&id,"child1");
-	    id = myDock.getDockIndex(dock.parent);s.save(&id,"parent");
-	}
-	return true;
+	    int sz = m_docks.size();s.save(&sz,"NumDocks");int id=0;
+	    for (int i = 0; i < m_docks.size(); ++i)    {
+	        DockContext::Dock& dock = *m_docks[i];
+	        s.save(&i,"index");
+	        if (dock.label) s.save(dock.label,"label");
+	        s.save(&dock.pos.x,"pos",2);
+	        s.save(&dock.size.x,"size",2);
+	        id = (int) dock.status;s.save(ImGui::FT_ENUM,&id,"status");
+	        s.save(&dock.active,"active");
+	        s.save(&dock.opened,"opened");
+	        id = myDock.getDockIndex(dock.prev_tab);s.save(&id,"prev");
+	        id = myDock.getDockIndex(dock.next_tab);s.save(&id,"next");
+	        id = myDock.getDockIndex(dock.children[0]);s.save(&id,"child0");
+	        id = myDock.getDockIndex(dock.children[1]);s.save(&id,"child1");
+	        id = myDock.getDockIndex(dock.parent);s.save(&id,"parent");
+	    }
+	    return true;
     }
     bool SaveDock(const char* filename)   {ImGuiHelper::Serializer s(filename);return SaveDock(s);}
 #   endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
@@ -1317,24 +1313,24 @@ bool AreAnyCurrentDockContextDocksDocked()
 	    ImVector<DockContext::Dock*>& m_docks = myDock.m_docks;
 	    const int* pValueInt = (const int*) pValue;
 	    if (strcmp(name,"NumDocks")==0) {
-		IM_ASSERT(P.curIndex==-1);
-		P.numDocks = *pValueInt;
-		IM_ASSERT(m_docks.size()==0);
-		m_docks.reserve(P.numDocks);
-		for (int i=0;i<P.numDocks;i++)  {
-		    DockContext::Dock* new_dock = (DockContext::Dock*)ImGui::MemAlloc(sizeof(DockContext::Dock));
-		    m_docks.push_back(IM_PLACEMENT_NEW(new_dock) DockContext::Dock());
-		}
-		P.curIndex=0;
+		    IM_ASSERT(P.curIndex==-1);
+		    P.numDocks = *pValueInt;
+		    IM_ASSERT(m_docks.size()==0);
+		    m_docks.reserve(P.numDocks);
+		    for (int i=0;i<P.numDocks;i++)  {
+		        DockContext::Dock* new_dock = (DockContext::Dock*)ImGui::MemAlloc(sizeof(DockContext::Dock));
+		        m_docks.push_back(IM_PLACEMENT_NEW(new_dock) DockContext::Dock());
+		    }
+		    P.curIndex=0;
 	    }
 	    else if (P.curIndex<0 || P.curIndex>P.numDocks) {IM_ASSERT(true);return true;}
 	    else if (strcmp(name,"index")==0)  {
-		P.curIndex = *pValueInt;
-		IM_ASSERT(P.curIndex>=0 && P.curIndex<m_docks.size());
-		m_docks[P.curIndex]->last_frame = 0;
-		m_docks[P.curIndex]->invalid_frames = 0;
-	    }
-	    else if (strcmp(name,"label")==0) {
+		    P.curIndex = *pValueInt;
+		    IM_ASSERT(P.curIndex>=0 && P.curIndex<m_docks.size());
+		    m_docks[P.curIndex]->last_frame = 0;
+		    m_docks[P.curIndex]->invalid_frames = 0;
+	    } 
+        else if (strcmp(name,"label")==0) {
 		    m_docks[P.curIndex]->label = ImStrdup((const char*) pValue);
 		    m_docks[P.curIndex]->id = ImHash(m_docks[P.curIndex]->label, 0);
 	    }
@@ -1349,33 +1345,33 @@ bool AreAnyCurrentDockContextDocksDocked()
 	    else if (strcmp(name,"child0")==0) m_docks[P.curIndex]->children[0] = getDockByIndex(&myDock,*pValueInt);
 	    else if (strcmp(name,"child1")==0) m_docks[P.curIndex]->children[1] = getDockByIndex(&myDock,*pValueInt);
 	    else if (strcmp(name,"parent")==0) {
-		m_docks[P.curIndex]->parent = getDockByIndex(&myDock,*pValueInt);
-		if (P.curIndex+1==P.numDocks) {
-		    return true;
-		}
+		    m_docks[P.curIndex]->parent = getDockByIndex(&myDock,*pValueInt);
+		    if (P.curIndex+1==P.numDocks) {
+		        return true;
+		    }
 	    }
 
 	    return false;
 	}
     };
     bool LoadDock(ImGuiHelper::Deserializer& d,const char ** pOptionalBufferStart)  {
-	if (!d.isValid()) return false;
-	const char* amount = pOptionalBufferStart ? (*pOptionalBufferStart) : 0;
-	DockContext& myDock = *g_dock_context;
-	ImVector<DockContext::Dock*>& m_docks = myDock.m_docks;
-	// clear
-	for (int i = 0; i < m_docks.size(); ++i)    {
-	    m_docks[i]->~Dock();
-	    ImGui::MemFree(m_docks[i]);
-	}
-	m_docks.clear();
-	myDock.m_current = myDock.m_next_parent = NULL;
+	    if (!d.isValid()) return false;
+	    const char* amount = pOptionalBufferStart ? (*pOptionalBufferStart) : 0;
+	    DockContext& myDock = *g_dock_context;
+	    ImVector<DockContext::Dock*>& m_docks = myDock.m_docks;
+	    // clear
+	    for (int i = 0; i < m_docks.size(); ++i)    {
+	        m_docks[i]->~Dock();
+	        ImGui::MemFree(m_docks[i]);
+	    }
+	    m_docks.clear();
+	    myDock.m_current = myDock.m_next_parent = NULL;
 
-	// parse
-	DockParser parser(&myDock);
-	amount = d.parse(&DockParser::Parse,(void*)&parser,amount);
-	if (pOptionalBufferStart) *pOptionalBufferStart = amount;
-	return true;
+	    // parse
+	    DockParser parser(&myDock);
+	    amount = d.parse(&DockParser::Parse,(void*)&parser,amount);
+	    if (pOptionalBufferStart) *pOptionalBufferStart = amount;
+	    return true;
     }
     bool LoadDock(const char* filename)  {ImGuiHelper::Deserializer d(filename);return LoadDock(d);}
 #   endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
