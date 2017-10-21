@@ -2526,7 +2526,7 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
     ImVec2 startGroupCursorPos = ImGui::GetCursorPos();
     ImGui::BeginGroup();
     ImVec2 tabButtonSz(0,0);bool mustCloseTab = false;bool canUseSizeOptimization = false;
-    const bool isWindowHovered = ImGui::IsWindowHovered();
+    const bool isWindowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
     bool selection_changed = false;bool noButtonDrawn = true;
     for (int j = 0,i; j < numTabs; j++)
     {
@@ -2958,7 +2958,7 @@ bool TabLabelsVertical(bool textIsRotatedCCW, int numTabs, const char** tabLabel
     ImGui::BeginGroup();
     //ImVec2 tabButtonSz(0,0);
     bool mustCloseTab = false;bool canUseSizeOptimization = false;
-    const bool isWindowHovered = ImGui::IsWindowHovered();
+    const bool isWindowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
     bool selection_changed = false;bool noButtonDrawn = true;
     for (int j = 0,i; j < numTabs; j++)
     {

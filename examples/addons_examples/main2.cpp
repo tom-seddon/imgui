@@ -610,6 +610,39 @@ if (mgr.isEmpty()) {
 
 }
 
+// The following block used to be in DrawGL(), but it's better to move it here (it's part of the initalization)
+#ifndef NO_IMGUITABWINDOW
+// Here we load all the Tabs, if their config file is available
+// Otherwise we create some Tabs in the central tabWindow (tabWindows[0])
+ImGui::TabWindow& tabWindow = tabWindows[0];
+if (!tabWindow.isInited()) {
+    // tabWindow.isInited() becomes true after the first call to tabWindow.render() [in DrawGL()]
+    for (int i=0;i<5;i++) tabWindows[i].clear();  // for robustness (they're already empty)
+    if (!LoadTabWindowsIfSupported()) {
+        // Here we set the starting configurations of the tabs in our ImGui::TabWindows
+        static const char* tabNames[] = {"TabLabelStyle","Render","Layers","Capture","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
+        static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
+        static const char* tabTooltips[numTabs] = {"Edit the look of the tab labels","Render Tab Tooltip","Layers Tab Tooltip","Capture Tab Tooltip","non-draggable","Another Tab Tooltip","","","","non-draggable","Tired to add tooltips...",""};
+        for (int i=0;i<numTabs;i++) {
+            tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
+        }
+#       ifdef YES_IMGUIMINIGAMES
+#           ifndef NO_IMGUIMINIGAMES_MINE
+        tabWindow.addTabLabel("ImGuiMineGame","a mini-game",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar);
+#           endif // NO_IMGUIMINIGAMES_MINE
+#           ifndef NO_IMGUIMINIGAMES_SUDOKU
+        tabWindow.addTabLabel("ImGuiSudokuGame","a mini-game",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+#           endif // NO_IMGUIMINIGAMES_SUDOKU
+#       endif // YES_IMGUIMINIGAMES
+#       ifdef YES_IMGUIIMAGEEDITOR
+        tabWindow.addTabLabel("ImGuiImageEditor","a tiny image editor",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+#       endif //YES_IMGUIIMAGEEDITOR
+#       ifndef NO_IMGUISTYLESERIALIZER
+        tabWindow.addTabLabel("ImGuiStyleChooser","Edit the look of the GUI",false);
+#       endif //NO_IMGUISTYLESERIALIZER
+    }
+}
+#endif // NO_IMGUITABWINDOW
 
 }
 
@@ -893,35 +926,8 @@ void DrawGL()	// Mandatory
                 ImGui::SetNextWindowSize(mgr.getCentralQuadSize());
                 if (ImGui::Begin("Central Window",NULL,ImVec2(0,0),mgr.getDockedWindowsAlpha(),ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove  | ImGuiWindowFlags_NoResize | mgr.getDockedWindowsExtraFlags() /*| ImGuiWindowFlags_NoBringToFrontOnFocus*/))    {
 #                   ifndef NO_IMGUITABWINDOW
-                    ImGui::TabWindow& tabWindow = tabWindows[0];
-                    if (!tabWindow.isInited()) {
-                        if (!LoadTabWindowsIfSupported()) {
-                            // Here we set the starting configurations of the tabs in our ImGui::TabWindows
-                            //tabWindow.clear();
-                            static const char* tabNames[] = {"TabLabelStyle","Render","Layers","Capture","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
-                            static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
-                            static const char* tabTooltips[numTabs] = {"Edit the look of the tab labels","Render Tab Tooltip","Layers Tab Tooltip","Capture Tab Tooltip","non-draggable","Another Tab Tooltip","","","","non-draggable","Tired to add tooltips...",""};
-                            for (int i=0;i<numTabs;i++) {
-                                tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
-                            }
-#                           ifdef YES_IMGUIMINIGAMES
-#                           ifndef NO_IMGUIMINIGAMES_MINE
-                            tabWindow.addTabLabel("ImGuiMineGame","a mini-game",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar);
-#                           endif // NO_IMGUIMINIGAMES_MINE
-#                           ifndef NO_IMGUIMINIGAMES_SUDOKU
-                            tabWindow.addTabLabel("ImGuiSudokuGame","a mini-game",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-#                           endif // NO_IMGUIMINIGAMES_SUDOKU
-#                           endif // YES_IMGUIMINIGAMES
-#                           ifdef YES_IMGUIIMAGEEDITOR
-                            tabWindow.addTabLabel("ImGuiImageEditor","a tiny image editor",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-#                           endif //YES_IMGUIIMAGEEDITOR
-#                           ifndef NO_IMGUISTYLESERIALIZER
-                            tabWindow.addTabLabel("ImGuiStyleChooser","Edit the look of the GUI",false);
-#                           endif //NO_IMGUISTYLESERIALIZER
-                        }
-                    }
-                    tabWindow.render(); // Must be called inside "its" window (and sets isInited() to false). [ ChildWindows can't be used here (but can be used inside Tab Pages). Basically all the "Central Window" must be given to 'tabWindow'. ]                    
-#                    else // NO_IMGUITABWINDOW
+                    tabWindows[0].render(); // Must be called inside "its" window (and sets isInited() to false). [ChildWindows can't be used here (but they can be used inside Tab Pages). Basically all the "Central Window" must be given to 'tabWindow'.]
+#                   else // NO_IMGUITABWINDOW
                     ImGui::Text("Example central window");
 #                   endif // NO_IMGUITABWINDOW
                 }
