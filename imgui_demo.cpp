@@ -1453,6 +1453,8 @@ void ImGui::ShowTestWindow(bool* p_open)
                 ImGui::Text("Hello from Stacked The First\nUsing style.Colors[ImGuiCol_ModalWindowDarkening] for darkening.");
                 static int item = 1;
                 ImGui::Combo("Combo", &item, "aaaa\0bbbb\0cccc\0dddd\0eeee\0\0");
+                static float color[4] = { 0.4f,0.7f,0.0f,0.5f };
+                ImGui::ColorEdit4("color", color);  // This is to test behavior of stacked regular popups over a modal
 
                 if (ImGui::Button("Add another modal.."))
                     ImGui::OpenPopup("Stacked 2");
@@ -1760,6 +1762,34 @@ void ImGui::ShowTestWindow(bool* p_open)
             else
                 ImGui::Text("Item with focus: <none>");
             ImGui::TextWrapped("Cursor & selection are preserved when refocusing last used item in code.");
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Hovering"))
+        {
+            // Testing IsWindowHovered() function
+            ImGui::BulletText(
+                "IsWindowHovered() = %d\n"
+                "IsWindowHovered(_AllowWhenBlockedByPopup) = %d\n"
+                "IsWindowHovered(_AllowWhenBlockedByActiveItem) = %d\n",
+                ImGui::IsWindowHovered(),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem));
+
+            // Testing IsItemHovered() function (because BulletText is an item itself and that would affect the output of IsItemHovered, we pass all lines in a single items to shorten the code)
+            ImGui::Button("ITEM");
+            ImGui::BulletText(
+                "IsItemHovered() = %d\n"
+                "IsItemHovered(_AllowWhenBlockedByPopup) = %d\n"
+                "IsItemHovered(_AllowWhenBlockedByActiveItem) = %d\n"
+                "IsItemHovered(_AllowWhenOverlapped) = %d\n"
+                "IsItemhovered(_RectOnly) = %d\n",
+                ImGui::IsItemHovered(),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlapped),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly));
+
             ImGui::TreePop();
         }
 
