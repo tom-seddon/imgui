@@ -708,10 +708,14 @@ struct DockContext
                 MemFree(container);
             }
         }
+
         if (dock.prev_tab) dock.prev_tab->next_tab = dock.next_tab;
         if (dock.next_tab) dock.next_tab->prev_tab = dock.prev_tab;
         dock.parent = NULL;
         dock.prev_tab = dock.next_tab = NULL;
+
+        if (m_next_parent == &dock)
+            m_next_parent = NULL;
     }
 
 
