@@ -38,6 +38,8 @@ SOFTWARE.
 
 bool gImGuiDockReuseTabWindowTextureIfAvailable = true;
 
+#define BOOL_NAME(X) ((X) ? "true" : "false")
+
 namespace ImGui	{
 
 struct DockContext
@@ -205,6 +207,19 @@ struct DockContext
             setChildrenPosSize(_pos, _size);
         }
 
+        static const char *getLabel(Dock *dock)
+        {
+            if(dock)
+            {
+                if(dock->label)
+                    return dock->label;
+                else
+                    return "(no label)";
+            }
+            else
+                return "(Dock *)NULL";
+        }
+
 
         char* label;
         ImU32 id;
@@ -246,7 +261,7 @@ struct DockContext
 
 
     ~DockContext() {
-	Shutdown();//New
+    	Shutdown();//New
     }
 
     void Shutdown()
@@ -655,6 +670,7 @@ struct DockContext
             dock.next_tab->setActive();
         else
             dock.active = false;
+
         Dock* container = dock.parent;
 
         if (container)
@@ -1166,25 +1182,57 @@ struct DockContext
         }
     }
 
+    static const char *getStatusName(Status_ status)
+    {
+        switch(status)
+        {
+        case Status_Docked: return "Docked";
+        case Status_Dragged: return "Dragged";
+        case Status_Float: return "Float";
+        default: return "?";
+        }
+    }
+
+    void debugWindow2(Dock *dock, const char *prefix)
+    {
+        if (dock) {
+            if (TreeNode(dock, "%s (Dock *)%p - %s", prefix, (void *)dock, Dock::getLabel(dock))) {
+                Text("Rect: (%.1f, %.1f) + %.1f x %.1f", dock->pos.x, dock->pos.y, dock->size.x, dock->size.y);
+                Text("Container: %s", BOOL_NAME(dock->isContainer()));
+                if (dock->isContainer()) {
+                    Text("Horizontal: %s", BOOL_NAME(dock->isHorizontal()));
+                }
+                Text("Status: %s", getStatusName(dock->status));
+
+                debugWindow2(dock->next_tab, "next tab");
+                debugWindow2(dock->children[0], "child 0");
+                debugWindow2(dock->children[1], "child 1");
+
+                TreePop();
+            }
+        }
+    }
 
     void debugWindow() {
         //SetNextWindowSize(ImVec2(300, 300));
         if (Begin("Dock Debug Info")) {
             Text("Any Docked: %s", m_workspace_any_docked ? "yes" : "no");
+            Text("Next Parent: %p", (void *)m_next_parent);
+
+            Dock *root = getRootDock();
+
+            debugWindow2(root, "root");
+
             for (int i = 0; i < m_docks.size(); ++i) {
-		        if (TreeNode(reinterpret_cast<void*> (i), "Dock %d (%p) (%s)", i, m_docks[i], m_docks[i]->label ? m_docks[i]->label : "NULL")) {
+		        if (TreeNode(reinterpret_cast<void*> (i), "Dock %d (%p) (%s)", i, m_docks[i], Dock::getLabel(m_docks[i]))) {
                     Dock &dock = *m_docks[i];
-                    Text("pos=(%.1f %.1f) size=(%.1f %.1f)",
-                         dock.pos.x, dock.pos.y,
-                         dock.size.x, dock.size.y);
-                    Text("parent = %p\n",
-                         dock.parent);
-                    Text("isContainer() == %s\n",
-                         dock.isContainer()?"true":"false");
-                    Text("status = %s\n",
-                         (dock.status == Status_Docked)?"Docked":
-                                                        ((dock.status == Status_Dragged)?"Dragged":
-                                                                                         ((dock.status == Status_Float)?"Float": "?")));
+                    Text("pos=(%.1f %.1f) size=(%.1f %.1f)", dock.pos.x, dock.pos.y, dock.size.x, dock.size.y);
+                    Text("parent = %p\n", (void *)dock.parent);
+                    Text("isContainer() == %s\n", dock.isContainer()?"true":"false");
+                    Text("status = %s\n", getStatusName(dock.status));
+                    Text("prev_tab = %s\n", Dock::getLabel(dock.prev_tab));
+                    Text("next_tab = %s\n", Dock::getLabel(dock.next_tab));
+                    Text("location = %s\n", dock.location);
                     TreePop();
                 }
             }
