@@ -696,10 +696,14 @@ struct DockContext
                 MemFree(container);
             }
         }
+
         if (dock.prev_tab) dock.prev_tab->next_tab = dock.next_tab;
         if (dock.next_tab) dock.next_tab->prev_tab = dock.prev_tab;
         dock.parent = NULL;
         dock.prev_tab = dock.next_tab = NULL;
+
+        if (m_next_parent == &dock)
+            m_next_parent = NULL;
     }
 
 
@@ -873,10 +877,28 @@ struct DockContext
         }
     }
 
+    Dock *findNonContainer(Dock *dock)
+    {
+        if (dock->isContainer())
+        {
+            Dock *dock2;
+            
+            dock2 = findNonContainer(dock->children[0]);
+            if (!dock2)
+                dock2 = findNonContainer(dock->children[1]);
+
+            return dock2;
+        }
+        else
+            return dock;
+    }
 
     void doDock(Dock& dock, Dock* dest, ImGuiDockSlot dock_slot)
     {
         IM_ASSERT(!dock.parent);
+        IM_ASSERT(!dock.prev_tab);
+        IM_ASSERT(!dock.next_tab);
+
         if (!dest)
         {
             dock.status = Status_Docked;
@@ -884,7 +906,10 @@ struct DockContext
         }
         else if (dock_slot == ImGuiDockSlot_Tab)
         {
-            Dock* tmp = dest;
+            dest = findNonContainer(dest);
+            IM_ASSERT(dest);
+
+            Dock *tmp = dest;
             while (tmp->next_tab)
             {
                 tmp = tmp->next_tab;
