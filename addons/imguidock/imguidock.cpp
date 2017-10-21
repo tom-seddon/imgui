@@ -1404,7 +1404,13 @@ bool AreAnyCurrentDockContextDocksDocked()
 		    m_docks[P.curIndex]->invalid_frames = 0;
 	    } 
         else if (strcmp(name,"label")==0) {
-		    m_docks[P.curIndex]->label = ImStrdup((const char*) pValue);
+            if (strcmp((const char *)pValue, "\n") == 0) {
+                // Bug in the serializer, I guess...
+                m_docks[P.curIndex]->label = ImStrdup("");
+            } else {
+		        m_docks[P.curIndex]->label = ImStrdup((const char*) pValue);
+            }
+
 		    m_docks[P.curIndex]->id = ImHash(m_docks[P.curIndex]->label, 0);
 	    }
 	    else if (strcmp(name,"pos")==0) m_docks[P.curIndex]->pos = *((ImVec2*) pValue);
