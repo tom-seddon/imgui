@@ -55,6 +55,31 @@ namespace ImGui {
 static const ImVec4 gDefaultClearColor(0.8f, 0.6f, 0.6f, 1.0f);
 static ImVec4 gClearColor = gDefaultClearColor;
 
+// Here are two static methods useful to handle the change of size of the togglable mainMenu we will use
+// Returns the height of the main menu based on the current font (from: ImGui::CalcMainMenuHeight() in imguihelper.h)
+inline static float CalcMainMenuHeight() {
+    ImGuiIO& io = ImGui::GetIO();
+    ImGuiStyle& style = ImGui::GetStyle();
+    ImFont* font = ImGui::GetFont();
+    if (!font) {
+        if (io.Fonts->Fonts.size()>0) font = io.Fonts->Fonts[0];
+        else return (14)+style.FramePadding.y * 2.0f;
+    }
+    return (io.FontGlobalScale * font->Scale * font->FontSize) + style.FramePadding.y * 2.0f;
+}
+inline static void SetPanelManagerBoundsToIncludeMainMenuIfPresent(int displayX=-1, int displayY=-1)  {
+    if (gpShowMainMenuBar)  {
+    if (displayX<=0) displayX = ImGui::GetIO().DisplaySize.x;
+    if (displayY<=0) displayY = ImGui::GetIO().DisplaySize.y;
+    ImVec4 bounds(0,0,(float)displayX,(float)displayY);   // (0,0,-1,-1) defaults to (0,0,io.DisplaySize.x,io.DisplaySize.y)
+        if (*gpShowMainMenuBar) {
+            const float mainMenuHeight = CalcMainMenuHeight();
+            bounds = ImVec4(0,mainMenuHeight,displayX,displayY-mainMenuHeight);
+        }
+        mgr.setDisplayPortion(bounds);
+    }
+}
+
 
 #ifndef NO_IMGUITABWINDOW
 ImGui::TabWindow tabWindows[5]; // 0 = center, 1 = left, 2 = right, 3 = top, 4 = bottom
@@ -203,11 +228,14 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             ImGui::Spacing();
             ImGui::TextDisabled("%s","Some controls to chenge the GUI style:");
             ImGui::PushItemWidth(275);
-            ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.2f"); // scale everything
+            if (ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.2f")) SetPanelManagerBoundsToIncludeMainMenuIfPresent();  // This is because the Main Menu height changes with the Font Scale
             ImGui::PopItemWidth();
             if (ImGui::GetIO().FontGlobalScale!=1.f)    {
                 ImGui::SameLine(0,10);
-                if (ImGui::SmallButton("Reset##glFontGlobalScale")) ImGui::GetIO().FontGlobalScale = 1.f;
+                if (ImGui::SmallButton("Reset##glFontGlobalScale")) {
+                    ImGui::GetIO().FontGlobalScale = 1.f;
+                    SetPanelManagerBoundsToIncludeMainMenuIfPresent();  // This is because the Main Menu height changes with the Font Scale
+                }
             }
             ImGui::Spacing();
 
@@ -342,31 +370,6 @@ void AddTabWindowIfSupported(ImGui::PanelManagerPane* pane) {
     pane->addButtonAndWindow(ImGui::Toolbutton(names[index],texId,uv0,uv1,buttonSize),              // the 1st arg of Toolbutton is only used as a text for the tooltip.
                 ImGui::PanelManagerPaneAssociatedWindow(names[index],-1,&DrawDockedTabWindows,NULL,ImGuiWindowFlags_NoScrollbar));    //  the 1st arg of PanelManagerPaneAssociatedWindow is the name of the window
 #endif //NO_IMGUITABWINDOW
-}
-
-// Here are two static methods useful to handle the change of size of the togglable mainMenu we will use
-// Returns the height of the main menu based on the current font (from: ImGui::CalcMainMenuHeight() in imguihelper.h)
-inline static float CalcMainMenuHeight() {
-    ImGuiIO& io = ImGui::GetIO();
-    ImGuiStyle& style = ImGui::GetStyle();
-    ImFont* font = ImGui::GetFont();
-    if (!font) {
-        if (io.Fonts->Fonts.size()>0) font = io.Fonts->Fonts[0];
-        else return (14)+style.FramePadding.y * 2.0f;
-    }
-    return (io.FontGlobalScale * font->Scale * font->FontSize) + style.FramePadding.y * 2.0f;
-}
-inline static void SetPanelManagerBoundsToIncludeMainMenuIfPresent(int displayX=-1, int displayY=-1)  {
-    if (gpShowMainMenuBar)  {
-	if (displayX<=0) displayX = ImGui::GetIO().DisplaySize.x;
-	if (displayY<=0) displayY = ImGui::GetIO().DisplaySize.y;
-	ImVec4 bounds(0,0,(float)displayX,(float)displayY);   // (0,0,-1,-1) defaults to (0,0,io.DisplaySize.x,io.DisplaySize.y)
-        if (*gpShowMainMenuBar) {
-            const float mainMenuHeight = CalcMainMenuHeight();
-            bounds = ImVec4(0,mainMenuHeight,displayX,displayY-mainMenuHeight);
-        }
-        mgr.setDisplayPortion(bounds);
-    }
 }
 
 // Here are refactored the load/save methods of the ImGui::PanelManager (mainly the hover and docked sizes of all windows and the button states of the 4 toolbars)
@@ -607,6 +610,39 @@ if (mgr.isEmpty()) {
 
 }
 
+// The following block used to be in DrawGL(), but it's better to move it here (it's part of the initalization)
+#ifndef NO_IMGUITABWINDOW
+// Here we load all the Tabs, if their config file is available
+// Otherwise we create some Tabs in the central tabWindow (tabWindows[0])
+ImGui::TabWindow& tabWindow = tabWindows[0];
+if (!tabWindow.isInited()) {
+    // tabWindow.isInited() becomes true after the first call to tabWindow.render() [in DrawGL()]
+    for (int i=0;i<5;i++) tabWindows[i].clear();  // for robustness (they're already empty)
+    if (!LoadTabWindowsIfSupported()) {
+        // Here we set the starting configurations of the tabs in our ImGui::TabWindows
+        static const char* tabNames[] = {"TabLabelStyle","Render","Layers","Capture","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
+        static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
+        static const char* tabTooltips[numTabs] = {"Edit the look of the tab labels","Render Tab Tooltip","Layers Tab Tooltip","Capture Tab Tooltip","non-draggable","Another Tab Tooltip","","","","non-draggable","Tired to add tooltips...",""};
+        for (int i=0;i<numTabs;i++) {
+            tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
+        }
+#       ifdef YES_IMGUIMINIGAMES
+#           ifndef NO_IMGUIMINIGAMES_MINE
+        tabWindow.addTabLabel("ImGuiMineGame","a mini-game",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar);
+#           endif // NO_IMGUIMINIGAMES_MINE
+#           ifndef NO_IMGUIMINIGAMES_SUDOKU
+        tabWindow.addTabLabel("ImGuiSudokuGame","a mini-game",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+#           endif // NO_IMGUIMINIGAMES_SUDOKU
+#       endif // YES_IMGUIMINIGAMES
+#       ifdef YES_IMGUIIMAGEEDITOR
+        tabWindow.addTabLabel("ImGuiImageEditor","a tiny image editor",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+#       endif //YES_IMGUIIMAGEEDITOR
+#       ifndef NO_IMGUISTYLESERIALIZER
+        tabWindow.addTabLabel("ImGuiStyleChooser","Edit the look of the GUI",false);
+#       endif //NO_IMGUISTYLESERIALIZER
+    }
+}
+#endif // NO_IMGUITABWINDOW
 
 }
 
@@ -850,7 +886,8 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
     }
     else {
         // Here we draw our toggle windows (in our case ToggleWindowNames) in the usual way:
-        if (ImGui::Begin(wd.name,&wd.open,wd.pos,-1.f,ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_ShowBorders))  {
+        // We can use -1.f for alpha here, instead of mgr.getDockedWindowsAlpha(), that can be too low (but choose what you like)
+        if (ImGui::Begin(wd.name,&wd.open,wd.size,-1.f,ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_ShowBorders))  {
             if (strcmp(wd.name,ToggleWindowNames[0])==0)   {
                 // Draw Toggle Window 1
                 ImGui::SetWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x*0.15f,ImGui::GetIO().DisplaySize.y*0.24f),ImGuiSetCond_FirstUseEver);
@@ -889,35 +926,8 @@ void DrawGL()	// Mandatory
                 ImGui::SetNextWindowSize(mgr.getCentralQuadSize());
                 if (ImGui::Begin("Central Window",NULL,ImVec2(0,0),mgr.getDockedWindowsAlpha(),ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove  | ImGuiWindowFlags_NoResize | mgr.getDockedWindowsExtraFlags() /*| ImGuiWindowFlags_NoBringToFrontOnFocus*/))    {
 #                   ifndef NO_IMGUITABWINDOW
-                    ImGui::TabWindow& tabWindow = tabWindows[0];
-                    if (!tabWindow.isInited()) {
-                        if (!LoadTabWindowsIfSupported()) {
-                            // Here we set the starting configurations of the tabs in our ImGui::TabWindows
-                            //tabWindow.clear();
-                            static const char* tabNames[] = {"TabLabelStyle","Render","Layers","Capture","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
-                            static const int numTabs = sizeof(tabNames)/sizeof(tabNames[0]);
-                            static const char* tabTooltips[numTabs] = {"Edit the look of the tab labels","Render Tab Tooltip","Layers Tab Tooltip","Capture Tab Tooltip","non-draggable","Another Tab Tooltip","","","","non-draggable","Tired to add tooltips...",""};
-                            for (int i=0;i<numTabs;i++) {
-                                tabWindow.addTabLabel(tabNames[i],tabTooltips[i],i%3!=0,i%5!=4);
-                            }
-#                           ifdef YES_IMGUIMINIGAMES
-#                           ifndef NO_IMGUIMINIGAMES_MINE
-                            tabWindow.addTabLabel("ImGuiMineGame","a mini-game",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar);
-#                           endif // NO_IMGUIMINIGAMES_MINE
-#                           ifndef NO_IMGUIMINIGAMES_SUDOKU
-                            tabWindow.addTabLabel("ImGuiSudokuGame","a mini-game",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-#                           endif // NO_IMGUIMINIGAMES_SUDOKU
-#                           endif // YES_IMGUIMINIGAMES
-#                           ifdef YES_IMGUIIMAGEEDITOR
-                            tabWindow.addTabLabel("ImGuiImageEditor","a tiny image editor",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-#                           endif //YES_IMGUIIMAGEEDITOR
-#                           ifndef NO_IMGUISTYLESERIALIZER
-                            tabWindow.addTabLabel("ImGuiStyleChooser","Edit the look of the GUI",false);
-#                           endif //NO_IMGUISTYLESERIALIZER
-                        }
-                    }
-                    tabWindow.render(); // Must be called inside "its" window (and sets isInited() to false). [ ChildWindows can't be used here (but can be used inside Tab Pages). Basically all the "Central Window" must be given to 'tabWindow'. ]                    
-#                    else // NO_IMGUITABWINDOW
+                    tabWindows[0].render(); // Must be called inside "its" window (and sets isInited() to false). [ChildWindows can't be used here (but they can be used inside Tab Pages). Basically all the "Central Window" must be given to 'tabWindow'.]
+#                   else // NO_IMGUITABWINDOW
                     ImGui::Text("Example central window");
 #                   endif // NO_IMGUITABWINDOW
                 }

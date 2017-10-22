@@ -1585,8 +1585,9 @@ void NodeGraphEditor::render()
             ImGui::PopItemWidth();
 
             // Scrolling
-            //if (!isSomeNodeMoving && !isaNodeInActiveState && !dragNode.node && ImGui::IsWindowHovered() &&  ImGui::IsMouseDragging(0, 6.0f)) scrolling = scrolling - io.MouseDelta;
-            if (isMouseDraggingForScrolling /*&& ImGui::IsWindowHovered()*/ && (ImGui::IsWindowHovered() || ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused())) {
+            //if (!isSomeNodeMoving && !isaNodeInActiveState && !dragNode.node && ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) &&  ImGui::IsMouseDragging(0, 6.0f)) scrolling = scrolling - io.MouseDelta;
+            // TODO: We can probably adjust the or-group better, using the new flags/methods, in next line
+            if (isMouseDraggingForScrolling && (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) || ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused())) {
                 scrolling = scrolling - io.MouseDelta;
                 ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
                 // This must be fixed somehow: ImGui::GetIO().WantCaptureMouse == false, because g.ActiveID == 0

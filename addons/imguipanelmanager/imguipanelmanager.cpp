@@ -198,8 +198,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     window->RootNonPopupWindow = g.CurrentWindowStack[root_non_popup_idx];      // This is merely for displaying the TitleBgActive color.
 
     // Default alpha
-    if (bg_alpha < 0.0f)
-        bg_alpha = 0.7f;    //1.0f; //It was 0.7f (e.g. style.WindowFillAlphaDefault);
+    //if (bg_alpha < 0.0f) bg_alpha = 0.7f;    //1.0f; //It was 0.7f (e.g. style.WindowFillAlphaDefault);
+    const ImGuiCol bg_color_idx = GetWindowBgColorIdxFromFlags(flags);
+    const ImVec4 bg_color_backup = g.Style.Colors[bg_color_idx];
+    if (bg_alpha >= 0.0f) g.Style.Colors[bg_color_idx].w = bg_alpha;
 
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     if (first_begin_of_the_frame)
@@ -785,6 +787,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
     // Return false if we don't intend to display anything to allow user to perform an early out optimization
     window->SkipItems = (window->Collapsed || !window->Active) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0;
+
+
+    if (bg_alpha >= 0.0f) g.Style.Colors[bg_color_idx] = bg_color_backup;
+
     return !window->SkipItems;
 }
 static void DockWindowEnd()

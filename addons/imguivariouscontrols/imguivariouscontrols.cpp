@@ -1393,7 +1393,7 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
     // Here we use the whole size (although it can be partially empty)
     ImRect bb(window->DC.CursorPos, ImVec2(window->DC.CursorPos.x + wndSz.x,window->DC.CursorPos.y + wndSz.y));
     ItemSize(bb);
-    if (!ItemAdd(bb, NULL)) return rv;
+    if (!ItemAdd(bb, 0)) return rv;
 
     ImVec2 imageSz = wndSz;
     ImVec2 remainingWndSize(0,0);
@@ -1693,7 +1693,7 @@ int PlotHistogram(const char* label, float (*values_getter)(void* data, int idx,
     const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0));
     ItemSize(total_bb, style.FramePadding.y);
-    if (!ItemAdd(total_bb, NULL)) return -1;
+    if (!ItemAdd(total_bb, 0)) return -1;
 
     // Determine scale from values if not specified
     if (scale_min == FLT_MAX || scale_max == FLT_MAX || scale_min==scale_max)   {
@@ -1880,7 +1880,7 @@ int PlotCurve(const char* label, float (*values_getter)(void* data, float x,int 
     const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0));
     ItemSize(total_bb, style.FramePadding.y);
-    if (!ItemAdd(total_bb, NULL)) return -1;
+    if (!ItemAdd(total_bb, 0)) return -1;
     const ImVec2 inner_bb_extension(inner_bb.Max.x-inner_bb.Min.x,inner_bb.Max.y-inner_bb.Min.y);
 
     ImVec2 xRange = rangeX,yRange = rangeY,rangeExtension(0,0);
@@ -2088,7 +2088,7 @@ static void PlotMultiEx(
     const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0));
     ItemSize(total_bb, style.FramePadding.y);
-    if (!ItemAdd(total_bb, NULL))
+    if (!ItemAdd(total_bb, 0))
         return;
 
     // Determine scale from values if not specified
@@ -4019,7 +4019,8 @@ unsigned int CheckboxFlags(const char* label,unsigned int* flags,int numFlags,in
         }
         else if (vNotif) window->DrawList->AddCircle(bb.Min+ImVec2(annCenter,annCenter), annRadius, annColor,annSegments,annThickness);
 
-        if (g.LogEnabled) LogRenderedText(&bb.Min, v ? "[x]" : "[ ]");
+        // Nope: LogRenderedText is static inside imgui.cpp => we remove it, so that imguivariouscontrols.h/cpp can be used on their own too
+        //if (g.LogEnabled) LogRenderedText(&bb.Min, v ? "[x]" : "[ ]");
 
         curPos.x+=checkSize.x;
         if (maxPos.x<curPos.x) maxPos.x=curPos.x;
