@@ -249,6 +249,7 @@ struct DockContext
     ImVec2 m_workspace_size;
     ImGuiDockSlot m_next_dock_slot;
     bool m_workspace_any_docked;
+    bool m_workspace_old_any_docked;
 
     DockContext()
         : m_current(NULL)
@@ -256,6 +257,7 @@ struct DockContext
         , m_last_frame(0)
         , m_next_dock_slot(ImGuiDockSlot_Tab)
         , m_workspace_any_docked(false)
+        , m_workspace_old_any_docked(false)
     {
     }
 
@@ -1142,15 +1144,34 @@ struct DockContext
 
         PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
         float tabbar_height = GetTextLineHeightWithSpacing();
-        if (tabbar(dock.getFirstTab(), opened != NULL))
+
+        bool draw_tabbar = true;
+        Dock &firstTab = dock.getFirstTab();
+        IM_ASSERT(!firstTab.prev_tab);
+        if (!firstTab.next_tab)
         {
-            fillLocation(dock);
-            *opened = false;
+            if (extra_flags & ImGuiWindowFlags_NoTitleBar)
+            {
+                if (!firstTab.parent && !firstTab.children[0] && !firstTab.children[1])
+                    draw_tabbar = false;
+            }
         }
+
         ImVec2 pos = dock.pos;
         ImVec2 size = dock.size;
-        pos.y += tabbar_height + GetStyle().WindowPadding.y;
-        size.y -= tabbar_height + GetStyle().WindowPadding.y;
+
+        if (draw_tabbar)
+        {
+            if (tabbar(firstTab, opened != NULL))
+            {
+                fillLocation(dock);
+                *opened = false;
+
+            }
+
+            pos.y += tabbar_height + GetStyle().WindowPadding.y;
+            size.y -= tabbar_height + GetStyle().WindowPadding.y;
+        }
 
         SetCursorScreenPos(pos);
         ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
@@ -1308,6 +1329,8 @@ void BeginDockspace() {
     BeginChild("###workspace", ImVec2(0,0), false, flags);
     g_dock_context->m_workspace_pos = GetWindowPos();
     g_dock_context->m_workspace_size = GetWindowSize();
+
+    g_dock_context->m_workspace_old_any_docked = g_dock_context->m_workspace_any_docked;
     g_dock_context->m_workspace_any_docked = false;
 }
 
@@ -1339,7 +1362,8 @@ void DockDebugWindow()
 
 bool AreAnyDockContextDocksDocked(DockContext *dock_context)
 {
-    return g_dock_context->m_workspace_any_docked;
+    // It's probably best to retrieve the previous frame's value.
+    return g_dock_context->m_workspace_old_any_docked;
 }
 
 bool AreAnyCurrentDockContextDocksDocked()
