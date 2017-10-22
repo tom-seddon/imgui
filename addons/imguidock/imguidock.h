@@ -104,8 +104,6 @@ IMGUI_API bool BeginDock(const char* label, bool* opened = NULL, ImGuiWindowFlag
 IMGUI_API void EndDock();
 IMGUI_API void SetDockActive();
 IMGUI_API void DockDebugWindow();
-IMGUI_API bool AreAnyDockContextDocksDocked(DockContext *dock_context);
-IMGUI_API bool AreAnyCurrentDockContextDocksDocked();
 
 // Ported from the original "Lua binding" code
 #if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))

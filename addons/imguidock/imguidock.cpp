@@ -248,16 +248,12 @@ struct DockContext
     ImVec2 m_workspace_pos;
     ImVec2 m_workspace_size;
     ImGuiDockSlot m_next_dock_slot;
-    bool m_workspace_any_docked;
-    bool m_workspace_old_any_docked;
 
     DockContext()
         : m_current(NULL)
         , m_next_parent(NULL)
         , m_last_frame(0)
         , m_next_dock_slot(ImGuiDockSlot_Tab)
-        , m_workspace_any_docked(false)
-        , m_workspace_old_any_docked(false)
     {
     }
 
@@ -413,8 +409,6 @@ struct DockContext
                         GetItemRectMin(), GetItemRectMax(), IsItemHovered() ? color_hovered : color);
             PopID();
         }
-
-        //printf("ActiveId = %x; HoveredId = %x; CurrentWindow = %s; HoveredWindow = %s; HoveredRootWindow = %s\n",GImGui->ActiveId,GImGui->HoveredId,GImGui->CurrentWindow?GImGui->CurrentWindow->Name:"-",GImGui->HoveredWindow?GImGui->HoveredWindow->Name:"-",GImGui->HoveredRootWindow?GImGui->HoveredRootWindow->Name:"-");
     }
 
 
@@ -433,7 +427,6 @@ struct DockContext
                 {
                     doUndock(*dock);
                     dock->status = Status_Float;
-                    printf("%s: undocking: %s\n", __func__, dock->label);
                 }
                 return;
             }
@@ -981,10 +974,6 @@ struct DockContext
             dock.status = Status_Docked;
 
             setDockPosSize(*dest, dock, dock_slot, *container);
-
-            printf("new container: 0=%s 1=%s\n",
-                   dest->parent->children[0] ? dest->parent->children[0]->label : "-",
-                   dest->parent->children[1] ? dest->parent->children[1]->label : "-");
         }
         dock.setActive();
     }
@@ -1133,9 +1122,6 @@ struct DockContext
 
         if (!dock.active && dock.status != Status_Dragged) return false;
 
-        if (dock.status == Status_Docked)
-            m_workspace_any_docked = true;
-
         //beginPanel();
 
         m_end_action = EndAction_EndChild;
@@ -1237,7 +1223,6 @@ struct DockContext
     void debugWindow() {
         //SetNextWindowSize(ImVec2(300, 300));
         if (Begin("Dock Debug Info")) {
-            Text("Any Docked: %s", m_workspace_any_docked ? "yes" : "no");
             Text("Next Parent: %p", (void *)m_next_parent);
 
             Dock *root = getRootDock();
@@ -1329,9 +1314,6 @@ void BeginDockspace() {
     BeginChild("###workspace", ImVec2(0,0), false, flags);
     g_dock_context->m_workspace_pos = GetWindowPos();
     g_dock_context->m_workspace_size = GetWindowSize();
-
-    g_dock_context->m_workspace_old_any_docked = g_dock_context->m_workspace_any_docked;
-    g_dock_context->m_workspace_any_docked = false;
 }
 
 void EndDockspace() {
@@ -1358,17 +1340,6 @@ void EndDock()
 void DockDebugWindow()
 {
     g_dock_context->debugWindow();
-}
-
-bool AreAnyDockContextDocksDocked(DockContext *dock_context)
-{
-    // It's probably best to retrieve the previous frame's value.
-    return g_dock_context->m_workspace_old_any_docked;
-}
-
-bool AreAnyCurrentDockContextDocksDocked()
-{
-    return AreAnyDockContextDocksDocked(g_dock_context);
 }
 
 
