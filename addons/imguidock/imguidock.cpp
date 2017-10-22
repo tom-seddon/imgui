@@ -73,11 +73,12 @@ struct DockContext
             , pos(0, 0)
             , size(-1, -1)
             , status(Status_Float)
-	    , last_frame(0)
-	    , invalid_frames(0)
+	        , last_frame(0)
+	        , invalid_frames(0)
             , opened(false)
-	    , first(false)
-
+    	    , first(false)
+            , float_size_valid(false)
+            , float_size(0, 0)
         {
             location[0] = 0;
             children[0] = children[1] = NULL;
@@ -236,6 +237,13 @@ struct DockContext
         char location[16];
         bool opened;
         bool first;
+
+        // the value in float_size is only valid when
+        // float_size_valid. But if its valid value is 0x0, the float
+        // size isn't available, and some other value will have to be
+        // used.
+        ImVec2 float_size;
+        bool float_size_valid;
     };
 
 
@@ -597,6 +605,7 @@ struct DockContext
     void handleDrag(Dock& dock)
     {
         Dock* dest_dock = getDockAt(GetIO().MousePos);
+        bool valid = IsMousePosValid();
 
         Begin("##Overlay",
               NULL,
@@ -609,7 +618,22 @@ struct DockContext
 
         ImU32 docked_color = GetColorU32(ImGuiCol_FrameBg);
 	    docked_color = (docked_color & 0x00ffFFFF) | 0x80000000;
-        dock.pos = GetIO().MousePos - m_drag_offset;
+
+        if (valid)
+        {
+            ImVec2 new_pos = GetIO().MousePos - m_drag_offset;
+
+            ImGuiWindow *window = GetCurrentWindow();
+
+            // ImGuiWindow::TitleBarHeight checks the NoTitle flag, so it's no use...
+            float title_bar_height = window->CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f;
+
+            if (new_pos.y < m_workspace_pos.y + m_workspace_size.y - title_bar_height)
+            {
+                dock.pos = new_pos;
+            }
+        }
+
         if (dest_dock)
         {
             if (dockSlots(dock,
@@ -628,10 +652,17 @@ struct DockContext
             End();
             return;
         }
-        canvas->AddRectFilled(dock.pos, dock.pos + dock.size, docked_color);
+
+        ImVec2 drag_size = dock.size;
+        if (dock.float_size_valid && dock.float_size.x > 0.f && dock.float_size.y > 0.f)
+            drag_size = dock.float_size;
+
+        canvas->AddRectFilled(dock.pos, dock.pos + drag_size, docked_color);
         canvas->PopClipRect();
 
-        if (!IsMouseDown(0))
+        //const bool valid = IsMousePosValid();
+
+        if (!IsMouseDown(0) || !valid)
         {
             dock.status = Status_Float;
             dock.location[0] = 0;
@@ -1116,6 +1147,8 @@ struct DockContext
             m_end_action = EndAction_End;
             dock.pos = GetWindowPos();
             dock.size = GetWindowSize();
+            dock.float_size = dock.size;
+            dock.float_size_valid = true;
 
             ImGuiContext& g = *GImGui;
 
@@ -1126,6 +1159,23 @@ struct DockContext
                 dock.status = Status_Dragged;
             }
             return ret;
+        }
+        else
+        {
+            if (!dock.float_size_valid)
+            {
+                dock.float_size = ImVec2(0, 0);
+
+                if (ImGuiWindow *window = FindWindowByName(label))
+                    dock.float_size = window->Size;
+                else if(ImGuiIniData* settings = FindWindowSettings(label))
+                {
+                    if (settings->Size.x > 0.f && settings->Size.y > 0.f)
+                        dock.float_size = settings->Size;
+                }
+
+                dock.float_size_valid = true;
+            }
         }
 
         if (!dock.active && dock.status != Status_Dragged) return false;
