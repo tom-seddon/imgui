@@ -208,6 +208,17 @@ struct DockContext
             setChildrenPosSize(_pos, _size);
         }
 
+        ImVec2 getSize()
+        {
+            if (status == Status_Dragged)
+            {
+                if (float_size_valid && float_size.x > 0.f && float_size.y > 0.f)
+                    return float_size;
+            }
+
+            return size;
+        }
+
         static const char *getLabel(Dock *dock)
         {
             if(dock)
@@ -609,7 +620,7 @@ struct DockContext
         Begin("##Overlay",
               NULL,
               ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove |
-              ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings |
+              ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse |
               ImGuiWindowFlags_AlwaysAutoResize);
         ImDrawList* canvas = GetWindowDrawList();
 
@@ -652,11 +663,7 @@ struct DockContext
             return;
         }
 
-        ImVec2 drag_size = dock.size;
-        if (dock.float_size_valid && dock.float_size.x > 0.f && dock.float_size.y > 0.f)
-            drag_size = dock.float_size;
-
-        canvas->AddRectFilled(dock.pos, dock.pos + drag_size, docked_color);
+        canvas->AddRectFilled(dock.pos, dock.pos + dock.getSize(), docked_color);
         canvas->PopClipRect();
 
         //const bool valid = IsMousePosValid();
@@ -889,7 +896,7 @@ struct DockContext
                 dock_tab = dock_tab->next_tab;
             }
             ImVec2 cp(dock.pos.x, tab_base + line_height);
-            draw_list->AddLine(cp, cp + ImVec2(dock.size.x, 0), color);
+            draw_list->AddLine(cp, cp + ImVec2(dock.getSize().x, 0), color);
         }
         EndChild();
         return tab_closed;
@@ -1212,7 +1219,7 @@ struct DockContext
         }
 
         ImVec2 pos = dock.pos;
-        ImVec2 size = dock.size;
+        ImVec2 size = dock.getSize();
 
         if (draw_tabbar)
         {
