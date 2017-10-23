@@ -659,6 +659,11 @@ static inline void      DataTypeFormatString(ImGuiDataType data_type, void* data
 static void             DataTypeApplyOp(ImGuiDataType data_type, int op, void* value1, const void* value2);
 static bool             DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* scalar_format);
 
+namespace ImGui
+{
+static void             FocusPreviousWindow();
+}
+
 //-----------------------------------------------------------------------------
 // Platform dependent default implementations
 //-----------------------------------------------------------------------------
@@ -2434,12 +2439,7 @@ void ImGui::NewFrame()
 
     // Closing the focused window restore focus to the first active root window in descending z-order
     if (g.NavWindow && !g.NavWindow->WasActive)
-        for (int i = g.Windows.Size-1; i >= 0; i--)
-            if (g.Windows[i]->WasActive && !(g.Windows[i]->Flags & ImGuiWindowFlags_ChildWindow))
-            {
-                FocusWindow(g.Windows[i]);
-                break;
-            }
+        FocusPreviousWindow();
 
     // No window should be open at the beginning of the frame.
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
@@ -4831,6 +4831,17 @@ void ImGui::FocusWindow(ImGuiWindow* window)
             break;
         }
     g.Windows.push_back(window);
+}
+
+void ImGui::FocusPreviousWindow()
+{
+    ImGuiContext& g = *GImGui;
+    for (int i = g.Windows.Size - 1; i >= 0; i--)
+        if (g.Windows[i]->WasActive && !(g.Windows[i]->Flags & ImGuiWindowFlags_ChildWindow))
+        {
+            FocusWindow(g.Windows[i]);
+            return;
+        }
 }
 
 void ImGui::PushItemWidth(float item_width)
@@ -9077,23 +9088,38 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected, boo
         return false;
 
     ImGuiContext& g = *GImGui;
+    ImGuiStyle& style = g.Style;
     ImVec2 pos = window->DC.CursorPos;
     ImVec2 label_size = CalcTextSize(label, NULL, true);
-    ImVec2 shortcut_size = shortcut ? CalcTextSize(shortcut, NULL) : ImVec2(0.0f, 0.0f);
-    float w = window->MenuColumns.DeclColumns(label_size.x, shortcut_size.x, (float)(int)(g.FontSize * 1.20f)); // Feedback for next frame
-    float extra_w = ImMax(0.0f, GetContentRegionAvail().x - w);
 
-    bool pressed = Selectable(label, false, ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DrawFillAvailWidth | (enabled ? 0 : ImGuiSelectableFlags_Disabled), ImVec2(w, 0.0f));
-    if (shortcut_size.x > 0.0f)
+    ImGuiSelectableFlags flags = ImGuiSelectableFlags_MenuItem | (enabled ? 0 : ImGuiSelectableFlags_Disabled);
+    bool pressed;
+    if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
     {
-        PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
-        RenderText(pos + ImVec2(window->MenuColumns.Pos[1] + extra_w, 0.0f), shortcut, NULL, false);
-        PopStyleColor();
+        // Mimic the exact layout spacing of BeginMenu() to allow MenuItem() inside a menu bar, which is a little misleading but may be useful
+        // Note that in this situation we render neither the shortcut neither the selected tick mark
+        float w = label_size.x;
+        window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
+        PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
+        pressed = Selectable(label, false, flags, ImVec2(w, 0.0f));
+        PopStyleVar();
+        window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * (-1.0f + 0.5f)); // -1 spacing to compensate the spacing added when Selectable() did a SameLine(). It would also work to call SameLine() ourselves after the PopStyleVar().
     }
-
-    if (selected)
-        RenderCheckMark(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * (0.20f+0.200f), g.FontSize * 0.134f * 0.5f), GetColorU32(enabled ? ImGuiCol_Text : ImGuiCol_TextDisabled), g.FontSize  * 0.866f);
-
+    else
+    {
+        ImVec2 shortcut_size = shortcut ? CalcTextSize(shortcut, NULL) : ImVec2(0.0f, 0.0f);
+        float w = window->MenuColumns.DeclColumns(label_size.x, shortcut_size.x, (float)(int)(g.FontSize * 1.20f)); // Feedback for next frame
+        float extra_w = ImMax(0.0f, GetContentRegionAvail().x - w);
+        pressed = Selectable(label, false, flags | ImGuiSelectableFlags_DrawFillAvailWidth, ImVec2(w, 0.0f));
+        if (shortcut_size.x > 0.0f)
+        {
+            PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
+            RenderText(pos + ImVec2(window->MenuColumns.Pos[1] + extra_w, 0.0f), shortcut, NULL, false);
+            PopStyleColor();
+        }
+        if (selected)
+            RenderCheckMark(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * (0.20f+0.200f), g.FontSize * 0.134f * 0.5f), GetColorU32(enabled ? ImGuiCol_Text : ImGuiCol_TextDisabled), g.FontSize  * 0.866f);
+    }
     return pressed;
 }
 
