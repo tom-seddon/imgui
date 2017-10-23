@@ -1363,10 +1363,10 @@ void DestroyDockContext(DockContext *dock_context)
     else
     {
         if (dock_context == g_dock_context)
-            SetCurrentDockContext(nullptr);
+            SetCurrentDockContext(NULL);
 
         delete dock_context;
-        dock_context = nullptr;
+        dock_context = NULL;
     }
 }
 
