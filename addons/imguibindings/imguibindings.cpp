@@ -1285,53 +1285,6 @@ extern "C" void GLDebugMessageCallback(GLenum source, GLenum type,
 }
 #endif //IMIMPL_FORCE_DEBUG_CONTEXT
 
-const ImVec4* ImImpl_SdfShaderGetParams() {
-#if (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
-#ifdef IMIMPL_USE_SDF_SHADER
-return &gImImplPrivateParams.sdfParams;
-#endif // IMIMPL_USE_SDF_SHADER
-#endif // (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
-return NULL;
-}
-bool ImImpl_SdfShaderSetParams(const ImVec4& sdfParams) {
-#if (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
-#ifdef IMIMPL_USE_SDF_SHADER
-gImImplPrivateParams.sdfParams = sdfParams;
-return true;
-#endif // IMIMPL_USE_SDF_SHADER
-#endif // (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
-return false;
-}
-bool ImImpl_EditSdfParams() {
-using namespace ImGui;
-bool changed = false;
-#if (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
-#ifdef IMIMPL_USE_SDF_SHADER
-const float maxValue = 0.75f;
-const float step = 0.005f;
-#ifdef IMIMPL_USE_SDF_OUTLINE_SHADER
-PushItemWidth(GetWindowWidth()*0.15f);
-changed|=DragFloat("###ImImpl_EditSdfParams_X",&gImImplPrivateParams.sdfParams.x,step,gImImplPrivateParams.sdfParams.y,maxValue);
-if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Glyph Extension");
-ImGui::SameLine();
-changed|=DragFloat("###ImImpl_EditSdfParams_Y",&gImImplPrivateParams.sdfParams.y,step,0.f,gImImplPrivateParams.sdfParams.x);
-if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Outline Extension");
-ImGui::SameLine();
-changed|=DragFloat("Global Font Params###ImImpl_EditSdfParams_Z",&gImImplPrivateParams.sdfParams.z,step,0.f,maxValue);
-if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Outline Darkness");
-PopItemWidth();
-#else //IMIMPL_USE_SDF_OUTLINE_SHADER
-PushItemWidth(GetWindowWidth()*0.5f);
-changed|=DragFloat("Global Font Params###ImImpl_EditSdfParams_X",&gImImplPrivateParams.sdfParams.x,step,0.f,maxValue);
-if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Glyph Extension");
-PopItemWidth();
-#endif //IMIMPL_USE_SDF_OUTLINE_SHADER
-ImGui::SameLine();
-if (ImGui::SmallButton("Reset###ImImpl_EditSdfParams_R")) {gImImplPrivateParams.resetSdfParams();changed=true;}
-#endif // IMIMPL_USE_SDF_SHADER
-#endif // (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
-return changed;
-}
 
 void ImImpl_RenderDrawLists(ImDrawData* draw_data)
 {
@@ -1741,4 +1694,53 @@ void ImImpl_NewFramePaused()    {
     g.WantCaptureMouseNextFrame = g.WantCaptureKeyboardNextFrame = g.WantTextInputNextFrame = -1;
 
 
+}
+
+
+const ImVec4* ImImpl_SdfShaderGetParams() {
+#if (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
+#ifdef IMIMPL_USE_SDF_SHADER
+return &gImImplPrivateParams.sdfParams;
+#endif // IMIMPL_USE_SDF_SHADER
+#endif // (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
+return NULL;
+}
+bool ImImpl_SdfShaderSetParams(const ImVec4& sdfParams) {
+#if (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
+#ifdef IMIMPL_USE_SDF_SHADER
+gImImplPrivateParams.sdfParams = sdfParams;
+return true;
+#endif // IMIMPL_USE_SDF_SHADER
+#endif // (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
+return false;
+}
+bool ImImpl_EditSdfParams() {
+using namespace ImGui;
+bool changed = false;
+#if (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
+#ifdef IMIMPL_USE_SDF_SHADER
+const float maxValue = 0.75f;
+const float step = 0.005f;
+#ifdef IMIMPL_USE_SDF_OUTLINE_SHADER
+PushItemWidth(GetWindowWidth()*0.15f);
+changed|=DragFloat("###ImImpl_EditSdfParams_X",&gImImplPrivateParams.sdfParams.x,step,gImImplPrivateParams.sdfParams.y,maxValue);
+if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Glyph Extension");
+ImGui::SameLine();
+changed|=DragFloat("###ImImpl_EditSdfParams_Y",&gImImplPrivateParams.sdfParams.y,step,0.f,gImImplPrivateParams.sdfParams.x);
+if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Outline Extension");
+ImGui::SameLine();
+changed|=DragFloat("Global Font Params###ImImpl_EditSdfParams_Z",&gImImplPrivateParams.sdfParams.z,step,0.f,maxValue);
+if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Outline Darkness");
+PopItemWidth();
+#else //IMIMPL_USE_SDF_OUTLINE_SHADER
+PushItemWidth(GetWindowWidth()*0.5f);
+changed|=DragFloat("Global Font Params###ImImpl_EditSdfParams_X",&gImImplPrivateParams.sdfParams.x,step,0.f,maxValue);
+if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Glyph Extension");
+PopItemWidth();
+#endif //IMIMPL_USE_SDF_OUTLINE_SHADER
+ImGui::SameLine();
+if (ImGui::SmallButton("Reset###ImImpl_EditSdfParams_R")) {gImImplPrivateParams.resetSdfParams();changed=true;}
+#endif // IMIMPL_USE_SDF_SHADER
+#endif // (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
+return changed;
 }
