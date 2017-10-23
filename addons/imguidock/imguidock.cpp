@@ -601,8 +601,7 @@ struct DockContext
 	    return false;
     }
 
-
-    void handleDrag(Dock& dock)
+    void handleDrag2(Dock& dock)
     {
         Dock* dest_dock = getDockAt(GetIO().MousePos);
         bool valid = IsMousePosValid();
@@ -670,8 +669,19 @@ struct DockContext
         }
 
         End();
+
     }
 
+    void handleDrag(Dock& dock)
+    {
+        // without this, there's a little blob of a window on top of
+        // the overlay...
+        ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.f, 0.f, 0.f, 0.f));
+
+        handleDrag2(dock);
+
+        ImGui::PopStyleColor(1);
+    }
 
     void fillLocation(Dock& dock)
     {
