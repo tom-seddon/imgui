@@ -1241,6 +1241,13 @@ struct DockContext
                 extra_flags;
         bool ret = BeginChild(label, size, true, flags);
         PopStyleColor();
+
+        if (dock.status == Status_Dragged)
+        {
+            // Draw this window in top of everything else.
+            ImGuiWindow *window = GetCurrentWindow();
+            window->OrderWithinParent = 100000;
+        }
         
         return ret;
     }
