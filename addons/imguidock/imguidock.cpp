@@ -70,6 +70,7 @@ struct DockContext
             , prev_tab(NULL)
             , parent(NULL)
             , active(true)
+            , set_focus(false)
             , pos(0, 0)
             , size(-1, -1)
             , status(Status_Float)
@@ -137,6 +138,7 @@ struct DockContext
         void setActive()
         {
             active = true;
+            set_focus = true;
             for (Dock* tmp = prev_tab; tmp; tmp = tmp->prev_tab) tmp->active = false;
             for (Dock* tmp = next_tab; tmp; tmp = tmp->next_tab) tmp->active = false;
         }
@@ -240,6 +242,7 @@ struct DockContext
         Dock* children[2];
         Dock* parent;
         bool active;
+        bool set_focus;
         ImVec2 pos;
         ImVec2 size;
         Status_ status;
@@ -1233,6 +1236,14 @@ struct DockContext
             pos.y += tabbar_height + GetStyle().WindowPadding.y;
             size.y -= tabbar_height + GetStyle().WindowPadding.y;
         }
+
+        if (dock.status == Status_Docked)
+        {
+            if (dock.set_focus)
+                SetNextWindowFocus();
+        }
+
+        dock.set_focus = false;
 
         SetCursorScreenPos(pos);
         ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
