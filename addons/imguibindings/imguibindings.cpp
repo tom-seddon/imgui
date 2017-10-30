@@ -1639,16 +1639,26 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
 #endif// IMGUI_USE_DIRECT3D9_BINDING
 
 void ImImpl_NewFramePaused()    {
+    // We use this method when ImGui is paused (= not displayed),
+    // so that we can still process input using ImGui calls
+
     ImGuiContext& g = *GImGui;
     g.Time += g.IO.DeltaTime;
 
-    // Update inputs state
-    if (g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0)
-        g.IO.MousePos = ImVec2(-9999.0f, -9999.0f);
+    // Update keyboard input state
+    memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
+    for (int i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
+        g.IO.KeysDownDuration[i] = g.IO.KeysDown[i] ? (g.IO.KeysDownDuration[i] < 0.0f ? 0.0f : g.IO.KeysDownDuration[i] + g.IO.DeltaTime) : -1.0f;
+
+    // Update mouse inputs state
+    // If mouse just appeared or disappeared (usually denoted by -FLT_MAX component, but in reality we test for -256000.0f) we cancel out movement in MouseDelta
+    if (ImGui::IsMousePosValid(&g.IO.MousePos) && ImGui::IsMousePosValid(&g.IO.MousePosPrev)) g.IO.MouseDelta = g.IO.MousePos - g.IO.MousePosPrev;
+    else g.IO.MouseDelta = ImVec2(0.0f, 0.0f);
+    /* Old code:
+    if (g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0) g.IO.MousePos = ImVec2(-9999.0f, -9999.0f);
     if ((g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0) || (g.IO.MousePosPrev.x < 0 && g.IO.MousePosPrev.y < 0))   // if mouse just appeared or disappeared (negative coordinate) we cancel out movement in MouseDelta
         g.IO.MouseDelta = ImVec2(0.0f, 0.0f);
-    else
-        g.IO.MouseDelta = g.IO.MousePos - g.IO.MousePosPrev;
+    else g.IO.MouseDelta = g.IO.MousePos - g.IO.MousePosPrev;*/
     g.IO.MousePosPrev = g.IO.MousePos;
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
     {
@@ -1670,16 +1680,17 @@ void ImImpl_NewFramePaused()    {
                 g.IO.MouseClickedTime[i] = g.Time;
             }
             g.IO.MouseClickedPos[i] = g.IO.MousePos;
+            g.IO.MouseDragMaxDistanceAbs[i] = ImVec2(0.0f, 0.0f);
             g.IO.MouseDragMaxDistanceSqr[i] = 0.0f;
         }
         else if (g.IO.MouseDown[i])
         {
-            g.IO.MouseDragMaxDistanceSqr[i] = ImMax(g.IO.MouseDragMaxDistanceSqr[i], ImLengthSqr(g.IO.MousePos - g.IO.MouseClickedPos[i]));
+            ImVec2 mouse_delta = g.IO.MousePos - g.IO.MouseClickedPos[i];
+            g.IO.MouseDragMaxDistanceAbs[i].x = ImMax(g.IO.MouseDragMaxDistanceAbs[i].x, mouse_delta.x < 0.0f ? -mouse_delta.x : mouse_delta.x);
+            g.IO.MouseDragMaxDistanceAbs[i].y = ImMax(g.IO.MouseDragMaxDistanceAbs[i].y, mouse_delta.y < 0.0f ? -mouse_delta.y : mouse_delta.y);
+            g.IO.MouseDragMaxDistanceSqr[i] = ImMax(g.IO.MouseDragMaxDistanceSqr[i], ImLengthSqr(mouse_delta));
         }
     }
-    memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
-    for (int i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
-        g.IO.KeysDownDuration[i] = g.IO.KeysDown[i] ? (g.IO.KeysDownDuration[i] < 0.0f ? 0.0f : g.IO.KeysDownDuration[i] + g.IO.DeltaTime) : -1.0f;
 
     // Calculate frame-rate for the user, as a purely luxurious feature
     g.FramerateSecPerFrameAccum += g.IO.DeltaTime - g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx];
@@ -1689,11 +1700,12 @@ void ImImpl_NewFramePaused()    {
 
     g.IO.WantCaptureKeyboard = g.IO.WantCaptureMouse = g.IO.WantTextInput = false;
 
-    // New:
     g.IO.WantTextInput = 0;
     g.WantCaptureMouseNextFrame = g.WantCaptureKeyboardNextFrame = g.WantTextInputNextFrame = -1;
 
-
+    // New
+    g.MovingWindow = NULL;
+    g.MovingWindowMoveId = 0;
 }
 
 

@@ -322,7 +322,7 @@ void DrawGL()	// Mandatory
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","This is just some reference code to make\nsplitters without using the ImGui Columns API");
 #       ifndef NO_IMGUIDOCK
         show_dock_window ^= ImGui::Button("ImGui Dock");
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","An exaple of imguidock\n(LumixEngine's Docking System)");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","An example of imguidock\n(LumixEngine's Docking System)");
 #       endif //NO_IMGUIDOCK
         ImGui::EndGroup();
         ImGui::SameLine();
@@ -419,12 +419,13 @@ void DrawGL()	// Mandatory
         saveCurrentStyle = ImGui::Button("Save Current Style");
         resetCurrentStyle = ImGui::Button("Reset Current Style To: ");
         ImGui::SameLine();
-        static int styleEnumNum = 1;
+        static int styleEnumNum = 2;    // Gray style
         ImGui::PushItemWidth(135);
         ImGui::Combo("###StyleEnumCombo",&styleEnumNum,ImGui::GetDefaultStyleNames(),(int) ImGuiStyle_Count,(int) ImGuiStyle_Count);
         ImGui::PopItemWidth();
         if (ImGui::IsItemHovered()) {
-            if   (styleEnumNum==ImGuiStyle_Default)      ImGui::SetTooltip("%s","\"Default\"\nThis is the default\nImGui theme");
+            if   (styleEnumNum==ImGuiStyle_Default)      ImGui::SetTooltip("%s","\"Default\"\nThis is the default\nclassic ImGui theme");
+            else if (styleEnumNum==ImGuiStyle_DefaultDark)      ImGui::SetTooltip("%s","\"DefaultDark\"\nThis is the default\ndark ImGui theme");
             else if (styleEnumNum==ImGuiStyle_Gray)   ImGui::SetTooltip("%s","\"Gray\"\nThis is the default\ntheme of this demo");
             else if (styleEnumNum==ImGuiStyle_OSX)   ImGui::SetTooltip("%s","\"OSX\"\nPosted by @itamago here:\nhttps://github.com/ocornut/imgui/pull/511\n(hope I can use it)");
             else if (styleEnumNum==ImGuiStyle_DarkOpaque)   ImGui::SetTooltip("%s","\"DarkOpaque\"\nA dark-grayscale style with\nno transparency (by default)");
@@ -1231,7 +1232,7 @@ void DrawGL()	// Mandatory
         // A commented out example of a read-only version [note that must be: passwordSize = gridSize*gridSize+1, even if password it's shorter]
         //ImGui::Spacing();ImGui::Separator();if (ImGui::PasswordDrawer((char*)"15984",10,ImGuiPasswordDrawerFlags_ReadOnly,250)) {printf("Whole read-only widget clicked\n");fflush(stdout);}
 
-        // Password Drawer
+        // CheckboxFlags
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Text("CheckboxFlags() Overload [Experimental]:");
@@ -1248,10 +1249,40 @@ void DrawGL()	// Mandatory
 
         static unsigned int cbFlags = (unsigned int)  128+32+8+1;
         static const unsigned int cbAnnotationFlags = 0;//132;   // Optional (default is zero = no annotations)
-        ImGui::CheckboxFlags("Flags###CBF_Overload",&cbFlags,numFlags,numRows,numColumns,cbAnnotationFlags);
+        int flagIndexHovered = -1;  // Optional
+        ImGui::CheckboxFlags("Flags###CBF_Overload",&cbFlags,numFlags,numRows,numColumns,cbAnnotationFlags,&flagIndexHovered);
+        if (flagIndexHovered!=-1) {
+            // Test: Manual positional tooltip
+            ImVec2 m = ImGui::GetIO().MousePos;
+            ImGui::SetNextWindowPos(ImVec2(m.x, m.y+ImGui::GetTextLineHeightWithSpacing()));
+            ImGui::Begin("CBF_Overload_Tooltip", NULL, ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar);
+            ImGui::Text("flag %d. Hold shift\nwhile clicking to toggle it",flagIndexHovered);
+            ImGui::End();
+        }
 
         // BUG: This is completely wrong (both x and y position):
-        //ImGui::SameLine(0,0);ImGui::Text("%s","Test");
+        //ImGui::SameLine(0,0);ImGui::Text("%s","Test");    // (I don't know how to get this fixed)
+
+        // CheckboxStyled
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Text("CheckboxStyled(...)");
+        ImGui::Separator();
+        static bool checkStyled[2] = {false,true};
+        ImGui::CheckboxStyled("Checkbox Styled 1",&checkStyled[0]);
+        ImGui::CheckboxStyled("Checkbox Styled 2",&checkStyled[1]);
+
+        // Knob
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Text("KnobFloat(...) from https://github.com/ocornut/imgui/issues/942");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Use Hover+double-click to reset knobs");
+        ImGui::Separator();
+
+        static float knobValues[3]={-10.f,0.f,10.f};
+        ImGui::KnobFloat("Knob1", &knobValues[0], -10.f, 10.f);ImGui::SameLine();
+        ImGui::KnobFloat("Knob2", &knobValues[1], -10.f, 10.f);ImGui::SameLine();
+        ImGui::KnobFloat("Knob3", &knobValues[2], -10.f, 10.f);
 
 #       else //NO_IMGUIVARIOUSCONTROLS
             ImGui::Text("%s","Excluded from this build.\n");

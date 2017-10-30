@@ -250,13 +250,14 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
 
 #           ifdef IMGUISTYLESERIALIZER_H_
             static int styleEnumNum = 0;
-            ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.25f);
+            ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.44f);
             if (ImGui::Combo("Main Style Chooser",&styleEnumNum,ImGui::GetDefaultStyleNames(),(int) ImGuiStyle_Count,(int) ImGuiStyle_Count)) {
                 ImGui::ResetStyle(styleEnumNum);
             }
             ImGui::PopItemWidth();
             if (ImGui::IsItemHovered()) {
-                if   (styleEnumNum==ImGuiStyle_Default)      ImGui::SetTooltip("%s","\"Default\"\nThis is the default\nImGui theme");
+                if   (styleEnumNum==ImGuiStyle_Default)      ImGui::SetTooltip("%s","\"Default\"\nThis is the default\nclassic ImGui theme");
+                else if (styleEnumNum==ImGuiStyle_DefaultDark)      ImGui::SetTooltip("%s","\"DefaultDark\"\nThis is the default\ndark ImGui theme");
                 else if (styleEnumNum==ImGuiStyle_Gray)   ImGui::SetTooltip("%s","\"Gray\"\nThis is the default theme of first demo");
                 else if (styleEnumNum==ImGuiStyle_OSX)   ImGui::SetTooltip("%s","\"OSX\"\nPosted by @itamago here:\nhttps://github.com/ocornut/imgui/pull/511\n(hope I can use it)");
                 else if (styleEnumNum==ImGuiStyle_DarkOpaque)   ImGui::SetTooltip("%s","\"DarkOpaque\"\nA dark-grayscale style with\nno transparency (by default)");

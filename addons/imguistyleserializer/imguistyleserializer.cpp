@@ -369,6 +369,9 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
     if (styleEnum<0 || styleEnum>=ImGuiStyle_Count) return false;
     style = ImGuiStyle();
     switch (styleEnum) {
+    case ImGuiStyle_DefaultDark:
+	ImGui::StyleColorsDark(&style);
+    break;
     case ImGuiStyle_DefaultInverse:
 	InvertStyleColors(style);
 	style.Colors[ImGuiCol_PopupBg]	= ImVec4(0.79f, 0.76f, 0.725f, 0.875f);
@@ -928,7 +931,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 
     return true;
 }
-static const char* DefaultStyleNames[ImGuiStyle_Count]={"Default","Gray","Light","OSX","OSXOpaque","DarkOpaque","Soft","EdinBlack","EdinWhite","Maya","DefaultInverse","OSXInverse","OSXOpaqueInverse","DarkOpaqueInverse"};
+static const char* DefaultStyleNames[ImGuiStyle_Count]={"Default","DefaultDark","Gray","Light","OSX","OSXOpaque","DarkOpaque","Soft","EdinBlack","EdinWhite","Maya","DefaultInverse","OSXInverse","OSXOpaqueInverse","DarkOpaqueInverse"};
 const char** GetDefaultStyleNames() {return &DefaultStyleNames[0];}
 
 } // namespace ImGui

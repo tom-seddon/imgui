@@ -3953,9 +3953,8 @@ bool PasswordDrawer(char *password, int passwordSize,ImGuiPasswordDrawerFlags fl
 unsigned int CheckboxFlags(const char* label,unsigned int* flags,int numFlags,int numRows,int numColumns,unsigned int flagAnnotations,int* itemHoveredOut,const unsigned int* pFlagsValues)
 {
     unsigned int itemPressed = 0;
-    if (itemHoveredOut) *itemHoveredOut=0;
+    if (itemHoveredOut) *itemHoveredOut=-1;
     if (numRows*numColumns*numFlags==0) return itemPressed;
-
 
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems) return itemPressed;
@@ -3967,7 +3966,6 @@ unsigned int CheckboxFlags(const char* label,unsigned int* flags,int numFlags,in
     int numItemsPerRow = numFlags/numRows;if (numFlags%numRows) ++numItemsPerRow;
     int numItemsPerGroup = numItemsPerRow/numColumns;if (numItemsPerRow%numColumns) ++numItemsPerGroup;
     numItemsPerRow = numItemsPerGroup * numColumns;
-
 
     ImGui::BeginGroup();
     const ImVec2 startCurPos = window->DC.CursorPos;
@@ -4005,6 +4003,7 @@ unsigned int CheckboxFlags(const char* label,unsigned int* flags,int numFlags,in
         hovered = ItemHoverable(bb, itemID);pressed =  buttonPressed && hovered;   // Way faster
         if (pressed) {
             v = !v;
+            if (!ImGui::GetIO().KeyShift) *flags=0;
             if (v)  *flags |= j;
             else    *flags &= ~j;
             itemPressed = j;
@@ -4056,12 +4055,161 @@ unsigned int CheckboxFlags(const char* label,unsigned int* flags,int numFlags,in
         ImGuiID itemID = window->GetID(label);
         ItemSize(text_bb, style.FramePadding.y*numRows);
         if (ItemAdd(text_bb, itemID)) RenderText(text_bb.Min, label);
-
-
     }
 
     return itemPressed;
 }
 // End CheckboxFlags =================================================================================================
+
+// Start CheckBoxStyled ==============================================================================================
+bool CheckboxStyled(const char* label, bool* v)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+    const ImGuiID id = window->GetID(label);
+    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    const ImVec2 check_size(label_size.y*2.5f,label_size.y);
+
+    const ImRect check_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(check_size.x + style.FramePadding.x*2, check_size.y + style.FramePadding.y*2)); // We want a square shape to we use Y twice
+    ItemSize(check_bb, style.FramePadding.y);
+
+    ImRect total_bb = check_bb;
+    if (label_size.x > 0) SameLine(0, style.ItemInnerSpacing.x);
+    const ImRect text_bb(window->DC.CursorPos + ImVec2(0,style.FramePadding.y), window->DC.CursorPos + ImVec2(0,style.FramePadding.y) + label_size);
+    if (label_size.x > 0)
+    {
+        ItemSize(ImVec2(text_bb.GetWidth(), check_bb.GetHeight()), style.FramePadding.y);
+        total_bb = ImRect(ImMin(check_bb.Min, text_bb.Min), ImMax(check_bb.Max, text_bb.Max));
+    }
+
+    if (!ItemAdd(total_bb, id))
+        return false;
+
+    bool hovered, held;
+    bool pressed = ButtonBehavior(total_bb, id, &hovered, &held);
+    static float timeBegin = -1.f;
+    static ImGuiID timeID = 0;
+    if (pressed) {
+        *v = !(*v);
+        timeID = id;
+        timeBegin = ImGui::GetTime();
+    }
+
+    // Widget Look Here ================================================================
+    float t = 0.f;    // In (0,1) 0 = OFF 1 = ON
+    if (timeID==id) {
+        const float actionTime = 0.25f;
+        float elapsedTime = ImGui::GetTime()-timeBegin;
+        if (elapsedTime>actionTime) {timeBegin=-1;timeID=0;}
+        else t = 1.f-elapsedTime/actionTime;
+    }
+    if (*v) t = 1.f-t;
+    if (t<0) t=0;
+    else if (t>1) t=1;
+    const float check_bb_height = check_bb.GetHeight();
+    const float innerFrameHeight = check_bb_height*0.5f;
+    const float heightDelta = (check_bb_height-innerFrameHeight)*0.5f;
+    const float check_bb_width = check_bb.GetWidth();
+    float widthFraction = check_bb_width*t;
+    ImU32 baseColor = GetColorU32((held || hovered) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
+    const float rounding = style.WindowRounding;//style.FrameRounding;
+    ImRect innerFrame0(ImVec2(check_bb.Min.x,check_bb.Min.y+heightDelta),ImVec2(check_bb.Min.x+widthFraction,check_bb.Max.y-heightDelta));
+    ImRect innerFrame1(ImVec2(check_bb.Min.x+widthFraction,check_bb.Min.y+heightDelta),ImVec2(check_bb.Max.x,check_bb.Max.y-heightDelta));
+    if (t>0) {
+        ImU32 fillColor0 = GetColorU32((held || hovered) ? ImGuiCol_CloseButtonHovered : ImGuiCol_CloseButton);
+        window->DrawList->AddRectFilled(innerFrame0.Min, innerFrame0.Max, fillColor0, rounding, t<1 ? 9 : 15);
+    }
+    if (t<1) {
+        ImU32 fillColor1 = baseColor;//GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
+        window->DrawList->AddRectFilled(innerFrame1.Min, innerFrame1.Max, fillColor1, rounding, t>0 ? 6 : 15);
+    }
+    if (window->Flags & ImGuiWindowFlags_ShowBorders)   {
+        ImRect innerFrame(innerFrame0.Min,innerFrame1.Max);
+        window->DrawList->AddRect(innerFrame.Min+ImVec2(1,1), innerFrame.Max+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), rounding);
+        window->DrawList->AddRect(innerFrame.Min, innerFrame.Max, GetColorU32(ImGuiCol_Border), rounding);
+    }
+    // Ideally we need an opaque color here:
+    ImU32 circleColor = GetColorU32((held || hovered) ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+    // GetColorU32(ImGuiCol_CheckMark);
+    int numSegments = (int)(check_bb_height*0.8f);if (numSegments<3) numSegments=3;else if (numSegments>24) numSegments = 24;
+    float radius = check_bb_height*0.5f;
+    if (widthFraction<radius) widthFraction=radius;
+    else if (widthFraction>check_bb_width-radius) widthFraction=check_bb_width-radius;
+    ImVec2 center(check_bb.Min.x+widthFraction,check_bb.Min.y+check_bb_height*0.5f);
+    window->DrawList->AddCircleFilled(center,radius,circleColor,numSegments);
+    // ==================================================================================
+
+    //if (g.LogEnabled) LogRenderedText(&text_bb.Min, *v ? "[x]" : "[ ]");
+    if (label_size.x > 0.0f)    RenderText(text_bb.Min, label);
+
+    return pressed;
+}
+bool CheckboxStyledFlags(const char* label, unsigned int* flags, unsigned int flags_value)  {
+    bool v = ((*flags & flags_value) == flags_value);
+    bool pressed = CheckboxStyled(label, &v);
+    if (pressed)    {
+        if (v)  *flags |= flags_value;
+        else    *flags &= ~flags_value;
+    }
+    return pressed;
+}
+// End CheckBoxStyled ================================================================================================
+
+// KnobFloat Starts Here =============================================================================================
+bool KnobFloat(const char* label, float* p_value, float v_min, float v_max,float v_step) {
+    //@ocornut https://github.com/ocornut/imgui/issues/942
+    ImGuiIO& io = ImGui::GetIO();
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    float radius_outer = 20.0f;
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+    ImVec2 center = ImVec2(pos.x + radius_outer, pos.y + radius_outer);
+    float line_height = ImGui::GetTextLineHeight();
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+    float ANGLE_MIN = 3.141592f * 0.75f;
+    float ANGLE_MAX = 3.141592f * 2.25f;
+
+    ImGui::InvisibleButton(label, ImVec2(radius_outer*2, radius_outer*2 + line_height + style.ItemInnerSpacing.y));
+    bool value_changed = false;
+    bool is_active = ImGui::IsItemActive();
+    bool is_hovered = ImGui::IsItemHovered();
+    if (is_active && io.MouseDelta.x != 0.0f)   {
+        if (v_step<=0) v_step=50.f;
+        float step = (v_max - v_min) / v_step;
+        *p_value += io.MouseDelta.x * step;
+
+        if (*p_value < v_min) *p_value = v_min;
+        if (*p_value > v_max) *p_value = v_max;
+        value_changed = true;
+    }
+    else if (is_hovered && (io.MouseDoubleClicked[0] || io.MouseClicked[2])) {
+        *p_value = (v_max + v_min) * 0.5f;  // reset value
+        value_changed = true;
+    }
+
+    float t = (*p_value - v_min) / (v_max - v_min);
+    float angle = ANGLE_MIN + (ANGLE_MAX - ANGLE_MIN) * t;
+    float angle_cos = cosf(angle), angle_sin = sinf(angle);
+    float radius_inner = radius_outer*0.40f;
+    draw_list->AddCircleFilled(center, radius_outer, ImGui::GetColorU32(ImGuiCol_FrameBg), 16);
+    draw_list->AddLine(ImVec2(center.x + angle_cos*radius_inner, center.y + angle_sin*radius_inner), ImVec2(center.x + angle_cos*(radius_outer-2), center.y + angle_sin*(radius_outer-2)), ImGui::GetColorU32(ImGuiCol_SliderGrabActive), 2.0f);
+    draw_list->AddCircleFilled(center, radius_inner, ImGui::GetColorU32(is_active ? ImGuiCol_FrameBgActive : is_hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), 16);
+    draw_list->AddText(ImVec2(pos.x, pos.y + radius_outer * 2 + style.ItemInnerSpacing.y), ImGui::GetColorU32(ImGuiCol_Text), label);
+
+    if (is_active || is_hovered)    {
+        ImGui::SetNextWindowPos(ImVec2(pos.x - style.WindowPadding.x, pos.y - line_height - style.ItemInnerSpacing.y - style.WindowPadding.y));
+        ImGui::BeginTooltip();
+        ImGui::Text("%.3f", *p_value);
+        ImGui::EndTooltip();
+    }
+
+    return value_changed;
+}
+// ===================================================================================================================
 
 } // namespace ImGui

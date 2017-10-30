@@ -883,6 +883,12 @@ namespace ImGui {
 // KNOWN BUG: When ImGui::SameLine() is used after it, the alignment is broken
 IMGUI_API unsigned int CheckboxFlags(const char* label,unsigned int* flags,int numFlags,int numRows,int numColumns,unsigned int flagAnnotations=0,int* itemHoveredOut=NULL,const unsigned int* pFlagsValues=NULL);
 
+// These just differ from the default ones for their look:
+IMGUI_API bool CheckboxStyled(const char* label, bool* v);
+IMGUI_API bool CheckboxStyledFlags(const char* label, unsigned int* flags, unsigned int flags_value);
+
+// Minimal implementation from: https://github.com/ocornut/imgui/issues/942
+IMGUI_API bool KnobFloat(const char* label, float* p_value, float v_min, float v_max, float v_step=50.f);
 
 } // namespace ImGui
 

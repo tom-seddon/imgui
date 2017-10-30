@@ -415,13 +415,13 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                     if (!(flags & ImGuiWindowFlags_NoSavedSettings))
                         MarkIniSettingsDirty(window);
                 }
-                IM_ASSERT(g.MovedWindow != NULL);
-                FocusWindow(g.MovedWindow);
+                IM_ASSERT(g.MovingWindow != NULL);
+                FocusWindow(g.MovingWindow);
             }
             else
             {
                 ClearActiveID();
-                g.MovedWindow = NULL;   // Not strictly necessary but doing it for sanity.
+                g.MovingWindow = NULL;   // Not strictly necessary but doing it for sanity.
             }
         }
 
@@ -703,22 +703,6 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             if (!(flags & ImGuiWindowFlags_NoCollapse))
                 RenderTriangle(window->Pos + style.FramePadding, window->Collapsed ? ImGuiDir_Right : ImGuiDir_Down, 1.0f);
 
-
-            /*
-            ImVec2 text_min = window->Pos + style.FramePadding;
-            //ImVec2 text_max = window->Pos + ImVec2(window->Size.x - style.FramePadding.x, style.FramePadding.y*2 + text_size.y);
-            //ImVec2 clip_max = ImVec2(window->Pos.x + window->Size.x - (p_opened ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x), text_max.y); // Match the size of CloseWindowButton()
-            ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (p_opened ? (title_bar_rect.GetHeight()-3) : style.FramePadding.x) - (p_undocked ? (title_bar_rect.GetHeight()-3) : style.FramePadding.x), style.FramePadding.y*2 + text_size.y);
-            ImVec2 clip_max = ImVec2(window->Pos.x + window->Size.x - (p_opened ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x) - (p_undocked ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x), text_max.y); // Match the size of CloseWindowButton()
-
-            bool pad_left = (flags & ImGuiWindowFlags_NoCollapse) == 0;
-            bool pad_right = (p_opened != NULL);
-            if (style.WindowTitleAlign & ImGuiAlign_Center) pad_right = pad_left;
-            if (pad_left) text_min.x += g.FontSize + style.ItemInnerSpacing.x;
-            if (pad_right) text_max.x -= g.FontSize + style.ItemInnerSpacing.x;
-            RenderTextClipped(text_min, text_max, name, NULL, &text_size, style.WindowTitleAlign, NULL, &clip_max);
-            */
-
             ImVec2 text_min = window->Pos;
             ImVec2 text_max = window->Pos + ImVec2(window->Size.x, style.FramePadding.y*2 + text_size.y);
             ImRect clip_rect;
@@ -747,25 +731,34 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             if (g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_C))
                 ImGui::LogToClipboard();
         */
+
+        // Inner rectangle
+        // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
+        // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
+        window->InnerRect.Min.x = title_bar_rect.Min.x;
+        window->InnerRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight();
+        window->InnerRect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x;
+        window->InnerRect.Max.y = window->Pos.y + window->Size.y - window->ScrollbarSizes.y;
+        //window->DrawList->AddRect(window->InnerRect.Min, window->InnerRect.Max, IM_COL32_WHITE);
+
     }
 
     // Inner clipping rectangle
-    // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
-    // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
-    const ImRect title_bar_rect = window->TitleBarRect();
+    // Force round operator last to ensure that e.g. (int)(max.x-min.x) in user's render code produce correct result.
     const float border_size = ((flags & ImGuiWindowFlags_ShowBorders) || gImGuiDockPanelManagerAlwaysDrawExternalBorders) ? 1.0f : 0.0f;
     ImRect clip_rect;
-    clip_rect.Min.x = title_bar_rect.Min.x + 0.5f + ImMax(border_size, window->WindowPadding.x*0.5f);
-    clip_rect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight() + 0.5f + border_size;
-    clip_rect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x - ImMax(border_size, window->WindowPadding.x*0.5f);
-    clip_rect.Max.y = window->Pos.y + window->Size.y - border_size - window->ScrollbarSizes.y;
-
+    clip_rect.Min.x = ImFloor(0.5f + window->InnerRect.Min.x + ImMax(border_size, ImFloor(window->WindowPadding.x*0.5f)));
+    clip_rect.Min.y = ImFloor(0.5f + window->InnerRect.Min.y + border_size);
+    clip_rect.Max.x = ImFloor(0.5f + window->InnerRect.Max.x - ImMax(border_size, ImFloor(window->WindowPadding.x*0.5f)));
+    clip_rect.Max.y = ImFloor(0.5f + window->InnerRect.Max.y - border_size);
     PushClipRect(clip_rect.Min, clip_rect.Max, true);
 
     // Clear 'accessed' flag last thing
     if (first_begin_of_the_frame)
         window->Accessed = false;
+
     window->BeginCount++;
+    g.SetNextWindowSizeConstraint = false;
 
     // Child window can be out of sight and have "negative" clip windows.
     // Mark them as collapsed so commands are skipped earlier (we can't manually collapse because they have no title bar).
