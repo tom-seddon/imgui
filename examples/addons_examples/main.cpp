@@ -1269,8 +1269,18 @@ void DrawGL()	// Mandatory
         ImGui::Text("CheckboxStyled(...)");
         ImGui::Separator();
         static bool checkStyled[2] = {false,true};
-        ImGui::CheckboxStyled("Checkbox Styled 1",&checkStyled[0]);
-        ImGui::CheckboxStyled("Checkbox Styled 2",&checkStyled[1]);
+        // Default look and size
+        ImGui::CheckboxStyled("Checkbox Styled 1 (default style)",&checkStyled[0]);
+        // Custom look and size
+        static const ImU32 optionalEightColors[8] = {
+            IM_COL32(220,220,220,255),IM_COL32(255,255,255,255),    // on_circle (normal and hovered)
+            IM_COL32(80,80,80,255),IM_COL32(100,100,100,255),       // off_circle (normal and hovered)
+            IM_COL32(60,120,60,255),IM_COL32(80,155,80,255),        // on_bg (normal and hovered)
+            IM_COL32(60,60,60,255),IM_COL32(80,80,80,255)           // off_bg (normal and hovered)
+        };
+        const ImVec2 checkBoxSizeScale(1.5f,2.f);   // (checkBoxSizeScale.y max is 2.f)
+        const float checkBoxRounding = 6.f;         // -1 defaults to style.WindowRounding. (Note that is scales with the font height)
+        ImGui::CheckboxStyled("Checkbox Styled 2 (custom style)",&checkStyled[1],optionalEightColors,checkBoxSizeScale,checkBoxRounding);
 
         // Knob
         ImGui::Spacing();

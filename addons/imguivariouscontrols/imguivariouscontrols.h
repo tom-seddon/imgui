@@ -884,8 +884,11 @@ namespace ImGui {
 IMGUI_API unsigned int CheckboxFlags(const char* label,unsigned int* flags,int numFlags,int numRows,int numColumns,unsigned int flagAnnotations=0,int* itemHoveredOut=NULL,const unsigned int* pFlagsValues=NULL);
 
 // These just differ from the default ones for their look:
-IMGUI_API bool CheckboxStyled(const char* label, bool* v);
-IMGUI_API bool CheckboxStyledFlags(const char* label, unsigned int* flags, unsigned int flags_value);
+// checkBoxScale.y max is clamped to 2.f
+// pOptionalEightColors are: {circle_on, circle_on_hovered, circle_off, circle_off_hovered, bg_on, bg_on_hovered, bg_off, bg_off_hovered} [The 4 circle colors will have A = 255, even if users choose otherwise]
+// checkBoxRounding if negative defaults to style.WindowRounding
+IMGUI_API bool CheckboxStyled(const char* label, bool* v, const ImU32 *pOptionalEightColors=NULL, const ImVec2 &checkBoxScale=ImVec2(1.f,1.f), float checkBoxRounding=-1.f);
+IMGUI_API bool CheckboxStyledFlags(const char* label, unsigned int* flags, unsigned int flags_value,const ImU32 *pOptionalEightColors=NULL,const ImVec2 &checkBoxScale=ImVec2(1.f,1.f), float checkBoxRounding=-1.f);
 
 // Minimal implementation from: https://github.com/ocornut/imgui/issues/942
 IMGUI_API bool KnobFloat(const char* label, float* p_value, float v_min, float v_max, float v_step=50.f);

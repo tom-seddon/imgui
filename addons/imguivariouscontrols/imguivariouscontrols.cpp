@@ -4062,17 +4062,18 @@ unsigned int CheckboxFlags(const char* label,unsigned int* flags,int numFlags,in
 // End CheckboxFlags =================================================================================================
 
 // Start CheckBoxStyled ==============================================================================================
-bool CheckboxStyled(const char* label, bool* v)
+bool CheckboxStyled(const char* label, bool* v,const ImU32* pOptionalEightColors,const ImVec2& checkBoxScale,float checkBoxRounding)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
 
+    IM_ASSERT(checkBoxScale.x>0 && checkBoxScale.y>0);
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
-    const ImVec2 check_size(label_size.y*2.5f,label_size.y);
+    const ImVec2 check_size(label_size.y*2.5f*checkBoxScale.x,label_size.y);
 
     const ImRect check_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(check_size.x + style.FramePadding.x*2, check_size.y + style.FramePadding.y*2)); // We want a square shape to we use Y twice
     ItemSize(check_bb, style.FramePadding.y);
@@ -4093,38 +4094,56 @@ bool CheckboxStyled(const char* label, bool* v)
     bool pressed = ButtonBehavior(total_bb, id, &hovered, &held);
     static float timeBegin = -1.f;
     static ImGuiID timeID = 0;
+    static const float timeActionLength = 0.25f;
     if (pressed) {
-        *v = !(*v);
-        timeID = id;
-        timeBegin = ImGui::GetTime();
+        *v = !(*v); // change state soon
+        if (timeID==id) {
+            // Fine tuning for the case when user clicks on the same checkbox twice quickly
+            float elapsedTime = ImGui::GetTime()-timeBegin;
+            if (elapsedTime>timeActionLength) timeBegin = ImGui::GetTime();   // restart
+            else {
+                // We must invert the time, tweaking timeBegin
+                const float newElapsedTime = timeActionLength-elapsedTime;
+                timeBegin= ImGui::GetTime()-newElapsedTime;
+            }
+        }
+        else {
+            timeID = id;
+            timeBegin = ImGui::GetTime();
+        }
     }
 
     // Widget Look Here ================================================================
-    float t = 0.f;    // In (0,1) 0 = OFF 1 = ON
+    float t = 0.f;    // In [0,1] 0 = OFF 1 = ON
+    bool animationActive = false;
     if (timeID==id) {
-        const float actionTime = 0.25f;
         float elapsedTime = ImGui::GetTime()-timeBegin;
-        if (elapsedTime>actionTime) {timeBegin=-1;timeID=0;}
-        else t = 1.f-elapsedTime/actionTime;
+        if (elapsedTime>timeActionLength) {timeBegin=-1;timeID=0;}
+	else {
+	    t = 1.f-elapsedTime/timeActionLength;
+	    animationActive = t>0;
+	}
     }
     if (*v) t = 1.f-t;
     if (t<0) t=0;
     else if (t>1) t=1;
     const float check_bb_height = check_bb.GetHeight();
-    const float innerFrameHeight = check_bb_height*0.5f;
+    const float innerFrameHeight = check_bb_height*0.5f*(checkBoxScale.y<=2.f?checkBoxScale.y:2.f);
     const float heightDelta = (check_bb_height-innerFrameHeight)*0.5f;
     const float check_bb_width = check_bb.GetWidth();
-    float widthFraction = check_bb_width*t;
-    ImU32 baseColor = GetColorU32((held || hovered) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
-    const float rounding = style.WindowRounding;//style.FrameRounding;
+    float widthFraction = check_bb_width*t;    
+    float rounding = checkBoxRounding<0 ? style.WindowRounding : checkBoxRounding;//style.FrameRounding;
+    rounding*=innerFrameHeight*0.065f;if (rounding>16.f) rounding = 16.f;
     ImRect innerFrame0(ImVec2(check_bb.Min.x,check_bb.Min.y+heightDelta),ImVec2(check_bb.Min.x+widthFraction,check_bb.Max.y-heightDelta));
     ImRect innerFrame1(ImVec2(check_bb.Min.x+widthFraction,check_bb.Min.y+heightDelta),ImVec2(check_bb.Max.x,check_bb.Max.y-heightDelta));
     if (t>0) {
-        ImU32 fillColor0 = GetColorU32((held || hovered) ? ImGuiCol_CloseButtonHovered : ImGuiCol_CloseButton);
+	ImU32 fillColor0 = pOptionalEightColors ? ((held || hovered) ? pOptionalEightColors[5] : pOptionalEightColors[4]) :
+	    (GetColorU32((held || hovered) ? ImGuiCol_ButtonHovered : ImGuiCol_Button));
         window->DrawList->AddRectFilled(innerFrame0.Min, innerFrame0.Max, fillColor0, rounding, t<1 ? 9 : 15);
     }
     if (t<1) {
-        ImU32 fillColor1 = baseColor;//GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
+	ImU32 fillColor1 = pOptionalEightColors ? ((held || hovered) ? pOptionalEightColors[7] : pOptionalEightColors[6]) :
+            (GetColorU32((held || hovered) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg));
         window->DrawList->AddRectFilled(innerFrame1.Min, innerFrame1.Max, fillColor1, rounding, t>0 ? 6 : 15);
     }
     if (window->Flags & ImGuiWindowFlags_ShowBorders)   {
@@ -4132,15 +4151,41 @@ bool CheckboxStyled(const char* label, bool* v)
         window->DrawList->AddRect(innerFrame.Min+ImVec2(1,1), innerFrame.Max+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), rounding);
         window->DrawList->AddRect(innerFrame.Min, innerFrame.Max, GetColorU32(ImGuiCol_Border), rounding);
     }
-    // Ideally we need an opaque color here:
-    ImU32 circleColor = GetColorU32((held || hovered) ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
-    // GetColorU32(ImGuiCol_CheckMark);
     int numSegments = (int)(check_bb_height*0.8f);if (numSegments<3) numSegments=3;else if (numSegments>24) numSegments = 24;
     float radius = check_bb_height*0.5f;
     if (widthFraction<radius) widthFraction=radius;
     else if (widthFraction>check_bb_width-radius) widthFraction=check_bb_width-radius;
     ImVec2 center(check_bb.Min.x+widthFraction,check_bb.Min.y+check_bb_height*0.5f);
-    window->DrawList->AddCircleFilled(center,radius,circleColor,numSegments);
+    // All the 4 circle colors will be forced to have A = 255
+    const ImGuiCol defaultCircleColorOn =	    ImGuiCol_Text;
+    const ImGuiCol defaultCircleColorOnHovered =    ImGuiCol_Text;
+    const ImGuiCol defaultCircleColorOff =	    ImGuiCol_TextDisabled;
+    const ImGuiCol defaultCircleColorOffHovered =   ImGuiCol_TextDisabled;
+    if (!animationActive) {
+	if (*v) {
+	    ImU32 circleColorOn = pOptionalEightColors ? ((held || hovered) ? pOptionalEightColors[1] : pOptionalEightColors[0]) :
+			(GetColorU32((held || hovered) ? defaultCircleColorOnHovered : defaultCircleColorOn));
+	    int col = (circleColorOn & ~IM_COL32_A_MASK) | (0xFF << IM_COL32_A_SHIFT);
+	    window->DrawList->AddCircleFilled(center,radius,col,numSegments);
+	}
+	else {
+	    ImU32 circleColorOff = pOptionalEightColors ? ((held || hovered) ? pOptionalEightColors[3] : pOptionalEightColors[2]) :
+			(GetColorU32((held || hovered) ? defaultCircleColorOffHovered : defaultCircleColorOff));
+	    int col = (circleColorOff & ~IM_COL32_A_MASK) | (0xFF << IM_COL32_A_SHIFT);
+	    window->DrawList->AddCircleFilled(center,radius,col,numSegments);
+	}
+    }
+    else {
+	int col1 = (int) (pOptionalEightColors ? ((held || hovered) ? pOptionalEightColors[1] : pOptionalEightColors[0]) :
+			(GetColorU32((held || hovered) ? defaultCircleColorOnHovered : defaultCircleColorOn)));
+	int col0 = (int) (pOptionalEightColors ? ((held || hovered) ? pOptionalEightColors[3] : pOptionalEightColors[2]) :
+			(GetColorU32((held || hovered) ? defaultCircleColorOffHovered : defaultCircleColorOff)));
+	int r = ImLerp((col0 >> IM_COL32_R_SHIFT) & 0xFF, (col1 >> IM_COL32_R_SHIFT) & 0xFF, t);
+	int g = ImLerp((col0 >> IM_COL32_G_SHIFT) & 0xFF, (col1 >> IM_COL32_G_SHIFT) & 0xFF, t);
+	int b = ImLerp((col0 >> IM_COL32_B_SHIFT) & 0xFF, (col1 >> IM_COL32_B_SHIFT) & 0xFF, t);
+	int col = (r << IM_COL32_R_SHIFT) | (g << IM_COL32_G_SHIFT) | (b << IM_COL32_B_SHIFT) | (0xFF << IM_COL32_A_SHIFT);
+	window->DrawList->AddCircleFilled(center,radius,col,numSegments);
+    }
     // ==================================================================================
 
     //if (g.LogEnabled) LogRenderedText(&text_bb.Min, *v ? "[x]" : "[ ]");
@@ -4148,9 +4193,9 @@ bool CheckboxStyled(const char* label, bool* v)
 
     return pressed;
 }
-bool CheckboxStyledFlags(const char* label, unsigned int* flags, unsigned int flags_value)  {
+bool CheckboxStyledFlags(const char* label, unsigned int* flags, unsigned int flags_value, const ImU32 *pOptionalEightColors, const ImVec2 &checkBoxScale,float checkBoxRounding)  {
     bool v = ((*flags & flags_value) == flags_value);
-    bool pressed = CheckboxStyled(label, &v);
+    bool pressed = CheckboxStyled(label, &v, pOptionalEightColors, checkBoxScale, checkBoxRounding);
     if (pressed)    {
         if (v)  *flags |= flags_value;
         else    *flags &= ~flags_value;
@@ -4210,6 +4255,6 @@ bool KnobFloat(const char* label, float* p_value, float v_min, float v_max,float
 
     return value_changed;
 }
-// ===================================================================================================================
+// End KnobFloat =========================================================================================================
 
 } // namespace ImGui
