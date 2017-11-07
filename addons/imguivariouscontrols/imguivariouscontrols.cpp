@@ -1,7 +1,5 @@
 //- Common Code For All Addons needed just to ease inclusion as separate files in user code ----------------------
 #include <imgui.h>
-#undef IMGUI_DEFINE_PLACEMENT_NEW
-#define IMGUI_DEFINE_PLACEMENT_NEW
 #undef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui_internal.h>
@@ -3947,7 +3945,7 @@ bool PasswordDrawer(char *password, int passwordSize,ImGuiPasswordDrawerFlags fl
 
     return editable ? 0 : pressed;
 }
-// End MobileLock ===================================================================================================
+// End PasswordDrawer ===================================================================================================
 
 // Start CheckboxFlags ==============================================================================================
 unsigned int CheckboxFlags(const char* label,unsigned int* flags,int numFlags,int numRows,int numColumns,unsigned int flagAnnotations,int* itemHoveredOut,const unsigned int* pFlagsValues)
@@ -4094,7 +4092,7 @@ bool CheckboxStyled(const char* label, bool* v,const ImU32* pOptionalEightColors
     bool pressed = ButtonBehavior(total_bb, id, &hovered, &held);
     static float timeBegin = -1.f;
     static ImGuiID timeID = 0;
-    static const float timeActionLength = 0.25f;
+    static const float timeActionLength = 0.2f;
     if (pressed) {
         *v = !(*v); // change state soon
         if (timeID==id) {

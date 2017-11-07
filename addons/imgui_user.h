@@ -76,6 +76,7 @@
 #endif // NO_IMGUI_ADDONS
 
 // Defining a custom placement new() with a dummy parameter allows us to bypass including <new> which on some platforms complains when user has disabled exceptions.
+// (This is necessary because the original IM_PLACEMENT_NEW macro is not exposed by imgui.h, but only by imgui_internal.h)
 #ifndef IMIMPL_HAS_PLACEMENT_NEW
 #define IMIMPL_HAS_PLACEMENT_NEW
 struct ImImplPlacementNewDummy {};

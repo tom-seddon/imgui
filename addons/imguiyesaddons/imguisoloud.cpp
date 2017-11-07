@@ -70,10 +70,8 @@ The TED / SID support is based on tedplay (c) 2012 Attila Grosz, used under Unli
 
 #ifndef NO_IMGUISOLOUD_METHODS
 #include <imgui.h>
-//#undef IMGUI_DEFINE_PLACEMENT_NEW
-//#define IMGUI_DEFINE_PLACEMENT_NEW
-//#undef IMGUI_DEFINE_MATH_OPERATORS
-//#define IMGUI_DEFINE_MATH_OPERATORS
+#undef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui_internal.h>
 #endif //NO_IMGUISOLOUD_METHODS
 
