@@ -340,7 +340,7 @@ TabLabelStyle::TabLabelStyle()    {
     tabWindowLabelBackgroundColor        = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     tabWindowLabelShowAreaSeparator      = false;
     tabWindowSplitterColor               = ImVec4(1,1,1,1);
-    tabWindowSplitterSize                = 8.f;
+    tabWindowSplitterSize                = 6.f;
 }
 void ChangeTabLabelStyleColors(TabLabelStyle& style,float satThresholdForInvertingLuminance,float shiftHue)  {
     if (satThresholdForInvertingLuminance>=1.f && shiftHue==0.f) return;

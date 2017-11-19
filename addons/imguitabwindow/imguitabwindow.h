@@ -28,8 +28,9 @@
         }
 
         tabWindow.render(); // Must be called inside "its" window (and sets isInited() to false)
-        ImGui::End();
     }
+    ImGui::End();
+
     // Optional add other ImGui::Window-TabWindow pairs here
 
 2) At init time:

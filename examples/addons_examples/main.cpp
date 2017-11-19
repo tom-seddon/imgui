@@ -419,13 +419,14 @@ void DrawGL()	// Mandatory
         saveCurrentStyle = ImGui::Button("Save Current Style");
         resetCurrentStyle = ImGui::Button("Reset Current Style To: ");
         ImGui::SameLine();
-        static int styleEnumNum = 2;    // Gray style
+        static int styleEnumNum = 3;    // Gray style
         ImGui::PushItemWidth(135);
         ImGui::Combo("###StyleEnumCombo",&styleEnumNum,ImGui::GetDefaultStyleNames(),(int) ImGuiStyle_Count,(int) ImGuiStyle_Count);
         ImGui::PopItemWidth();
         if (ImGui::IsItemHovered()) {
             if   (styleEnumNum==ImGuiStyle_Default)      ImGui::SetTooltip("%s","\"Default\"\nThis is the default\nclassic ImGui theme");
             else if (styleEnumNum==ImGuiStyle_DefaultDark)      ImGui::SetTooltip("%s","\"DefaultDark\"\nThis is the default\ndark ImGui theme");
+            else if (styleEnumNum==ImGuiStyle_DefaultLight)      ImGui::SetTooltip("%s","\"DefaultLight\"\nThis is the default\nlight ImGui theme");
             else if (styleEnumNum==ImGuiStyle_Gray)   ImGui::SetTooltip("%s","\"Gray\"\nThis is the default\ntheme of this demo");
             else if (styleEnumNum==ImGuiStyle_OSX)   ImGui::SetTooltip("%s","\"OSX\"\nPosted by @itamago here:\nhttps://github.com/ocornut/imgui/pull/511\n(hope I can use it)");
             else if (styleEnumNum==ImGuiStyle_DarkOpaque)   ImGui::SetTooltip("%s","\"DarkOpaque\"\nA dark-grayscale style with\nno transparency (by default)");
@@ -751,8 +752,7 @@ void DrawGL()	// Mandatory
         ImGui::InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu("ITMWHS2", buffer2, 1024, height,popup_open,threeStaticInts);
         ImGui::PopID();
 
-        ImGui::Spacing();
-        ImGui::Text("AutoCompletion Stuff (UP/DOWN/TAB keys):");
+        ImGui::Spacing();ImGui::Separator();ImGui::Text("AutoCompletion Stuff (UP/DOWN/TAB keys):");ImGui::Separator();
         {
             // Bad implementation: users think they can click on the autocompletion-menu, instead of using TAB+ARROWS
 
@@ -882,8 +882,7 @@ void DrawGL()	// Mandatory
 
         }
 
-        ImGui::Spacing();
-        ImGui::Text("Buttons With Images:");
+        ImGui::Spacing();ImGui::Separator();ImGui::Text("Buttons With Images:");ImGui::Separator();
         ImGui::ImageButtonWithText(reinterpret_cast<ImTextureID>(myImageTextureId2),"MyImageButtonWithText",ImVec2(16,16),ImVec2(0,0),ImVec2(0.33334f,0.33334f));
 
 #       ifndef NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
@@ -895,15 +894,12 @@ void DrawGL()	// Mandatory
         gif.renderAsButton("myButton123",ImVec2(-.5f,-.5f));    // Negative size multiplies the 'native' gif size
 #       endif //NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
 
-        ImGui::Spacing();
-        ImGui::Text("Image with zoom (CTRL+MW) and pan (RMB drag):");
-        //ImGui::TextColored(halfTextColor,"(Problem: zooming interfence with GetIO().FontAllowUserScaling).");
+        ImGui::Spacing();ImGui::Separator();ImGui::Text("Image with zoom (CTRL+MW) and pan (RMB drag):");ImGui::Separator();
         static float zoom = 1.f;static ImVec2 pan(.5f,.5f);
         // This requires     ImGui::GetIO().FontAllowUserScaling = false;
         ImGui::ImageZoomAndPan(reinterpret_cast<ImTextureID>(myImageTextureId2),ImVec2(0,150),1.f,zoom,pan);    // aspect ratio can be aero for stretch mode
 
-        ImGui::Spacing();
-        ImGui::Text("Collapsable Header with buttons [ImGui::AppendTreeNodeHeaderButtons(...)]");
+        ImGui::Spacing();ImGui::Separator();ImGui::Text("Collapsable Header with buttons [ImGui::AppendTreeNodeHeaderButtons(...)]");ImGui::Separator();
         // Nobody will use this, it's too complicated to set up. However:
         { // start scope
             static bool displayButtonsOnlyOnItemHovering = false;     // tweakable
@@ -945,9 +941,7 @@ void DrawGL()	// Mandatory
             else if (ImGui::Button("Reset collapsable header##AppendTreeNodeHeaderButtonsReset")) closed = false;
         } // end scope        
 
-        ImGui::Spacing();
-        ImGui::Text("Graph Widgets:");
-        ImGui::Separator();
+        ImGui::Spacing();ImGui::Separator();ImGui::Text("Graph Widgets:");ImGui::Separator();
         {
             if (ImGui::TreeNode("ImGui::PlotHistogram(...) overload###ImGui::PlotHistogram(...) overloadCH")) {
 
@@ -1008,9 +1002,7 @@ void DrawGL()	// Mandatory
             // are available too (but no example so far... I'm too lazy to code it)
         }
 
-
-        ImGui::Spacing();
-        ImGui::Text("Generic TreeView Implementation:");
+        ImGui::Spacing();ImGui::Separator();ImGui::Text("Generic TreeView Implementation:");//ImGui::Separator();
         {
             // Actually we can use less than 5 lines of code to setup and run a very basic TreeView...
             // [the single line: static ImGui::TreeView tv;tv.render(); works, but it's without any item...]
@@ -1061,8 +1053,8 @@ void DrawGL()	// Mandatory
             }
 
             // Optional tuff to change some tv options on the fly -------------------------------------
+            if (ImGui::TreeNode("Options:##TreeNodeOptions")) {
             {
-                ImGui::Separator();
                 bool changed = false;
                 ImGui::AlignFirstTextHeightToWidgets();ImGui::TextDisabled("Selection Mode:");ImGui::SameLine();
                 changed|=ImGui::CheckboxFlags("Root##TreeViewSelectRoot",&tv.selectionMode,ImGui::TreeViewNode::MODE_ROOT);ImGui::SameLine();
@@ -1100,12 +1092,12 @@ void DrawGL()	// Mandatory
             bool customCheckBox = ImGui::TreeView::HasCustomCheckBoxGlyphs();
             if (ImGui::Checkbox("Use custom check boxes##TreeViewCustomCheckBoxes",&customCheckBox)) ImGui::TreeView::SetFontCheckBoxGlyphs(customCheckBox?"[ ]":"",customCheckBox?"[x]":"");
 #           if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
-            ImGui::Separator();
+            //ImGui::Separator();
             static const char* saveName = "myTreeView.layout";
             const char* saveNamePersistent = "/persistent_folder/myTreeView.layout";
             const char* pSaveName = saveName;
 #           ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
-            if (ImGui::Button("Save")) {
+            if (ImGui::Button("Save TreeView")) {
 #               ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                 pSaveName = saveNamePersistent;
 #               endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
@@ -1118,7 +1110,7 @@ void DrawGL()	// Mandatory
             ImGui::SameLine();
 #           endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #           ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
-            if (ImGui::Button("Load")) {
+            if (ImGui::Button("Load TreeView")) {
 #               ifdef YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
                 if (ImGuiHelper::FileExists(saveNamePersistent)) pSaveName = saveNamePersistent;
 #               endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
@@ -1127,9 +1119,12 @@ void DrawGL()	// Mandatory
             ImGui::SameLine();
 #           endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #           endif //NO_IMGUIHELPER_SERIALIZATION
-            resetTv = ImGui::Button("Reset");
-            ImGui::Separator();
+            resetTv = ImGui::Button("Reset TreeView");
             // ----------------------------------------------------------------------------------------------
+            ImGui::TreePop();
+            }
+            ImGui::Separator();
+
 
             if (tv.render())    // Mandatory call. Makes tv.isInit() return true. Returns true when a node event has occurred.
             {

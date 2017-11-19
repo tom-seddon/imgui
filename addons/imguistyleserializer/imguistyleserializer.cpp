@@ -82,7 +82,7 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
     fprintf(f, "[ScrollbarSize]\n%1.3f\n", style.ScrollbarSize);
     fprintf(f, "[GrabMinSize]\n%1.3f\n", style.GrabMinSize);
     fprintf(f, "[GrabRounding]\n%1.3f\n", style.GrabRounding);
-    fprintf(f, "[ChildWindowRounding]\n%1.3f\n", style.ChildWindowRounding);
+    fprintf(f, "[ChildRounding]\n%1.3f\n", style.ChildRounding);
     fprintf(f, "[DisplayWindowPadding]\n%1.3f %1.3f\n", style.DisplayWindowPadding.x,style.DisplaySafeAreaPadding.y);
     fprintf(f, "[DisplaySafeAreaPadding]\n%1.3f %1.3f\n", style.DisplaySafeAreaPadding.x,style.DisplaySafeAreaPadding.y);
     fprintf(f, "[AntiAliasedLines]\n%d\n", style.AntiAliasedLines?1:0);
@@ -91,7 +91,7 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
 
     for (size_t i = 0; i != ImGuiCol_COUNT; i++)
     {
-		const ImVec4& c = style.Colors[i];
+	const ImVec4& c = style.Colors[i];
 	fprintf(f, "[%s]\n", ImGui::GetStyleColorName(i));//ImGuiColNames[i]);
         fprintf(f, "%1.3f %1.3f %1.3f %1.3f\n",c.x,c.y,c.z,c.w);
     }
@@ -179,7 +179,8 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
                 else if (strcmp(name, "ScrollbarSize")==0)            {npf=1;pf[0]=&style.ScrollbarSize;}
                 else if (strcmp(name, "GrabMinSize")==0)               {npf=1;pf[0]=&style.GrabMinSize;}
                 else if (strcmp(name, "GrabRounding")==0)               {npf=1;pf[0]=&style.GrabRounding;}
-                else if (strcmp(name, "ChildWindowRounding")==0)       {npf=1;pf[0]=&style.ChildWindowRounding;}
+		else if (strcmp(name, "ChildRounding")==0 ||
+			 strcmp(name, "ChildWindowRounding")==0)       {npf=1;pf[0]=&style.ChildRounding;}
                 else if (strcmp(name, "DisplayWindowPadding")==0)    {npf=2;pf[0]=&style.DisplayWindowPadding.x;pf[1]=&style.DisplayWindowPadding.y;}
                 else if (strcmp(name, "DisplaySafeAreaPadding")==0)    {npf=2;pf[0]=&style.DisplaySafeAreaPadding.x;pf[1]=&style.DisplaySafeAreaPadding.y;}
                 else if (strcmp(name, "AntiAliasedLines")==0)          {npb=1;pb[0]=&style.AntiAliasedLines;}
@@ -221,6 +222,14 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
 			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
 			    break;
 			}
+			/* // ImGuiCol_ComboBg has been removed in favour of ImGuiCol_PopupBg.
+			   // So it's better not to use the serilized ImGuiCol_ComboBg anymore
+			  else if (strcmp(name,"ComboBg")==0)	{
+			    npf = 4;
+			    ImVec4& color = style.Colors[ImGuiCol_PopupBg];
+			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
+			    break;
+			}*/
 			// -----------------------------------------------------------
                     }
                 }
@@ -372,6 +381,9 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
     case ImGuiStyle_DefaultDark:
 	ImGui::StyleColorsDark(&style);
     break;
+    case ImGuiStyle_DefaultLight:
+	ImGui::StyleColorsLight(&style);
+    break;
     case ImGuiStyle_DefaultInverse:
 	InvertStyleColors(style);
 	style.Colors[ImGuiCol_PopupBg]	= ImVec4(0.79f, 0.76f, 0.725f, 0.875f);
@@ -387,7 +399,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 
 	style.WindowPadding = ImVec2(8,8);
 	style.WindowRounding = 6;
-	style.ChildWindowRounding = 0;
+	style.ChildRounding = 0;
 	style.FramePadding = ImVec2(3,3);
 	style.FrameRounding = 2;
 	style.ItemSpacing = ImVec2(8,4);
@@ -416,7 +428,8 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_ScrollbarGrab]         = ImVec4(0.67f, 0.58f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_ScrollbarGrabHovered]  = ImVec4(0.83f, 0.88f, 0.25f, 1.00f);
 	style.Colors[ImGuiCol_ScrollbarGrabActive]   = ImVec4(1.00f, 1.00f, 0.67f, 1.00f);
-	style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+	style.Colors[ImGuiCol_PopupBg]               = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
+	//style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
 	style.Colors[ImGuiCol_CheckMark]             = ImVec4(0.90f, 0.90f, 0.90f, 0.50f);
 	style.Colors[ImGuiCol_SliderGrab]            = ImVec4(1.00f, 1.00f, 1.00f, 0.29f);
 	style.Colors[ImGuiCol_SliderGrabActive]      = ImVec4(0.80f, 0.50f, 0.50f, 1.00f);
@@ -440,8 +453,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_PlotHistogram]         = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.00f, 0.00f, 0.66f, 0.34f);
-	style.Colors[ImGuiCol_PopupBg]               = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
-	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);	
+	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
     }
     break;
     case ImGuiStyle_Light:
@@ -454,7 +466,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 
 	style.WindowPadding = ImVec2(8,8);
 	style.WindowRounding = 6;
-	style.ChildWindowRounding = 0;
+	style.ChildRounding = 0;
 	style.FramePadding = ImVec2(4,3);
 	style.FrameRounding = 0;
 	style.ItemSpacing = ImVec2(8,4);
@@ -484,7 +496,6 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_ScrollbarGrab]         = ImVec4(0.61f, 0.60f, 0.26f, 1.00f);
 	style.Colors[ImGuiCol_ScrollbarGrabHovered]  = ImVec4(0.73f, 0.72f, 0.31f, 1.00f);
 	style.Colors[ImGuiCol_ScrollbarGrabActive]   = ImVec4(0.82f, 0.82f, 0.35f, 1.00f);
-	style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.51f, 0.63f, 0.63f, 0.92f);
 	style.Colors[ImGuiCol_CheckMark]             = ImVec4(0.85f, 0.86f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_SliderGrab]            = ImVec4(0.81f, 0.82f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_SliderGrabActive]      = ImVec4(0.87f, 0.88f, 0.00f, 1.00f);
@@ -533,7 +544,6 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_ScrollbarGrab]         = ImVec4(0.69f, 0.69f, 0.69f, 0.80f);
 	style.Colors[ImGuiCol_ScrollbarGrabHovered]  = ImVec4(0.49f, 0.49f, 0.49f, 0.80f);
 	style.Colors[ImGuiCol_ScrollbarGrabActive]   = ImVec4(0.49f, 0.49f, 0.49f, 1.00f);
-	style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.86f, 0.86f, 0.86f, 0.99f);
 	style.Colors[ImGuiCol_CheckMark]             = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
 	style.Colors[ImGuiCol_SliderGrab]            = ImVec4(0.26f, 0.59f, 0.98f, 0.78f);
 	style.Colors[ImGuiCol_SliderGrabActive]      = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
@@ -558,6 +568,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
 	style.Colors[ImGuiCol_PopupBg]		     = ImVec4(1.00f, 1.00f, 1.00f, 0.94f);
+	//style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.86f, 0.86f, 0.86f, 0.99f);
 	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 
 	if (styleEnum == ImGuiStyle_OSXInverse) {
@@ -578,7 +589,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 
 	style.WindowPadding = ImVec2(8,8);
 	style.WindowRounding = 4;
-	style.ChildWindowRounding = 0;
+	style.ChildRounding = 0;
 	style.FramePadding = ImVec2(3,3);
 	style.FrameRounding = 0;
 	style.ItemSpacing = ImVec2(8,4);
@@ -596,6 +607,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.18f, 0.18f, 0.18f, 1.00f);
 	style.Colors[ImGuiCol_ChildWindowBg]         = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
 	style.Colors[ImGuiCol_PopupBg]               = ImVec4(0.01f, 0.04f, 0.00f, 1.00f);
+	//style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
 	style.Colors[ImGuiCol_Border]                = ImVec4(0.04f, 0.04f, 0.04f, 0.51f);
 	style.Colors[ImGuiCol_BorderShadow]          = ImVec4(0.18f, 0.18f, 0.18f, 1.00f);
 	style.Colors[ImGuiCol_FrameBg]               = ImVec4(0.33f, 0.33f, 0.33f, 1.00f);
@@ -609,7 +621,6 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_ScrollbarGrab]         = ImVec4(0.64f, 0.64f, 0.80f, 0.59f);
 	style.Colors[ImGuiCol_ScrollbarGrabHovered]  = ImVec4(0.64f, 0.64f, 0.80f, 0.78f);
 	style.Colors[ImGuiCol_ScrollbarGrabActive]   = ImVec4(0.64f, 0.64f, 0.80f, 1.00f);
-	style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
 	style.Colors[ImGuiCol_CheckMark]             = ImVec4(0.69f, 0.69f, 0.69f, 1.00f);
 	style.Colors[ImGuiCol_SliderGrab]            = ImVec4(0.69f, 0.69f, 0.69f, 1.00f);
 	style.Colors[ImGuiCol_SliderGrabActive]      = ImVec4(0.88f, 0.88f, 0.88f, 1.00f);
@@ -662,7 +673,6 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_ScrollbarGrab]         = ImVec4(0.69f, 0.69f, 0.69f, 0.80f);
 	style.Colors[ImGuiCol_ScrollbarGrabHovered]  = ImVec4(0.49f, 0.49f, 0.49f, 0.80f);
 	style.Colors[ImGuiCol_ScrollbarGrabActive]   = ImVec4(0.49f, 0.49f, 0.49f, 1.00f);
-	style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.86f, 0.86f, 0.86f, 0.99f);
 	style.Colors[ImGuiCol_CheckMark]             = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
 	style.Colors[ImGuiCol_SliderGrab]            = ImVec4(0.26f, 0.59f, 0.98f, 0.78f);
 	style.Colors[ImGuiCol_SliderGrabActive]      = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
@@ -687,6 +697,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
 	style.Colors[ImGuiCol_PopupBg]		     = ImVec4(1.00f, 1.00f, 1.00f, 0.94f);
+	//style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.86f, 0.86f, 0.86f, 0.99f);
 	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 
 	if (styleEnum == ImGuiStyle_OSXOpaqueInverse) {
@@ -727,6 +738,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.92f, 0.91f, 0.88f, 0.70f);
 	style.Colors[ImGuiCol_ChildWindowBg]         = ImVec4(1.00f, 0.98f, 0.95f, 0.58f);
 	style.Colors[ImGuiCol_PopupBg]               = ImVec4(0.92f, 0.91f, 0.88f, 0.92f);
+	//style.Colors[ImGuiCol_ComboBg]               = ImVec4(1.00f, 0.98f, 0.95f, 1.00f);
 	style.Colors[ImGuiCol_Border]                = ImVec4(0.84f, 0.83f, 0.80f, 0.65f);
 	style.Colors[ImGuiCol_BorderShadow]          = ImVec4(0.92f, 0.91f, 0.88f, 0.00f);
 	style.Colors[ImGuiCol_FrameBg]               = ImVec4(1.00f, 0.98f, 0.95f, 1.00f);
@@ -740,7 +752,6 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_ScrollbarGrab]         = ImVec4(0.00f, 0.00f, 0.00f, 0.21f);
 	style.Colors[ImGuiCol_ScrollbarGrabHovered]  = ImVec4(0.90f, 0.91f, 0.00f, 0.78f);
 	style.Colors[ImGuiCol_ScrollbarGrabActive]   = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
-	style.Colors[ImGuiCol_ComboBg]               = ImVec4(1.00f, 0.98f, 0.95f, 1.00f);
 	style.Colors[ImGuiCol_CheckMark]             = ImVec4(0.25f, 1.00f, 0.00f, 0.80f);
 	style.Colors[ImGuiCol_SliderGrab]            = ImVec4(0.00f, 0.00f, 0.00f, 0.14f);
 	style.Colors[ImGuiCol_SliderGrabActive]      = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
@@ -777,6 +788,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
 	style.Colors[ImGuiCol_ChildWindowBg]         = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
 	style.Colors[ImGuiCol_PopupBg]               = ImVec4(0.10f, 0.10f, 0.10f, 0.90f);
+	//style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.21f, 0.21f, 0.21f, 0.99f);
 	style.Colors[ImGuiCol_Border]                = ImVec4(0.27f, 0.27f, 0.27f, 1.00f);
 	style.Colors[ImGuiCol_BorderShadow]          = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_FrameBg]               = ImVec4(0.23f, 0.23f, 0.23f, 1.00f);
@@ -790,7 +802,6 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_ScrollbarGrab]         = ImVec4(0.80f, 0.80f, 0.80f, 0.30f);
 	style.Colors[ImGuiCol_ScrollbarGrabHovered]  = ImVec4(0.80f, 0.80f, 0.80f, 0.40f);
 	style.Colors[ImGuiCol_ScrollbarGrabActive]   = ImVec4(0.86f, 0.86f, 0.86f, 0.52f);
-	style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.21f, 0.21f, 0.21f, 0.99f);
 	style.Colors[ImGuiCol_CheckMark]             = ImVec4(0.47f, 0.47f, 0.47f, 1.00f);
 	style.Colors[ImGuiCol_SliderGrab]            = ImVec4(0.60f, 0.60f, 0.60f, 0.34f);
 	style.Colors[ImGuiCol_SliderGrabActive]      = ImVec4(0.84f, 0.84f, 0.84f, 0.34f);
@@ -829,6 +840,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.92f, 0.92f, 0.92f, 1.00f);
 	style.Colors[ImGuiCol_ChildWindowBg]         = ImVec4(1.00f, 1.00f, 1.00f, 0.00f);
 	style.Colors[ImGuiCol_PopupBg]               = ImVec4(1.00f, 1.00f, 1.00f, 0.92f);
+	//style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.96f, 0.96f, 0.96f, 0.92f);
 	style.Colors[ImGuiCol_Border]                = ImVec4(0.73f, 0.73f, 0.73f, 0.65f);
 	style.Colors[ImGuiCol_BorderShadow]          = ImVec4(0.65f, 0.65f, 0.65f, 0.31f);
 	style.Colors[ImGuiCol_FrameBg]               = ImVec4(0.96f, 0.96f, 0.96f, 1.00f);
@@ -842,7 +854,6 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_ScrollbarGrab]         = ImVec4(0.75f, 0.75f, 0.75f, 1.00f);
 	style.Colors[ImGuiCol_ScrollbarGrabHovered]  = ImVec4(0.67f, 0.67f, 0.67f, 1.00f);
 	style.Colors[ImGuiCol_ScrollbarGrabActive]   = ImVec4(0.55f, 0.55f, 0.55f, 1.00f);
-	style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.96f, 0.96f, 0.96f, 0.92f);
 	style.Colors[ImGuiCol_CheckMark]             = ImVec4(0.72f, 0.72f, 0.72f, 1.00f);
 	style.Colors[ImGuiCol_SliderGrab]            = ImVec4(0.57f, 0.57f, 0.57f, 0.34f);
 	style.Colors[ImGuiCol_SliderGrabActive]      = ImVec4(0.24f, 0.24f, 0.24f, 0.34f);
@@ -872,7 +883,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
     break;
     case ImGuiStyle_Maya: {
 	// Posted by @ongamex here https://gist.github.com/ongamex/4ee36fb23d6c527939d0f4ba72144d29
-	style.ChildWindowRounding = 3.f;
+	style.ChildRounding = 3.f;
 	style.GrabRounding = 0.f;
 	style.WindowRounding = 0.f;
 	style.ScrollbarRounding = 3.f;
@@ -884,6 +895,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.26f, 0.26f, 0.26f, 0.95f);
 	style.Colors[ImGuiCol_ChildWindowBg]         = ImVec4(0.28f, 0.28f, 0.28f, 1.00f);
 	style.Colors[ImGuiCol_PopupBg]               = ImVec4(0.26f, 0.26f, 0.26f, 1.00f);
+	//style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.32f, 0.32f, 0.32f, 1.00f);
 	style.Colors[ImGuiCol_Border]                = ImVec4(0.26f, 0.26f, 0.26f, 1.00f);
 	style.Colors[ImGuiCol_BorderShadow]          = ImVec4(0.26f, 0.26f, 0.26f, 1.00f);
 	style.Colors[ImGuiCol_FrameBg]               = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
@@ -897,7 +909,6 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_ScrollbarGrab]         = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
 	style.Colors[ImGuiCol_ScrollbarGrabHovered]  = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
 	style.Colors[ImGuiCol_ScrollbarGrabActive]   = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
-	style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.32f, 0.32f, 0.32f, 1.00f);
 	style.Colors[ImGuiCol_CheckMark]             = ImVec4(0.78f, 0.78f, 0.78f, 1.00f);
 	style.Colors[ImGuiCol_SliderGrab]            = ImVec4(0.74f, 0.74f, 0.74f, 1.00f);
 	style.Colors[ImGuiCol_SliderGrabActive]      = ImVec4(0.74f, 0.74f, 0.74f, 1.00f);
@@ -931,7 +942,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 
     return true;
 }
-static const char* DefaultStyleNames[ImGuiStyle_Count]={"Default","DefaultDark","Gray","Light","OSX","OSXOpaque","DarkOpaque","Soft","EdinBlack","EdinWhite","Maya","DefaultInverse","OSXInverse","OSXOpaqueInverse","DarkOpaqueInverse"};
+static const char* DefaultStyleNames[ImGuiStyle_Count]={"Default","DefaultDark","DefaultLight","Gray","Light","OSX","OSXOpaque","DarkOpaque","Soft","EdinBlack","EdinWhite","Maya","DefaultInverse","OSXInverse","OSXOpaqueInverse","DarkOpaqueInverse"};
 const char** GetDefaultStyleNames() {return &DefaultStyleNames[0];}
 
 } // namespace ImGui
