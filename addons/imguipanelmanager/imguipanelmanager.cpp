@@ -125,6 +125,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     SetCurrentWindow(window);
     CheckStacksSize(window, true);
 
+    const float window_border_size = window->WindowBorderSize;
     bool window_just_activated_by_user = (window->LastFrameActive < current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
     if (flags & ImGuiWindowFlags_Popup)
     {
@@ -306,11 +307,19 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         }
 
         // Lock window padding so that altering the ShowBorders flag for children doesn't have side-effects.
-        window->WindowPadding = style.WindowPadding;
-        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_Popup)))
+//        window->WindowPadding = style.WindowPadding;
+//        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_Popup)))
+//            window->WindowPadding = ImVec2(0.0f, (flags & ImGuiWindowFlags_MenuBar) ? style.WindowPadding.y : 0.0f);
+//        window->WindowBorderSize = style.WindowBorderSize;
+//        window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
+
+        // Lock window rounding, border size and rounding so that altering the border sizes for children doesn't have side-effects.
+         window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
+         window->WindowBorderSize = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildBorderSize : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupBorderSize : style.WindowBorderSize;
+         window->WindowPadding = style.WindowPadding;
+         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_Popup)) && window->WindowBorderSize == 0.0f)
             window->WindowPadding = ImVec2(0.0f, (flags & ImGuiWindowFlags_MenuBar) ? style.WindowPadding.y : 0.0f);
-        window->WindowBorderSize = (flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
-        window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
+
         const float window_rounding = window->WindowRounding;
 
         // Calculate auto-fit size
@@ -394,6 +403,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         }
 
         // POSITION
+
 
         // Position child window
         if (flags & ImGuiWindowFlags_ChildWindow)   {
@@ -515,7 +525,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         {
             // Draw title bar only
             window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_TitleBgCollapsed), window_rounding);
-            if ((flags & ImGuiWindowFlags_ShowBorders) || gImGuiDockPanelManagerAlwaysDrawExternalBorders)
+            if (style.WindowBorderSize || gImGuiDockPanelManagerAlwaysDrawExternalBorders)
             {
                 window->DrawList->AddRect(title_bar_rect.GetTL()+ImVec2(1,1), title_bar_rect.GetBR()+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), window_rounding);
                 window->DrawList->AddRect(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border), window_rounding);
@@ -624,13 +634,13 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                     ImU32 col = GetColorU32((g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
                     ImGui::ImDrawListAddRectWithVerticalGradient(window->DrawList,
                         title_bar_rect.GetTL(), title_bar_rect.GetBR(),col,0.15f,0,
-                        window_rounding, ImGuiCorner_TopLeft|ImGuiCorner_TopRight,1.f,ImGui::GetStyle().AntiAliasedShapes
+                        window_rounding, ImDrawCornerFlags_TopLeft|ImDrawCornerFlags_TopRight,1.f,ImGui::GetStyle().AntiAliasedShapes
                     );
                 }
                 else
 #               endif // (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
                 {
-                    window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32((g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, ImGuiCorner_TopLeft|ImGuiCorner_TopRight);
+                    window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32((g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, ImDrawCornerFlags_TopLeft|ImDrawCornerFlags_TopRight);
                 }
             }
 
@@ -639,7 +649,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             {
                 ImRect menu_bar_rect = window->MenuBarRect();
                 //if (flags & ImGuiWindowFlags_ShowBorders) window->DrawList->AddLine(menu_bar_rect.GetBL()-ImVec2(0,0), menu_bar_rect.GetBR()-ImVec2(0,0), GetColorU32(ImGuiCol_Border));
-                window->DrawList->AddRectFilled(menu_bar_rect.GetTL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImGuiCorner_TopLeft|ImGuiCorner_TopRight);
+                window->DrawList->AddRectFilled(menu_bar_rect.GetTL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawCornerFlags_TopLeft|ImDrawCornerFlags_TopRight);
             }
 
             // Scrollbars
@@ -660,13 +670,12 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             }
 
             // Borders
-            if ((flags & ImGuiWindowFlags_ShowBorders) || gImGuiDockPanelManagerAlwaysDrawExternalBorders)
+            if (window_border_size > 0.0f || gImGuiDockPanelManagerAlwaysDrawExternalBorders)
             {
                 window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), window_rounding);
                 window->DrawList->AddRect(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_Border), window_rounding);
+                if (!(flags & ImGuiWindowFlags_NoTitleBar)) window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border));
             }
-            if ((flags & ImGuiWindowFlags_ShowBorders) && !(flags & ImGuiWindowFlags_NoTitleBar))
-                window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border));
 
         }
 
@@ -777,12 +786,11 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
     // Inner clipping rectangle
     // Force round operator last to ensure that e.g. (int)(max.x-min.x) in user's render code produce correct result.
-    const float border_size = ((flags & ImGuiWindowFlags_ShowBorders) || gImGuiDockPanelManagerAlwaysDrawExternalBorders) ? window->WindowBorderSize : 0.0f;    //  window->WindowBorderSize or 1.0f ?
     ImRect clip_rect;
-    clip_rect.Min.x = ImFloor(0.5f + window->InnerRect.Min.x + ImMax(border_size, ImFloor(window->WindowPadding.x*0.5f)));
-    clip_rect.Min.y = ImFloor(0.5f + window->InnerRect.Min.y + border_size);
-    clip_rect.Max.x = ImFloor(0.5f + window->InnerRect.Max.x - ImMax(border_size, ImFloor(window->WindowPadding.x*0.5f)));
-    clip_rect.Max.y = ImFloor(0.5f + window->InnerRect.Max.y - border_size);
+    clip_rect.Min.x = ImFloor(0.5f + window->InnerRect.Min.x + ImMax(window_border_size, ImFloor(window->WindowPadding.x*0.5f)));
+    clip_rect.Min.y = ImFloor(0.5f + window->InnerRect.Min.y + window_border_size);
+    clip_rect.Max.x = ImFloor(0.5f + window->InnerRect.Max.x - ImMax(window_border_size, ImFloor(window->WindowPadding.x*0.5f)));
+    clip_rect.Max.y = ImFloor(0.5f + window->InnerRect.Max.y - window_border_size);
     PushClipRect(clip_rect.Min, clip_rect.Max, true);
 
     // Clear 'accessed' flag last thing
@@ -1753,7 +1761,7 @@ static bool ImGuiPanelManagerParser(ImGuiHelper::FieldType ft,int /*numArrayElem
         else if (strcmp(name,"managerExtraWindowFlags")==0)	{
             ImGuiWindowFlags flags = *((int*)pValue);
             //mgr.dockedWindowsExtraFlags = flags;
-            mgr.setDockedWindowsBorder(flags&ImGuiWindowFlags_ShowBorders);
+            //mgr.setDockedWindowsBorder(flags&ImGuiWindowFlags_ShowBorders);
             mgr.setDockedWindowsNoTitleBar(flags&ImGuiWindowFlags_NoTitleBar);
             break;
         }

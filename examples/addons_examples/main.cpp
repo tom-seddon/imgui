@@ -292,8 +292,8 @@ void DrawGL()	// Mandatory
     static bool show_image_editor = false;
 
     // 1. Show a simple window
-    static bool open = true;static bool no_border = false;static float bg_alpha = -1.f;
-    if (ImGui::Begin("ImGui Addons", &open, ImVec2(450,300),bg_alpha,no_border ? 0 : ImGuiWindowFlags_ShowBorders))   {
+    static bool open = true;static float bg_alpha = -1.f;
+    if (ImGui::Begin("ImGui Addons", &open, ImVec2(450,300),bg_alpha,0))   {
 
         if (ImGui::TreeNodeEx("Pause/Resume ImGui and process input as usual",ImGuiTreeNodeFlags_CollapsingHeader)) {
         //ImGui::Text("\n");ImGui::Separator();ImGui::Text("Pause/Resume ImGui and process input as usual");ImGui::Separator();
@@ -392,8 +392,6 @@ void DrawGL()	// Mandatory
 
         // Some options ported from imgui_demo.cpp
         if (ImGui::TreeNodeEx("Window options",ImGuiTreeNodeFlags_CollapsingHeader)) {
-        ImGui::Checkbox("No border", &no_border);
-        ImGui::SameLine(0,25);
         ImGui::PushItemWidth(100);
         ImGui::DragFloat("Window Fill Alpha", &bg_alpha, 0.005f, -0.01f, 1.0f, bg_alpha < 0.0f ? "(default)" : "%.3f"); // Not exposing zero here so user doesn't "close" the UI (zero alpha clips all widgets). But application code could have a toggle to switch between zero and non-zero.
         ImGui::PopItemWidth();
@@ -1725,7 +1723,7 @@ void DrawGL()	// Mandatory
 #   ifndef NO_IMGUITOOLBAR
     if (show_another_window)
     {
-        ImGui::Begin("Another Window", &show_another_window, ImVec2(500,100),bg_alpha,no_border ? 0 : ImGuiWindowFlags_ShowBorders);
+        ImGui::Begin("Another Window", &show_another_window, ImVec2(500,100),bg_alpha,0);
         {
             // imguitoolbar test (note that it can be used both inside and outside windows (see below)
             ImGui::Separator();ImGui::Text("imguitoolbar");ImGui::Separator();
@@ -1766,7 +1764,7 @@ void DrawGL()	// Mandatory
 #   endif // NO_IMGUISTYLESERIALIZER
 #   ifndef NO_IMGUINODEGRAPHEDITOR
     if (show_node_graph_editor_window) {
-        if (ImGui::Begin("Example: Custom Node Graph", &show_node_graph_editor_window,ImVec2(700,600),0.95f,ImGuiWindowFlags_NoScrollbar | (no_border ? 0 : ImGuiWindowFlags_ShowBorders))){
+        if (ImGui::Begin("Example: Custom Node Graph", &show_node_graph_editor_window,ImVec2(700,600),0.95f,ImGuiWindowFlags_NoScrollbar)){
 #           ifndef IMGUINODEGRAPHEDITOR_NOTESTDEMO
             ImGui::TestNodeGraphEditor();   // see its code for further info
 #           endif //IMGUINODEGRAPHEDITOR_NOTESTDEMO            
@@ -1831,7 +1829,7 @@ void DrawGL()	// Mandatory
     }
 #   ifndef NO_IMGUIDOCK
     if (show_dock_window)   {
-        if (ImGui::Begin("imguidock window (= lumix engine's dock system)",&show_dock_window,ImVec2(500, 500),0.95f,ImGuiWindowFlags_NoScrollbar | (no_border ? 0 : ImGuiWindowFlags_ShowBorders))) {
+        if (ImGui::Begin("imguidock window (= lumix engine's dock system)",&show_dock_window,ImVec2(500, 500),0.95f,ImGuiWindowFlags_NoScrollbar)) {
             ImGui::BeginDockspace();
             static char tmp[128];
             for (int i=0;i<10;i++)  {
@@ -1899,7 +1897,7 @@ void DrawGL()	// Mandatory
         static bool showTabWindow[2] = {true,true};
 
         if (showTabWindow[0])   {
-            if (ImGui::Begin("TabWindow1", &showTabWindow[0], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar | (no_border ? 0 : ImGuiWindowFlags_ShowBorders)))  {
+            if (ImGui::Begin("TabWindow1", &showTabWindow[0], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar))  {
                 ImGui::TabWindow&  tabWindow = tabWindows[0];
                 if (!tabWindow.isInited()) {
                     static const char* tabNames[] = {"Test","Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
@@ -1915,7 +1913,7 @@ void DrawGL()	// Mandatory
         }
 
         if (showTabWindow[1])   {
-            if (ImGui::Begin("TabWindow2", &showTabWindow[1], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar | (no_border ? 0 : ImGuiWindowFlags_ShowBorders)))  {
+            if (ImGui::Begin("TabWindow2", &showTabWindow[1], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar))  {
                 ImGui::TabWindow&  tabWindow2 = tabWindows[1];
                 tabWindow2.render();
             }
@@ -1930,7 +1928,7 @@ void DrawGL()	// Mandatory
     }
 #   endif //NO_IMGUITABWINDOW
     if (show_performance)   {
-        if (ImGui::Begin("Performance Window",&show_performance,ImVec2(0,0),0.9f,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoResize | (no_border ? 0 : ImGuiWindowFlags_ShowBorders)))   {
+        if (ImGui::Begin("Performance Window",&show_performance,ImVec2(0,0),0.9f,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoResize))   {
             ImGui::Text("Frame rate %.1f FPS",ImGui::GetIO().Framerate);
             ImGui::Text("Num texture bindings per frame: %d",gImGuiNumTextureBindingsPerFrame);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Consider that we're using\njust a single extra texture\nwith all the icons (numbers).");
@@ -1940,7 +1938,7 @@ void DrawGL()	// Mandatory
 #   ifdef YES_IMGUIMINIGAMES
 #   ifndef NO_IMGUIMINIGAMES_MINE
     if (show_mine_game) {
-        if (ImGui::Begin("Mine Game",&show_mine_game,ImVec2(600,400),.95f,ImGuiWindowFlags_NoScrollbar | (no_border ? 0 : ImGuiWindowFlags_ShowBorders)))  {
+        if (ImGui::Begin("Mine Game",&show_mine_game,ImVec2(600,400),.95f,ImGuiWindowFlags_NoScrollbar))  {
             static ImGuiMiniGames::Mine mineGame;
             mineGame.render();
         }
@@ -1949,7 +1947,7 @@ void DrawGL()	// Mandatory
 #   endif //NO_IMGUIMINIGAMES_MINE
 #   ifndef NO_IMGUIMINIGAMES_SUDOKU
     if (show_sudoku_game) {
-        if (ImGui::Begin("Sdoku Game",&show_sudoku_game,ImVec2(600,400),.95f,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse|(no_border ? 0 : ImGuiWindowFlags_ShowBorders)))  {
+        if (ImGui::Begin("Sdoku Game",&show_sudoku_game,ImVec2(600,400),.95f,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))  {
             static ImGuiMiniGames::Sudoku sudokuGame;
             sudokuGame.render();
         }
@@ -1959,7 +1957,7 @@ void DrawGL()	// Mandatory
 #   endif //YES_IMGUIMINIGAMES
 #   ifdef YES_IMGUIIMAGEEDITOR
     if (show_image_editor)  {
-        if (ImGui::Begin("Image Editor",&show_image_editor,ImVec2(750,600),0.95f,(no_border ? 0 : ImGuiWindowFlags_ShowBorders)))   {
+        if (ImGui::Begin("Image Editor",&show_image_editor,ImVec2(750,600),0.95f,0))   {
             static ImGui::ImageEditor imageEditor;
             if (!imageEditor.isInited()) 	{
                 if (!imageEditor.loadFromFile("./blankImage.png")) {

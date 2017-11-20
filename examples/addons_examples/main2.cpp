@@ -272,9 +272,6 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
 
             ImGui::TextDisabled("%s","These are also present in the \"Preferences\" Panel:");
             ImGui::DragFloat("Window Alpha##WA2", &mgr.getDockedWindowsAlpha(), 0.005f, -0.01f, 1.0f, mgr.getDockedWindowsAlpha() < 0.0f ? "(default)" : "%.3f");
-            ImGui::Spacing();
-            bool border = mgr.getDockedWindowsBorder();
-            if (ImGui::Checkbox("Window Borders##WB2",&border)) mgr.setDockedWindowsBorder(border); // Sets the window border to all the docked windows
 
 
 
@@ -836,9 +833,6 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
         }
         else if (strcmp(wd.name,"Preferences")==0)    {
             ImGui::DragFloat("Window Alpha##WA1", &mgr.getDockedWindowsAlpha(), 0.005f, -0.01f, 1.0f, mgr.getDockedWindowsAlpha() < 0.0f ? "(default)" : "%.3f");
-            bool border = mgr.getDockedWindowsBorder();
-            if (ImGui::Checkbox("Window Borders",&border)) mgr.setDockedWindowsBorder(border); // Sets the window border to all the docked windows
-            ImGui::SameLine();
             bool noTitleBar = mgr.getDockedWindowsNoTitleBar();
             if (ImGui::Checkbox("No Window TitleBars",&noTitleBar)) mgr.setDockedWindowsNoTitleBar(noTitleBar);
             if (gpShowCentralWindow) {ImGui::SameLine();ImGui::Checkbox("Show Central Wndow",(bool*)gpShowCentralWindow);}
@@ -889,7 +883,7 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
     else {
         // Here we draw our toggle windows (in our case ToggleWindowNames) in the usual way:
         // We can use -1.f for alpha here, instead of mgr.getDockedWindowsAlpha(), that can be too low (but choose what you like)
-        if (ImGui::Begin(wd.name,&wd.open,wd.size,-1.f,ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_ShowBorders))  {
+        if (ImGui::Begin(wd.name,&wd.open,wd.size,-1.f,ImGuiWindowFlags_NoSavedSettings))  {
             if (strcmp(wd.name,ToggleWindowNames[0])==0)   {
                 // Draw Toggle Window 1
                 ImGui::SetWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x*0.15f,ImGui::GetIO().DisplaySize.y*0.24f),ImGuiSetCond_FirstUseEver);

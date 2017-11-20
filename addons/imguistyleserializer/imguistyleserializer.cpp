@@ -66,14 +66,20 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
  
     fprintf(f, "[Alpha]\n%1.3f\n", style.Alpha);
     fprintf(f, "[WindowPadding]\n%1.3f %1.3f\n", style.WindowPadding.x,style.WindowPadding.y);
+    fprintf(f, "[WindowRounding]\n%1.3f\n", style.WindowRounding);
+    fprintf(f, "[WindowBorderSize]\n%1.3f\n", style.WindowBorderSize);
     fprintf(f, "[WindowMinSize]\n%1.3f %1.3f\n", style.WindowMinSize.x,style.WindowMinSize.y);
+    fprintf(f, "[ChildRounding]\n%1.3f\n", style.ChildRounding);
+    fprintf(f, "[ChildBorderSize]\n%1.3f\n", style.ChildBorderSize);
+    fprintf(f, "[PopupRounding]\n%1.3f\n", style.PopupRounding);
+    fprintf(f, "[PopupBorderSize]\n%1.3f\n", style.PopupBorderSize);
     fprintf(f, "[FramePadding]\n%1.3f %1.3f\n", style.FramePadding.x,style.FramePadding.y);
     fprintf(f, "[FrameRounding]\n%1.3f\n", style.FrameRounding);
+    fprintf(f, "[FrameBorderSize]\n%1.3f\n", style.FrameBorderSize);
     fprintf(f, "[ItemSpacing]\n%1.3f %1.3f\n", style.ItemSpacing.x,style.ItemSpacing.y);
     fprintf(f, "[ItemInnerSpacing]\n%1.3f %1.3f\n", style.ItemInnerSpacing.x,style.ItemInnerSpacing.y);
     fprintf(f, "[TouchExtraPadding]\n%1.3f %1.3f\n", style.TouchExtraPadding.x,style.TouchExtraPadding.y);
     //fprintf(f, "[WindowFillAlphaDefault]\n%1.3f\n", style.WindowFillAlphaDefault);
-    fprintf(f, "[WindowRounding]\n%1.3f\n", style.WindowRounding);
     fprintf(f, "[ScrollbarRounding]\n%1.3f\n", style.ScrollbarRounding);
     fprintf(f, "[WindowTitleAlign]\n%1.3f %1.3f\n", style.WindowTitleAlign.x,style.WindowTitleAlign.y);
     fprintf(f, "[ButtonTextAlign]\n%1.3f %1.3f\n", style.ButtonTextAlign.x,style.ButtonTextAlign.y);
@@ -82,7 +88,6 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
     fprintf(f, "[ScrollbarSize]\n%1.3f\n", style.ScrollbarSize);
     fprintf(f, "[GrabMinSize]\n%1.3f\n", style.GrabMinSize);
     fprintf(f, "[GrabRounding]\n%1.3f\n", style.GrabRounding);
-    fprintf(f, "[ChildRounding]\n%1.3f\n", style.ChildRounding);
     fprintf(f, "[DisplayWindowPadding]\n%1.3f %1.3f\n", style.DisplayWindowPadding.x,style.DisplaySafeAreaPadding.y);
     fprintf(f, "[DisplaySafeAreaPadding]\n%1.3f %1.3f\n", style.DisplaySafeAreaPadding.x,style.DisplaySafeAreaPadding.y);
     fprintf(f, "[AntiAliasedLines]\n%d\n", style.AntiAliasedLines?1:0);
@@ -161,33 +166,36 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
 
             // parsing 'name' here by filling the fields above
             {
-                if      (strcmp(name, "Alpha")==0)                     {npf=1;pf[0]=&style.Alpha;}
-                else if (strcmp(name, "WindowPadding")==0)             {npf=2;pf[0]=&style.WindowPadding.x;pf[1]=&style.WindowPadding.y;}
-                else if (strcmp(name, "WindowMinSize")==0)             {npf=2;pf[0]=&style.WindowMinSize.x;pf[1]=&style.WindowMinSize.y;}
-                else if (strcmp(name, "FramePadding")==0)              {npf=2;pf[0]=&style.FramePadding.x;pf[1]=&style.FramePadding.y;}
+		if      (strcmp(name, "Alpha")==0)			{npf=1;pf[0]=&style.Alpha;}
+		else if (strcmp(name, "WindowPadding")==0)		{npf=2;pf[0]=&style.WindowPadding.x;pf[1]=&style.WindowPadding.y;}
+		else if (strcmp(name, "WindowRounding")==0)		{npf=1;pf[0]=&style.WindowRounding;}
+		else if (strcmp(name, "WindowBorderSize")==0)		{npf=1;pf[0]=&style.WindowBorderSize;}
+		else if (strcmp(name, "WindowMinSize")==0)		{npf=2;pf[0]=&style.WindowMinSize.x;pf[1]=&style.WindowMinSize.y;}
+		else if (strcmp(name, "ChildRounding")==0 ||
+			 strcmp(name, "ChildWindowRounding")==0)	{npf=1;pf[0]=&style.ChildRounding;}
+		else if (strcmp(name, "ChildBorderSize")==0)		{npf=1;pf[0]=&style.ChildBorderSize;}
+		else if (strcmp(name, "PopupRounding")==0)		{npf=1;pf[0]=&style.PopupRounding;}
+		else if (strcmp(name, "PopupBorderSize")==0)		{npf=1;pf[0]=&style.PopupBorderSize;}
+		else if (strcmp(name, "FramePadding")==0)              {npf=2;pf[0]=&style.FramePadding.x;pf[1]=&style.FramePadding.y;}
                 else if (strcmp(name, "FrameRounding")==0)             {npf=1;pf[0]=&style.FrameRounding;}
-                else if (strcmp(name, "ItemSpacing")==0)               {npf=2;pf[0]=&style.ItemSpacing.x;pf[1]=&style.ItemSpacing.y;}
+		else if (strcmp(name, "FrameBorderSize")==0)		{npf=1;pf[0]=&style.FrameBorderSize;}
+		else if (strcmp(name, "ItemSpacing")==0)               {npf=2;pf[0]=&style.ItemSpacing.x;pf[1]=&style.ItemSpacing.y;}
                 else if (strcmp(name, "ItemInnerSpacing")==0)          {npf=2;pf[0]=&style.ItemInnerSpacing.x;pf[1]=&style.ItemInnerSpacing.y;}
-                else if (strcmp(name, "TouchExtraPadding")==0)         {npf=2;pf[0]=&style.TouchExtraPadding.x;pf[1]=&style.TouchExtraPadding.y;}
+		else if (strcmp(name, "IndentSpacing")==0)             {npf=1;pf[0]=&style.IndentSpacing;}
+		else if (strcmp(name, "TouchExtraPadding")==0)         {npf=2;pf[0]=&style.TouchExtraPadding.x;pf[1]=&style.TouchExtraPadding.y;}
 		else if (strcmp(name, "WindowFillAlphaDefault")==0)    {npf=1;pf[0]=&WindowFillAlphaDefault;}
-                else if (strcmp(name, "WindowRounding")==0)            {npf=1;pf[0]=&style.WindowRounding;}
-                else if (strcmp(name, "ScrollbarRounding")==0)         {npf=1;pf[0]=&style.ScrollbarRounding;}
+		else if (strcmp(name, "ScrollbarRounding")==0)         {npf=1;pf[0]=&style.ScrollbarRounding;}
 		else if (strcmp(name, "WindowTitleAlign")==0)          {npf=2;pf[0]=&style.WindowTitleAlign.x;pf[1]=&style.WindowTitleAlign.y;}
 		else if (strcmp(name, "ButtonTextAlign")==0)          {npf=2;pf[0]=&style.ButtonTextAlign.x;pf[1]=&style.ButtonTextAlign.y;}
-		else if (strcmp(name, "IndentSpacing")==0)             {npf=1;pf[0]=&style.IndentSpacing;}
-                else if (strcmp(name, "ColumnsMinSpacing")==0)         {npf=1;pf[0]=&style.ColumnsMinSpacing;}
+		else if (strcmp(name, "ColumnsMinSpacing")==0)         {npf=1;pf[0]=&style.ColumnsMinSpacing;}
                 else if (strcmp(name, "ScrollbarSize")==0)            {npf=1;pf[0]=&style.ScrollbarSize;}
                 else if (strcmp(name, "GrabMinSize")==0)               {npf=1;pf[0]=&style.GrabMinSize;}
                 else if (strcmp(name, "GrabRounding")==0)               {npf=1;pf[0]=&style.GrabRounding;}
-		else if (strcmp(name, "ChildRounding")==0 ||
-			 strcmp(name, "ChildWindowRounding")==0)       {npf=1;pf[0]=&style.ChildRounding;}
-                else if (strcmp(name, "DisplayWindowPadding")==0)    {npf=2;pf[0]=&style.DisplayWindowPadding.x;pf[1]=&style.DisplayWindowPadding.y;}
+		else if (strcmp(name, "DisplayWindowPadding")==0)    {npf=2;pf[0]=&style.DisplayWindowPadding.x;pf[1]=&style.DisplayWindowPadding.y;}
                 else if (strcmp(name, "DisplaySafeAreaPadding")==0)    {npf=2;pf[0]=&style.DisplaySafeAreaPadding.x;pf[1]=&style.DisplaySafeAreaPadding.y;}
                 else if (strcmp(name, "AntiAliasedLines")==0)          {npb=1;pb[0]=&style.AntiAliasedLines;}
                 else if (strcmp(name, "AntiAliasedShapes")==0)          {npb=1;pb[0]=&style.AntiAliasedShapes;}
                 else if (strcmp(name, "CurveTessellationTol")==0)               {npf=1;pf[0]=&style.CurveTessellationTol;}
-
-
                 // all the colors here
                 else {
                     for (int j=0;j<ImGuiCol_COUNT;j++)    {
@@ -410,6 +418,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.ScrollbarRounding = 4;
 	style.GrabMinSize = 8;
 	style.GrabRounding = 0;
+	style.WindowBorderSize = style.FrameBorderSize = 1.f;
 
 	style.Colors[ImGuiCol_Text]                  = ImVec4(0.82f, 0.82f, 0.82f, 1.00f);
 	style.Colors[ImGuiCol_TextDisabled]          = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
@@ -477,6 +486,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.ScrollbarRounding = 4;
 	style.GrabMinSize = 8;
 	style.GrabRounding = 0;
+	style.WindowBorderSize = style.FrameBorderSize = 1.f;
 
 	style.Colors[ImGuiCol_Text]                  = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextDisabled]          = ImVec4(0.00f, 0.00f, 0.00f, 0.71f);
@@ -889,6 +899,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.ScrollbarRounding = 3.f;
 	style.FrameRounding = 3.f;
 	style.WindowTitleAlign = ImVec2(0.5f,0.5f);
+	style.WindowBorderSize = style.FrameBorderSize = 1.f;
 
 	style.Colors[ImGuiCol_Text]                  = ImVec4(0.73f, 0.73f, 0.73f, 1.00f);
 	style.Colors[ImGuiCol_TextDisabled]          = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
