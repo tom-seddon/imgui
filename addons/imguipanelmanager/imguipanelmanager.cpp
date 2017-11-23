@@ -306,21 +306,14 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             }
         }
 
-        // Lock window padding so that altering the ShowBorders flag for children doesn't have side-effects.
-//        window->WindowPadding = style.WindowPadding;
-//        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_Popup)))
-//            window->WindowPadding = ImVec2(0.0f, (flags & ImGuiWindowFlags_MenuBar) ? style.WindowPadding.y : 0.0f);
-//        window->WindowBorderSize = style.WindowBorderSize;
-//        window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
-
         // Lock window rounding, border size and rounding so that altering the border sizes for children doesn't have side-effects.
-         window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
-         window->WindowBorderSize = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildBorderSize : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupBorderSize : style.WindowBorderSize;
-         window->WindowPadding = style.WindowPadding;
-         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_Popup)) && window->WindowBorderSize == 0.0f)
+        window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
+        window->WindowBorderSize = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildBorderSize : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupBorderSize : style.WindowBorderSize;
+        window->WindowPadding = style.WindowPadding;
+        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_Popup)) && window->WindowBorderSize == 0.0f)
             window->WindowPadding = ImVec2(0.0f, (flags & ImGuiWindowFlags_MenuBar) ? style.WindowPadding.y : 0.0f);
-
         const float window_rounding = window->WindowRounding;
+        const float window_border_size = window->WindowBorderSize;
 
         // Calculate auto-fit size
         ImVec2 size_auto_fit;
@@ -629,9 +622,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
             // Title bar
             if (!(flags & ImGuiWindowFlags_NoTitleBar)) {
+                const bool window_is_focused = g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow;
 #               if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
                 if (gImGuiDockpanelManagerExtendedStyle)    {
-                    ImU32 col = GetColorU32((g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
+                    ImU32 col = GetColorU32(window_is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
                     ImGui::ImDrawListAddRectWithVerticalGradient(window->DrawList,
                         title_bar_rect.GetTL(), title_bar_rect.GetBR(),col,0.15f,0,
                         window_rounding, ImDrawCornerFlags_TopLeft|ImDrawCornerFlags_TopRight,1.f,ImGui::GetStyle().AntiAliasedShapes
@@ -640,7 +634,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 else
 #               endif // (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
                 {
-                    window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32((g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, ImDrawCornerFlags_TopLeft|ImDrawCornerFlags_TopRight);
+                    window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32(window_is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, ImDrawCornerFlags_TopLeft|ImDrawCornerFlags_TopRight);
                 }
             }
 
@@ -649,7 +643,14 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             {
                 ImRect menu_bar_rect = window->MenuBarRect();
                 //if (flags & ImGuiWindowFlags_ShowBorders) window->DrawList->AddLine(menu_bar_rect.GetBL()-ImVec2(0,0), menu_bar_rect.GetBR()-ImVec2(0,0), GetColorU32(ImGuiCol_Border));
-                window->DrawList->AddRectFilled(menu_bar_rect.GetTL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawCornerFlags_TopLeft|ImDrawCornerFlags_TopRight);
+                /*window->DrawList->AddRectFilled(menu_bar_rect.GetTL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawCornerFlags_TopLeft|ImDrawCornerFlags_TopRight);
+                if (style.FrameBorderSize > 0.0f)
+                    window->DrawList->AddLine(menu_bar_rect.GetBL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border), style.FrameBorderSize);*/
+                menu_bar_rect.ClipWith(window->Rect());  // Soft clipping, in particular child window don't have minimum size covering the menu bar so this is useful for them.
+                window->DrawList->AddRectFilled(menu_bar_rect.Min, menu_bar_rect.Max, GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawCornerFlags_Top);
+                if (style.FrameBorderSize > 0.0f && menu_bar_rect.Max.y < window->Pos.y + window->Size.y)
+                     window->DrawList->AddLine(menu_bar_rect.GetBL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border), style.FrameBorderSize);
+
             }
 
             // Scrollbars
@@ -663,19 +664,23 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             if (!(flags & ImGuiWindowFlags_NoResize))
             {
                 const ImVec2 br = window->Rect().GetBR();
-                window->DrawList->PathLineTo(br + ImVec2(-resize_corner_size, -window->WindowBorderSize));
-                window->DrawList->PathLineTo(br + ImVec2(-window->WindowBorderSize, -resize_corner_size));
-                window->DrawList->PathArcToFast(ImVec2(br.x - window_rounding - window->WindowBorderSize, br.y - window_rounding - window->WindowBorderSize), window_rounding, 0, 3);
+                window->DrawList->PathLineTo(br + ImVec2(-resize_corner_size, -window_border_size));
+                window->DrawList->PathLineTo(br + ImVec2(-window_border_size, -resize_corner_size));
+                window->DrawList->PathArcToFast(ImVec2(br.x - window_rounding - window_border_size, br.y - window_rounding - window_border_size), window_rounding, 0, 3);
                 window->DrawList->PathFillConvex(resize_col);
             }
 
             // Borders
-            if (window_border_size > 0.0f || gImGuiDockPanelManagerAlwaysDrawExternalBorders)
+            /*if (window_border_size > 0.0f || gImGuiDockPanelManagerAlwaysDrawExternalBorders)
             {
                 window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), window_rounding);
                 window->DrawList->AddRect(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_Border), window_rounding);
                 if (!(flags & ImGuiWindowFlags_NoTitleBar)) window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border));
-            }
+            }*/
+            if (window_border_size > 0.0f || gImGuiDockPanelManagerAlwaysDrawExternalBorders)
+                window->DrawList->AddRect(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_Border), window_rounding, ~0, window_border_size);
+            if ((style.FrameBorderSize > 0 || gImGuiDockPanelManagerAlwaysDrawExternalBorders) && !(flags & ImGuiWindowFlags_NoTitleBar))
+                window->DrawList->AddLine(title_bar_rect.GetBL()+ImVec2(1,-1), title_bar_rect.GetBR()+ImVec2(-1,-1), GetColorU32(ImGuiCol_Border), style.FrameBorderSize);
 
         }
 
