@@ -920,7 +920,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
 
     if (dirty)  {
         if (selected) mgr.updateSizes();
-        else if (hovered) updateSizeInHoverMode(mgr,pane,winAndBarIndex);
+        else if (hovered) updateSizeInHoverMode(mgr,pane,winAndBarIndex);   // (*)
     }
 
     if (curSize.x<0 || curSize.y<0) return;
@@ -929,12 +929,26 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
     if (selected) persistHoverFocus = false;
     //else if (hovered) ImGui::SetNextWindowFocus();  // is this line necessary ?
 
-
     const float oldSize = sizeToUse;bool open = true;bool undocked = hovered;
     WindowData wd(windowName,curPos,curSize,togglable,pane.pos,sizeToUse,open,persistHoverFocus,userData);
     //===============================================================================================
     if (wd.isToggleWindow) windowDrawer(wd);
     else if (wd.size.x>=ImGui::GetStyle().WindowMinSize.x){
+        if (hovered) {
+            // TO FIX: Ideally updateSizeInHoverMode(...) should not be called every frame, but it's only 1 window on screen after all
+            dirty = true; // Needed for updateSizeXXX(...) to work.
+            updateSizeInHoverMode(mgr,pane,winAndBarIndex); // sets dirty to false.
+
+            // Honestly I don't know why dirty = true; is not set in some cases...
+            // Note that we can comment out the line above and it's still correct,
+            // because next frame (*) is triggered correctly, but there's one frame delay
+
+            // In short: forcing "dirty = true;" every frame for the hovered windows is WRONG, but it's a hack to fix.
+            // some cases in which the hovered window pos and size are wrong.
+            // We should manage to detect the very first frame a new hovered window is displayed and set it dirty only on that frame.
+
+            // I don't think the overhead is big in any case...
+        }
         ImGui::SetNextWindowPos(wd.pos);
         ImGui::SetNextWindowSize(wd.size);
             static const ImGuiWindowFlags windowFlags =
@@ -1062,8 +1076,8 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
         else if (selected) {
             pane.bar.setSelectedButtonIndex(-1);
             persistHoverFocus = false;  // optional line (when commented out leaves a selected window in hover move: we must press the close button another time to hide it)
-	    dirty = true;mgr.updateSizes();  // Needed to update the innerQuadSize
-	    dirty = true; // Needed so next time the hover window sizes are set
+            dirty = true;mgr.updateSizes();  // Needed to update the innerQuadSize
+            dirty = true; // Needed so next time the hover window sizes are set
         }
     }
     else if (togglableAndVisible) button->isDown = false;
@@ -1526,7 +1540,7 @@ void ImGui::PanelManager::updateSizes() const  {
                 innerQuadPos.y+=win.curSize.y;
                 innerQuadSize.y-=win.curSize.y;
                 //
-            }
+            }            
             win.dirty = false;
         }
     }
@@ -1601,7 +1615,6 @@ void ImGui::PanelManager::updateSizes() const  {
 
     //fprintf(stderr,"innerBarQuad  (%1.1f,%1.1f,%1.1f,%1.1f)\n",innerBarQuadPos.x,innerBarQuadPos.y,innerBarQuadSize.x,innerBarQuadSize.y);
     //fprintf(stderr,"innerQuad     (%1.1f,%1.1f,%1.1f,%1.1f)\n",innerQuadPos.x,innerQuadPos.y,innerQuadSize.x,innerQuadSize.y);
-
 }
 
 void ImGui::PanelManager::closeHoverWindow() {
@@ -1614,7 +1627,7 @@ void ImGui::PanelManager::closeHoverWindow() {
                 // The next two lines were outside the loop
                 window.dirty = true;
                 window.updateSizeInHoverMode(*this,pane,w);
-		window.dirty = true;
+                window.dirty = true;
                 window.persistHoverFocus = false;
                 bar.hoverButtonIndex=-1;
             }
