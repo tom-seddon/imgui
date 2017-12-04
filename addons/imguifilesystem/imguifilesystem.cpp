@@ -1492,11 +1492,11 @@ void FileGetExtensionTypesFromFilenames(ImVector<int>& fileExtensionTypesOut,con
 bool FileDownload(const char* path,const char* optionalSaveFileName)    {
     if (!path || !FileExists(path)) return false;
     ImGuiTextBuffer buffer;
-    if (optionalSaveFileName) buffer.append("saveFileFromMemoryFSToDisk(\"%s\",\"%s\")",path,optionalSaveFileName);
+    if (optionalSaveFileName) buffer.appendf("saveFileFromMemoryFSToDisk(\"%s\",\"%s\")",path,optionalSaveFileName);
     else {
         char fileName[ImGuiFs::MAX_FILENAME_BYTES]="";
         ImGuiFs::PathGetFileName(path,fileName);
-        buffer.append("saveFileFromMemoryFSToDisk(\"%s\",\"%s\")",path,fileName);
+        buffer.appendf("saveFileFromMemoryFSToDisk(\"%s\",\"%s\")",path,fileName);
     }
     emscripten_run_script(&buffer.Buf[0]);
     return true;

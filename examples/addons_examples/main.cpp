@@ -1374,7 +1374,8 @@ void DrawGL()	// Mandatory
         ImGui::PopItemWidth();
         static const char* myCode="# include <sadd.h>\n\nusing namespace std;\n\n//This is a comment\nclass MyClass\n{\npublic:\nMyClass() {}\nvoid Init(int num)\n{  // for loop\nfor (int t=0;t<20;t++)\n	{\n     mNum=t; /* setting var */\n     const float myFloat = 1.25f;\n      break;\n	}\n}\n\nprivate:\nint mNum;\n};\n\nstatic const char* SomeStrings[] = {\"One\"/*Comment One*//*Comment*/,\"Two /*Fake Comment*/\",\"Three\\\"Four\"};\n\nwhile (i<25 && i>=0)   {\n\ti--;\nbreak;} /*comment*/{/*This should not fold*/}/*comment2*/for (int i=0;i<20;i++)    {\n\t\t\tcontinue;//OK\n} // end second folding\n\nfor (int j=0;j<200;j++)  {\ncontinue;}\n\n//region Custom Region Here\n{\n//something inside here\n}\n//endregion\n\n/*\nMultiline\nComment\nHere\n*/\n\n/*\nSome Unicode Characters here:\n€€€€\n*/\n\n";
         static char bceBuffer[1024]="";
-        if (bceBuffer[0]=='\0') strcpy(bceBuffer,myCode);   //Bad init (use initGL() to fill the buffer
+        if (bceBuffer[0]=='\0') strcpy(bceBuffer,myCode);   //Bad init (use initGL() to fill the buffer)
+        // It needs a monospace font
         ImGui::InputTextWithSyntaxHighlighting("ITWSH_JustForID",bceBuffer,sizeof(bceBuffer),(ImGuiCe::Language)languageIndex,ImVec2(0,300));
 #       else //NO_IMGUICODEEDITOR
         ImGui::Text("%s","Excluded from this build.\n");
@@ -2154,20 +2155,20 @@ void PerformCppSQLiteTest(ImGuiTextBuffer& rv,int nRowsToCreate) {
     try {
 	int i,fld,nRows;
 	DB db;
-    rv.append("SQLite Version: %s\n",db.SQLiteVersion());
+    rv.appendf("SQLite Version: %s\n",db.SQLiteVersion());
 	remove(dbFileName);     // from stdio.h (I must admit I've never used it: does it delete the file ?)
 
-    rv.append("Performed test at http://www.codeproject.com/Articles/6343/CppSQLite-C-Wrapper-for-SQLite.\n\n");
+    rv.appendf("Performed test at http://www.codeproject.com/Articles/6343/CppSQLite-C-Wrapper-for-SQLite.\n\n");
 
 	db.open(dbFileName);    // it opens or creates the db
 	db.execDML("create table emp(empno int, empname char(20));");   // Creates emp table with a int (empno) and a char(20) (empname)
-    nRows = db.execDML("insert into emp values (7, 'David Beckham');");                 rv.append("nRows = %d\n",nRows);
-    nRows = db.execDML("update emp set empname = 'Christiano Ronaldo' where empno = 7;");   rv.append("%d rows updated\n",nRows);
-    nRows = db.execDML("delete from emp where empno = 7;");                                 rv.append("%d rows deleted\n",nRows);
+    nRows = db.execDML("insert into emp values (7, 'David Beckham');");                 rv.appendf("nRows = %d\n",nRows);
+    nRows = db.execDML("update emp set empname = 'Christiano Ronaldo' where empno = 7;");   rv.appendf("%d rows updated\n",nRows);
+    nRows = db.execDML("delete from emp where empno = 7;");                                 rv.appendf("%d rows deleted\n",nRows);
 
 	// Transaction Demo [The transaction could just as easily have been rolled back]
 	clock_t ckStart,ckEnd;
-    rv.append("\nTransaction test, creating %d rows please wait...\n",nRowsToCreate);
+    rv.appendf("\nTransaction test, creating %d rows please wait...\n",nRowsToCreate);
 	ckStart = clock();
 	db.execDML("begin transaction;");
 	for (i = 0; i < nRowsToCreate; i++) {
@@ -2178,12 +2179,12 @@ void PerformCppSQLiteTest(ImGuiTextBuffer& rv,int nRowsToCreate) {
 	db.execDML("commit transaction;");
 	ckEnd = clock();
 	// Demonstrate CppSQLite::DB::execScalar()
-    rv.append("%d rows in emp table in %1.3f seconds (it was fast!)\n",db.execScalar("select count(*) from emp;"),(float)(ckEnd-ckStart)/(float)CLOCKS_PER_SEC);
+    rv.appendf("%d rows in emp table in %1.3f seconds (it was fast!)\n",db.execScalar("select count(*) from emp;"),(float)(ckEnd-ckStart)/(float)CLOCKS_PER_SEC);
 
 	// Pre-compiled Statements Demo
 	db.execDML("drop table emp;");	// SQLITE_LOCKED[6]: database table is locked.
 	db.execDML("create table emp(empno int, empname char(20));");
-    rv.append("\nTransaction test with pre-compiled statements, creating %d rows please wait...\n",nRowsToCreate);
+    rv.appendf("\nTransaction test with pre-compiled statements, creating %d rows please wait...\n",nRowsToCreate);
 	ckStart = clock();
 	db.execDML("begin transaction;");
 	Statement stmt = db.compileStatement("insert into emp values (?, ?);");
@@ -2197,10 +2198,10 @@ void PerformCppSQLiteTest(ImGuiTextBuffer& rv,int nRowsToCreate) {
 	}
 	db.execDML("commit transaction;");
 	ckEnd = clock();
-    rv.append("%d rows in emp table in %1.3f seconds (that was even faster!)\n",db.execScalar("select count(*) from emp;"),(float)(ckEnd-ckStart)/(float)CLOCKS_PER_SEC);
+    rv.appendf("%d rows in emp table in %1.3f seconds (that was even faster!)\n",db.execScalar("select count(*) from emp;"),(float)(ckEnd-ckStart)/(float)CLOCKS_PER_SEC);
 
 	// Re-create emp table with auto-increment field
-    rv.append("\nAuto increment test\n");
+    rv.appendf("\nAuto increment test\n");
 	db.execDML("drop table emp;");
 	db.execDML("create table emp(empno integer primary key, empname char(20));");
 
@@ -2208,53 +2209,53 @@ void PerformCppSQLiteTest(ImGuiTextBuffer& rv,int nRowsToCreate) {
 	    char buf[128];
 	    sprintf(buf,"insert into emp (empname) values ('Empname%06d');", i+1);
 	    db.execDML(buf);
-        rv.append(" primary key: %ld\n",(long)db.lastRowId());
+        rv.appendf(" primary key: %ld\n",(long)db.lastRowId());
 	}
 
 	// Query data and also show results of inserts into auto-increment field
-    rv.append("\nSelect statement test\n");
+    rv.appendf("\nSelect statement test\n");
 	Query q = db.execQuery("select * from emp order by 1;");
 	for (fld = 0; fld < q.numFields(); fld++)   {
-        rv.append("%s(%s)|",q.fieldName(fld),q.fieldDeclType(fld));   // It was fieldType(fld)...
+        rv.appendf("%s(%s)|",q.fieldName(fld),q.fieldDeclType(fld));   // It was fieldType(fld)...
 	}
-    rv.append("\n");
+    rv.appendf("\n");
 	while (!q.eof())    {
-        rv.append("	%s	|   %s	    |\n",q.fieldValue(0),q.fieldDeclType(1));   // It was fieldType(fld)...
+        rv.appendf("	%s	|   %s	    |\n",q.fieldValue(0),q.fieldDeclType(1));   // It was fieldType(fld)...
 	    q.nextRow();
 	}
 
 	// SQLite's printf() functionality. Handles embedded quotes and NULLs
-    rv.append("\nSQLite sprintf test\n");
+    rv.appendf("\nSQLite sprintf test\n");
 	Buffer bufSQL;
 	bufSQL.format("insert into emp (empname) values (%Q);", "He's bad");
-    rv.append("%s\n",(const char*)bufSQL);
+    rv.appendf("%s\n",(const char*)bufSQL);
 	db.execDML(bufSQL);
 
 	bufSQL.format("insert into emp (empname) values (%Q);", NULL);
-    rv.append("%s\n",(const char*)bufSQL);
+    rv.appendf("%s\n",(const char*)bufSQL);
 	db.execDML(bufSQL);
 
 	// Fetch table at once, and also show how to
 	// use CppSQLite::Table::setRow() method
-    rv.append("\ngetTable() test\n");
+    rv.appendf("\ngetTable() test\n");
 	Table t = db.getTable("select * from emp order by 1;");
 
 	for (fld = 0; fld < t.numFields(); fld++)   {
-        rv.append("%s	|",t.fieldName(fld));
+        rv.appendf("%s	|",t.fieldName(fld));
 	}
-    rv.append("\n");
+    rv.appendf("\n");
 	for (int row = 0; row < t.numRows(); row++) {
 	    t.setRow(row);
 	    for (int fld = 0; fld < t.numFields(); fld++)   {
-        if (!t.fieldIsNull(fld))    rv.append("	%s	|",t.fieldValue(fld));
-        else rv.append("	NULL			|");
+        if (!t.fieldIsNull(fld))    rv.appendf("	%s	|",t.fieldValue(fld));
+        else rv.appendf("	NULL			|");
 	    }
-        rv.append("\n");
+        rv.appendf("\n");
 	}
 
 	// Test CppSQLite::Binary by storing/retrieving some binary data, checking
 	// it afterwards to make sure it is the same
-    rv.append("\nBinary data test\n");
+    rv.appendf("\nBinary data test\n");
 	db.execDML("create table bindata(desc char(10), data blob);");
 
 	unsigned char bin[256];
@@ -2265,27 +2266,27 @@ void PerformCppSQLiteTest(ImGuiTextBuffer& rv,int nRowsToCreate) {
 	bufSQL.format("insert into bindata values ('testing', %Q);",
 		      blob.getEncoded());
 	db.execDML(bufSQL);
-    rv.append("Stored binary Length: %d\n",sizeof bin);
+    rv.appendf("Stored binary Length: %d\n",sizeof bin);
 
 	q = db.execQuery("select data from bindata where desc = 'testing';");
 	if (!q.eof())   {
 	    blob.setEncoded((unsigned char*)q.fieldValue("data"));
-        rv.append("Retrieved binary Length: %d\n",blob.getBinaryLength());
+        rv.appendf("Retrieved binary Length: %d\n",blob.getBinaryLength());
 	}
 
 	const unsigned char* pbin = blob.getBinary();
 	for (i = 0; i < (int) sizeof bin; i++)
 	{
 	    if (pbin[i] != i)   {
-        rv.append("Problem: i: ,%d bin[i]: %d\n",i,(int)pbin[i]);
+        rv.appendf("Problem: i: ,%d bin[i]: %d\n",i,(int)pbin[i]);
 	    }
 	}
 
-    rv.append("\nEnd of tests\n");
+    rv.appendf("\nEnd of tests\n");
     }
     catch (CppSQLite3::Exception& e)
     {
-    rv.append("Exception thrown. Code: %d. Message: %s.\n",e.errorCode(),e.errorMessage());
+    rv.appendf("Exception thrown. Code: %d. Message: %s.\n",e.errorCode(),e.errorMessage());
     }
 }
 #endif //YES_IMGUISQLITE3

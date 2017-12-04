@@ -3489,7 +3489,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         */
         // Workaround
         char title[256];
-        ImFormatString(title, IM_ARRAYSIZE(title), "%s.%08X", window->Name, 2*id);
+        ImFormatString(title, IM_ARRAYSIZE(title), "%s/%08X", window->Name, 2*id);
         ImGuiWindow* childWindow = FindWindowByName(title);
         const float scaledTextHeight = textLineHeight*(childWindow?childWindow->FontWindowScale:1.f);
         if (childWindow) firstVisibleLineNumber = (int) (childWindow->Scroll.y/scaledTextHeight);
