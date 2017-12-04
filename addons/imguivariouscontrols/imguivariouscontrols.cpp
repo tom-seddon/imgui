@@ -533,29 +533,13 @@ bool ColorCombo(const char* label,ImVec4 *pColorOut,bool supportsAlpha,float wid
         }
         static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)  {
             ImGuiContext& g = *GImGui;
-            ImGuiWindow* window = g.CurrentWindow;
-            const ImGuiID id = window->GetID(str_id);
-            if (!IsPopupOpen(id))
+            if (g.OpenPopupStack.Size <= g.CurrentPopupStack.Size) // Early out for performance
             {
                 ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
                 return false;
             }
-
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
             ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
-
-            char name[20];
-            if (flags & ImGuiWindowFlags_ChildMenu)
-                ImFormatString(name, IM_ARRAYSIZE(name), "##menu_%d", g.CurrentPopupStack.Size);    // Recycle windows based on depth
-            else
-                ImFormatString(name, IM_ARRAYSIZE(name), "##popup_%08x", id); // Not recycling, so we can close/open during the same frame
-
-            bool is_open = ImGui::Begin(name, NULL, flags);
-            //if (!(window->Flags & ImGuiWindowFlags_ShowBorders))    g.CurrentWindow->Flags &= ~ImGuiWindowFlags_ShowBorders;
-            if (!is_open) // NB: is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
-                ImGui::EndPopup();
-
-            return is_open;
+            return ImGui::BeginPopupEx(g.CurrentWindow->GetID(str_id), flags);
         }
     } ImGuiCppDuply;
 
