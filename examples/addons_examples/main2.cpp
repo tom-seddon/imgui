@@ -207,6 +207,14 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             ImGui::Text("Disabled for this build.");
 #           endif // NO_IMGUIMINIGAMES_SUDOKU
         }
+        else if (tab->matchLabel("ImGuiFifteenGame"))  {
+#           if (defined(YES_IMGUIMINIGAMES) && !defined(NO_IMGUIMINIGAMES_FIFTEEN))
+            static ImGuiMiniGames::Fifteen fifteenGame;
+            fifteenGame.render();
+#           else // NO_IMGUIMINIGAMES_FIFTEEN
+            ImGui::Text("Disabled for this build.");
+#           endif // NO_IMGUIMINIGAMES_FIFTEEN
+        }
         else if (tab->matchLabel("ImGuiImageEditor"))   {
 #           ifdef YES_IMGUIIMAGEEDITOR
             static ImGui::ImageEditor imageEditor;
@@ -632,6 +640,9 @@ if (!tabWindow.isInited()) {
 #           ifndef NO_IMGUIMINIGAMES_SUDOKU
         tabWindow.addTabLabel("ImGuiSudokuGame","a mini-game",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 #           endif // NO_IMGUIMINIGAMES_SUDOKU
+#           ifndef NO_IMGUIMINIGAMES_FIFTEEN
+        tabWindow.addTabLabel("ImGuiFifteenGame","a mini-game",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+#           endif // NO_IMGUIMINIGAMES_FIFTEEN
 #       endif // YES_IMGUIMINIGAMES
 #       ifdef YES_IMGUIIMAGEEDITOR
         tabWindow.addTabLabel("ImGuiImageEditor","a tiny image editor",false,true,NULL,NULL,0,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);

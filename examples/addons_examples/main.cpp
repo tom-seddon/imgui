@@ -289,6 +289,7 @@ void DrawGL()	// Mandatory
     static bool show_performance = false;
     static bool show_mine_game = false;
     static bool show_sudoku_game = false;
+    static bool show_fifteen_game = false;
     static bool show_image_editor = false;
 
     // 1. Show a simple window
@@ -324,13 +325,13 @@ void DrawGL()	// Mandatory
         show_dock_window ^= ImGui::Button("ImGui Dock");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","An example of imguidock\n(LumixEngine's Docking System)");
 #       endif //NO_IMGUIDOCK
-        ImGui::EndGroup();
-        ImGui::SameLine();
-        ImGui::BeginGroup();
 #       ifndef NO_IMGUITABWINDOW
         show_tab_windows ^= ImGui::Button("ImGui Tab Window");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","An (incomplete) example of using\nthe imguitabwindow addon.\nMore on this in the second demo (main2.cpp)");
 #       endif //NO_IMGUITABWINDOW
+        ImGui::EndGroup();
+        ImGui::SameLine();
+        ImGui::BeginGroup();
         show_performance ^= ImGui::Button("Show performance");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Performance Window.\nShows the frame rate and the\n number of texture switches per frame");
 #       ifdef YES_IMGUIMINIGAMES
@@ -342,6 +343,10 @@ void DrawGL()	// Mandatory
             show_sudoku_game ^= ImGui::Button("ImGui Sudoku Game");
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Another example from the\nimguiminigames yes_addon");
 #           endif //NO_IMGUIMINIGAMES_SUDOKU
+#           ifndef NO_IMGUIMINIGAMES_FIFTEEN
+            show_fifteen_game ^= ImGui::Button("ImGui Fifteen Game");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Another example from the\nimguiminigames yes_addon");
+#           endif //NO_IMGUIMINIGAMES_FIFTEEN
 #       endif //YES_IMGUIMINIGAMES
 #       ifdef YES_IMGUIIMAGEEDITOR
             show_image_editor ^= ImGui::Button("ImGui Image Editor");
@@ -1939,7 +1944,7 @@ void DrawGL()	// Mandatory
 #   ifdef YES_IMGUIMINIGAMES
 #   ifndef NO_IMGUIMINIGAMES_MINE
     if (show_mine_game) {
-        if (ImGui::Begin("Mine Game",&show_mine_game,ImVec2(600,400),.95f,ImGuiWindowFlags_NoScrollbar))  {
+        if (ImGui::Begin("Mine Game",&show_mine_game,ImVec2(400,400),.95f,ImGuiWindowFlags_NoScrollbar))  {
             static ImGuiMiniGames::Mine mineGame;
             mineGame.render();
         }
@@ -1948,13 +1953,22 @@ void DrawGL()	// Mandatory
 #   endif //NO_IMGUIMINIGAMES_MINE
 #   ifndef NO_IMGUIMINIGAMES_SUDOKU
     if (show_sudoku_game) {
-        if (ImGui::Begin("Sdoku Game",&show_sudoku_game,ImVec2(600,400),.95f,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))  {
+        if (ImGui::Begin("Sudoku Game",&show_sudoku_game,ImVec2(400,400),.95f,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))  {
             static ImGuiMiniGames::Sudoku sudokuGame;
             sudokuGame.render();
         }
         ImGui::End();
     }
 #   endif //NO_IMGUIMINIGAMES_SUDOKU
+#   ifndef NO_IMGUIMINIGAMES_FIFTEEN
+    if (show_fifteen_game) {
+        if (ImGui::Begin("Fifteen Game",&show_fifteen_game,ImVec2(400,400),.95f,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))  {
+            static ImGuiMiniGames::Fifteen fifteenGame;
+            fifteenGame.render();
+        }
+        ImGui::End();
+    }
+#   endif //NO_IMGUIMINIGAMES_FIFTEEN
 #   endif //YES_IMGUIMINIGAMES
 #   ifdef YES_IMGUIIMAGEEDITOR
     if (show_image_editor)  {
