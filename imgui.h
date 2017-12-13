@@ -64,6 +64,7 @@ struct ImGuiTextBuffer;             // Text buffer for logging/accumulating text
 struct ImGuiTextEditCallbackData;   // Shared state of ImGui::InputText() when using custom ImGuiTextEditCallback (rare/advanced use)
 struct ImGuiSizeConstraintCallbackData;// Structure used to constraint window size in custom ways when using custom ImGuiSizeConstraintCallback (rare/advanced use)
 struct ImGuiListClipper;            // Helper to manually clip large list of items
+struct ImGuiPayload;                // User data payload for drag and drop operations
 struct ImGuiContext;                // ImGui context (opaque)
 
 // Typedefs and Enumerations (declared as int for compatibility and to not pollute the top of this file)
@@ -79,8 +80,10 @@ typedef int ImGuiStyleVar;          // enum: a variable identifier for styling  
 typedef int ImDrawCornerFlags;      // flags: for ImDrawList::AddRect*() etc.   // enum ImDrawCornerFlags_
 typedef int ImGuiColorEditFlags;    // flags: for ColorEdit*(), ColorPicker*()  // enum ImGuiColorEditFlags_
 typedef int ImGuiColumnsFlags;      // flags: for *Columns*()                   // enum ImGuiColumnsFlags_
+typedef int ImGuiDragDropFlags;     // flags: for *DragDrop*()                  // enum ImGuiDragDropFlags_
 typedef int ImGuiComboFlags;        // flags: for BeginCombo()                  // enum ImGuiComboFlags_
-typedef int ImGuiHoveredFlags;      // flags: for IsItemHovered()               // enum ImGuiHoveredFlags_
+typedef int ImGuiFocusedFlags;      // flags: for IsWindowFocused()             // enum ImGuiFocusedFlags_
+typedef int ImGuiHoveredFlags;      // flags: for IsItemHovered() etc.          // enum ImGuiHoveredFlags_
 typedef int ImGuiInputTextFlags;    // flags: for InputText*()                  // enum ImGuiInputTextFlags_
 typedef int ImGuiSelectableFlags;   // flags: for Selectable()                  // enum ImGuiSelectableFlags_
 typedef int ImGuiTreeNodeFlags;     // flags: for TreeNode*(),CollapsingHeader()// enum ImGuiTreeNodeFlags_
@@ -231,9 +234,10 @@ namespace ImGui
     IMGUI_API ImVec2        GetCursorScreenPos();                                               // cursor position in absolute screen coordinates [0..io.DisplaySize] (useful to work with ImDrawList API)
     IMGUI_API void          SetCursorScreenPos(const ImVec2& pos);                              // cursor position in absolute screen coordinates [0..io.DisplaySize]
     IMGUI_API void          AlignTextToFramePadding();                                          // vertically align/lower upcoming text to FramePadding.y so that it will aligns to upcoming widgets (call if you have text on a line before regular widgets)
-    IMGUI_API float         GetTextLineHeight();                                                // height of font == GetWindowFontSize()
-    IMGUI_API float         GetTextLineHeightWithSpacing();                                     // distance (in pixels) between 2 consecutive lines of text == GetWindowFontSize() + GetStyle().ItemSpacing.y
-    IMGUI_API float         GetItemsLineHeightWithSpacing();                                    // distance (in pixels) between 2 consecutive lines of standard height widgets == GetWindowFontSize() + GetStyle().FramePadding.y*2 + GetStyle().ItemSpacing.y
+    IMGUI_API float         GetTextLineHeight();                                                // ~ FontSize
+    IMGUI_API float         GetTextLineHeightWithSpacing();                                     // ~ FontSize + style.ItemSpacing.y (distance in pixels between 2 consecutive lines of text)
+    IMGUI_API float         GetFrameHeight();                                                   // ~ FontSize + style.FramePadding.y * 2
+    IMGUI_API float         GetFrameHeightWithSpacing();                                        // ~ FontSize + style.FramePadding.y * 2 + style.ItemSpacing.y (distance in pixels between 2 consecutive lines of framed widgets)
 
     // Columns
     // You can also use SameLine(pos_x) for simplified columns. The columns API is still work-in-progress and rather lacking.
@@ -416,6 +420,15 @@ namespace ImGui
     IMGUI_API void          LogButtons();                                                       // helper to display buttons for logging to tty/file/clipboard
     IMGUI_API void          LogText(const char* fmt, ...) IM_FMTARGS(1);                        // pass text data straight to log (without being displayed)
 
+    // Drag and Drop
+    // [BETA API] Missing Demo code. API may evolve.
+    IMGUI_API bool          BeginDragDropSource(ImGuiDragDropFlags flags = 0, int mouse_button = 0);                      // Call when the current item is active. If this return true, you can call SetDragDropPayload() + EndDragDropSource()
+    IMGUI_API bool          SetDragDropPayload(const char* type, const void* data, size_t data_size, ImGuiCond cond = 0); // Type is a user defined string of maximum 8 characters. Strings starting with '_' are reserved for dear imgui internal types. Data is copied and held by imgui.
+    IMGUI_API void          EndDragDropSource();
+    IMGUI_API bool          BeginDragDropTarget();                                                                        // Call after submitting an item that may receive an item. If this returns true, you can call AcceptDragDropPayload() + EndDragDropTarget()
+    IMGUI_API const ImGuiPayload* AcceptDragDropPayload(const char* type, ImGuiDragDropFlags flags = 0);                  // Accept contents of a given type. If ImGuiDragDropFlags_AcceptBeforeDelivery is set you can peek into the payload before the mouse button is released.
+    IMGUI_API void          EndDragDropTarget();
+
     // Clipping
     IMGUI_API void          PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_current_clip_rect);
     IMGUI_API void          PopClipRect();
@@ -442,10 +455,9 @@ namespace ImGui
     IMGUI_API ImVec2        GetItemRectMax();                                                   // "
     IMGUI_API ImVec2        GetItemRectSize();                                                  // "
     IMGUI_API void          SetItemAllowOverlap();                                              // allow last item to be overlapped by a subsequent item. sometimes useful with invisible buttons, selectables, etc. to catch unused area.
-    IMGUI_API bool          IsWindowFocused();                                                  // is current Begin()-ed window focused?
-    IMGUI_API bool          IsWindowHovered(ImGuiHoveredFlags flags = 0);                       // is current Begin()-ed window hovered (and typically: not blocked by a popup/modal)?
-    IMGUI_API bool          IsRootWindowFocused();                                              // is current Begin()-ed root window focused (root = top-most parent of a child, otherwise self)?
-    IMGUI_API bool          IsRootWindowOrAnyChildFocused();                                    // is current Begin()-ed root window or any of its child (including current window) focused?
+    IMGUI_API bool          IsWindowFocused(ImGuiFocusedFlags flags = 0);                       // is current window focused? or its root/child, depending on flags. see flags for options.
+    IMGUI_API bool          IsWindowHovered(ImGuiHoveredFlags flags = 0);                       // is current window hovered (and typically: not blocked by a popup/modal)? see flags for options.
+    IMGUI_API bool          IsAnyWindowFocused();
     IMGUI_API bool          IsAnyWindowHovered();                                               // is mouse hovering any visible window
     IMGUI_API bool          IsRectVisible(const ImVec2& size);                                  // test if rectangle (of given size, starting from cursor position) is visible / not clipped.
     IMGUI_API bool          IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max);      // test if rectangle (in screen space) is visible / not clipped. to perform coarse clipping on user's side.
@@ -506,7 +518,6 @@ namespace ImGui
 // Flags for ImGui::Begin()
 enum ImGuiWindowFlags_
 {
-    // Default: 0
     ImGuiWindowFlags_NoTitleBar             = 1 << 0,   // Disable title-bar
     ImGuiWindowFlags_NoResize               = 1 << 1,   // Disable user resizing with the lower-right grip
     ImGuiWindowFlags_NoMove                 = 1 << 2,   // Disable user moving the window
@@ -537,7 +548,6 @@ enum ImGuiWindowFlags_
 // Flags for ImGui::InputText()
 enum ImGuiInputTextFlags_
 {
-    // Default: 0
     ImGuiInputTextFlags_CharsDecimal        = 1 << 0,   // Allow 0123456789.+-*/
     ImGuiInputTextFlags_CharsHexadecimal    = 1 << 1,   // Allow 0123456789ABCDEFabcdef
     ImGuiInputTextFlags_CharsUppercase      = 1 << 2,   // Turn a..z into A..Z
@@ -563,7 +573,7 @@ enum ImGuiTreeNodeFlags_
 {
     ImGuiTreeNodeFlags_Selected             = 1 << 0,   // Draw as selected
     ImGuiTreeNodeFlags_Framed               = 1 << 1,   // Full colored frame (e.g. for CollapsingHeader)
-    ImGuiTreeNodeFlags_AllowOverlapMode     = 1 << 2,   // Hit testing to allow subsequent widgets to overlap this one
+    ImGuiTreeNodeFlags_AllowItemOverlap     = 1 << 2,   // Hit testing to allow subsequent widgets to overlap this one
     ImGuiTreeNodeFlags_NoTreePushOnOpen     = 1 << 3,   // Don't do a TreePush() when open (e.g. for CollapsingHeader) = no extra indent nor pushing on ID stack
     ImGuiTreeNodeFlags_NoAutoOpenOnLog      = 1 << 4,   // Don't automatically and temporarily open node when Logging is active (by default logging will automatically open tree nodes)
     ImGuiTreeNodeFlags_DefaultOpen          = 1 << 5,   // Default node to be open
@@ -575,12 +585,16 @@ enum ImGuiTreeNodeFlags_
     //ImGuITreeNodeFlags_SpanAllAvailWidth  = 1 << 11,  // FIXME: TODO: Extend hit box horizontally even if not framed
     //ImGuiTreeNodeFlags_NoScrollOnOpen     = 1 << 12,  // FIXME: TODO: Disable automatic scroll on TreePop() if node got just open and contents is not visible
     ImGuiTreeNodeFlags_CollapsingHeader     = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_NoAutoOpenOnLog
+
+    // Obsolete names (will be removed)
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    , ImGuiTreeNodeFlags_AllowOverlapMode = ImGuiTreeNodeFlags_AllowItemOverlap
+#endif
 };
 
 // Flags for ImGui::Selectable()
 enum ImGuiSelectableFlags_
 {
-    // Default: 0
     ImGuiSelectableFlags_DontClosePopups    = 1 << 0,   // Clicking this don't close parent popup window
     ImGuiSelectableFlags_SpanAllColumns     = 1 << 1,   // Selectable frame can span all columns (text will still fit in current column)
     ImGuiSelectableFlags_AllowDoubleClick   = 1 << 2    // Generate press events on double clicks too
@@ -589,25 +603,52 @@ enum ImGuiSelectableFlags_
 // Flags for ImGui::BeginCombo()
 enum ImGuiComboFlags_
 {
-    ImGuiComboFlags_PopupAlignLeft      = 1 << 0,   // Align the popup toward the left by default
-    ImGuiComboFlags_HeightSmall         = 1 << 1,   // Max ~4 items visible. Tip: If you want your combo popup to be a specific size you can use SetNextWindowSizeConstraints() prior to calling BeginCombo()
-    ImGuiComboFlags_HeightRegular       = 1 << 2,   // Max ~8 items visible (default)
-    ImGuiComboFlags_HeightLarge         = 1 << 3,   // Max ~20 items visible
-    ImGuiComboFlags_HeightLargest       = 1 << 4,   // As many fitting items as possible
-    ImGuiComboFlags_HeightMask_         = ImGuiComboFlags_HeightSmall | ImGuiComboFlags_HeightRegular | ImGuiComboFlags_HeightLarge | ImGuiComboFlags_HeightLargest
+    ImGuiComboFlags_PopupAlignLeft          = 1 << 0,   // Align the popup toward the left by default
+    ImGuiComboFlags_HeightSmall             = 1 << 1,   // Max ~4 items visible. Tip: If you want your combo popup to be a specific size you can use SetNextWindowSizeConstraints() prior to calling BeginCombo()
+    ImGuiComboFlags_HeightRegular           = 1 << 2,   // Max ~8 items visible (default)
+    ImGuiComboFlags_HeightLarge             = 1 << 3,   // Max ~20 items visible
+    ImGuiComboFlags_HeightLargest           = 1 << 4,   // As many fitting items as possible
+    ImGuiComboFlags_HeightMask_             = ImGuiComboFlags_HeightSmall | ImGuiComboFlags_HeightRegular | ImGuiComboFlags_HeightLarge | ImGuiComboFlags_HeightLargest
+};
+
+// Flags for ImGui::IsWindowFocused()
+enum ImGuiFocusedFlags_
+{
+    ImGuiFocusedFlags_ChildWindows                  = 1 << 0,   // IsWindowFocused(): Return true if any children of the window is focused
+    ImGuiFocusedFlags_RootWindow                    = 1 << 1,   // IsWindowFocused(): Test from root window (top most parent of the current hierarchy)
+    ImGuiFocusedFlags_RootAndChildWindows           = ImGuiFocusedFlags_RootWindow | ImGuiFocusedFlags_ChildWindows,
 };
 
 // Flags for ImGui::IsItemHovered(), ImGui::IsWindowHovered()
 enum ImGuiHoveredFlags_
 {
     ImGuiHoveredFlags_Default                       = 0,        // Return true if directly over the item/window, not obstructed by another window, not obstructed by an active popup or modal blocking inputs under them.
-    ImGuiHoveredFlags_AllowWhenBlockedByPopup       = 1 << 0,   // Return true even if a popup window is normally blocking access to this item/window
-    //ImGuiHoveredFlags_AllowWhenBlockedByModal     = 1 << 1,   // Return true even if a modal popup window is normally blocking access to this item/window. FIXME-TODO: Unavailable yet.
-    ImGuiHoveredFlags_AllowWhenBlockedByActiveItem  = 1 << 2,   // Return true even if an active item is blocking access to this item/window
-    ImGuiHoveredFlags_AllowWhenOverlapped           = 1 << 3,   // Return true even if the position is overlapped by another window
-    ImGuiHoveredFlags_FlattenChilds                 = 1 << 4,   // Treat all child windows as the same window (for IsWindowHovered())
+    ImGuiHoveredFlags_ChildWindows                  = 1 << 0,   // IsWindowHovered() only: Return true if any children of the window is hovered
+    ImGuiHoveredFlags_RootWindow                    = 1 << 1,   // IsWindowHovered() only: Test from root window (top most parent of the current hierarchy)
+    ImGuiHoveredFlags_AllowWhenBlockedByPopup       = 1 << 2,   // Return true even if a popup window is normally blocking access to this item/window
+    //ImGuiHoveredFlags_AllowWhenBlockedByModal     = 1 << 3,   // Return true even if a modal popup window is normally blocking access to this item/window. FIXME-TODO: Unavailable yet.
+    ImGuiHoveredFlags_AllowWhenBlockedByActiveItem  = 1 << 4,   // Return true even if an active item is blocking access to this item/window. Useful for Drag and Drop patterns.
+    ImGuiHoveredFlags_AllowWhenOverlapped           = 1 << 5,   // Return true even if the position is overlapped by another window
     ImGuiHoveredFlags_RectOnly                      = ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem | ImGuiHoveredFlags_AllowWhenOverlapped
 };
+
+// Flags for ImGui::BeginDragDropSource(), ImGui::AcceptDragDropPayload()
+enum ImGuiDragDropFlags_
+{
+    // BeginDragDropSource() flags
+    ImGuiDragDropFlags_SourceNoAutoTooltip          = 1 << 0,       // By default, a successful call to BeginDragDropSource opens a tooltip so you can display a preview or description of the dragged contents. This flag disable this behavior.
+    ImGuiDragDropFlags_SourceNoDisableHover         = 1 << 1,       // By default, when dragging we clear data so that IsItemHovered() will return true, to avoid subsequent user code submitting tooltips. This flag disable this behavior so you can still call IsItemHovered() on the source item.
+    ImGuiDragDropFlags_SourceNoHoldToOpenOthers     = 1 << 2,       // Disable the behavior that allows to open tree nodes and collapsing header by holding over them while dragging a source item.
+    ImGuiDragDropFlags_SourceAllowNullID            = 1 << 3,       // Allow items such as Text(), Image() that have no unique identifier to be used as drag source, by manufacturing a temporary identifier based on their window-relative position. This is extremely unusual within the dear imgui ecosystem and so we made it explicit.
+    // AcceptDragDropPayload() flags
+    ImGuiDragDropFlags_AcceptBeforeDelivery         = 1 << 10,      // AcceptDragDropPayload() will returns true even before the mouse button is released. You can then call IsDelivery() to test if the payload needs to be delivered.
+    ImGuiDragDropFlags_AcceptNoDrawDefaultRect      = 1 << 11,      // Do not draw the default highlight rectangle when hovering over target.
+    ImGuiDragDropFlags_AcceptPeekOnly               = ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect  // For peeking ahead and inspecting the payload before delivery.
+};
+
+// Standard Drag and Drop payload types. Types starting with '_' are defined by Dear ImGui.
+#define IMGUI_PAYLOAD_TYPE_COLOR_3F     "_COL3F"    // float[3]     // Standard type for colors, without alpha. User code may use this type. 
+#define IMGUI_PAYLOAD_TYPE_COLOR_4F     "_COL4F"    // float[4]     // Standard type for colors. User code may use this type.
 
 // User fill ImGuiIO.KeyMap[] array with indices into the ImGuiIO.KeysDown[512] array
 enum ImGuiKey_
@@ -679,6 +720,7 @@ enum ImGuiCol_
     ImGuiCol_PlotHistogramHovered,
     ImGuiCol_TextSelectedBg,
     ImGuiCol_ModalWindowDarkening,  // darken entire screen when a modal window is active
+    ImGuiCol_DragDropTarget,
     ImGuiCol_COUNT
 
     // Obsolete names (will be removed)
@@ -756,8 +798,8 @@ enum ImGuiMouseCursor_
     ImGuiMouseCursor_Arrow = 0,
     ImGuiMouseCursor_TextInput,         // When hovering over InputText, etc.
     ImGuiMouseCursor_Move,              // Unused
-    ImGuiMouseCursor_ResizeNS,          // Unused
-    ImGuiMouseCursor_ResizeEW,          // When hovering over a column
+    ImGuiMouseCursor_ResizeNS,          // When hovering over an horizontal border
+    ImGuiMouseCursor_ResizeEW,          // When hovering over a vertical border or a column
     ImGuiMouseCursor_ResizeNESW,        // When hovering over the bottom-left corner of a window
     ImGuiMouseCursor_ResizeNWSE,        // When hovering over the bottom-right corner of a window
     ImGuiMouseCursor_Count_
@@ -935,8 +977,10 @@ struct ImGuiIO
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 namespace ImGui
 {
-    static inline void      SetNextWindowContentWidth(float width) { ImGui::SetNextWindowContentSize(ImVec2(width, 0.0f)); } // OBSOLETE 1.53+ (nb: original version preserved last Y value set by SetNextWindowContentSize())
-    static inline bool      IsRootWindowOrAnyChildHovered(ImGuiHoveredFlags flags = 0) { return IsItemHovered(flags | ImGuiHoveredFlags_FlattenChilds); } // OBSOLETE 1.53+ use flags directly
+    static inline bool      IsRootWindowFocused() { return IsWindowFocused(ImGuiFocusedFlags_RootWindow); } // OBSOLETE 1.53+
+    static inline bool      IsRootWindowOrAnyChildFocused() { return IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows); } // OBSOLETE 1.53+
+    static inline void      SetNextWindowContentWidth(float width) { SetNextWindowContentSize(ImVec2(width, 0.0f)); } // OBSOLETE 1.53+ (nb: original version preserved last Y value set by SetNextWindowContentSize())
+    static inline bool      IsRootWindowOrAnyChildHovered(ImGuiHoveredFlags flags = 0) { return IsItemHovered(flags | ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows); } // OBSOLETE 1.53+ use flags directly
     bool                    Begin(const char* name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha_override = -1.0f, ImGuiWindowFlags flags = 0); // OBSOLETE 1.52+. use SetNextWindowSize() instead if you want to set a window size.
     static inline void      AlignFirstTextHeightToWidgets() { AlignTextToFramePadding(); }     // OBSOLETE 1.52+
     static inline void      SetNextWindowPosCenter(ImGuiCond cond = 0) { SetNextWindowPos(ImVec2(GetIO().DisplaySize.x * 0.5f, GetIO().DisplaySize.y * 0.5f), cond, ImVec2(0.5f, 0.5f)); } // OBSOLETE 1.52+
@@ -1008,6 +1052,7 @@ public:
 
     inline iterator             erase(const_iterator it)        { IM_ASSERT(it >= Data && it < Data+Size); const ptrdiff_t off = it - Data; memmove(Data + off, Data + off + 1, ((size_t)Size - (size_t)off - 1) * sizeof(value_type)); Size--; return Data + off; }
     inline iterator             insert(const_iterator it, const value_type& v)  { IM_ASSERT(it >= Data && it <= Data+Size); const ptrdiff_t off = it - Data; if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); if (off < (int)Size) memmove(Data + off + 1, Data + off, ((size_t)Size - (size_t)off) * sizeof(value_type)); Data[off] = v; Size++; return Data + off; }
+    inline bool                 contains(const value_type& v) const             { const T* data = Data;  const T* data_end = Data + Size; while (data < data_end) if (*data++ == v) return true; return false; }
 };
 
 // Helper: execute a block of code at maximum once a frame. Convenient if you want to quickly create an UI within deep-nested code that runs multiple times every frame.
@@ -1163,6 +1208,28 @@ struct ImGuiSizeConstraintCallbackData
     ImVec2  DesiredSize;    // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.
 };
 
+// Data payload for Drag and Drop operations
+struct ImGuiPayload
+{
+    // Members
+    const void*     Data;               // Data (copied and owned by dear imgui)
+    int             DataSize;           // Data size
+
+    // [Internal]
+    ImGuiID         SourceId;           // Source item id
+    ImGuiID         SourceParentId;     // Source parent id (if available)
+    int             DataFrameCount;     // Data timestamp
+    char            DataType[8 + 1];    // Data type tag (short user-supplied string)
+    bool            Preview;            // Set when AcceptDragDropPayload() was called and mouse has been hovering the target item (nb: handle overlapping drag targets)
+    bool            Delivery;           // Set when AcceptDragDropPayload() was called and mouse button is released over the target item.
+
+    ImGuiPayload()  { Clear(); }
+    void Clear()    { SourceId = SourceParentId = 0; Data = NULL; DataSize = 0; memset(DataType, 0, sizeof(DataType)); DataFrameCount = -1; Preview = Delivery = false; }
+    bool IsDataType(const char* type) const { return DataFrameCount != -1 && strcmp(type, DataType) == 0; }
+    bool IsPreview() const                  { return Preview; }
+    bool IsDelivery() const                 { return Delivery; }
+};
+
 // Helpers macros to generate 32-bits encoded colors
 #ifdef IMGUI_USE_BGRA_PACKED_COLOR
 #define IM_COL32_R_SHIFT    16
@@ -1223,7 +1290,7 @@ struct ImGuiListClipper
     int     ItemsCount, StepNo, DisplayStart, DisplayEnd;
 
     // items_count:  Use -1 to ignore (you can call Begin later). Use INT_MAX if you don't know how many items you have (in which case the cursor won't be advanced in the final step).
-    // items_height: Use -1.0f to be calculated automatically on first step. Otherwise pass in the distance between your items, typically GetTextLineHeightWithSpacing() or GetItemsLineHeightWithSpacing().
+    // items_height: Use -1.0f to be calculated automatically on first step. Otherwise pass in the distance between your items, typically GetTextLineHeightWithSpacing() or GetFrameHeightWithSpacing().
     // If you don't specify an items_height, you NEED to call Step(). If you specify items_height you may call the old Begin()/End() api directly, but prefer calling Step().
     ImGuiListClipper(int items_count = -1, float items_height = -1.0f)  { Begin(items_count, items_height); } // NB: Begin() initialize every fields (as we allow user to call Begin/End multiple times on a same instance if they want).
     ~ImGuiListClipper()                                                 { IM_ASSERT(ItemsCount == -1); }      // Assert if user forgot to call End() or Step() until false.
