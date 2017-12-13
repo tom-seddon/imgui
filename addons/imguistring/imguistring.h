@@ -194,6 +194,7 @@ inline const ImString substr(int beg,int cnt=-1) const {
     return rv;
 }
 
+
 protected:
 
 private:
@@ -215,8 +216,9 @@ inline void push_back(const char c) {
     return base::push_back(c);
 }
 
-//TODO: redefine all the other methods we want to hide here...
+friend void ImStringNonStdResize(ImString& s,int size);
 
+//TODO: redefine all the other methods we want to hide here...
 };
 inline const ImString operator+(ImString v1, const ImString& v2 ) {return v1+=(v2);}
 #endif //ImString

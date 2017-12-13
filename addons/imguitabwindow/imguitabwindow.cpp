@@ -13,6 +13,9 @@
 #if !defined(alloca)
 #   ifdef _WIN32
 #       include <malloc.h>     // alloca
+#       if !defined(alloca)
+#           define alloca _alloca  // for clang with MS Codegen
+#       endif //alloca
 #   elif defined(__GLIBC__) || defined(__sun)
 #       include <alloca.h>     // alloca
 #   else

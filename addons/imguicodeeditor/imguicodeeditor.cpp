@@ -2320,7 +2320,7 @@ void CodeEditor::render()   {
         bool mustSkipNextVisibleLine = false;
         for (int i = lineStart;i<=lineEnd;i++) {
             if (i>=lines.size()) break;
-            if (i==scrollToLine) ImGui::SetScrollPosHere();
+            if (i==scrollToLine) ImGui::SetScrollHere();
             Line* line = lines[i];
             if (line->isHidden()) {
                 //fprintf(stderr,"line %d is hidden\n",line->lineNumber+1); // This seems to happen on "//endregion" lines only
@@ -3421,7 +3421,7 @@ static void MyTextLineWithSH(const BadCodeEditorData& ceData,const char* fmt, ..
 }
 
 
-bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
+bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data,ImGuiID* pOptionalItemIDOut)
 {
 //#define BAD_CODE_EDITOR_HAS_HORIZONTAL_SCROLLBAR  // doesn't work... maybe we can fix it someday... but default ImGui::InputTextMultiline() should be made with it...
 #   ifndef BAD_CODE_EDITOR_HAS_HORIZONTAL_SCROLLBAR
@@ -3455,6 +3455,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     }
     ImGui::PushID(label);
     const ImGuiID id = window->GetID("");
+    if (pOptionalItemIDOut) *pOptionalItemIDOut=id;
     const bool is_editable = (flags & ImGuiInputTextFlags_ReadOnly) == 0;
 
     bool showLineNumbers = true;
@@ -3630,8 +3631,9 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
     bool value_changed = false;
     bool enter_pressed = false;
+    bool item_active = (g.ActiveId == id);
 
-    if (g.ActiveId == id)
+    if (item_active)
     {
         if (!is_editable && !g.ActiveIdIsJustActivated)
         {
@@ -4226,6 +4228,13 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
     ImGui::PopID();
 
+    window->DC.LastItemId = id; // Otherwise ImGui::IsItemActive() is wrong
+    /*if (item_active) {
+        //g.ActiveId = id;
+        IM_ASSERT(g.ActiveId == id);
+        IM_ASSERT(ImGui::IsItemActive());
+    }*/
+
     if ((flags & ImGuiInputTextFlags_EnterReturnsTrue) != 0)
         return enter_pressed;
     else
@@ -4239,6 +4248,167 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 } // namespace ImGuiCe
 
 
+void ImStringNonStdResize(ImString& s,int size) {
+    IM_ASSERT(size>=0);
+    const int oldLength = s.length();
+#   ifndef IMGUISTRING_STL_FALLBACK
+    if (size!=oldLength)  {
+        s.resize(size+1);
+        for (int i=oldLength;i<size;i++) s[i]='\0';
+        s[size]='\0';
+    }
+#   else //IMGUISTRING_STL_FALLBACK
+    if (size<oldLength) s = s.substr(0,size);
+    else if (size>oldLength) for (int i=0,icnt=size-oldLength;i<icnt;i++) s+='\0';
+#   endif //IMGUISTRING_STL_FALLBACK
+}
+
+namespace ImGui {
+
+bool InputTextWithSyntaxHighlighting(ImGuiID& staticItemIDInOut, ImString& text,ImGuiCe::Language lang,const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data) {
+    bool rv = false;
+    const bool is_editable = (flags & ImGuiInputTextFlags_ReadOnly) == 0;
+    ImGui::PushID(&staticItemIDInOut);
+    if (staticItemIDInOut>0 && is_editable && ImGui::GetCurrentContext()->ActiveId==staticItemIDInOut) {
+        const ImGuiIO& io = ImGui::GetIO();
+        ImGuiTextEditState &edit_state = ImGui::GetCurrentContext()->InputTextState;    // Hope this always points to the active InputText...
+        const char* clipText = (io.KeyMap[ImGuiKey_V] && io.KeyCtrl) ? ImGui::GetClipboardText() : "";
+        const size_t clipSize = strlen(clipText);
+        size_t sizeToAdd = clipSize+((io.InputCharacters[0] && (!(io.KeyCtrl && !io.KeyAlt)))?(5*IM_ARRAYSIZE(io.InputCharacters)):0);
+        if (IsKeyPressedMap(ImGuiKey_Enter) || IsKeyPressedMap(ImGuiKey_Tab)
+            // || IsKeyPressedMap(ImGuiKey_Delete) || IsKeyPressedMap(ImGuiKey_Backspace) || (io.KeyMap[ImGuiKey_X] && io.KeyCtrl)
+        )
+        sizeToAdd+=5;
+        //if ((io.KeyMap[ImGuiKey_Z] && io.KeyCtrl)) sizeToAdd+=200;  // UNDO
+        //else if ((io.KeyMap[ImGuiKey_Y] && io.KeyCtrl)) sizeToAdd+=200; //REDO
+        size_t cnt = 0;
+        if (sizeToAdd>0)    {
+            // Note that this happens only on a few frames
+            sizeToAdd+=1;   // Trailing '\0'
+            const size_t oldTextLen = (size_t)text.length();
+            const size_t newTextLen = oldTextLen+sizeToAdd;
+            ImStringNonStdResize(text,newTextLen);  // See its code: it sets text[i]='\0' too
+            edit_state.Text.resize(text.length()+1);
+            edit_state.InitialText.resize(text.length()+1);
+
+            rv = ImGui::InputTextWithSyntaxHighlighting("###DummyID_ITWSH",&text[0],newTextLen,lang,size_arg,flags,callback,user_data,&staticItemIDInOut);
+
+            // Remove all trailing '\0's and resize all strings back to save memory (SLOW)
+            for (int i=(int)text.length()-1;i>=0;i--) {
+                if (text[i]!='\0') break;
+                ++cnt;
+            }
+            ImStringNonStdResize(text,text.length()-cnt);
+
+            if  (ImGui::GetCurrentContext()->ActiveId==staticItemIDInOut)    // Otherwise edit_state points to something else
+            {
+                //Allows the textbox to expand while active.
+                edit_state.Text.resize(text.length()+1);
+                edit_state.InitialText.resize(text.length()+1);
+            }
+        }
+        else rv = ImGui::InputTextWithSyntaxHighlighting("###DummyID_ITWSH",&text[0],text.length(),lang,size_arg,flags,callback,user_data,&staticItemIDInOut);
+
+        // Dbg only:
+#       ifdef IMGUICODEEDITOR_DEBUG
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("text.length()=%d cnt:%d sizeToAdd:%d\n",text.length(),cnt,(int)sizeToAdd);
+#       endif //IMGUICODEEDITOR_DEBUG
+    }
+    else rv = ImGui::InputTextWithSyntaxHighlighting("###DummyID_ITWSH",&text[0],text.length(),lang,size_arg,flags,callback,user_data,&staticItemIDInOut);
+    ImGui::PopID();
+    return rv;
+}
+
+} // namespace ImGui
+
 #undef IMGUI_NEW    // cleanup
 #undef IMGUI_DELETE // cleanup
+
+
+#ifdef NEVER
+// EXPERIMENTAL (ALMOST UNTESTED) InputTextMultiline(...) for std::strings.
+// USE IT AT YOUR OWN RISK!
+
+// Example usage:
+/*
+    static std::string text = "Dear ImGui lacks InputTextMultiline(...) for std::string.";
+    static bool isTextBoxActive = false;
+    ImGui::InputTextMultiline("###ADummyLabelForMe",text,isTextBoxActive);
+*/
+
+
+// .h file
+#include <imgui.h>
+#include <string>
+namespace ImGui {
+IMGUI_API bool InputTextMultiline(const char* label,std::string& text,bool& staticItemActiveInOut, const ImVec2& size = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
+}
+
+// .cpp file (needs imgui_internal.h)
+namespace ImGui {
+
+inline static void StdStringNonStdResize(std::string& s,int size) {
+    IM_ASSERT(size>=0);
+    const int oldLength = s.length();
+    if (size<oldLength) s = s.substr(0,size);
+    else if (size>oldLength) for (int i=0,icnt=size-oldLength;i<icnt;i++) s+='\0';
+}
+
+// Ideally we should remove "staticItemActiveInOut" and find a way to query the active state BEFORE calling the default InputTextMultiline(...) version
+// Also I'm not sure this works well with Undo/Redo
+bool InputTextMultiline(const char* label,std::string& text,bool& staticItemActiveInOut, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)    {
+    bool rv = false;
+    const bool is_editable = (flags & ImGuiInputTextFlags_ReadOnly) == 0;
+    if (staticItemActiveInOutForID && is_editable) {
+        const ImGuiIO& io = ImGui::GetIO();
+        ImGuiTextEditState &edit_state = ImGui::GetCurrentContext()->InputTextState;    // Hope this always points to the active InputText...
+        const char* clipText = (io.KeyMap[ImGuiKey_V] && io.KeyCtrl) ? ImGui::GetClipboardText() : "";
+        const size_t clipSize = strlen(clipText);
+        size_t sizeToAdd = clipSize+((io.InputCharacters[0] && (!(io.KeyCtrl && !io.KeyAlt)))?(5*IM_ARRAYSIZE(io.InputCharacters)):0);
+        if (IsKeyPressedMap(ImGuiKey_Enter) || IsKeyPressedMap(ImGuiKey_Tab)) sizeToAdd+=5;
+        size_t cnt = 0;
+        if (sizeToAdd>0)    {
+            // Note that this happens only on a few frames
+            sizeToAdd+=1;   // Trailing '\0'
+            const size_t oldTextLen = (size_t)text.length();
+            const size_t newTextLen = oldTextLen+sizeToAdd;
+            StdStringNonStdResize(text,newTextLen);  // See its code: it sets text[i]='\0' too
+            edit_state.Text.resize(text.length()+1);
+            edit_state.InitialText.resize(text.length()+1);
+
+            rv = ImGui::InputTextMultiline(label,&text[0],newTextLen,flags,callback,user_data);
+
+            // Remove all trailing '\0's and resize all strings back to save memory (a bit slow)
+            for (int i=(int)text.length()-1;i>=0;i--) {
+                if (text[i]!='\0') break;
+                ++cnt;
+            }
+            StdStringNonStdResize(text,text.length()-cnt);
+
+            staticItemActiveInOutForID = ImGui::IsItemActive();
+            if  (staticItemActiveInOutForID)    // Otherwise maybe edit_state points to something else
+            {
+                //Allows the textbox to expand while active.
+                edit_state.Text.resize(text.length()+1);
+                edit_state.InitialText.resize(text.length()+1);
+            }
+        }
+        else {
+            rv = ImGui::InputTextMultiline(label,&text[0],text.length(),flags,callback,user_data);
+            staticItemActiveInOutForID = ImGui::IsItemActive();
+        }
+
+        // Dbg only: (to remove)
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("text.length():%d (%s) cnt:%d sizeToAdd:%d\n",text.length(),staticItemActiveInOutForID?"active":"inactive",cnt,(int)sizeToAdd);
+
+    }
+    else {
+        rv = ImGui::InputTextMultiline(label,&text[0],text.length(),flags,callback,user_data);
+        staticItemActiveInOutForID = ImGui::IsItemActive();
+    }
+    return rv;
+}
+
+} // namespace ImGui
+#endif //NEVER
 

@@ -1371,17 +1371,31 @@ void DrawGL()	// Mandatory
         // BadCodeEditor Test:
     if (ImGui::TreeNodeEx("imguicodeeditor",ImGuiTreeNodeFlags_CollapsingHeader)) {
         ImGui::TreePop();
-#       ifndef NO_IMGUITABWINDOW
+#       ifndef NO_IMGUICODEEDITOR
         ImGui::Text("ImGui::InputTextWithSyntaxHighlighting(...) [Experimental] (CTRL+MW: zoom):");
+        ImGui::TextDisabled("It needs a monospace font");
+        ImGui::TextDisabled("[New] Experimental dynamic string support (see code)");
         ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.35f);
         static int languageIndex = (int) ImGuiCe::LANG_CPP;
         ImGui::Combo("Language##BCE_LanguageCombo",&languageIndex,ImGuiCe::GetLanguageNames(),(int)ImGuiCe::LANG_COUNT);
         ImGui::PopItemWidth();
+
         static const char* myCode="# include <sadd.h>\n\nusing namespace std;\n\n//This is a comment\nclass MyClass\n{\npublic:\nMyClass() {}\nvoid Init(int num)\n{  // for loop\nfor (int t=0;t<20;t++)\n	{\n     mNum=t; /* setting var */\n     const float myFloat = 1.25f;\n      break;\n	}\n}\n\nprivate:\nint mNum;\n};\n\nstatic const char* SomeStrings[] = {\"One\"/*Comment One*//*Comment*/,\"Two /*Fake Comment*/\",\"Three\\\"Four\"};\n\nwhile (i<25 && i>=0)   {\n\ti--;\nbreak;} /*comment*/{/*This should not fold*/}/*comment2*/for (int i=0;i<20;i++)    {\n\t\t\tcontinue;//OK\n} // end second folding\n\nfor (int j=0;j<200;j++)  {\ncontinue;}\n\n//region Custom Region Here\n{\n//something inside here\n}\n//endregion\n\n/*\nMultiline\nComment\nHere\n*/\n\n/*\nSome Unicode Characters here:\n€€€€\n*/\n\n";
+        /*
+        // This works with a static buffer (fixed-size)
         static char bceBuffer[1024]="";
         if (bceBuffer[0]=='\0') strcpy(bceBuffer,myCode);   //Bad init (use initGL() to fill the buffer)
         // It needs a monospace font
         ImGui::InputTextWithSyntaxHighlighting("ITWSH_JustForID",bceBuffer,sizeof(bceBuffer),(ImGuiCe::Language)languageIndex,ImVec2(0,300));
+        */
+        // This "works"(?) with a ImString (dynamic-size)
+        // Tip: ImString is std::string when IMGUISTRING_STL_FALLBACK is defined globally (or at the top of addons/imguistring/imguistring.h
+        static ImString myCodeString = myCode;
+        static ImGuiID codeEditorID = 0;   // Needs to be static and set to zero (one per input text)
+        // It needs a monospace font
+        ImGui::InputTextWithSyntaxHighlighting(codeEditorID,myCodeString,(ImGuiCe::Language)languageIndex,ImVec2(0,300));
+        // Known problem I'm not going to fix: You must use strlen(myCodeString.c_str()) to find the text size, since myCodeString.size() might be bigger
+        // Won't fix this because otherwise Undo/Redo can't have enough space to work.
 #       else //NO_IMGUICODEEDITOR
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUICODEEDITOR

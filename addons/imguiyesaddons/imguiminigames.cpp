@@ -315,10 +315,10 @@ namespace ImGuiMiniGames {
         ImGuiIO& io = ImGui::GetIO();
         if (mustReInit) ImGui::SetNextWindowFocus();
         ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, ImGui::ColorConvertU32ToFloat4(style.colors[Mine::Style::Color_Background]));
-	ImGui::BeginChild("Mine Game Scrolling Region", ImVec2(0,0), false,fitToScreen ? (ImGuiWindowFlags_NoScrollbar||ImGuiWindowFlags_NoScrollWithMouse) : (ImGuiWindowFlags_HorizontalScrollbar/*|ImGuiWindowFlags_AlwaysHorizontalScrollbar|ImGuiWindowFlags_AlwaysVerticalScrollbar*/));
+    ImGui::BeginChild("Mine Game Scrolling Region", ImVec2(0,0), false,fitToScreen ? (ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse) : ImGuiWindowFlags_HorizontalScrollbar);
 
         // Following line is important if we want to avoid clicking on the window just to get the focus back (AFAICS, but there's probably some better way...)
-        const bool isFocused = ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused() || (ImGui::GetParentWindow() && ImGui::GetParentWindow()->Active);
+        const bool isFocused = ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused() || (ImGui::GetCurrentWindow() && ImGui::GetCurrentWindow()->Active);
         const bool isHovered = ImGui::IsWindowHovered();
         ImGuiWindow* window = ImGui::GetCurrentWindow();
 
@@ -1081,7 +1081,7 @@ namespace ImGuiMiniGames {
             ImGui::BeginChild("Sudoku Game Scrolling Region", ImVec2(0,0), false,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse);
 
             // Following line is important if we want to avoid clicking on the window just to get the focus back (AFAICS, but there's probably some better way...)
-            const bool isFocused = ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused() || (ImGui::GetParentWindow() && ImGui::GetParentWindow()->Active);
+            const bool isFocused = ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused() || (ImGui::GetCurrentWindow() && ImGui::GetCurrentWindow()->Active);
             const bool isHovered = ImGui::IsWindowHovered();
             ImGuiWindow* window = ImGui::GetCurrentWindow();
 
@@ -1508,7 +1508,7 @@ namespace ImGuiMiniGames {
             gamePhase=GP_Titles;gameWon=false;
             //resetAllCells(_cell_size);
         }
-        FifteenHS() {resetVariables();inited=false;comboSelectedIndex=2;}
+        FifteenHS() {resetVariables();inited=false;comboSelectedIndex=1;}
         ~FifteenHS() {}
         inline bool isCellMovable(const Coord& coord) const {
             if (coord==empty) return false;
@@ -1566,9 +1566,9 @@ namespace ImGuiMiniGames {
         }
 
         void initNewGame()  {
-            IM_ASSERT(comboSelectedIndex>=0 && comboSelectedIndex<6);
+            IM_ASSERT(comboSelectedIndex>=0 && comboSelectedIndex<5);
             resetVariables();
-            resetAllCells(comboSelectedIndex+2);
+            resetAllCells(comboSelectedIndex+3);
             // shuffle cells---
             const float puzzle_rand = (float)cell_size/(float)RAND_MAX;
             const int numShuffleMoves=cell_size*256/4;
@@ -1615,7 +1615,7 @@ namespace ImGuiMiniGames {
                 if (ImGui::Button("New Game##FifteenQuitGame")) {gamePhase = GP_Titles;mustReInit=true;}
             }
             if (gamePhase == GP_Titles || mustReInit) {
-                static const char* Types[] = {"Three","Eight","Fifteen","TwentyFour","ThirtyFive","FortyEight"};
+                static const char* Types[] = {"Eight","Fifteen","TwentyFour","ThirtyFive","FortyEight"};
                 ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.35f);
                 if (mustReInit || ImGui::Combo("Game Type##FifteenGameType",&comboSelectedIndex,Types,sizeof(Types)/sizeof(Types[0]),sizeof(Types)/sizeof(Types[0])))   {
                     mustReInit = true;
@@ -1659,7 +1659,7 @@ namespace ImGuiMiniGames {
             ImGui::BeginChild("Fifteen Game Scrolling Region", ImVec2(0,0), false,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse);
 
             // Following line is important if we want to avoid clicking on the window just to get the focus back (AFAICS, but there's probably some better way...)
-            const bool isFocused = ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused() || (ImGui::GetParentWindow() && ImGui::GetParentWindow()->Active);
+            const bool isFocused = ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused() || (ImGui::GetCurrentWindow() && ImGui::GetCurrentWindow()->Active);
             const bool isHovered = ImGui::IsWindowHovered();
             ImGuiWindow* window = ImGui::GetCurrentWindow();
 
@@ -1730,12 +1730,13 @@ namespace ImGuiMiniGames {
                 const ImVec2 grid_len = gridSize * GRID_SZ;
                 const float grid_Line_width = window->FontWindowScale;
 		const float rounding = style.cellRounding;
-		const float thickness = style.borderThickness;
+        float thickness = 5.f*grid_len.x/350.f;
 
 		// Display Background
 		draw_list->AddRectFilled(win_pos+gridOffset,win_pos+gridOffset+grid_len+ImVec2(grid_Line_width,grid_Line_width),style.colors[Fifteen::Style::Color_Background],rounding,ImDrawCornerFlags_All);
                 draw_list->AddRect(win_pos+gridOffset,win_pos+gridOffset+grid_len+ImVec2(grid_Line_width,grid_Line_width),style.colors[Fifteen::Style::Color_Text],rounding,ImDrawCornerFlags_All,thickness);
 
+        thickness*= 4.f/(float) (comboSelectedIndex+3);
 
                 // Detect the cell under the mouse.
                 Coord mouseCell(-1,-1);
@@ -1806,7 +1807,7 @@ namespace ImGuiMiniGames {
                 // Draw end game messages
                 if (gamePhase==GP_GameOver) {
                     const float elapsedSeconds = (float)(ImGui::GetTime()-currentTime-startTime);
-		    const float fontScaling = 0.25f;
+            const float fontScaling = 0.365f;
                     if (gameWon) {
                         static char gameWonText[256] = "";
                         sprintf(gameWonText,"GAME COMPLETED\nTIME: %um : %us",((unsigned)currentTime)/60,((unsigned)currentTime)%60);
@@ -1876,8 +1877,7 @@ namespace ImGuiMiniGames {
 	colors[Color_Numbers] = IM_COL32_BLACK;
 
 	cellRounding = 8.f;
-	borderThickness = 5.f;
-        keyPause = (int) 'p';
+    keyPause = (int) 'p';
     }
 #   ifndef NO_IMGUIMINIGAMES_MINE
     void Fifteen::Style::setFromMineGameStyle(const Mine::Style& ms) {

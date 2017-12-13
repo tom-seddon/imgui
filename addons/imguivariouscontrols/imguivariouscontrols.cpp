@@ -273,10 +273,10 @@ inline static void ClampColor(ImVec4& color)    {
 }
 
 // Based on the code from: https://github.com/benoitjacquier/imgui
-inline static bool ColorChooserInternal(ImVec4 *pColorOut,bool supportsAlpha,bool showSliders,ImGuiWindowFlags extra_flags=0,bool* pisAnyItemActive=NULL,float windowWidth = 180)    {
+inline static bool ColorChooserInternal(ImVec4 *pColorOut,bool supportsAlpha,bool showSliders,ImGuiWindowFlags extra_flags=0,bool* pisAnyItemActive=NULL,float windowWidth = 180/*,bool isCombo = false*/)    {
     bool colorSelected = false;
     if (pisAnyItemActive) *pisAnyItemActive=false;
-    const bool isCombo = (extra_flags&ImGuiWindowFlags_ComboBox);
+    //const bool isCombo = (extra_flags&ImGuiWindowFlags_ComboBox);
 
     ImVec4 color = pColorOut ? *pColorOut : ImVec4(0,0,0,1);
     if (!supportsAlpha) color.w=1.f;
@@ -294,7 +294,7 @@ inline static bool ColorChooserInternal(ImVec4 *pColorOut,bool supportsAlpha,boo
     ImGuiWindow* colorWindow = GetCurrentWindow();
 
     const float quadSize = windowWidth - smallWidth - colorWindow->WindowPadding.x*2;
-    if (isCombo) ImGui::SetCursorPosX(ImGui::GetCursorPos().x+colorWindow->WindowPadding.x);
+    //if (isCombo) ImGui::SetCursorPosX(ImGui::GetCursorPos().x+colorWindow->WindowPadding.x);
     // Hue Saturation Value
     if (ImGui::BeginChild("ValueSaturationQuad##ValueSaturationQuadColorChooser", ImVec2(quadSize, quadSize), false,extra_flags ))
     //ImGui::BeginGroup();
@@ -353,7 +353,7 @@ inline static bool ColorChooserInternal(ImVec4 *pColorOut,bool supportsAlpha,boo
 
     ImGui::SameLine();
 
-    if (isCombo) ImGui::SetCursorPosX(ImGui::GetCursorPos().x+colorWindow->WindowPadding.x+quadSize);
+    //if (isCombo) ImGui::SetCursorPosX(ImGui::GetCursorPos().x+colorWindow->WindowPadding.x+quadSize);
 
     //Vertical tint
     if (ImGui::BeginChild("Tint##TintColorChooser", ImVec2(smallWidth, quadSize), false,extra_flags))
@@ -404,7 +404,7 @@ inline static bool ColorChooserInternal(ImVec4 *pColorOut,bool supportsAlpha,boo
     {
         //Sliders
         //ImGui::PushItemHeight();
-        if (isCombo) ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPos().x+colorWindow->WindowPadding.x,ImGui::GetCursorPos().y+colorWindow->WindowPadding.y+quadSize));
+        //if (isCombo) ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPos().x+colorWindow->WindowPadding.x,ImGui::GetCursorPos().y+colorWindow->WindowPadding.y+quadSize));
         ImGui::AlignFirstTextHeightToWidgets();
         ImGui::Text("Sliders");
         static bool useHsvSliders = false;
@@ -414,7 +414,7 @@ inline static bool ColorChooserInternal(ImVec4 *pColorOut,bool supportsAlpha,boo
         if (ImGui::SmallButton(btnNames[index])) useHsvSliders=!useHsvSliders;
 
         ImGui::Separator();
-        const ImVec2 sliderSize = isCombo ? ImVec2(-1,quadSize) : ImVec2(-1,-1);
+        const ImVec2 sliderSize = /*isCombo ? ImVec2(-1,quadSize) : */ImVec2(-1,-1);
         if (ImGui::BeginChild("Sliders##SliderColorChooser", sliderSize, false,extra_flags))
         {
 
@@ -622,11 +622,11 @@ bool ColorCombo(const char* label,ImVec4 *pColorOut,bool supportsAlpha,float wid
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4,2));
 
         bool mustCloseCombo = false;
-        const ImGuiWindowFlags flags =  ImGuiWindowFlags_ComboBox;
+        const ImGuiWindowFlags flags =  0;//ImGuiWindowFlags_Modal;//ImGuiWindowFlags_ComboBox;  // ImGuiWindowFlags_ComboBox is no more available... what now ?
         if (ImGuiCppDuply::BeginPopupEx(label, flags))
         {
             bool comboItemActive = false;
-            value_changed = ColorChooserInternal(pColorOut,supportsAlpha,false,flags,&comboItemActive,windowWidth);
+            value_changed = ColorChooserInternal(pColorOut,supportsAlpha,false,flags,&comboItemActive,windowWidth/*,true*/);
             if (closeWhenMouseLeavesIt && !comboItemActive)
             {
                 const float distance = g.FontSize*1.75f;//1.3334f;//24;

@@ -236,7 +236,6 @@ namespace ImGuiMiniGames {
             };
             ImU32 colors[Color_Count];
             float cellRounding;
-            float borderThickness;
             int keyPause;                       // This depends on your key-mapping in ImGui. (default == 'p')
             static Style style;
             inline static Style& Get() {return style;}

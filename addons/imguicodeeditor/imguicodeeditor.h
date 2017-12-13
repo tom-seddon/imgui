@@ -317,7 +317,7 @@ private:
     IMGUI_API void TextLineWithSH(const char *fmt...);
 
     IMGUI_API static void StaticInit();
-    friend bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang,const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data);
+    friend bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang,const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data, ImGuiID* pOptionalItemIDOut);
 
 };
 
@@ -328,7 +328,7 @@ private:
 namespace ImGuiCe {
 
 
-IMGUI_API bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
+IMGUI_API bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL,ImGuiID* pOptionalItemIDOut=NULL);
 
 
 } // namespace ImGuiCe
@@ -337,10 +337,21 @@ IMGUI_API bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGui
 namespace ImGui {
 
 
-inline bool InputTextWithSyntaxHighlighting(const char* labelJustForID, char* buf, size_t buf_size,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL) {
-    return ImGuiCe::BadCodeEditor(labelJustForID,buf,buf_size,lang,size_arg,flags,callback,user_data);
+inline bool InputTextWithSyntaxHighlighting(const char* labelJustForID, char* buf, size_t buf_size,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL,ImGuiID* pOptionalItemIDOut=NULL) {
+    return ImGuiCe::BadCodeEditor(labelJustForID,buf,buf_size,lang,size_arg,flags,callback,user_data,pOptionalItemIDOut);
 }
 
+// Tip: ImString is std::string when IMGUISTRING_STL_FALLBACK is defined globally (or at the top of addons/imguistring/imguistring.h
+// USAGE:
+/*
+    static ImString myCodeString = "Some code here";
+    static ImGuiID codeEditorID = 0;   // Needs to be static and set to zero (one per input text)
+    // It needs a monospace font
+    ImGui::InputTextWithSyntaxHighlighting(codeEditorID,myCodeString,(ImGuiCe::Language)languageIndex,ImVec2(0,300));
+    // Known problem I'm not going to fix: You must use strlen(myCodeString.c_str()) to find the text size, since myCodeString.size() might be bigger
+    // Won't fix this because otherwise Undo/Redo can't have enough space to work.
+*/
+IMGUI_API bool InputTextWithSyntaxHighlighting(ImGuiID& staticItemIDInOut, ImString& text,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
 
 }   // namespace ImGui
 
