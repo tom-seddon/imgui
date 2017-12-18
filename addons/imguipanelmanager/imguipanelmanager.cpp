@@ -658,11 +658,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->DC.ItemFlagsStack.resize(0);
         window->DC.ItemWidthStack.resize(0);
         window->DC.TextWrapPosStack.resize(0);
-        window->DC.ColumnsCurrent = 0;
-        window->DC.ColumnsCount = 1;
-        window->DC.ColumnsStartPosY = window->DC.CursorPos.y;
-        window->DC.ColumnsStartMaxPosX = window->DC.CursorMaxPos.x;
-        window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY = window->DC.ColumnsStartPosY;
+        window->DC.ColumnsSet = NULL;
         window->DC.TreeDepth = 0;
         window->DC.StateStorage = &window->StateStorage;
         window->DC.GroupStack.resize(0);
@@ -793,7 +789,7 @@ static void DockWindowEnd()
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    if (window->DC.ColumnsCount != 1) // close columns set if any is open
+    if (window->DC.ColumnsSet != NULL) // close columns set if any is open
         EndColumns();
     PopClipRect();   // inner window clip rectangle
 

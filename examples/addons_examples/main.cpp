@@ -1389,7 +1389,7 @@ void DrawGL()	// Mandatory
         ImGui::InputTextWithSyntaxHighlighting("ITWSH_JustForID",bceBuffer,sizeof(bceBuffer),(ImGuiCe::Language)languageIndex,ImVec2(0,300));
         */
         // This "works"(?) with a ImString (dynamic-size)
-        // Tip: ImString is std::string when IMGUISTRING_STL_FALLBACK is defined globally (or at the top of addons/imguistring/imguistring.h
+        // Tip: ImString is std::string when IMGUISTRING_STL_FALLBACK is defined globally (or at the top of addons/imguistring/imguistring.h)
         static ImString myCodeString = myCode;
         static ImGuiID codeEditorID = 0;   // Needs to be static and set to zero (one per input text)
         // It needs a monospace font
