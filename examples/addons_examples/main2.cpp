@@ -12,6 +12,7 @@ static const bool* gpShowCentralWindow = NULL;    // We'll bind it to a "manual"
 //#define NO_IMGUIHELPER	    // Disables all saving/loading methods. [Users usually define this kind of definitions at the project level].
 //#define TEST_ICONS_INSIDE_TTF     // Optional to test FontAwesome (a ttf file containing icons) [Local definition]
 
+
 #ifdef TEST_ICONS_INSIDE_TTF
 #include "fonts/Icons/FontAwesome/definitions.h"
 static void DrawAllFontAwesomeIcons();  // defined at the bottom of this file
@@ -284,6 +285,71 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
 
 
         }
+        else if (tab->userInt>=500) {
+#       if (!defined(NO_IMGUICODEEDITOR) && !defined(NO_IMGUIFILESYSTEM))
+            // This is simply an experimental mess!
+            // However I need some kind of spot to further test ImGui::InputTextWithSyntaxHighlighting(...).
+            // Note that this test only works for an instance and we never SAVE any modified file!
+
+            static ImGuiID codeEditorID = 0;
+            static ImString codeEditorText = "__MUST_INIT__";
+            static bool fileNotPresent = false;
+
+            ImGuiInputTextFlags codeEditorFlags = 0;
+            const char* chosenPath = NULL;
+            const bool browseButtonPressed = ImGui::Button("Load###LoadCodeEditorFile");
+
+            bool mustReload = false;    // Well, we must find a way to detect when we load the whole TabWindow layout and at that moment reload the (new?) file
+            static char lastTabLabelName[ImGuiFs::MAX_PATH_BYTES]="";
+            if (!tab->matchLabel(lastTabLabelName)) {
+                tab->copyLabelTo(lastTabLabelName,ImGuiFs::MAX_PATH_BYTES);
+                IM_ASSERT(tab->matchLabel(lastTabLabelName));
+                mustReload = true;
+                fprintf(stderr,"No match with \"%s\"\n",tab->getLabel());
+            }
+
+            if ((codeEditorID==0 && codeEditorText=="__MUST_INIT__") || mustReload) {
+                codeEditorText="";
+                chosenPath = tab->getTooltip();
+            }
+            else {
+                static ImGuiFs::Dialog fsInstance;
+                chosenPath = fsInstance.chooseFileDialog(browseButtonPressed,"",ImGuiCe::GetSupportedExtensions());
+            }
+
+            if (strlen(chosenPath)>0) {
+                // A path (chosenPath) has been chosen right now. However we can retrieve it later using: fsInstance.getChosenPath()
+                if (chosenPath!=tab->getTooltip()) tab->setTooltip(chosenPath);
+                char relativePath[ImGuiFs::MAX_PATH_BYTES]="";
+                ImGuiFs::PathGetFileName(chosenPath,relativePath);
+                tab->setLabel(relativePath);
+                tab->setModified(false);
+                fileNotPresent = !ImGuiFs::FileExists(chosenPath);
+                if (!fileNotPresent) {
+                    ImVector<char> tmp;
+                    ImGuiFs::FileGetContent(chosenPath,tmp);
+                    if (tmp.size()) {
+                        codeEditorText = &tmp[0];
+                        codeEditorText[tmp.size()]='\0';
+                    }
+                    ImGuiFs::PathGetExtension(chosenPath,relativePath); // relativePath now is ".cpp" or something like that
+                    tab->userInt=500+(int)ImGuiCe::GetLanguageFromExtension(relativePath);
+                    codeEditorFlags = ImGuiInputTextFlags_ResetText;
+                    fprintf(stderr,"Loading \"%s\"\n",tab->getTooltip());
+                }
+            }
+
+            ImGui::SameLine();ImGui::Text("%s",ImGuiCe::GetLanguageNames()[tab->userInt-500]);
+
+            if (fileNotPresent) {
+                ImGui::SameLine();
+                ImGui::Text("Error: \"%s\" Not present.",tab->getTooltip());
+            }
+            else if (ImGui::InputTextWithSyntaxHighlighting(codeEditorID,codeEditorText,(ImGuiCe::Language) (tab->userInt-500),ImVec2(0,-1),codeEditorFlags)) tab->setModified(true);
+#       else //NO_IMGUICODEEDITOR || NO_IMGUIFILESYSTEM
+        ImGui::Text("Disabled for this build.");
+#       endif //NO_IMGUICODEEDITOR || NO_IMGUIFILESYSTEM
+        }
         else ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
         ImGui::PopID();
     }
@@ -452,6 +518,17 @@ strcpy(&ies.arrowsChars[1][0],"▶");
 strcpy(&ies.arrowsChars[2][0],"▲");
 strcpy(&ies.arrowsChars[3][0],"▼");
 #endif //YES_IMGUIIMAGEEDITOR
+
+#if (!defined(NO_IMGUICODEEDITOR) && !defined(NO_IMGUIFILESYSTEM))
+{
+    // We need (at least one) monopace font for our code editor. We add font number 1 (see main() function below)
+    // When using more than one monospace font, all must be of the same size
+    ImFontAtlas* atlas = ImGui::GetIO().Fonts;
+    IM_ASSERT(atlas->Fonts.Size>1);
+    ImFont* font = atlas->Fonts[1];
+    ImGuiCe::CodeEditor::SetFonts(font,font,font,font);
+}
+#endif
 
 // Here we setup mgr (our ImGui::PanelManager)
 if (mgr.isEmpty()) {
@@ -650,7 +727,14 @@ if (!tabWindow.isInited()) {
 #       ifndef NO_IMGUISTYLESERIALIZER
         tabWindow.addTabLabel("ImGuiStyleChooser","Edit the look of the GUI",false);
 #       endif //NO_IMGUISTYLESERIALIZER
+#       ifndef NO_IMGUICODEEDITOR
+#       ifndef NO_IMGUIFILESYSTEM  // Optional stuff to enhance file system dialogs with icons
+        ImGui::TabWindow::TabLabel* tabLabel = tabWindow.addTabLabel("Code Editor","",false,false,NULL,"",500,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse);
+        tabLabel->userInt = 500;    // We'll use tabLabel->userInt>=500 to detect if it's a code editor
+#       endif //NO_IMGUIFILESYSTEM
+#       endif //NO_IMGUICODEEDITOR
     }
+
 }
 #endif // NO_IMGUITABWINDOW
 
@@ -991,23 +1075,16 @@ void DestroyGL()    // Mandatory
 
 
 
-#   define USE_ADVANCED_SETUP
 
 
 // Application code
 #ifndef IMGUI_USE_AUTO_BINDING_WINDOWS  // IMGUI_USE_AUTO_ definitions get defined automatically (e.g. do NOT touch them!)
 int main(int argc, char** argv)
+#else //IMGUI_USE_AUTO_BINDING_WINDOWS
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine, int iCmdShow)   // This branch has made my code less concise (I will consider stripping it)
+#endif //IMGUI_USE_AUTO_BINDING_WINDOWS
 {
-#   ifndef USE_ADVANCED_SETUP
-    // Basic
-    ImImpl_Main(NULL,argc,argv);
 
-#       ifdef TEST_ICONS_INSIDE_TTF
-#       error No time to set up this font here: please use USE_ADVANCED_SETUP
-#       endif //TEST_ICONS_INSIDE_TTF
-
-#   else //USE_ADVANCED_SETUP
-    // Advanced
         static const ImWchar ranges[] =
         {
             0x0020, 0x00FF, // Basic Latin + Latin Supplement
@@ -1056,58 +1133,39 @@ int main(int argc, char** argv)
     //gImGuiInitParams.gFpsClampOutsideImGui = 15.0f;                                 // Optional Max allowed FPS (default -1 => unclamped). Useful for editors and to save GPU and CPU power.
 
 #   ifdef TEST_ICONS_INSIDE_TTF
+    {
     static const ImWchar iconFontRanges[] ={ICON_MIN_FA,ICON_MAX_FA,0};
     ImFontConfig fntCfg;fntCfg.MergeMode = true;fntCfg.PixelSnapH = true;
     fntCfg.OversampleV=fntCfg.OversampleH=1;    // To save texture memory (but commenting it out makes icons look better)
     gImGuiInitParams.fonts.push_back(ImImpl_InitParams::FontData("fonts/Icons/FontAwesome/font.ttf",fontSizeInPixels,&iconFontRanges[0],&fntCfg));
+    }
 #   endif //TEST_ICONS_INSIDE_TTF
 
+#   if (!defined(NO_IMGUICODEEDITOR) && !defined(NO_IMGUIFILESYSTEM))
+    // We need a monopace font for our code editor
+    {
+    ImFontConfig fntCfg;//fntCfg.MergeMode = true;fntCfg.PixelSnapH = true;
+    fntCfg.OversampleV=fntCfg.OversampleH=1;    // To save texture memory (but commenting it out makes icons look better)
+    const unsigned char ttfMonospaceMemory[] =
+#       include "./fonts/Mono/DejaVuSansMonoBold-Stripped.ttf.inl"
+    ;
+    gImGuiInitParams.fonts.push_back(ImImpl_InitParams::FontData(ttfMonospaceMemory,sizeof(ttfMonospaceMemory)/sizeof(ttfMonospaceMemory[0]),ImImpl_InitParams::FontData::COMP_NONE,fontSizeInPixels,NULL,&fntCfg));
+    // Note that this font will be assigned to the Code Editor in InitGL() (no need to PushFont()/PopFont() before ImGui::InputTextWithSyntaxHighlighting(...);
+    }
+#   endif //(!defined(NO_IMGUICODEEDITOR) && !defined(NO_IMGUIFILESYSTEM))
+
+
+#   ifndef IMGUI_USE_AUTO_BINDING_WINDOWS  // IMGUI_USE_AUTO_ definitions get defined automatically (e.g. do NOT touch them!)
     ImImpl_Main(&gImGuiInitParams,argc,argv);
-#   endif //USE_ADVANCED_SETUP
+#   else //IMGUI_USE_AUTO_BINDING_WINDOWS
+    ImImpl_WinMain(&gImGuiInitParams,hInstance,hPrevInstance,lpCmdLine,iCmdShow);
+#   endif //IMGUI_USE_AUTO_BINDING_WINDOWS
 
 	return 0;
 }
-#else //IMGUI_USE_AUTO_BINDING_WINDOWS
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine, int iCmdShow)   // This branch has made my code less concise (I will consider stripping it)
-{
-#   ifndef USE_ADVANCED_SETUP
-    // Basic
-    ImImpl_WinMain(NULL,hInstance,hPrevInstance,lpCmdLine,iCmdShow);
 
-#       ifdef TEST_ICONS_INSIDE_TTF
-#       error No time to set up this font here: please use USE_ADVANCED_SETUP
-#       endif //TEST_ICONS_INSIDE_TTF
 
-#   else //USE_ADVANCED_SETUP
-    // Advanced
-    // These lines load an embedded font. [However these files are way too big... inside <imgui.cpp> they used a better format storing bytes at groups of 4, so the files are more concise (1/4?) than mine]
-    const unsigned char fntMemory[] =
-#   include "./fonts/DejaVuSansCondensedBoldOutlineRGBAbinary18.fnt.inl"
-    const unsigned char imgMemory[] =
-#   include "./fonts/DejaVuSansCondensedBoldOutlineRGBAbinary18_0.png.inl"
 
-    ImImpl_InitParams gImGuiInitParams(
-    -1,-1,NULL,                                                         // optional window width, height, title
-    NULL,//"./fonts/DejaVuSansCondensedBoldOutlineRGBAbinary18.fnt",    // optional custom font from file (main custom font)
-    NULL,//"./fonts/DejaVuSansCondensedBoldOutlineRGBAbinary18_0.png",  // optional custom font from file (main custom font)
-    -1,-1,                                                              // optional white spot in font texture (returned by the console if not set)
-    &fntMemory[0],sizeof(fntMemory)/sizeof(fntMemory[0]),               // optional custom font from memory (secondary custom font) WARNING (licensing problem): e.g. embedding a GPL font in your code can make your code GPL as well.
-    &imgMemory[0],sizeof(imgMemory)/sizeof(imgMemory[0])                // optional custom font from memory (secondary custom font) WARNING (licensing problem): e.g. embedding a GPL font in your code can make your code GPL as well.
-    );
-    gImGuiInitParams.gFpsClamp = 10.0f;                                 // Optional Max allowed FPS (default -1 => unclamped). Useful for editors and to save GPU and CPU power.
-
-#   ifdef TEST_ICONS_INSIDE_TTF
-    static const ImWchar iconFontRanges[] ={ICON_MIN_FA,ICON_MAX_FA,0};
-    ImFontConfig fntCfg;fntCfg.MergeMode = true;fntCfg.PixelSnapH = true;
-    gImGuiInitParams.fonts.push_back(ImImpl_InitParams::FontData("fonts/Icons/FontAwesome/font.ttf",fontSizeInPixels,&iconFontRanges[0],&fntCfg));
-#   endif //TEST_ICONS_INSIDE_TTF
-
-    ImImpl_WinMain(&gImGuiInitParams,hInstance,hPrevInstance,lpCmdLine,iCmdShow);
-#   endif //#   USE_ADVANCED_SETUP
-
-    return 0;
-}
-#endif //IMGUI_USE_AUTO_BINDING_WINDOWS
 
 
 #ifdef TEST_ICONS_INSIDE_TTF

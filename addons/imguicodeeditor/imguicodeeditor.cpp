@@ -24,6 +24,8 @@
 #   include "utf8helper.h"         // not sure if it's necessary to count UTF8 chars
 #endif //IMGUICODEEDITOR_USE_UTF8HELPER_H
 
+#include <ctype.h> // tolower
+#include <string.h> // strstr
 
 #define IMGUI_NEW(type)         IM_PLACEMENT_NEW (ImGui::MemAlloc(sizeof(type) ) ) type
 #define IMGUI_DELETE(type, obj) reinterpret_cast<type*>(obj)->~type(), ImGui::MemFree(obj)
@@ -1681,13 +1683,13 @@ void CodeEditor::StaticInit()   {
 
     gTotalLanguageExtensionFilter = "";
     for (int lng=0;lng<LANG_COUNT;lng++)    {
-    const int id = gFoldingStringVectorIndices[lng];
-    if (id<0) continue;
-    const FoldingStringVector& fsv = gFoldingStringVectors[id];
-    if (fsv.languageExtensions && strlen(fsv.languageExtensions)>0)	{
-        if (gTotalLanguageExtensionFilter.size()>0) gTotalLanguageExtensionFilter+=";";
-        gTotalLanguageExtensionFilter+=fsv.languageExtensions;
-    }
+        const int id = gFoldingStringVectorIndices[lng];
+        if (id<0) continue;
+        const FoldingStringVector& fsv = gFoldingStringVectors[id];
+        if (fsv.languageExtensions && strlen(fsv.languageExtensions)>0)	{
+            if (gTotalLanguageExtensionFilter.size()>0) gTotalLanguageExtensionFilter+=";";
+            gTotalLanguageExtensionFilter+=fsv.languageExtensions;
+        }
     }
 
     StaticInited = true;
@@ -3037,7 +3039,29 @@ template <int NUM_TOKENS> inline static const char* FindPrevToken(const char* te
     return NULL;
 }
 
+const char* GetSupportedExtensions() {
+    if (!ImGuiCe::CodeEditor::StaticInited) ImGuiCe::CodeEditor::StaticInit();
+    return gTotalLanguageExtensionFilter.c_str();
+}
+Language GetLanguageFromExtension(const char* ext) {
+    static char extLowercase[36]="";
+    if (!ext) return LANG_NONE;
+    const int len = (int) strlen(ext);
+    if (len>=36) return LANG_NONE;
+    strcpy(extLowercase,ext);
+    for (int i=0;i<len;i++) extLowercase[i]=tolower(ext[i]);
 
+    if (!ImGuiCe::CodeEditor::StaticInited) ImGuiCe::CodeEditor::StaticInit();
+    for (int lng=0;lng<LANG_COUNT;lng++)    {
+        const int id = gFoldingStringVectorIndices[lng];
+        if (id<0) continue;
+        const char* langExts = gFoldingStringVectors[id].languageExtensions;
+        if (langExts && strlen(langExts)>0)	{
+            if (strstr(langExts,extLowercase)) return (Language) lng;
+        }
+    }
+    return LANG_NONE;
+}
 
 } // namespace ImGuiCe
 
@@ -3419,7 +3443,6 @@ static void MyTextLineWithSH(const BadCodeEditorData& ceData,const char* fmt, ..
     MyTextLineWithSHV(ceData,fmt, args);
     va_end(args);
 }
-
 
 bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data,ImGuiID* pOptionalItemIDOut)
 {
@@ -4268,8 +4291,14 @@ namespace ImGui {
 bool InputTextWithSyntaxHighlighting(ImGuiID& staticItemIDInOut, ImString& text,ImGuiCe::Language lang,const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data) {
     bool rv = false;
     const bool is_editable = (flags & ImGuiInputTextFlags_ReadOnly) == 0;
+    const bool is_active = staticItemIDInOut>0 && ImGui::GetCurrentContext()->ActiveId==staticItemIDInOut;
+    const bool must_reset_text = is_active && ((flags&ImGuiInputTextFlags_ResetText)==ImGuiInputTextFlags_ResetText);
+    if (must_reset_text) {
+        //ImGui::GetCurrentContext()->ActiveId=0;   // This works too
+        ImGui::ClearActiveID();
+    }
     ImGui::PushID(&staticItemIDInOut);
-    if (staticItemIDInOut>0 && is_editable && ImGui::GetCurrentContext()->ActiveId==staticItemIDInOut) {
+    if (is_editable && is_active) {
         const ImGuiIO& io = ImGui::GetIO();
         ImGuiTextEditState &edit_state = ImGui::GetCurrentContext()->InputTextState;    // Hope this always points to the active InputText...
         const char* clipText = (io.KeyMap[ImGuiKey_V] && io.KeyCtrl) ? ImGui::GetClipboardText() : "";
@@ -4316,6 +4345,10 @@ bool InputTextWithSyntaxHighlighting(ImGuiID& staticItemIDInOut, ImString& text,
     }
     else rv = ImGui::InputTextWithSyntaxHighlighting("###DummyID_ITWSH",&text[0],text.length(),lang,size_arg,flags,callback,user_data,&staticItemIDInOut);
     ImGui::PopID();
+    if (must_reset_text) {
+        ImGui::GetCurrentContext()->ActiveId=staticItemIDInOut; // However this does not restore focus correctly to the textBox
+        //ImGui::SetActiveID(staticItemIDInOut,ImGui::GetCurrentContext()->CurrentWindow);  // This does, but it does not reset text
+    }
     return rv;
 }
 
@@ -4325,90 +4358,5 @@ bool InputTextWithSyntaxHighlighting(ImGuiID& staticItemIDInOut, ImString& text,
 #undef IMGUI_DELETE // cleanup
 
 
-#ifdef NEVER
-// EXPERIMENTAL (ALMOST UNTESTED) InputTextMultiline(...) for std::strings.
-// USE IT AT YOUR OWN RISK!
 
-// Example usage:
-/*
-    static std::string text = "Dear ImGui lacks InputTextMultiline(...) for std::string.";
-    static bool isTextBoxActive = false;
-    ImGui::InputTextMultiline("###ADummyLabelForMe",text,isTextBoxActive);
-*/
-
-
-// .h file
-#include <imgui.h>
-#include <string>
-namespace ImGui {
-IMGUI_API bool InputTextMultiline(const char* label,std::string& text,bool& staticItemActiveInOut, const ImVec2& size = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
-}
-
-// .cpp file (needs imgui_internal.h)
-namespace ImGui {
-
-inline static void StdStringNonStdResize(std::string& s,int size) {
-    IM_ASSERT(size>=0);
-    const int oldLength = s.length();
-    if (size<oldLength) s = s.substr(0,size);
-    else if (size>oldLength) for (int i=0,icnt=size-oldLength;i<icnt;i++) s+='\0';
-}
-
-// Ideally we should remove "staticItemActiveInOut" and find a way to query the active state BEFORE calling the default InputTextMultiline(...) version
-// Also I'm not sure this works well with Undo/Redo
-bool InputTextMultiline(const char* label,std::string& text,bool& staticItemActiveInOut, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)    {
-    bool rv = false;
-    const bool is_editable = (flags & ImGuiInputTextFlags_ReadOnly) == 0;
-    if (staticItemActiveInOutForID && is_editable) {
-        const ImGuiIO& io = ImGui::GetIO();
-        ImGuiTextEditState &edit_state = ImGui::GetCurrentContext()->InputTextState;    // Hope this always points to the active InputText...
-        const char* clipText = (io.KeyMap[ImGuiKey_V] && io.KeyCtrl) ? ImGui::GetClipboardText() : "";
-        const size_t clipSize = strlen(clipText);
-        size_t sizeToAdd = clipSize+((io.InputCharacters[0] && (!(io.KeyCtrl && !io.KeyAlt)))?(5*IM_ARRAYSIZE(io.InputCharacters)):0);
-        if (IsKeyPressedMap(ImGuiKey_Enter) || IsKeyPressedMap(ImGuiKey_Tab)) sizeToAdd+=5;
-        size_t cnt = 0;
-        if (sizeToAdd>0)    {
-            // Note that this happens only on a few frames
-            sizeToAdd+=1;   // Trailing '\0'
-            const size_t oldTextLen = (size_t)text.length();
-            const size_t newTextLen = oldTextLen+sizeToAdd;
-            StdStringNonStdResize(text,newTextLen);  // See its code: it sets text[i]='\0' too
-            edit_state.Text.resize(text.length()+1);
-            edit_state.InitialText.resize(text.length()+1);
-
-            rv = ImGui::InputTextMultiline(label,&text[0],newTextLen,flags,callback,user_data);
-
-            // Remove all trailing '\0's and resize all strings back to save memory (a bit slow)
-            for (int i=(int)text.length()-1;i>=0;i--) {
-                if (text[i]!='\0') break;
-                ++cnt;
-            }
-            StdStringNonStdResize(text,text.length()-cnt);
-
-            staticItemActiveInOutForID = ImGui::IsItemActive();
-            if  (staticItemActiveInOutForID)    // Otherwise maybe edit_state points to something else
-            {
-                //Allows the textbox to expand while active.
-                edit_state.Text.resize(text.length()+1);
-                edit_state.InitialText.resize(text.length()+1);
-            }
-        }
-        else {
-            rv = ImGui::InputTextMultiline(label,&text[0],text.length(),flags,callback,user_data);
-            staticItemActiveInOutForID = ImGui::IsItemActive();
-        }
-
-        // Dbg only: (to remove)
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("text.length():%d (%s) cnt:%d sizeToAdd:%d\n",text.length(),staticItemActiveInOutForID?"active":"inactive",cnt,(int)sizeToAdd);
-
-    }
-    else {
-        rv = ImGui::InputTextMultiline(label,&text[0],text.length(),flags,callback,user_data);
-        staticItemActiveInOutForID = ImGui::IsItemActive();
-    }
-    return rv;
-}
-
-} // namespace ImGui
-#endif //NEVER
 

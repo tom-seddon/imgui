@@ -106,6 +106,9 @@ inline static const char** GetLanguageNames()   {
 }
 inline static int GetNumLanguages() {return (int) LANG_COUNT;}
 
+IMGUI_API const char* GetSupportedExtensions();     // e.g. ".cpp;.h;.cs;.lua" or something like that
+IMGUI_API Language GetLanguageFromExtension(const char* ext);   // e.g. ".cpp" (case insensitive)
+
 enum FoldingType {
     FOLDING_TYPE_PARENTHESIS = 0,
     FOLDING_TYPE_COMMENT,
@@ -318,7 +321,8 @@ private:
 
     IMGUI_API static void StaticInit();
     friend bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang,const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data, ImGuiID* pOptionalItemIDOut);
-
+    friend const char* GetSupportedExtensions();
+    friend Language GetLanguageFromExtension(const char* ext);
 };
 
 
@@ -329,7 +333,6 @@ namespace ImGuiCe {
 
 
 IMGUI_API bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL,ImGuiID* pOptionalItemIDOut=NULL);
-
 
 } // namespace ImGuiCe
 
@@ -349,8 +352,14 @@ inline bool InputTextWithSyntaxHighlighting(const char* labelJustForID, char* bu
     // It needs a monospace font
     ImGui::InputTextWithSyntaxHighlighting(codeEditorID,myCodeString,(ImGuiCe::Language)languageIndex,ImVec2(0,300));
     // Known problem I'm not going to fix: You must use strlen(myCodeString.c_str()) to find the text size, since myCodeString.size() might be bigger
-    // Won't fix this because otherwise Undo/Redo can't have enough space to work.
+    // Won't fix this because otherwise Undo/Redo can't have enough space to work.    
 */
+// The EXPERIMENTAL ImGuiInputTextFlags_ResetText flag can be used to re-assign text WHILE the text box is Active/Focused (otherwise re-setting 'text' just works).
+// Note that the Undo/Redo stack is reset after it (and as a side-effect the textBox loses focus)
+// It should be used only at specific frames (not always).
+#ifndef ImGuiInputTextFlags_ResetText
+#   define ImGuiInputTextFlags_ResetText   (1 << 19)
+#endif //ImGuiInputTextFlags_ResetText
 IMGUI_API bool InputTextWithSyntaxHighlighting(ImGuiID& staticItemIDInOut, ImString& text,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
 
 }   // namespace ImGui

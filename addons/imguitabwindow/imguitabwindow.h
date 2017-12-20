@@ -312,6 +312,14 @@ public:
         }
         else modified = false;
     }
+    inline bool copyLabelTo(char* buffer, int buffer_size) const {
+        int len = modified ? ((int)strlen(label)-1) : (int)strlen(label);
+        if (len<0) len=0;bool ok = true;
+        if (buffer_size<=len) {len = buffer_size-1;ok=false;}
+        strncpy(buffer,label,len);
+        buffer[len]='\0';
+        return ok;
+    }
     inline bool getModified() const {return modified;}
     inline void setModified(bool flag) {
         if (modified == flag) return;
