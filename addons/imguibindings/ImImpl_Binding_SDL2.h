@@ -272,7 +272,7 @@ static void ImImplMainLoopFrame(void* pDone)	{
             int key = (event.key.keysym.sym);
             static bool gImGuiCapsLockDown = false;
             if (key==SDLK_CAPSLOCK) gImGuiCapsLockDown = down;
-            else if (key>=SDLK_a && key<=SDLK_z && (io.KeyShift || gImGuiCapsLockDown)) key-= ((const int)'a'-(const int)'A');
+            else if (key>=SDLK_a && key<=SDLK_z && ((io.KeyShift && !io.KeyCtrl) || gImGuiCapsLockDown)) key-= ((const int)'a'-(const int)'A');
             if (key>=SDLK_F1 && key<=SDLK_F12) {
                 const int i = key-SDLK_F1;
                 const bool prevState = gImGuiFunctionKeyDown[i];

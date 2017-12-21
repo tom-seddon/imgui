@@ -157,13 +157,13 @@ static inline void ImDrawListRenderTextLine(ImDrawList* draw_list,const ImFont* 
     if (!text_end) text_end = text_begin + strlen(text_begin);
 
     if ((int)pos.y > clip_rect.w) {
-        pos.x+= (int)pos.x + MyCalcTextWidth(text_begin,text_end);
+        pos.x+= (int)pos.x + MyCalcTextWidth(text_begin,text_end);  // Not sure this is correct!
         return;
     }
 
     // Align to be pixel perfect
-    pos.x = (float)(int)pos.x + font->DisplayOffset.x;
-    pos.y = (float)(int)pos.y + font->DisplayOffset.y;
+    pos.x += font->DisplayOffset.x; // don't cast pos.x to int! It looks better whan scaled, but then we lose alignment with the caret position!
+    pos.y = (float)(int)pos.y + font->DisplayOffset.y;  // Not sure this is correct
     float& x = pos.x;
     float& y = pos.y;
 
@@ -290,7 +290,7 @@ static inline void ImDrawListAddTextLine(ImDrawList* draw_list,const ImFont* fon
 {
     if (text_end == NULL)   text_end = text_begin + strlen(text_begin);
     if ((col & IM_COL32_A_MASK) == 0)   {
-        pos.x+= (int)pos.x + MyCalcTextWidth(text_begin,text_end);
+        pos.x+= (int)pos.x + MyCalcTextWidth(text_begin,text_end);  // Not sure this is correct!
         return;
     }
     if (text_begin == text_end) return;
@@ -3444,6 +3444,8 @@ static void MyTextLineWithSH(const BadCodeEditorData& ceData,const char* fmt, ..
     va_end(args);
 }
 
+
+
 bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data,ImGuiID* pOptionalItemIDOut)
 {
 //#define BAD_CODE_EDITOR_HAS_HORIZONTAL_SCROLLBAR  // doesn't work... maybe we can fix it someday... but default ImGui::InputTextMultiline() should be made with it...
@@ -3480,6 +3482,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     const ImGuiID id = window->GetID("");
     if (pOptionalItemIDOut) *pOptionalItemIDOut=id;
     const bool is_editable = (flags & ImGuiInputTextFlags_ReadOnly) == 0;
+    const bool is_undoable = (flags & ImGuiInputTextFlags_NoUndoRedo) == 0;
 
     bool showLineNumbers = true;
     float lineNumberSize = 0;
@@ -3721,6 +3724,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         bool cancel_edit = false;
         const int k_mask = (is_shift_down ? STB_TEXTEDIT_K_SHIFT : 0);
         const bool is_ctrl_only = is_ctrl_down && !is_alt_down && !is_shift_down;
+        const bool is_ctrl_and_shift_only = !is_alt_down && is_ctrl_down && is_shift_down;
         if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_RightArrow))                  { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_UpArrow))                     { if (is_ctrl_down) SetWindowScrollY(draw_window, draw_window->Scroll.y - textLineHeight); else edit_state.OnKeyPressed(STB_TEXTEDIT_K_UP | k_mask); }
@@ -3771,8 +3775,8 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                 edit_state.OnKeyPressed((int)c);
         }
         else if (IsKeyPressedMap(ImGuiKey_Escape))                              { SetActiveID(0,NULL); cancel_edit = true; }
-        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Z) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); edit_state.ClearSelection(); }
-        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Y) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); edit_state.ClearSelection(); }
+        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Z) && is_editable && is_undoable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); edit_state.ClearSelection(); }
+        else if (((is_ctrl_only && IsKeyPressedMap(ImGuiKey_Y)) || (is_ctrl_and_shift_only && IsKeyPressedMap(ImGuiKey_Z))) && is_editable && is_undoable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); edit_state.ClearSelection(); }
         else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_A))                   { edit_state.SelectAll(); edit_state.CursorFollow = true; }
         else if (is_ctrl_only && ((IsKeyPressedMap(ImGuiKey_X) && is_editable) || IsKeyPressedMap(ImGuiKey_C)) && (edit_state.HasSelection()))
         {
@@ -4078,25 +4082,25 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         while (lineStart)    {
             nextLineStart=strchr(lineStart,'\n');
             if (numLines>=firstVisibleLineNumber && numLines<=lastVisibleLineNumber) {
-		if (numLines==firstVisibleLineNumber)   {
-		    // we must set langData.pendingOpenMultilineComment, because the first visible line can be inside a multiline comment
-		    // The correct code to set it is costly [but could be cached until the first visible line changes... (ATM I have no storage struct except "buf")]
+        if (numLines==firstVisibleLineNumber)   {
+            // we must set langData.pendingOpenMultilineComment, because the first visible line can be inside a multiline comment
+            // The correct code to set it is costly [but could be cached until the first visible line changes... (ATM I have no storage struct except "buf")]
 
-		    // We''l use two code paths: one more accurate than the other:
+            // We''l use two code paths: one more accurate than the other:
             const bool correctlyCheckIfTheFirstVisibleLineIsInAMultilineComment = numLines<=200 &&
-		    canModifyText;  // "true" only when cursor is active (= the field is focused)
+            canModifyText;  // "true" only when cursor is active (= the field is focused)
 
-		    int tokenIndexOut = -1;
-		    const char* startComments[3] = {langData.startComments[0],langData.startComments[1],langData.startComments[2]};
-		    const char* endComments[3] = {langData.endComments[0],langData.endComments[1],langData.endComments[2]};
-		    langData.pendingOpenMultilineComment = false;
+            int tokenIndexOut = -1;
+            const char* startComments[3] = {langData.startComments[0],langData.startComments[1],langData.startComments[2]};
+            const char* endComments[3] = {langData.endComments[0],langData.endComments[1],langData.endComments[2]};
+            langData.pendingOpenMultilineComment = false;
 
-		    if (correctlyCheckIfTheFirstVisibleLineIsInAMultilineComment && startComments[0] && startComments[1])  {
-			// More accurate version:
-			const char *nextToken=buf;
-			const int numStringDelimitersChars = langData.stringDelimiterChars ? strlen(langData.stringDelimiterChars) : 0;
+            if (correctlyCheckIfTheFirstVisibleLineIsInAMultilineComment && startComments[0] && startComments[1])  {
+            // More accurate version:
+            const char *nextToken=buf;
+            const int numStringDelimitersChars = langData.stringDelimiterChars ? strlen(langData.stringDelimiterChars) : 0;
 
-			bool isInStringDelimiters = false;
+            bool isInStringDelimiters = false;
                         bool waitForEndLine = false;
                         while (
                                (nextToken = ImGuiCe::FindNextToken<3>(nextToken,lineStart,startComments,endComments,&tokenIndexOut,langData.stringDelimiterChars,langData.stringEscapeChar,false,true))
@@ -4120,13 +4124,13 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
                         }
                     }
-		    else if (startComments[1]) {
-			// Cheaper alternative:
-			if (nextLineStart!=buf) {
-			    // Not perfect because it does not check if multiline comments are inside single-line comments or strings, but it should work in most cases.
-			    if (ImGuiCe::FindPrevToken<2>(buf,nextLineStart,&startComments[1],&endComments[1],&tokenIndexOut,langData.stringDelimiterChars,langData.stringEscapeChar,false,false) && tokenIndexOut==0) langData.pendingOpenMultilineComment = true;
-			}
-		    }
+            else if (startComments[1]) {
+            // Cheaper alternative:
+            if (nextLineStart!=buf) {
+                // Not perfect because it does not check if multiline comments are inside single-line comments or strings, but it should work in most cases.
+                if (ImGuiCe::FindPrevToken<2>(buf,nextLineStart,&startComments[1],&endComments[1],&tokenIndexOut,langData.stringDelimiterChars,langData.stringEscapeChar,false,false) && tokenIndexOut==0) langData.pendingOpenMultilineComment = true;
+            }
+            }
                 }
                 if (render_scroll.x!=0) ImGui::SetCursorPosX(render_pos.x - render_scroll.x - draw_window->Pos.x);
                 if (!nextLineStart) {
@@ -4158,14 +4162,16 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
     if (canModifyText)   {
         // Draw blinking cursor
+        bool cursor_is_visible = (!g.IO.OptCursorBlink) || (g.InputTextState.CursorAnim <= 0.0f) || fmodf(g.InputTextState.CursorAnim, 1.20f) <= 0.80f;
         ImVec2 cursor_screen_pos = render_pos + cursor_offset - render_scroll;
-        bool cursor_is_visible = (g.InputTextState.CursorAnim <= 0.0f) || fmodf(g.InputTextState.CursorAnim, 1.20f) <= 0.80f;
-        if (cursor_is_visible)
-            draw_window->DrawList->AddLine(cursor_screen_pos + ImVec2(0.0f,-textLineHeight+0.5f), cursor_screen_pos + ImVec2(0.0f,-1.5f), GetColorU32(ImGuiCol_Text));
+        ImRect cursor_screen_rect(cursor_screen_pos.x, cursor_screen_pos.y-g.FontSize+0.5f, cursor_screen_pos.x+1.0f, cursor_screen_pos.y-1.5f);
+        if (cursor_is_visible && cursor_screen_rect.Overlaps(clip_rect))
+            draw_window->DrawList->AddLine(cursor_screen_rect.Min, cursor_screen_rect.GetBL(), GetColorU32(ImGuiCol_Text));
 
         // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
         if (is_editable)
-            g.OsImePosRequest = ImVec2(cursor_screen_pos.x - 1, cursor_screen_pos.y - textLineHeight);
+            g.OsImePosRequest = ImVec2(cursor_screen_pos.x - 1, cursor_screen_pos.y - g.FontSize);
+
     }
 
     size.x += draw_window->ScrollbarSizes.x;                            // reset it

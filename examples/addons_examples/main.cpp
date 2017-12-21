@@ -1373,7 +1373,6 @@ void DrawGL()	// Mandatory
         ImGui::TreePop();
 #       ifndef NO_IMGUICODEEDITOR
         ImGui::Text("ImGui::InputTextWithSyntaxHighlighting(...) [Experimental] (CTRL+MW: zoom):");
-        ImGui::TextDisabled("It needs a monospace font");
         ImGui::TextDisabled("[New] Experimental dynamic string support (see code)");
         ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.35f);
         static int languageIndex = (int) ImGuiCe::LANG_CPP;
@@ -1385,14 +1384,12 @@ void DrawGL()	// Mandatory
         // This works with a static buffer (fixed-size)
         static char bceBuffer[1024]="";
         if (bceBuffer[0]=='\0') strcpy(bceBuffer,myCode);   //Bad init (use initGL() to fill the buffer)
-        // It needs a monospace font
         ImGui::InputTextWithSyntaxHighlighting("ITWSH_JustForID",bceBuffer,sizeof(bceBuffer),(ImGuiCe::Language)languageIndex,ImVec2(0,300));
         */
         // This "works"(?) with a ImString (dynamic-size)
         // Tip: ImString is std::string when IMGUISTRING_STL_FALLBACK is defined globally (or at the top of addons/imguistring/imguistring.h)
         static ImString myCodeString = myCode;
         static ImGuiID codeEditorID = 0;   // Needs to be static and set to zero (one per input text)
-        // It needs a monospace font
         ImGui::InputTextWithSyntaxHighlighting(codeEditorID,myCodeString,(ImGuiCe::Language)languageIndex,ImVec2(0,300));
         // Known problem I'm not going to fix: You must use strlen(myCodeString.c_str()) to find the text size, since myCodeString.size() might be bigger
         // Won't fix this because otherwise Undo/Redo can't have enough space to work.

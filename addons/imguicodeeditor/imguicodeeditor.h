@@ -349,7 +349,7 @@ inline bool InputTextWithSyntaxHighlighting(const char* labelJustForID, char* bu
 /*
     static ImString myCodeString = "Some code here";
     static ImGuiID codeEditorID = 0;   // Needs to be static and set to zero (one per input text)
-    // It needs a monospace font
+    // It works better with a monospace font (but fonts must be passed using: ImGuiCe::SetFonts(...), not using ImGui::PushFont(...)/ImGui::PopFont()!)
     ImGui::InputTextWithSyntaxHighlighting(codeEditorID,myCodeString,(ImGuiCe::Language)languageIndex,ImVec2(0,300));
     // Known problem I'm not going to fix: You must use strlen(myCodeString.c_str()) to find the text size, since myCodeString.size() might be bigger
     // Won't fix this because otherwise Undo/Redo can't have enough space to work.    

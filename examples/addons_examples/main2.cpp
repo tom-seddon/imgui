@@ -521,8 +521,13 @@ strcpy(&ies.arrowsChars[3][0],"▼");
 
 #if (!defined(NO_IMGUICODEEDITOR) && !defined(NO_IMGUIFILESYSTEM))
 {
-    // We need (at least one) monopace font for our code editor. We add font number 1 (see main() function below)
+    // We use (at least one) monopace font for our code editor. We add font number 1 (see main() function below)
     // When using more than one monospace font, all must be of the same size
+
+    // AFAIR a SINGLE non-monospace font is allowed as long as we always pass in the same font (as in this case, but we're using a monospace font),
+    // otherwise we can use 4 monospace fonts (one for Regular,Bold,Italic,BoldItalic).
+
+    // In any case all the fonts must be of the same size
     ImFontAtlas* atlas = ImGui::GetIO().Fonts;
     IM_ASSERT(atlas->Fonts.Size>1);
     ImFont* font = atlas->Fonts[1];
@@ -1142,12 +1147,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
 #   endif //TEST_ICONS_INSIDE_TTF
 
 #   if (!defined(NO_IMGUICODEEDITOR) && !defined(NO_IMGUIFILESYSTEM))
-    // We need a monopace font for our code editor
+    // We use a monopace font for our code editor
     {
     ImFontConfig fntCfg;//fntCfg.MergeMode = true;fntCfg.PixelSnapH = true;
     fntCfg.OversampleV=fntCfg.OversampleH=1;    // To save texture memory (but commenting it out makes icons look better)
     const unsigned char ttfMonospaceMemory[] =
-#       include "./fonts/Mono/DejaVuSansMonoBold-Stripped.ttf.inl"
+#       include "./fonts/Mono/DejaVuSansMono-Bold-Stripped.ttf.inl"
     ;
     gImGuiInitParams.fonts.push_back(ImImpl_InitParams::FontData(ttfMonospaceMemory,sizeof(ttfMonospaceMemory)/sizeof(ttfMonospaceMemory[0]),ImImpl_InitParams::FontData::COMP_NONE,fontSizeInPixels,NULL,&fntCfg));
     // Note that this font will be assigned to the Code Editor in InitGL() (no need to PushFont()/PopFont() before ImGui::InputTextWithSyntaxHighlighting(...);
