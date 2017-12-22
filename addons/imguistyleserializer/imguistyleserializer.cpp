@@ -91,7 +91,7 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
     fprintf(f, "[DisplayWindowPadding]\n%1.3f %1.3f\n", style.DisplayWindowPadding.x,style.DisplaySafeAreaPadding.y);
     fprintf(f, "[DisplaySafeAreaPadding]\n%1.3f %1.3f\n", style.DisplaySafeAreaPadding.x,style.DisplaySafeAreaPadding.y);
     fprintf(f, "[AntiAliasedLines]\n%d\n", style.AntiAliasedLines?1:0);
-    fprintf(f, "[AntiAliasedShapes]\n%d\n", style.AntiAliasedShapes?1:0);
+    fprintf(f, "[AntiAliasedFill]\n%d\n", style.AntiAliasedFill?1:0);
     fprintf(f, "[CurveTessellationTol]\n%1.3f\n", style.CurveTessellationTol);
 
     for (size_t i = 0; i != ImGuiCol_COUNT; i++)
@@ -194,7 +194,7 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
 		else if (strcmp(name, "DisplayWindowPadding")==0)    {npf=2;pf[0]=&style.DisplayWindowPadding.x;pf[1]=&style.DisplayWindowPadding.y;}
                 else if (strcmp(name, "DisplaySafeAreaPadding")==0)    {npf=2;pf[0]=&style.DisplaySafeAreaPadding.x;pf[1]=&style.DisplaySafeAreaPadding.y;}
                 else if (strcmp(name, "AntiAliasedLines")==0)          {npb=1;pb[0]=&style.AntiAliasedLines;}
-                else if (strcmp(name, "AntiAliasedShapes")==0)          {npb=1;pb[0]=&style.AntiAliasedShapes;}
+		else if (strcmp(name, "AntiAliasedFill")==0 || strcmp(name, "AntiAliasedShapes")==0)          {npb=1;pb[0]=&style.AntiAliasedFill;}
                 else if (strcmp(name, "CurveTessellationTol")==0)               {npf=1;pf[0]=&style.CurveTessellationTol;}
                 // all the colors here
                 else {
@@ -400,7 +400,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
     case ImGuiStyle_Gray:
     {
 	style.AntiAliasedLines = true;
-	style.AntiAliasedShapes = true;
+	style.AntiAliasedFill = true;
 	style.CurveTessellationTol = 1.25f;
 	style.Alpha = 1.f;
 	//style.WindowFillAlphaDefault = .7f;
@@ -468,7 +468,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
     case ImGuiStyle_Light:
     {
 	style.AntiAliasedLines = true;
-	style.AntiAliasedShapes = true;
+	style.AntiAliasedFill = true;
 	style.CurveTessellationTol = 1.25f;
 	style.Alpha = 1.f;
 	//style.WindowFillAlphaDefault = .7f;
@@ -592,7 +592,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
     case ImGuiStyle_DarkOpaque:
     case ImGuiStyle_DarkOpaqueInverse:	    {
 	style.AntiAliasedLines = true;
-	style.AntiAliasedShapes = true;
+	style.AntiAliasedFill = true;
 	style.CurveTessellationTol = 1.25f;
 	style.Alpha = 1.f;
 	//style.WindowFillAlphaDefault = .7f;

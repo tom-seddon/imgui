@@ -39,16 +39,16 @@ namespace ImGuiMiniGames {
         }
         return false;
     }*/
-    static void ImDrawListPathFillAndStroke(ImDrawList *dl, const ImU32 &fillColor, const ImU32 &strokeColor, bool strokeClosed, float strokeThickness, bool antiAliased)    {
+    static void ImDrawListPathFillAndStroke(ImDrawList *dl, const ImU32 &fillColor, const ImU32 &strokeColor, bool strokeClosed, float strokeThickness)    {
         if (!dl) return;
-        if ((fillColor & IM_COL32_A_MASK) != 0) dl->AddConvexPolyFilled(dl->_Path.Data, dl->_Path.Size, fillColor, antiAliased);
-        if ((strokeColor& IM_COL32_A_MASK)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness, antiAliased);
+        if ((fillColor & IM_COL32_A_MASK) != 0) dl->AddConvexPolyFilled(dl->_Path.Data, dl->_Path.Size, fillColor);
+        if ((strokeColor& IM_COL32_A_MASK)!= 0 && strokeThickness>0) dl->AddPolyline(dl->_Path.Data, dl->_Path.Size, strokeColor, strokeClosed, strokeThickness);
         dl->PathClear();
     }
-    static void ImDrawListAddRect(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColor, const ImU32 &strokeColor, float rounding, int rounding_corners, float strokeThickness, bool antiAliased) {
+    static void ImDrawListAddRect(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColor, const ImU32 &strokeColor, float rounding, int rounding_corners, float strokeThickness) {
         if (!dl || (((fillColor & IM_COL32_A_MASK) == 0) && ((strokeColor & IM_COL32_A_MASK) == 0)))  return;
         dl->PathRect(a, b, rounding, rounding_corners);
-        ImDrawListPathFillAndStroke(dl,fillColor,strokeColor,true,strokeThickness,antiAliased);
+        ImDrawListPathFillAndStroke(dl,fillColor,strokeColor,true,strokeThickness);
     }
 
 
@@ -376,7 +376,7 @@ namespace ImGuiMiniGames {
                 const ImVec2 textSize = ImGui::CalcTextSize(pausedText);
                 const ImVec2 start = win_pos+ImVec2((canvasSize.x-textSize.x)*0.5f+ImGui::GetScrollX(),(canvasSize.y-textSize.y)*0.15f+ImGui::GetScrollY());
                 const ImVec2 enlargement(textLineHeight*0.25f,0.f);
-                ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Mine::Style::Color_OpenCellBackground],style.colors[Mine::Style::Color_Grid],4.f,0x0F,window->FontWindowScale,true);
+                ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Mine::Style::Color_OpenCellBackground],style.colors[Mine::Style::Color_Grid],4.f,0x0F,window->FontWindowScale);
                 draw_list->AddText(start,colorText,pausedText);
                 //--------------------------------------
             }
@@ -387,7 +387,7 @@ namespace ImGuiMiniGames {
             const ImVec2 textSize = ImGui::CalcTextSize(controlsText)*fontScaling;
             const ImVec2 start = win_pos+ImVec2((canvasSize.x-textSize.x)*0.5f+ImGui::GetScrollX(),(canvasSize.y-textSize.y)*0.65f+ImGui::GetScrollY());
             const ImVec2 enlargement(textLineHeight*0.25f,0.f);
-            ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Mine::Style::Color_OpenCellBackground],style.colors[Mine::Style::Color_Grid],4.f,0x0F,window->FontWindowScale,true);
+            ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Mine::Style::Color_OpenCellBackground],style.colors[Mine::Style::Color_Grid],4.f,0x0F,window->FontWindowScale);
             draw_list->AddText(GImGui->Font,GImGui->FontSize*fontScaling,start,colorText,controlsText);
 
 
@@ -576,7 +576,7 @@ namespace ImGuiMiniGames {
                     }
                     const ImVec2 start = win_pos+ImVec2((canvasSize.x-textSize.x)*0.5f+ImGui::GetScrollX()+deltaPos.x,(canvasSize.y-textSize.y)*0.5f+ImGui::GetScrollY()-deltaPos.y);
                     const ImVec2 enlargement(textLineHeight*0.25f,0.f);
-                    ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Mine::Style::Color_OpenCellBackground],style.colors[Mine::Style::Color_Grid],4.f,0x0F,window->FontWindowScale,true);
+                    ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Mine::Style::Color_OpenCellBackground],style.colors[Mine::Style::Color_Grid],4.f,0x0F,window->FontWindowScale);
                     draw_list->AddText(start,colorText,gameWonText);
                 }
                 else {
@@ -589,7 +589,7 @@ namespace ImGuiMiniGames {
                     }
                     const ImVec2 start = win_pos+ImVec2((canvasSize.x-textSize.x)*0.5f+ImGui::GetScrollX()+deltaPos.x,(canvasSize.y-textSize.y)*0.5f+ImGui::GetScrollY()-deltaPos.y);
                     const ImVec2 enlargement(textLineHeight*0.25f,0.f);
-                    ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Mine::Style::Color_OpenCellBackground],style.colors[Mine::Style::Color_Grid],4.f,0x0F,window->FontWindowScale,true);
+                    ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Mine::Style::Color_OpenCellBackground],style.colors[Mine::Style::Color_Grid],4.f,0x0F,window->FontWindowScale);
                     draw_list->AddText(start,colorText,gameOverText);
                 }
             }
@@ -1128,7 +1128,7 @@ namespace ImGuiMiniGames {
                     const ImVec2 textSize = ImGui::CalcTextSize(pausedText);
                     const ImVec2 start = win_pos+ImVec2((canvasSize.x-textSize.x)*0.5f+ImGui::GetScrollX(),(canvasSize.y-textSize.y)*0.15f+ImGui::GetScrollY());
                     const ImVec2 enlargement(textLineHeight*0.25f,0.f);
-                    ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Sudoku::Style::Color_CellBackground],style.colors[Sudoku::Style::Color_Grid],4.f,0x0F,window->FontWindowScale,true);
+                    ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Sudoku::Style::Color_CellBackground],style.colors[Sudoku::Style::Color_Grid],4.f,0x0F,window->FontWindowScale);
                     draw_list->AddText(start,colorText,pausedText);
                     //--------------------------------------
                 }
@@ -1139,7 +1139,7 @@ namespace ImGuiMiniGames {
                 const ImVec2 textSize = ImGui::CalcTextSize(controlsText)*fontScaling;
                 const ImVec2 start = win_pos+ImVec2((canvasSize.x-textSize.x)*0.5f+ImGui::GetScrollX(),(canvasSize.y-textSize.y)*0.65f+ImGui::GetScrollY());
                 const ImVec2 enlargement(textLineHeight*0.25f,0.f);
-                ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Sudoku::Style::Color_CellBackground],style.colors[Sudoku::Style::Color_Grid],4.f,0x0F,window->FontWindowScale,true);
+                ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Sudoku::Style::Color_CellBackground],style.colors[Sudoku::Style::Color_Grid],4.f,0x0F,window->FontWindowScale);
                 draw_list->AddText(GImGui->Font,GImGui->FontSize*fontScaling,start,colorText,controlsText);
 
 
@@ -1384,7 +1384,7 @@ namespace ImGuiMiniGames {
                         }
                         const ImVec2 start = win_pos+ImVec2((canvasSize.x-textSize.x)*0.5f+ImGui::GetScrollX()+deltaPos.x,(canvasSize.y-textSize.y)*0.5f+ImGui::GetScrollY()-deltaPos.y);
                         const ImVec2 enlargement(textLineHeight*0.25f,0.f);
-                        ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Sudoku::Style::Color_CellBackground],style.colors[Sudoku::Style::Color_Grid],4.f,0x0F,window->FontWindowScale,true);
+                        ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Sudoku::Style::Color_CellBackground],style.colors[Sudoku::Style::Color_Grid],4.f,0x0F,window->FontWindowScale);
                         draw_list->AddText(start,colorText,gameWonText);
                     }
                     else {
@@ -1397,7 +1397,7 @@ namespace ImGuiMiniGames {
                         }
                         const ImVec2 start = win_pos+ImVec2((canvasSize.x-textSize.x)*0.5f+ImGui::GetScrollX()+deltaPos.x,(canvasSize.y-textSize.y)*0.5f+ImGui::GetScrollY()-deltaPos.y);
                         const ImVec2 enlargement(textLineHeight*0.25f,0.f);
-                        ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Sudoku::Style::Color_CellBackground],style.colors[Sudoku::Style::Color_Grid],4.f,0x0F,window->FontWindowScale,true);
+                        ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Sudoku::Style::Color_CellBackground],style.colors[Sudoku::Style::Color_Grid],4.f,0x0F,window->FontWindowScale);
                         draw_list->AddText(start,colorText,gameOverText);
                     }
                 }
@@ -1706,7 +1706,7 @@ namespace ImGuiMiniGames {
                     const ImVec2 textSize = ImGui::CalcTextSize(pausedText);
                     const ImVec2 start = win_pos+ImVec2((canvasSize.x-textSize.x)*0.5f+ImGui::GetScrollX(),(canvasSize.y-textSize.y)*0.15f+ImGui::GetScrollY());
                     const ImVec2 enlargement(textLineHeight*0.25f,0.f);
-                    ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Fifteen::Style::Color_CellBackground],style.colors[Fifteen::Style::Color_Text],4.f,0x0F,window->FontWindowScale,true);
+                    ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Fifteen::Style::Color_CellBackground],style.colors[Fifteen::Style::Color_Text],4.f,0x0F,window->FontWindowScale);
                     draw_list->AddText(start,colorText,pausedText);
                     //--------------------------------------
                 }
@@ -1717,7 +1717,7 @@ namespace ImGuiMiniGames {
                 const ImVec2 textSize = ImGui::CalcTextSize(controlsText)*fontScaling;
                 const ImVec2 start = win_pos+ImVec2((canvasSize.x-textSize.x)*0.5f+ImGui::GetScrollX(),(canvasSize.y-textSize.y)*0.65f+ImGui::GetScrollY());
                 const ImVec2 enlargement(textLineHeight*0.25f,0.f);
-                ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Fifteen::Style::Color_CellBackground],style.colors[Fifteen::Style::Color_Grid],4.f,0x0F,window->FontWindowScale,true);
+                ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Fifteen::Style::Color_CellBackground],style.colors[Fifteen::Style::Color_Grid],4.f,0x0F,window->FontWindowScale);
                 draw_list->AddText(GImGui->Font,GImGui->FontSize*fontScaling,start,colorText,controlsText);
                 */
 
@@ -1819,7 +1819,7 @@ namespace ImGuiMiniGames {
                         }
                         const ImVec2 start = win_pos+ImVec2((canvasSize.x-textSize.x)*0.5f+ImGui::GetScrollX()+deltaPos.x,(canvasSize.y-textSize.y)*0.5f+ImGui::GetScrollY()-deltaPos.y);
                         const ImVec2 enlargement(textLineHeight*0.25f,0.f);
-			ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Fifteen::Style::Color_CellBackground],style.colors[Fifteen::Style::Color_Text],4.f,0x0F,window->FontWindowScale*fontScaling,true);
+            ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Fifteen::Style::Color_CellBackground],style.colors[Fifteen::Style::Color_Text],4.f,0x0F,window->FontWindowScale*fontScaling);
 			draw_list->AddText(GImGui->Font,GImGui->FontSize*fontScaling,start,colorText,gameWonText);
                     }
                     else {
@@ -1832,7 +1832,7 @@ namespace ImGuiMiniGames {
                         }
                         const ImVec2 start = win_pos+ImVec2((canvasSize.x-textSize.x)*0.5f+ImGui::GetScrollX()+deltaPos.x,(canvasSize.y-textSize.y)*0.5f+ImGui::GetScrollY()-deltaPos.y);
                         const ImVec2 enlargement(textLineHeight*0.25f,0.f);
-                        ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Fifteen::Style::Color_CellBackground],style.colors[Fifteen::Style::Color_Text],4.f,0x0F,window->FontWindowScale,true);
+                        ImDrawListAddRect(draw_list,start-enlargement,start+textSize+enlargement,style.colors[Fifteen::Style::Color_CellBackground],style.colors[Fifteen::Style::Color_Text],4.f,0x0F,window->FontWindowScale);
                         draw_list->AddText(start,colorText,gameOverText);
                     }
                 }

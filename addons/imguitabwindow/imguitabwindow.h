@@ -193,8 +193,6 @@ float closeButtonRounding;
 float closeButtonBorderWidth;
 float closeButtonTextWidth;
 
-bool antialiasing;
-
 enum FontStyle {
     FONT_STYLE_NORMAL=0,
     FONT_STYLE_BOLD,
