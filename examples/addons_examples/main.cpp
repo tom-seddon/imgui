@@ -1859,7 +1859,8 @@ void DrawGL()	// Mandatory
             }
 //=========== OPTIONAL STUFF ===================================================
             static bool draggingLookOpen = true;    // With this next dock has a close button (but its state is not serializable AFAIK)
-            if (ImGui::BeginDock("Dragging Look",&draggingLookOpen))    {
+            // We're also passing a 'default_size' as initial size of the window once undocked
+            if (ImGui::BeginDock("Dragging Look",&draggingLookOpen,0,ImVec2(200,350)))    {
                 ImGui::Checkbox("Textured##imguidockDraggingLook",&gImGuiDockReuseTabWindowTextureIfAvailable);
             }
             ImGui::EndDock();
