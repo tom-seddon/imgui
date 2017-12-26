@@ -300,6 +300,11 @@ protected:
 public:
     inline const char* getLabel() const {return label;}
     inline bool matchLabel(const char* match) const {return modified ? (strncmp(match,label,strlen(label)-1)==0) : (strcmp(match,label)==0);}
+    inline bool matchLabelExtension(const char* matchExtension) const {
+        const char* dot = strrchr(label,(int) '.');if (!dot) return false;
+        // Warning: strncasecmp()/strcasecmp() on _MSC_VER
+        return modified ? (strncasecmp(matchExtension,dot,strlen(dot)-1)==0) : (strcasecmp(matchExtension,dot)==0);
+    }
     void setLabel(const char* lbl,bool appendAnAsteriskAndMarkAsModified=false)  {
         if (label) {ImGui::MemFree(label);label=NULL;}
         const char e = '\0';if (!lbl) lbl=&e;

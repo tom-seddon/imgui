@@ -544,7 +544,7 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     if (!ImGui::TabWindow::DockPanelIconTextureID)  {
         ImVector<unsigned char> rgba_buffer;int w=0,h=0;
         ImGui::TabWindow::GetDockPanelIconImageRGBA(rgba_buffer,&w,&h);
-        ImImpl_GenerateOrUpdateTexture(ImGui::TabWindow::DockPanelIconTextureID,w,h,4,&rgba_buffer[0],true);
+        ImImpl_GenerateOrUpdateTexture(ImGui::TabWindow::DockPanelIconTextureID,w,h,4,&rgba_buffer[0]);
     }
 #   endif //NO_IMGUITABWINDOW
 

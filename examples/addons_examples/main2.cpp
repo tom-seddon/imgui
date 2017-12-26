@@ -296,7 +296,7 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             static bool fileNotPresent = false;
 
             ImGuiInputTextFlags codeEditorFlags = 0;
-            const char* chosenPath = NULL;
+            const char* chosenPath = "";
             const bool browseButtonPressed = ImGui::Button("Load###LoadCodeEditorFile");
 
             bool mustReload = false;    // Well, we must find a way to detect when we load the whole TabWindow layout and at that moment reload the (new?) file
@@ -305,7 +305,7 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
                 tab->copyLabelTo(lastTabLabelName,ImGuiFs::MAX_PATH_BYTES);
                 IM_ASSERT(tab->matchLabel(lastTabLabelName));
                 mustReload = true;
-                fprintf(stderr,"No match with \"%s\"\n",tab->getLabel());
+                //fprintf(stderr,"No match with \"%s\"\n",tab->getLabel());
             }
 
             if ((codeEditorID==0 && codeEditorText=="__MUST_INIT__") || mustReload) {
@@ -314,7 +314,7 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             }
             else {
                 static ImGuiFs::Dialog fsInstance;
-                chosenPath = fsInstance.chooseFileDialog(browseButtonPressed,"",ImGuiCe::GetSupportedExtensions());
+                chosenPath = fsInstance.chooseFileDialog(browseButtonPressed,tab->getTooltip(),ImGuiCe::GetSupportedExtensions());
             }
 
             if (strlen(chosenPath)>0) {
@@ -335,20 +335,68 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
                     ImGuiFs::PathGetExtension(chosenPath,relativePath); // relativePath now is ".cpp" or something like that
                     tab->userInt=500+(int)ImGuiCe::GetLanguageFromExtension(relativePath);
                     codeEditorFlags = ImGuiInputTextFlags_ResetText;
-                    fprintf(stderr,"Loading \"%s\"\n",tab->getTooltip());
+                    //fprintf(stderr,"Loading \"%s\"\n",tab->getTooltip());
                 }
             }
 
             ImGui::SameLine();ImGui::Text("%s",ImGuiCe::GetLanguageNames()[tab->userInt-500]);
 
             if (fileNotPresent) {
-                ImGui::SameLine();
                 ImGui::Text("Error: \"%s\" Not present.",tab->getTooltip());
             }
             else if (ImGui::InputTextWithSyntaxHighlighting(codeEditorID,codeEditorText,(ImGuiCe::Language) (tab->userInt-500),ImVec2(0,-1),codeEditorFlags)) tab->setModified(true);
 #       else //NO_IMGUICODEEDITOR || NO_IMGUIFILESYSTEM
         ImGui::Text("Disabled for this build.");
 #       endif //NO_IMGUICODEEDITOR || NO_IMGUIFILESYSTEM
+        }
+        else if (tab->matchLabelExtension(".pdf"))  {
+#       if (defined(YES_IMGUIPDFVIEWER) && !defined(NO_IMGUIFILESYSTEM))
+            // This is simply an experimental mess!
+            // However I need some kind of spot to further test ImGui::InputTextWithSyntaxHighlighting(...).
+            // Note that this test only works for an instance and we never SAVE any modified file!
+
+            static ImGui::PdfViewer pdfViewer;
+            static bool fileNotPresent = false;
+
+            const char* chosenPath = "";
+            const bool browseButtonPressed = ImGui::Button("Load###LoadPdfFile");
+
+            bool mustReload = false;    // Well, we must find a way to detect when we load the whole TabWindow layout and at that moment reload the (new?) file
+            static char lastTabLabelName[ImGuiFs::MAX_PATH_BYTES]="";
+            if (!tab->matchLabel(lastTabLabelName)) {
+                tab->copyLabelTo(lastTabLabelName,ImGuiFs::MAX_PATH_BYTES);
+                IM_ASSERT(tab->matchLabel(lastTabLabelName));
+                mustReload = true;
+                //fprintf(stderr,"No match with \"%s\"\n",tab->getLabel());
+            }
+
+            if (!pdfViewer.isInited() || mustReload) chosenPath = tab->getTooltip();
+            else {
+                static ImGuiFs::Dialog fsInstance;
+                chosenPath = fsInstance.chooseFileDialog(browseButtonPressed,tab->getTooltip(),".pdf");
+            }
+
+            if (strlen(chosenPath)>0) {
+                // A path (chosenPath) has been chosen right now. However we can retrieve it later using: fsInstance.getChosenPath()
+                if (chosenPath!=tab->getTooltip()) tab->setTooltip(chosenPath);
+                char relativePath[ImGuiFs::MAX_PATH_BYTES]="";
+                ImGuiFs::PathGetFileName(chosenPath,relativePath);
+                tab->setLabel(relativePath);
+                tab->setModified(false);
+                fileNotPresent = !ImGuiFs::FileExists(chosenPath);
+                if (!fileNotPresent) {
+                    pdfViewer.loadFromFile(chosenPath);
+                    //fprintf(stderr,"Loading \"%s\"\n",tab->getTooltip());
+                }
+            }
+
+            if (fileNotPresent) {
+                ImGui::Text("Error: \"%s\" Not present.",tab->getTooltip());
+            }
+            else {ImGui::SameLine();pdfViewer.render();}    // ImGui::SameLine() is just to accomodate our Load Button
+#       else //YES_IMGUIPDFVIEWER || NO_IMGUIFILESYSTEM
+        ImGui::Text("Disabled for this build.");
+#       endif //YES_IMGUIPDFVIEWER || NO_IMGUIFILESYSTEM
         }
         else ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
         ImGui::PopID();
@@ -732,13 +780,17 @@ if (!tabWindow.isInited()) {
 #       ifndef NO_IMGUISTYLESERIALIZER
         tabWindow.addTabLabel("ImGuiStyleChooser","Edit the look of the GUI",false);
 #       endif //NO_IMGUISTYLESERIALIZER
-#       ifndef NO_IMGUICODEEDITOR
 #       ifndef NO_IMGUIFILESYSTEM  // Optional stuff to enhance file system dialogs with icons
-        ImGui::TabWindow::TabLabel* tabLabel = tabWindow.addTabLabel("Code Editor","",false,false,NULL,"",500,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse);
+#       ifndef NO_IMGUICODEEDITOR
+        ImGui::TabWindow::TabLabel* tabLabel = tabWindow.addTabLabel("Code Editor","",false,true,NULL,"",500,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse);
         tabLabel->userInt = 500;    // We'll use tabLabel->userInt>=500 to detect if it's a code editor
-#       endif //NO_IMGUIFILESYSTEM
 #       endif //NO_IMGUICODEEDITOR
+#       ifdef YES_IMGUIPDFVIEWER
+        tabWindow.addTabLabel("dummyPdfPath.pdf","",false,true,NULL,"",0,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse);
+#       endif //YES_IMGUIPDFVIEWER
+#       endif //NO_IMGUIFILESYSTEM
     }
+
 
 }
 #endif // NO_IMGUITABWINDOW

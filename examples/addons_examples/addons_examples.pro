@@ -64,6 +64,8 @@ IMGUI_BASE_PATH=../..
 #DEFINES+=STBI_NO_GIF
 #DEFINES+=NO_IMGUITOOLBAR
 #DEFINES+=YES_IMGUIIMAGEEDITOR
+#DEFINES+=YES_IMGUIPDFVIEWER
+#PKGCONFIG += poppler-glib
 # END USER EDITABLE AREA ----------------------------------------------------------------------------
 
 
