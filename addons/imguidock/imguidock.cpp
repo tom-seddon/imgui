@@ -70,7 +70,7 @@ struct DockContext
             , active(true)
             , pos(0, 0)
             , size(-1, -1)
-	    , floatmode_size(-1,-1)
+	    , floatmode_size(0, 0)
             , status(Status_Float)
 	    , last_frame(0)
 	    , invalid_frames(0)
@@ -1138,8 +1138,8 @@ struct DockContext
             m_end_action = EndAction_End;
             dock.pos = GetWindowPos();
 	    dock.size = GetWindowSize();
-	    if (dock.size.x!=old_size.x) dock.floatmode_size.x = dock.size.x;
-	    if (dock.size.y!=old_size.y) dock.floatmode_size.y = dock.size.y;
+	    if (dock.size.x!=old_size.x && dock.floatmode_size.x>=0) dock.floatmode_size.x = dock.size.x;
+	    if (dock.size.y!=old_size.y && dock.floatmode_size.y>=0) dock.floatmode_size.y = dock.size.y;
 
 	    // Dbg (to remove)
 	    //if (ImGui::IsWindowHovered()) ImGui::SetTooltip("dock.size:\t(%1.f,%1.f)\\ndock.floatmode_size\t(%1.f,%1.f)\n",dock.size.x,dock.size.y,dock.floatmode_size.x,dock.floatmode_size.y);
@@ -1164,6 +1164,7 @@ struct DockContext
         splits();
 
 	PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+	PushStyleColor(ImGuiCol_BorderShadow, ImVec4(0, 0, 0, 0));
 	float tabbar_height = GetTextLineHeightWithSpacing();
 	if (tabbar(dock.getFirstTab(), opened != NULL))
         {
@@ -1184,7 +1185,7 @@ struct DockContext
 	strcpy(tmp, label);
 	strcat(tmp, "_docked"); // to avoid https://github.com/ocornut/imgui/issues/713
 	bool ret = BeginChild(tmp, size, true, flags);
-	PopStyleColor();
+	PopStyleColor(2);
 
         return ret;
     }
@@ -1201,8 +1202,9 @@ struct DockContext
             else if (m_end_action == EndAction_EndChild)
             {
 		PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+		PushStyleColor(ImGuiCol_BorderShadow, ImVec4(0, 0, 0, 0));
 		EndChild();
-		PopStyleColor();
+		PopStyleColor(2);
             }
             //endPanel();
         }

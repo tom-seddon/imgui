@@ -44,9 +44,9 @@
 
     // Texture Loading (*)
     if (!ImGui::TabWindow::DockPanelIconTextureID)  {
-        int pngIconSize = 0;
-        const unsigned char* pngIcon = ImGui::TabWindow::GetDockPanelIconImagePng(&pngIconSize);
-        ImGui::TabWindow::DockPanelIconTextureID = reinterpret_cast<ImTextureID>(MyTextureFromMemoryPngMethod(pngIcon,pngIconSize));  // User must load it (using GetDockPanelIconImagePng and in some cases flipping Y to match tex coords unique convention).
+		ImVector<unsigned char> rgba_buffer;int w,h;
+        ImGui::TabWindow::GetDockPanelIconImageRGBA(rgba_buffer,&w,&h); // 4 channels, no additional stride between lines, => rgba_buffer.size() = 4*w*h
+        ImGui::TabWindow::DockPanelIconTextureID = reinterpret_cast<ImTextureID>(MyTextureFromMemoryRGBAMethod(&rgba_buffer[0],w,h));  // User must turn raw RBGA to texture (using GetDockPanelIconImageRGBA).
     }
 
     // Optional Style
@@ -116,7 +116,7 @@ TIPS ABOUT TEXTURE LOADING;
         what IMGUI_USE_XXX_BINDING is.
      -> If you prefer loading the texture from an external image, I'll provide it here: https://gist.github.com/Flix01/2cdf1db8d936100628c0
      -> Since internally we use texcoords, we had to choose a single convention for them. That means that it might be necessary for
-        some people to load the image upside down (stb_image has a build-in method to do it).
+        some people to flip the image RGBA upside down (we can provide some definitions for that if needed).
 
 ADDITIONAL (OPTIONAL) CALLBACKS:
 static void TabWindow::SetTabLabelFactoryCallback(TabLabelFactoryCallback _tabLabelFactoryCb) {TabLabelFactoryCb=_tabLabelFactoryCb;}
@@ -448,9 +448,9 @@ inline static const char* GetTabLabelAskForDeletionModalWindowName() {return "Sa
 // Main method
 IMGUI_API void render();
 
-// Texture And Memory Png Data
-static const unsigned char* GetDockPanelIconImagePng(int* bufferSizeOut=NULL); // Manually redrawn based on the ones in https://github.com/dockpanelsuite/dockpanelsuite (that is MIT licensed). So no copyright issues for this AFAIK, but I'm not a lawyer and I cannot guarantee it.
-static ImTextureID DockPanelIconTextureID;  // User must load it (using GetDockPanelIconImagePng) and free it when no IMGUI_USE_XXX_BINDING is used.
+// Texture And Memory Data  (4 channels, no additional stride between lines, => rgba_buffer_out.size() = 4*(*w_out)*(*h_out) )
+static void GetDockPanelIconImageRGBA(ImVector<unsigned char>& rgba_buffer_out,int* w_out=NULL,int* h_out=NULL); // Manually redrawn based on the ones in https://github.com/dockpanelsuite/dockpanelsuite (that is MIT licensed). So no copyright issues for this AFAIK, but I'm not a lawyer and I cannot guarantee it.
+static ImTextureID DockPanelIconTextureID;  // User must load it (using GetDockPanelIconImageRGBA) and free it when no IMGUI_USE_XXX_BINDING is used.
 
 // These are just optional "filtering" methods
 bool isIsolated() const {return isolatedMode;}          // can't exchange tab labels outside

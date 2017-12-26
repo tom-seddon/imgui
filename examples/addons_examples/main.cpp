@@ -1776,7 +1776,7 @@ void DrawGL()	// Mandatory
     if (show_test_window)
     {
         //ImGui::SetNewWindowDefaultPos(ImVec2(650, 20));        // Normally user code doesn't need/want to call this, because positions are saved in .ini file. Here we just want to make the demo initial state a bit more friendly!
-        ImGui::ShowTestWindow(&show_test_window);
+        ImGui::ShowDemoWindow(&show_test_window);
     }
 #   endif // NO_IMGUISTYLESERIALIZER
 #   ifndef NO_IMGUINODEGRAPHEDITOR
