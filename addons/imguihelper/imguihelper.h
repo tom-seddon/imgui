@@ -47,14 +47,12 @@ IMGUI_API void ImDrawListAddCircleWithVerticalGradient(ImDrawList* dl, const ImV
 // Overload of ImDrawList::addPolyLine(...) that takes offset and scale:
 IMGUI_API void ImDrawListAddPolyLine(ImDrawList *dl,const ImVec2* polyPoints,int numPolyPoints,ImU32 strokeColor=IM_COL32_WHITE,float strokeThickness=1.f,bool strokeClosed=false, const ImVec2 &offset=ImVec2(0,0), const ImVec2& scale=ImVec2(1,1));
 
-#ifdef NEVER
 IMGUI_API void ImDrawListAddConvexPolyFilledWithHorizontalGradient(ImDrawList *dl, const ImVec2 *points, const int points_count, ImU32 colLeft, ImU32 colRight, float minx=-1.f, float maxx=-1.f);
 IMGUI_API void ImDrawListPathFillWithHorizontalGradientAndStroke(ImDrawList *dl, const ImU32 &fillColorLeft, const ImU32 &fillColorRight, const ImU32 &strokeColor, bool strokeClosed=false, float strokeThickness = 1.0f, float minx=-1.f,float maxx=-1.f);
 IMGUI_API void ImDrawListAddRectWithHorizontalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColorLeft, const ImU32 &fillColoRight, const ImU32 &strokeColor, float rounding = 0.0f, int rounding_corners = ~0, float strokeThickness = 1.0f);
 IMGUI_API void ImDrawListAddEllipseWithHorizontalGradient(ImDrawList *dl, const ImVec2 &centre, const ImVec2 &radii, const ImU32 &fillColorLeft, const ImU32 &fillColorRight, const ImU32 &strokeColor, int num_segments = 12, float strokeThickness = 1.0f);
 IMGUI_API void ImDrawListAddCircleWithHorizontalGradient(ImDrawList *dl, const ImVec2 &centre, float radius, const ImU32 &fillColorLeft, const ImU32 &fillColorRight, const ImU32 &strokeColor, int num_segments = 12, float strokeThickness = 1.0f);
 IMGUI_API void ImDrawListAddRectWithHorizontalGradient(ImDrawList *dl, const ImVec2 &a, const ImVec2 &b, const ImU32 &fillColor, float fillColorGradientDeltaIn0_05, const ImU32 &strokeColor, float rounding = 0.0f, int rounding_corners = ~0, float strokeThickness = 1.0f);
-#endif //NEVER
 #endif //NO_IMGUIHELPER_DRAW_METHODS
 
 // These two methods are inspired by imguidock.cpp
