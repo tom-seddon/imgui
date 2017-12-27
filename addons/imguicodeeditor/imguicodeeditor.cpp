@@ -350,7 +350,7 @@ static const char* SyntaxHighlightingFontStrings[SH_COUNT] = {"FONT_KEYWORD_ACCE
 CodeEditor::Style::Style() {
     color_background =          ImColor(40,40,50,255);
     color_text_selected_background = ImColor(50,50,120,255);
-    color_text =                ImGui::GetStyle().Colors[ImGuiCol_Text];
+    color_text =                ImColor(210,210,210,255);//ImGui::GetStyle().Colors[ImGuiCol_Text];
     color_line_numbers =        ImVec4(color_text.x,color_text.y,color_text.z,0.25f);
     color_icon_margin_error =        ImColor(255,0,0);
     color_icon_margin_warning =      ImColor(255,255,0);
@@ -4075,6 +4075,8 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
     // Render Text Here:
     {
+        ImGui::PushStyleColor(ImGuiCol_Text,ceStyle.color_text);
+
         // Draw with manual Y-clipping-----------
         const float oldCurPosY = ImGui::GetCursorPosY();
         ImGui::SetCursorPosY(oldCurPosY+firstVisibleLineNumber*textLineHeight);
@@ -4082,25 +4084,25 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         while (lineStart)    {
             nextLineStart=strchr(lineStart,'\n');
             if (numLines>=firstVisibleLineNumber && numLines<=lastVisibleLineNumber) {
-        if (numLines==firstVisibleLineNumber)   {
-            // we must set langData.pendingOpenMultilineComment, because the first visible line can be inside a multiline comment
-            // The correct code to set it is costly [but could be cached until the first visible line changes... (ATM I have no storage struct except "buf")]
+                if (numLines==firstVisibleLineNumber)   {
+                    // we must set langData.pendingOpenMultilineComment, because the first visible line can be inside a multiline comment
+                    // The correct code to set it is costly [but could be cached until the first visible line changes... (ATM I have no storage struct except "buf")]
 
-            // We''l use two code paths: one more accurate than the other:
-            const bool correctlyCheckIfTheFirstVisibleLineIsInAMultilineComment = numLines<=200 &&
-            canModifyText;  // "true" only when cursor is active (= the field is focused)
+                    // We''l use two code paths: one more accurate than the other:
+                    const bool correctlyCheckIfTheFirstVisibleLineIsInAMultilineComment = numLines<=200 &&
+                            canModifyText;  // "true" only when cursor is active (= the field is focused)
 
-            int tokenIndexOut = -1;
-            const char* startComments[3] = {langData.startComments[0],langData.startComments[1],langData.startComments[2]};
-            const char* endComments[3] = {langData.endComments[0],langData.endComments[1],langData.endComments[2]};
-            langData.pendingOpenMultilineComment = false;
+                    int tokenIndexOut = -1;
+                    const char* startComments[3] = {langData.startComments[0],langData.startComments[1],langData.startComments[2]};
+                    const char* endComments[3] = {langData.endComments[0],langData.endComments[1],langData.endComments[2]};
+                    langData.pendingOpenMultilineComment = false;
 
-            if (correctlyCheckIfTheFirstVisibleLineIsInAMultilineComment && startComments[0] && startComments[1])  {
-            // More accurate version:
-            const char *nextToken=buf;
-            const int numStringDelimitersChars = langData.stringDelimiterChars ? strlen(langData.stringDelimiterChars) : 0;
+                    if (correctlyCheckIfTheFirstVisibleLineIsInAMultilineComment && startComments[0] && startComments[1])  {
+                        // More accurate version:
+                        const char *nextToken=buf;
+                        const int numStringDelimitersChars = langData.stringDelimiterChars ? strlen(langData.stringDelimiterChars) : 0;
 
-            bool isInStringDelimiters = false;
+                        bool isInStringDelimiters = false;
                         bool waitForEndLine = false;
                         while (
                                (nextToken = ImGuiCe::FindNextToken<3>(nextToken,lineStart,startComments,endComments,&tokenIndexOut,langData.stringDelimiterChars,langData.stringEscapeChar,false,true))
@@ -4124,13 +4126,13 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
                         }
                     }
-            else if (startComments[1]) {
-            // Cheaper alternative:
-            if (nextLineStart!=buf) {
-                // Not perfect because it does not check if multiline comments are inside single-line comments or strings, but it should work in most cases.
-                if (ImGuiCe::FindPrevToken<2>(buf,nextLineStart,&startComments[1],&endComments[1],&tokenIndexOut,langData.stringDelimiterChars,langData.stringEscapeChar,false,false) && tokenIndexOut==0) langData.pendingOpenMultilineComment = true;
-            }
-            }
+                    else if (startComments[1]) {
+                        // Cheaper alternative:
+                        if (nextLineStart!=buf) {
+                            // Not perfect because it does not check if multiline comments are inside single-line comments or strings, but it should work in most cases.
+                            if (ImGuiCe::FindPrevToken<2>(buf,nextLineStart,&startComments[1],&endComments[1],&tokenIndexOut,langData.stringDelimiterChars,langData.stringEscapeChar,false,false) && tokenIndexOut==0) langData.pendingOpenMultilineComment = true;
+                        }
+                    }
                 }
                 if (render_scroll.x!=0) ImGui::SetCursorPosX(render_pos.x - render_scroll.x - draw_window->Pos.x);
                 if (!nextLineStart) {
@@ -4156,6 +4158,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         // --------------------------------------
 
         //codeEditorContentWidth = langData.textSizeX;
+        ImGui::PopStyleColor();
     }
 
 
@@ -4166,7 +4169,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         ImVec2 cursor_screen_pos = render_pos + cursor_offset - render_scroll;
         ImRect cursor_screen_rect(cursor_screen_pos.x, cursor_screen_pos.y-g.FontSize+0.5f, cursor_screen_pos.x+1.0f, cursor_screen_pos.y-1.5f);
         if (cursor_is_visible && cursor_screen_rect.Overlaps(clip_rect))
-            draw_window->DrawList->AddLine(cursor_screen_rect.Min, cursor_screen_rect.GetBL(), GetColorU32(ImGuiCol_Text));
+            draw_window->DrawList->AddLine(cursor_screen_rect.Min, cursor_screen_rect.GetBL(),GetColorU32(ceStyle.color_text));
 
         // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
         if (is_editable)

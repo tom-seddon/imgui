@@ -145,6 +145,18 @@ There are better alternatives to Imgui::TabWindow:
 Please see: https://github.com/ocornut/imgui/issues for further info
 */
 
+
+#include <string.h>
+#ifdef _MSC_VER
+#   ifndef strcasecmp
+#       define strcasecmp _stricmp
+#   endif // strcasecmp
+#   ifndef strncasecmp
+#       define strncasecmp _strnicmp
+#   endif // strncasecmp
+#endif // _MSC_VER
+
+
 namespace ImGui {
 
 enum ImGuiTabLabelStyleEnum {
@@ -302,7 +314,6 @@ public:
     inline bool matchLabel(const char* match) const {return modified ? (strncmp(match,label,strlen(label)-1)==0) : (strcmp(match,label)==0);}
     inline bool matchLabelExtension(const char* matchExtension) const {
         const char* dot = strrchr(label,(int) '.');if (!dot) return false;
-        // Warning: strncasecmp()/strcasecmp() on _MSC_VER
         return modified ? (strncasecmp(matchExtension,dot,strlen(dot)-1)==0) : (strcasecmp(matchExtension,dot)==0);
     }
     void setLabel(const char* lbl,bool appendAnAsteriskAndMarkAsModified=false)  {
@@ -323,6 +334,9 @@ public:
         buffer[len]='\0';
         return ok;
     }
+    inline bool matchTooltip(const char* match) const {return (strcmp(match,tooltip)==0);}
+    inline bool matchUserText(const char* match) const {return (strcmp(match,userText)==0);}
+
     inline bool getModified() const {return modified;}
     inline void setModified(bool flag) {
         if (modified == flag) return;
@@ -532,7 +546,12 @@ typedef TabWindow::TabLabel TabWindowLabel;
 */
 IMGUI_API bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const char** tabLabelTooltips=NULL , bool wrapMode=true, int* pOptionalHoveredIndex=NULL, int* pOptionalItemOrdering=NULL, bool allowTabReorder=true, bool allowTabClosing=false, int* pOptionalClosedTabIndex=NULL,int * pOptionalClosedTabIndexInsideItemOrdering=NULL);
 
-// Untested attempt to provide serialization for ImGui::TabLabels(...): only "selectedIndex" and "pOptionalItemOrdering" are serialized.
+// ImGui::TabLabelsVertical() are similiar to ImGui::TabLabels(), but they do not support WrapMode.
+IMGUI_API bool TabLabelsVertical(bool textIsRotatedCCW,int numTabs, const char** tabLabels, int& selectedIndex, const char** tabLabelTooltips=NULL, int* pOptionalHoveredIndex=NULL, int* pOptionalItemOrdering=NULL, bool allowTabReorder=false, bool allowTabClosing=false, int* pOptionalClosedTabIndex=NULL,int * pOptionalClosedTabIndexInsideItemOrdering=NULL,bool invertRounding=false);
+IMGUI_API float CalcVerticalTabLabelsWidth();
+
+
+// Untested attempt to provide serialization for ImGui::TabLabels(...) or ImGui::TabLabelsVertical(...): only "selectedIndex" and "pOptionalItemOrdering" are serialized.
 //-------------------------------------------------------------------------------
 #   if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION))
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_SAVE
@@ -547,13 +566,6 @@ IMGUI_API bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex
 //--------------------------------------------------------------------------------
 
 
-#if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS) && !defined(NO_IMGUIHELPER_VERTICAL_TEXT_METHODS))
-// Tip: IMGUIHELPER_HAS_VERTICAL_TEXT_SUPPORT is a read-only definition that summarizes the definitions above
-
-// ImGui::TabLabelsVertical() are similiar to ImGui::TabLabels(), but they do not support WrapMode.
-IMGUI_API bool TabLabelsVertical(bool textIsRotatedCCW,int numTabs, const char** tabLabels, int& selectedIndex, const char** tabLabelTooltips=NULL, int* pOptionalHoveredIndex=NULL, int* pOptionalItemOrdering=NULL, bool allowTabReorder=false, bool allowTabClosing=false, int* pOptionalClosedTabIndex=NULL,int * pOptionalClosedTabIndexInsideItemOrdering=NULL,bool invertRounding=false);
-IMGUI_API float CalcVerticalTabLabelsWidth();
-#endif // (defined(IMGUIHELPER_H_) && ...)
 
 } // namespace ImGui
 

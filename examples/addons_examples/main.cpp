@@ -1334,34 +1334,32 @@ void DrawGL()	// Mandatory
         if (selectedTab==0) ImGui::TabLabelStyle::Edit(ImGui::TabLabelStyle().Get());
         ImGui::EndChild();
 
-#	    ifdef IMGUIHELPER_HAS_VERTICAL_TEXT_SUPPORT	// read-only definition
-	// ImGui::TabLabelsVertical() are similiar to ImGui::TabLabels(), but they do not support WrapMode.
+        // ImGui::TabLabelsVertical() are similiar to ImGui::TabLabels(), but they do not support WrapMode.
+        // ImGui::TabLabelsVertical() example usage
+        static bool verticalTabLabelsAtLeft = true;ImGui::Checkbox("Vertical Tab Labels at the left side##VerticalTabLabelPosition",&verticalTabLabelsAtLeft);
+        static const char* verticalTabNames[] = {"Layers","Scene","World"};
+        static const int numVerticalTabs = sizeof(verticalTabNames)/sizeof(verticalTabNames[0]);
+        static const char* verticalTabTooltips[numVerticalTabs] = {"Layers Tab Tooltip","Scene Tab Tooltip","World Tab Tooltip"};
+        static int verticalTabItemOrdering[numVerticalTabs] = {0,1,2};
+        static int selectedVerticalTab = 0;
+        static int optionalHoveredVerticalTab = 0;
+        if (resetTabLabels) {selectedVerticalTab=0;for (int i=0;i<numVerticalTabs;i++) verticalTabItemOrdering[i] = i;}
 
-    static bool verticalTabLabelsAtLeft = true;ImGui::Checkbox("Vertical Tab Labels at the left side##VerticalTabLabelPosition",&verticalTabLabelsAtLeft);
-    static const char* verticalTabNames[] = {"Layers","Scene","World"};
-	static const int numVerticalTabs = sizeof(verticalTabNames)/sizeof(verticalTabNames[0]);
-    static const char* verticalTabTooltips[numVerticalTabs] = {"Layers Tab Tooltip","Scene Tab Tooltip","World Tab Tooltip"};
-    static int verticalTabItemOrdering[numVerticalTabs] = {0,1,2};
-	static int selectedVerticalTab = 0;
-	static int optionalHoveredVerticalTab = 0;
-    if (resetTabLabels) {selectedVerticalTab=0;for (int i=0;i<numVerticalTabs;i++) verticalTabItemOrdering[i] = i;}
-
-	const float verticalTabsWidth = ImGui::CalcVerticalTabLabelsWidth();
-	if (verticalTabLabelsAtLeft)	{
-	    /*const bool verticalTabSelectedChanged =*/ ImGui::TabLabelsVertical(verticalTabLabelsAtLeft,numVerticalTabs,verticalTabNames,selectedVerticalTab,verticalTabTooltips,&optionalHoveredVerticalTab,&verticalTabItemOrdering[0],allowTabLabelDragAndDrop,allowClosingTabs,NULL,NULL);
-	    //if (optionalHoveredVerticalTab>=0) ImGui::Text("Mouse is hovering Tab Label: \"%s\".\n\n",verticalTabNames[optionalHoveredVerticalTab]);
-	    ImGui::SameLine(0,0);
-	}
-	// Draw tab page
-	ImGui::BeginChild("MyVerticalTabLabelsChild",ImVec2(ImGui::GetWindowWidth()-verticalTabsWidth-2.f*ImGui::GetStyle().WindowPadding.x-ImGui::GetStyle().ScrollbarSize,150),true);
-    ImGui::Text("Tab Page For Tab: \"%s\" here.",selectedVerticalTab>=0?verticalTabNames[selectedVerticalTab]:"None!");
-	ImGui::EndChild();
-	if (!verticalTabLabelsAtLeft)	{
-	    ImGui::SameLine(0,0);
-	    /*const bool verticalTabSelectedChanged =*/ ImGui::TabLabelsVertical(verticalTabLabelsAtLeft,numVerticalTabs,verticalTabNames,selectedVerticalTab,verticalTabTooltips,&optionalHoveredVerticalTab,&verticalTabItemOrdering[0],allowTabLabelDragAndDrop,allowClosingTabs,NULL,NULL);
-	    //if (optionalHoveredVerticalTab>=0) ImGui::Text("Mouse is hovering Tab Label: \"%s\".\n\n",verticalTabNames[optionalHoveredVerticalTab]);
-	}
-#	    endif //IMGUIHELPER_HAS_VERTICAL_TEXT_SUPPORT
+        const float verticalTabsWidth = ImGui::CalcVerticalTabLabelsWidth();
+        if (verticalTabLabelsAtLeft)	{
+            /*const bool verticalTabSelectedChanged =*/ ImGui::TabLabelsVertical(verticalTabLabelsAtLeft,numVerticalTabs,verticalTabNames,selectedVerticalTab,verticalTabTooltips,&optionalHoveredVerticalTab,&verticalTabItemOrdering[0],allowTabLabelDragAndDrop,allowClosingTabs,NULL,NULL);
+            //if (optionalHoveredVerticalTab>=0) ImGui::Text("Mouse is hovering Tab Label: \"%s\".\n\n",verticalTabNames[optionalHoveredVerticalTab]);
+            ImGui::SameLine(0,0);
+        }
+        // Draw tab page
+        ImGui::BeginChild("MyVerticalTabLabelsChild",ImVec2(ImGui::GetWindowWidth()-verticalTabsWidth-2.f*ImGui::GetStyle().WindowPadding.x-ImGui::GetStyle().ScrollbarSize,150),true);
+        ImGui::Text("Tab Page For Tab: \"%s\" here.",selectedVerticalTab>=0?verticalTabNames[selectedVerticalTab]:"None!");
+        ImGui::EndChild();
+        if (!verticalTabLabelsAtLeft)	{
+            ImGui::SameLine(0,0);
+            /*const bool verticalTabSelectedChanged =*/ ImGui::TabLabelsVertical(verticalTabLabelsAtLeft,numVerticalTabs,verticalTabNames,selectedVerticalTab,verticalTabTooltips,&optionalHoveredVerticalTab,&verticalTabItemOrdering[0],allowTabLabelDragAndDrop,allowClosingTabs,NULL,NULL);
+            //if (optionalHoveredVerticalTab>=0) ImGui::Text("Mouse is hovering Tab Label: \"%s\".\n\n",verticalTabNames[optionalHoveredVerticalTab]);
+        }
 
 #       else //NO_IMGUITABWINDOW
         ImGui::Text("%s","Excluded from this build.\n");
