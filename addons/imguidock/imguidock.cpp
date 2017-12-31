@@ -1360,6 +1360,10 @@ void DockDebugWindow()
 		m_docks[P.curIndex]->invalid_frames = 0;
 	    }
 	    else if (strcmp(name,"label")==0) {
+            if (strcmp((const char*)pValue, "\n") == 0) {
+                // ??? - bug in the serializer, I suppose?
+                pValue = (void*)"";
+            }
 		    m_docks[P.curIndex]->label = ImStrdup((const char*) pValue);
 		    m_docks[P.curIndex]->id = ImHash(m_docks[P.curIndex]->label, 0);
 	    }
