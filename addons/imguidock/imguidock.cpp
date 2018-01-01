@@ -1177,15 +1177,32 @@ struct DockContext
 	PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
 	PushStyleColor(ImGuiCol_BorderShadow, ImVec4(0, 0, 0, 0));
 	float tabbar_height = GetTextLineHeightWithSpacing();
-	if (tabbar(dock.getFirstTab(), opened != NULL))
+
+    bool draw_tabbar = true;
+    Dock& firstTab = dock.getFirstTab();
+    IM_ASSERT(!firstTab.prev_tab);
+    if (!firstTab.next_tab)
+    {
+        if (extra_flags & ImGuiWindowFlags_NoTitleBar)
+        {
+            if (!firstTab.parent && !firstTab.hasChildren())
+                draw_tabbar = false;
+        }
+    }
+
+    ImVec2 pos = dock.pos;
+    ImVec2 size = dock.size;
+
+    if (draw_tabbar)
+    {
+    	if (tabbar(firstTab, opened != NULL))
         {
             fillLocation(dock);
             *opened = false;
         }
-        ImVec2 pos = dock.pos;
-        ImVec2 size = dock.size;
         pos.y += tabbar_height + GetStyle().WindowPadding.y;
         size.y -= tabbar_height + GetStyle().WindowPadding.y;
+    }
 
         SetCursorScreenPos(pos);
         ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
