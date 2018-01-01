@@ -88,6 +88,23 @@ typedef enum ImGuiDockSlot {
 
 namespace ImGui{
 
+struct DockContext;
+
+// Create, destroy and change dock contexts. These functions are
+// entirely optional if you only need one dock context - a default
+// dock context is created on startup and set by default.
+
+// Each created context must be destroyed using DestroyDockContext.
+IMGUI_API DockContext* CreateDockContext();
+
+// Destroying the default dock context is a no-op.
+IMGUI_API void DestroyDockContext(DockContext* dock);
+
+// SetCurrentDockContext(NULL) will select the default dock context.
+IMGUI_API void SetCurrentDockContext(DockContext* dock);
+
+IMGUI_API DockContext* GetCurrentDockContext();
+
 IMGUI_API void BeginDockspace();
 IMGUI_API void EndDockspace();
 IMGUI_API void ShutdownDock();
