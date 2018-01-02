@@ -861,7 +861,7 @@ bool PdfPagePanel::imageZoomAndPan(const ImVec2& size)
     // Here we use the whole size (although it can be partially empty)
     ImRect bb(window->DC.CursorPos, ImVec2(window->DC.CursorPos.x + size.x,window->DC.CursorPos.y + size.y));
     ItemSize(bb);
-    if (!ItemAdd(bb, NULL)) return rv;
+    if (!ItemAdd(bb, 0)) return rv;
 
     zoomedImageSize = size;
     ImVec2 remainingWndSize(0,0);

@@ -259,6 +259,7 @@ LIBS+= -ld3d9 -luser32 -lkernel32 -static-libgcc -static-libstdc++
 }
 
 # Dev stuff here (should be commented out)
+#DEFINES+=IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 #DEFINES+=NO_IMGUIVARIOUSCONTROLS
 #DEFINES+=NO_IMGUIPANELMANAGER
 #DEFINES+=NO_IMGUIDATECHOOSER

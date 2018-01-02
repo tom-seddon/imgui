@@ -692,13 +692,16 @@ const char* Deserializer::parse(Deserializer::ParseCallback cb, void *userPtr, c
                     else {
 
                         if (ft==ImGui::FT_STRING && varName && varName[0]!='\0')  {
+                            if (numArrayElements==1 && (!minusCh || (minusCh-colonCh)>0)) {
+                                numArrayElements=0;   // NEW! To handle blank strings ""
+                            }
                             //Process soon here, as the string can be multiline
                             line_start = ++line_end;
                             //--------------------------------------------------------
                             int cnt = 0;
                             while (line_end < buf_end && cnt++ < numArrayElements-1) ++line_end;
                             textBuffer[0]=textBuffer[2049]='\0';
-                            const int maxLen = cnt>2049?2049:cnt;
+                            const int maxLen = numArrayElements>0 ? (cnt>2049?2049:cnt) : 0;
                             strncpy(textBuffer,line_start,maxLen+1);
                             textBuffer[maxLen]='\0';
                             quitParsing = cb(ft,numArrayElements,(void*)textBuffer,varName,userPtr);
