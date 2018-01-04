@@ -709,7 +709,7 @@ void NodeGraphEditor::render()
 	gNodeGraphEditorWindowPadding = ImGui::GetStyle().WindowPadding;
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1,1));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
-        ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.color_background);
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, style.color_background);
         if (ImGui::BeginChild("scrolling_region", ImVec2(0,0), true, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollWithMouse))  {
 
             ImGuiContext& g = *GImGui;
@@ -831,7 +831,7 @@ void NodeGraphEditor::render()
             }
             // End Clipping Data
 
-            const bool isMouseHoveringWindow = ImGui::IsMouseHoveringWindow();
+            const bool isMouseHoveringWindow = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
 
             const bool isLMBClicked = ImGui::IsMouseClicked(0);
             const bool isLMBDoubleClicked = ImGui::IsMouseDoubleClicked(0);
@@ -888,7 +888,7 @@ void NodeGraphEditor::render()
 
                 bool nodeInEditMode = false;
                 ImGui::BeginGroup(); // Lock horizontal position
-                ImGui::SetNextTreeNodeOpen(node->isOpen,ImGuiSetCond_Always);
+                ImGui::SetNextTreeNodeOpen(node->isOpen,ImGuiCond_Always);
 
                 ImU32 titleTextColorU32 = 0, titleBgColorU32 = 0;float titleBgGradient = -1.f;
                 node->getDefaultTitleBarColors(titleTextColorU32,titleBgColorU32,titleBgGradient);
@@ -1445,7 +1445,7 @@ void NodeGraphEditor::render()
                 menuNode = node_hovered_in_list = node_hovered_in_scene = NULL;
                 open_delete_only_context_menu = false;	// just in case...
             }
-            else if (/*!isAContextMenuOpen &&*/ !ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() && getNumAvailableNodeTypes()>0 && nodeFactoryFunctionPtr)   {
+            else if (/*!isAContextMenuOpen &&*/ !ImGui::IsAnyItemHovered() && ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) && getNumAvailableNodeTypes()>0 && nodeFactoryFunctionPtr)   {
                 if (ImGui::IsMouseClicked(1))   {   // Open context menu for adding nodes
                     menuNode = node_hovered_in_scene ? node_hovered_in_scene : node_hovered_in_list ? node_hovered_in_list : NULL;
                     //fprintf(stderr,"menuNode.name=%s\n",menuNode?menuNode->getName():"NULL");
@@ -1588,7 +1588,7 @@ void NodeGraphEditor::render()
             // Scrolling
             //if (!isSomeNodeMoving && !isaNodeInActiveState && !dragNode.node && ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) &&  ImGui::IsMouseDragging(0, 6.0f)) scrolling = scrolling - io.MouseDelta;
             // TODO: We can probably adjust the or-group better, using the new flags/methods, in next line
-            if (isMouseDraggingForScrolling && (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) || ImGui::IsWindowFocused() || ImGui::IsRootWindowFocused())) {
+            if (isMouseDraggingForScrolling && (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) || ImGui::IsWindowFocused() || IsWindowFocused(ImGuiFocusedFlags_RootWindow))) {
                 scrolling = scrolling - io.MouseDelta;
                 ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
                 // This must be fixed somehow: ImGui::GetIO().WantCaptureMouse == false, because g.ActiveID == 0

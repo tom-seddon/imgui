@@ -123,7 +123,7 @@ void Text(int fntIndex, const char *fmt,...)    {
 
 bool GetTexCoordsFromGlyph(unsigned short glyph, ImVec2 &uv0, ImVec2 &uv1) {
     if (!GImGui->Font) return false;
-    const ImFont::Glyph* g = GImGui->Font->FindGlyph(glyph);
+    const ImFontGlyph* g = GImGui->Font->FindGlyph(glyph);
     if (g)  {
         uv0.x = g->U0; uv0.y = g->V0;
         uv1.x = g->U1; uv1.y = g->V1;

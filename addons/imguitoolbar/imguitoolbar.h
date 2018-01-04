@@ -244,7 +244,7 @@ public:
                 }
                 ImGui::PopID();
                 if (inWindowMode) currentWidth+=tbsz.x;
-                const bool isItemHovered = isMouseDragging ? ImGui::IsItemHoveredRect() : ImGui::IsItemHovered();
+                const bool isItemHovered = isMouseDragging ? ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly) : ImGui::IsItemHovered();
                 if (isItemHovered)
                 {
                     if (!tooltipsDisabled && strlen(tb.tooltip)>0)   {

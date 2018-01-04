@@ -231,7 +231,7 @@ bool DateChooser(const char* label, tm& dateOut,const char* dateFormat,bool clos
         // ImGuiWindowFlags_ComboBox is no longer present... we simply remove it and see if it still work...
         const ImGuiWindowFlags flags = /*ImGuiWindowFlags_ComboBox |*/ ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;// | ImGuiWindowFlags_Modal;    // Adding ImGuiWindowFlags_Modal seems to work too...
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
-        ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.Colors[ImGuiCol_PopupBg]);
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, style.Colors[ImGuiCol_PopupBg]);
         ImGui::BeginChild("#ComboBoxDateChooser", popup_rect.GetSize(), true, flags);
         ImGui::Spacing();
 

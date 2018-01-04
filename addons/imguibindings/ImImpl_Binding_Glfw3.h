@@ -475,7 +475,7 @@ static void ImImplMainLoopFrame(void* userPtr)	{
 
 
     if (!gImGuiPaused)	{
-        gImGuiWereOutsideImGui = !ImGui::IsMouseHoveringAnyWindow() && !ImGui::IsAnyItemActive();
+        gImGuiWereOutsideImGui = !ImGui::IsAnyWindowHovered() && !ImGui::IsAnyItemActive();
         const bool imguiNeedsInputNow = !gImGuiWereOutsideImGui && (io.WantTextInput || io.MouseDelta.x!=0 || io.MouseDelta.y!=0 || io.MouseWheel!=0);// || io.MouseDownOwned[0] || io.MouseDownOwned[1] || io.MouseDownOwned[2]);
         if (gImGuiCapturesInput != imguiNeedsInputNow) {
             gImGuiCapturesInput = imguiNeedsInputNow;

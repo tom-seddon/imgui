@@ -196,7 +196,7 @@ static inline void ImDrawListRenderTextLine(ImDrawList* draw_list,const ImFont* 
         }
 
         float char_width = 0.0f;
-        if (const ImFont::Glyph* glyph = font->FindGlyph((unsigned short)c))
+        if (const ImFontGlyph* glyph = font->FindGlyph((unsigned short)c))
         {
             char_width = glyph->AdvanceX * scale;
 
@@ -2245,7 +2245,7 @@ void CodeEditor::render()   {
         ImGui::SameLine(0);
     }
 
-    ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.color_background);  // The line below is just to set the bg color....
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, style.color_background);  // The line below is just to set the bg color....
     ImGui::BeginChild("CodeEditorChild", ImVec2(0,0), true, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_HorizontalScrollbar);
 
     if (!io.FontAllowUserScaling && io.MouseWheel && ImGui::GetCurrentWindow()==GImGui->HoveredWindow)   {
@@ -2624,7 +2624,7 @@ void CodeEditor::render()   {
                 }
                 const bool wasFolded = foldableLine->isFolded();
                 ImGui::PushStyleColor(ImGuiCol_Text,style.color_syntax_highlighting[sht]);
-                ImGui::SetNextTreeNodeOpen(!wasFolded,ImGuiSetCond_Always);
+                ImGui::SetNextTreeNodeOpen(!wasFolded,ImGuiCond_Always);
                 if (!ImGui::TreeNode(line,"%s",""))  {
                     if (!wasFolded)   {
                         // process next lines to make them visible someway

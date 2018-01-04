@@ -476,7 +476,7 @@ void RenderTextVertical(const ImFont* font,ImDrawList* draw_list, float size, Im
         }
 
         float char_width = 0.0f;
-        if (const ImFont::Glyph* glyph = font->FindGlyph((unsigned short)c))
+        if (const ImFontGlyph* glyph = font->FindGlyph((unsigned short)c))
         {
             char_width = glyph->AdvanceX * scale;
             //fprintf(stderr,"%c [%1.4f]\n",(unsigned char) glyph->Codepoint,char_width);
@@ -1793,7 +1793,7 @@ struct MyTabWindowHelperStruct {
 
         textHeightWithSpacing = ImGui::GetTextLineHeightWithSpacing();
 
-        isWindowHovered = ImGui::IsRootWindowOrAnyChildFocused();
+        isWindowHovered = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
 
         flags = TabWindow::ExtraWindowFlags;// | ((ImGui::GetCurrentWindow()->Flags&ImGuiWindowFlags_ShowBorders) ? ImGuiWindowFlags_ShowBorders : 0);
     }
@@ -1858,7 +1858,7 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
     MyTabWindowHelperStruct& mhs = *ptr;
     const TabLabelStyle& tabStyle = TabLabelStyle::GetMergedWithWindowAlpha();  // Or just Get() ?
     ImGuiStyle& style = ImGui::GetStyle();
-    const ImVec4 colorChildWindowBg = style.Colors[ImGuiCol_ChildWindowBg];
+    const ImVec4 colorChildWindowBg = style.Colors[ImGuiCol_ChildBg];
     const float splitterSize = tabStyle.tabWindowSplitterSize;
     bool splitterActive = false;
     static ImVec4 colorTransparent(0,0,0,0);
@@ -1868,9 +1868,9 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
         IM_ASSERT(child[1]);
         IM_ASSERT(tabs.size()==0);
         const float minSplitSize = 10;  // If size is smaller, the child won't be displayed
-        style.Colors[ImGuiCol_ChildWindowBg] = colorTransparent;
+        style.Colors[ImGuiCol_ChildBg] = colorTransparent;
         if (ImGui::RevertUpstreamBeginChildCommit::OldBeginChild(name,windowSize,ImGuiWindowFlags_NoScrollbar))   {
-            style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
+            style.Colors[ImGuiCol_ChildBg] = colorChildWindowBg;
             ImVec2 ws = windowSize;
             float splitterPercToPixels = 0.f,splitterDelta = 0.f;
             if (horizontal && ws.y>splitterSize && ws.x>minSplitSize) {
@@ -1943,7 +1943,7 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
             }
             //else {/* Window too tiny: better not to draw it, otherwise the splitters overlap and may cause bad stuff */}
         }
-        else style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
+        else style.Colors[ImGuiCol_ChildBg] = colorChildWindowBg;
         ImGui::EndChild();  // name
         return;
     }
@@ -1955,13 +1955,13 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
     //TabWindow::TabLabel* hoveredTab = NULL;
     //----------------------------------------------------------------
     {
-        style.Colors[ImGuiCol_ChildWindowBg] = colorTransparent;
+        style.Colors[ImGuiCol_ChildBg] = colorTransparent;
         if (ImGui::RevertUpstreamBeginChildCommit::OldBeginChild(name,windowSize,ImGuiWindowFlags_NoScrollbar)) {
             if (tabStyle.tabWindowLabelBackgroundColor.w!=0)    {
                 ImGuiWindow* window = ImGui::GetCurrentWindow();
                 window->DrawList->AddRectFilled(window->Pos, window->Pos+ImVec2(windowSize.x,allTabsSize.y), GetColorU32(tabStyle.tabWindowLabelBackgroundColor), 0);
             }
-            style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
+            style.Colors[ImGuiCol_ChildBg] = colorChildWindowBg;
             ImGuiContext& g = *GImGui;
             TabWindowDragData& dd = gDragData;
             const ImFont* fontOverride = NULL;
@@ -2025,7 +2025,7 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
                         mhs.MustOpenAskForClosingPopup = true;
                     }
                 }
-                else if (ImGui::IsItemHoveredRect()) {
+                else if (ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly)) {
                     isAItemHovered = true;
                     //hoveredTab = &tab;
                     if (tab.tooltip && mhs.isWindowHovered && strlen(tab.tooltip)>0 && (&tab!=mhs.tabLabelPopup || GImGui->OpenPopupStack.size()==0) )  ImGui::SetTooltip("%s",tab.tooltip);
@@ -2146,7 +2146,7 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
             ImGui::EndChild();  // user
             mhs.storeStyleVars();
         }
-        else style.Colors[ImGuiCol_ChildWindowBg] = colorChildWindowBg;
+        else style.Colors[ImGuiCol_ChildBg] = colorChildWindowBg;
         ImGui::EndChild();  // "name"
     }
     //----------------------------------------------------------------
@@ -2984,7 +2984,7 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
 
         }
 
-        if (isWindowHovered && ImGui::IsItemHoveredRect() && !mustCloseTab) {
+        if (isWindowHovered && ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly) && !mustCloseTab) {
             if (pOptionalHoveredIndex) *pOptionalHoveredIndex = i;
             if (tabLabelTooltips && !isRMBclicked && tabLabelTooltips[i] && strlen(tabLabelTooltips[i])>0)  ImGui::SetTooltip("%s",tabLabelTooltips[i]);
 
@@ -3427,7 +3427,7 @@ bool TabLabelsVertical(bool textIsRotatedCCW, int numTabs, const char** tabLabel
 
         }*/
 
-        if (isWindowHovered && ImGui::IsItemHoveredRect() && !mustCloseTab) {
+        if (isWindowHovered && ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly) && !mustCloseTab) {
             if (pOptionalHoveredIndex) *pOptionalHoveredIndex = i;
             if (tabLabelTooltips && !isRMBclicked && tabLabelTooltips[i] && strlen(tabLabelTooltips[i])>0)  ImGui::SetTooltip("%s",tabLabelTooltips[i]);
 

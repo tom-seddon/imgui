@@ -97,16 +97,19 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
     IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // Called ImGui::Render() or ImGui::EndFrame() and haven't called ImGui::NewFrame() again yet
 
-    if (flags & ImGuiWindowFlags_NoInputs)
-        flags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
-
     // Find or create
     ImGuiWindow* window = FindWindowByName(name);
     if (!window)
     {
-        ImVec2 size_on_first_use = (g.SetNextWindowSizeCond != 0) ? g.SetNextWindowSizeVal : ImVec2(0.0f, 0.0f); // Any condition flag will do since we are creating a new window here.
+        ImVec2 size_on_first_use = (g.NextWindowData.SizeCond != 0) ? g.NextWindowData.SizeVal : ImVec2(0.0f, 0.0f); // Any condition flag will do since we are creating a new window here.
         window = CreateNewWindow(name, size_on_first_use, flags);
     }
+
+    // Automatically disable manual moving/resizing when NoInputs is set
+    if (flags & ImGuiWindowFlags_NoInputs)
+        flags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
+    //if (flags & ImGuiWindowFlags_NavFlattened)
+    //    IM_ASSERT(flags & ImGuiWindowFlags_ChildWindow);
 
     const int current_frame = g.FrameCount;
     const bool first_begin_of_the_frame = (window->LastFrameActive != current_frame);
@@ -149,50 +152,50 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     // Process SetNextWindow***() calls
     bool window_pos_set_by_api = false;
     bool window_size_x_set_by_api = false, window_size_y_set_by_api = false;
-    if (g.SetNextWindowPosCond)
+    if (g.NextWindowData.PosCond)
     {
-        window_pos_set_by_api = (window->SetWindowPosAllowFlags & g.SetNextWindowPosCond) != 0;
-        if (window_pos_set_by_api && ImLengthSqr(g.SetNextWindowPosPivot) > 0.00001f)
+        window_pos_set_by_api = (window->SetWindowPosAllowFlags & g.NextWindowData.PosCond) != 0;
+        if (window_pos_set_by_api && ImLengthSqr(g.NextWindowData.PosPivotVal) > 0.00001f)
         {
             // May be processed on the next frame if this is our first frame and we are measuring size
             // FIXME: Look into removing the branch so everything can go through this same code path for consistency.
-            window->SetWindowPosVal = g.SetNextWindowPosVal;
-            window->SetWindowPosPivot = g.SetNextWindowPosPivot;
+            window->SetWindowPosVal = g.NextWindowData.PosVal;
+            window->SetWindowPosPivot = g.NextWindowData.PosPivotVal;
             window->SetWindowPosAllowFlags &= ~(ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing);
         }
         else
         {
-            SetWindowPos(window, g.SetNextWindowPosVal, g.SetNextWindowPosCond);
+            SetWindowPos(window, g.NextWindowData.PosVal, g.NextWindowData.PosCond);
         }
-        g.SetNextWindowPosCond = 0;
+        g.NextWindowData.PosCond = 0;
     }
-    if (g.SetNextWindowSizeCond)
+    if (g.NextWindowData.SizeCond)
     {
-        window_size_x_set_by_api = (window->SetWindowSizeAllowFlags & g.SetNextWindowSizeCond) != 0 && (g.SetNextWindowSizeVal.x > 0.0f);
-        window_size_y_set_by_api = (window->SetWindowSizeAllowFlags & g.SetNextWindowSizeCond) != 0 && (g.SetNextWindowSizeVal.y > 0.0f);
-        SetWindowSize(window, g.SetNextWindowSizeVal, g.SetNextWindowSizeCond);
-        g.SetNextWindowSizeCond = 0;
+        window_size_x_set_by_api = (window->SetWindowSizeAllowFlags & g.NextWindowData.SizeCond) != 0 && (g.NextWindowData.SizeVal.x > 0.0f);
+        window_size_y_set_by_api = (window->SetWindowSizeAllowFlags & g.NextWindowData.SizeCond) != 0 && (g.NextWindowData.SizeVal.y > 0.0f);
+        SetWindowSize(window, g.NextWindowData.SizeVal, g.NextWindowData.SizeCond);
+        g.NextWindowData.SizeCond = 0;
     }
-    if (g.SetNextWindowContentSizeCond)
+    if (g.NextWindowData.ContentSizeCond)
     {
         // Adjust passed "client size" to become a "window size"
-        window->SizeContentsExplicit = g.SetNextWindowContentSizeVal;
+        window->SizeContentsExplicit = g.NextWindowData.SizeVal;
         window->SizeContentsExplicit.y += window->TitleBarHeight() + window->MenuBarHeight();
-        g.SetNextWindowContentSizeCond = 0;
+        g.NextWindowData.ContentSizeCond = 0;
     }
     else if (first_begin_of_the_frame)
     {
         window->SizeContentsExplicit = ImVec2(0.0f, 0.0f);
     }
-    if (g.SetNextWindowCollapsedCond)
+    if (g.NextWindowData.CollapsedCond)
     {
-        SetWindowCollapsed(window, g.SetNextWindowCollapsedVal, g.SetNextWindowCollapsedCond);
-        g.SetNextWindowCollapsedCond = 0;
+        SetWindowCollapsed(window, g.NextWindowData.CollapsedVal, g.NextWindowData.CollapsedCond);
+        g.NextWindowData.CollapsedCond = 0;
     }
-    if (g.SetNextWindowFocus)
+    if (g.NextWindowData.FocusCond)
     {
         SetWindowFocus();
-        g.SetNextWindowFocus = false;
+        g.NextWindowData.FocusCond = false;
     }
     if (window->Appearing)
         SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, false);
@@ -551,7 +554,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             if ((flags & ImGuiWindowFlags_Tooltip) != 0 || (flags & ImGuiWindowFlags_Popup) != 0 /*|| (flags & ImGuiWindowFlags_ComboBox) != 0*/)
                 bg_color_idx = ImGuiCol_PopupBg;
             else if ((flags & ImGuiWindowFlags_ChildWindow) != 0)
-                bg_color_idx = ImGuiCol_ChildWindowBg;
+                bg_color_idx = ImGuiCol_ChildBg;
             ImVec4 bg_color = style.Colors[bg_color_idx];
             if (bg_alpha >= 0.0f)
                 bg_color.w = bg_alpha;
@@ -757,7 +760,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->WriteAccessed = false;
 
     window->BeginCount++;
-    g.SetNextWindowSizeConstraint = false;
+    g.NextWindowData.SizeConstraintCond = false;
 
     // Child window can be out of sight and have "negative" clip windows.
     // Mark them as collapsed so commands are skipped earlier (we can't manually collapse because they have no title bar).

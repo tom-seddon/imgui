@@ -93,7 +93,7 @@ float ProgressBar(const char *optionalPrefixText, float value, const float minVa
     const ImFontAtlas* fontAtlas = ImGui::GetIO().Fonts;
 
     if (optionalPrefixText && strlen(optionalPrefixText)>0) {
-        ImGui::AlignFirstTextHeightToWidgets();
+        ImGui::AlignTextToFramePadding();
         ImGui::Text("%s",optionalPrefixText);
         ImGui::SameLine();
     }
@@ -405,7 +405,7 @@ inline static bool ColorChooserInternal(ImVec4 *pColorOut,bool supportsAlpha,boo
         //Sliders
         //ImGui::PushItemHeight();
         //if (isCombo) ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPos().x+colorWindow->WindowPadding.x,ImGui::GetCursorPos().y+colorWindow->WindowPadding.y+quadSize));
-        ImGui::AlignFirstTextHeightToWidgets();
+        ImGui::AlignTextToFramePadding();
         ImGui::Text("Sliders");
         static bool useHsvSliders = false;
         static const char* btnNames[2] = {"to HSV","to RGB"};
@@ -526,16 +526,11 @@ bool ColorCombo(const char* label,ImVec4 *pColorOut,bool supportsAlpha,float wid
             ImGuiContext& g = *GImGui;
             ClosePopupToLevel(g.OpenPopupStack.Size - 1);
         }
-        static inline void ClearSetNextWindowData() {
-            ImGuiContext& g = *GImGui;
-            g.SetNextWindowPosCond = g.SetNextWindowSizeCond = g.SetNextWindowContentSizeCond = g.SetNextWindowCollapsedCond = 0;
-            g.SetNextWindowSizeConstraint = g.SetNextWindowFocus = false;
-        }
         static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)  {
             ImGuiContext& g = *GImGui;
             if (g.OpenPopupStack.Size <= g.CurrentPopupStack.Size) // Early out for performance
             {
-                ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
+                g.NextWindowData.Clear(); // We behave like Begin() and need to consume those values
                 return false;
             }
             ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
@@ -3183,12 +3178,12 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
         int customColorState = (state&STATE_COLOR1) ? 1 : (state&STATE_COLOR2) ? 2 : (state&STATE_COLOR3) ? 3 : 0;
 
         ImGui::PushID(this);
-        if (allowCheckBox && !tvhs.hasCbGlyphs) ImGui::AlignFirstTextHeightToWidgets();
+        if (allowCheckBox && !tvhs.hasCbGlyphs) ImGui::AlignTextToFramePadding();
 
         tvhs.window->DC.CursorPos.x+= tvhs.arrowOffset*(numIndents-(isLeafNode ? 0 : 1))+(tvhs.hasArrowGlyphs?(GImGui->Style.FramePadding.x*2):0.f);
         if (!isLeafNode) {
             if (!tvhs.hasArrowGlyphs)  {
-                ImGui::SetNextTreeNodeOpen(stateopen,ImGuiSetCond_Always);
+                ImGui::SetNextTreeNodeOpen(stateopen,ImGuiCond_Always);
                 mustTreePop = ImGui::TreeNode("","%s","");
             }
             else {
