@@ -370,7 +370,7 @@ void GetTexDataAsRGBA32(ImFontAtlas* atlas,unsigned char** out_pixels, int* out_
     // Although it is likely to be the most commonly used format, our font rendering is 1 channel / 8 bpp
     if (!atlas->TexPixelsRGBA32)
     {
-        unsigned char* pixels;
+        unsigned char* pixels=NULL;
         GetTexDataAsAlpha8(atlas,&pixels, NULL, NULL,NULL,flags,pOptionalFlagVector);
         if (pixels) {
             atlas->TexPixelsRGBA32 = (unsigned int*)ImGui::MemAlloc((size_t)(atlas->TexWidth * atlas->TexHeight * 4));
