@@ -639,6 +639,7 @@ static bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 static ImFont*          GetDefaultFont();
 static void             SetCurrentFont(ImFont* font);
 static void             SetCurrentWindow(ImGuiWindow* window);
+static void             SetWindowScrollX(ImGuiWindow* window, float new_scroll_x);
 static void             SetWindowScrollY(ImGuiWindow* window, float new_scroll_y);
 static void             SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond);
 static void             SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond);
@@ -2282,6 +2283,8 @@ void ImGui::NewFrame()
     IM_ASSERT(g.Style.CurveTessellationTol > 0.0f                       && "Invalid style setting");
     IM_ASSERT(g.Style.Alpha >= 0.0f && g.Style.Alpha <= 1.0f            && "Invalid style setting. Alpha cannot be negative (allows us to avoid a few clamps in color computations)");
     IM_ASSERT((g.FrameCount == 0 || g.FrameCountEnded == g.FrameCount)  && "Forgot to call Render() or EndFrame() at the end of the previous frame?");
+    for (int n = 0; n < ImGuiKey_COUNT; n++)
+        IM_ASSERT(g.IO.KeyMap[n] >= -1 && g.IO.KeyMap[n] < IM_ARRAYSIZE(g.IO.KeysDown) && "io.KeyMap[] contains an out of bound value (need to be 0..512, or -1 for unmapped key)");
 
     // Initialize on first frame
     if (!g.Initialized)
@@ -2391,11 +2394,8 @@ void ImGui::NewFrame()
         if (g.IO.MouseDown[0])
         {
             // MovingWindow = window we clicked on, could be a child window. We track it to preserve Focus and so that ActiveIdWindow == MovingWindow and ActiveId == MovingWindow->MoveId for consistency.
-            // actually_moving_window = MovingWindow->RootWindow.
             ImGuiWindow* actually_moving_window = g.MovingWindow->RootWindow;
             ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
-            if (actually_moving_window != g.MovingWindow)
-                pos += actually_moving_window->PosFloat - g.MovingWindow->PosFloat;
             if (actually_moving_window->PosFloat.x != pos.x || actually_moving_window->PosFloat.y != pos.y)
             {
                 MarkIniSettingsDirty(actually_moving_window);
@@ -2483,37 +2483,45 @@ void ImGui::NewFrame()
     if (!mouse_avail_to_imgui && !mouse_dragging_extern_payload)
         g.HoveredWindow = g.HoveredRootWindow = NULL;
 
-    // Scale & Scrolling
-    if (g.HoveredWindow && g.IO.MouseWheel != 0.0f && !g.HoveredWindow->Collapsed)
+    // Mouse wheel scrolling, scale
+    if (g.HoveredWindow && !g.HoveredWindow->Collapsed && (g.IO.MouseWheel != 0.0f || g.IO.MouseWheelH != 0.0f))
     {
+        // If a child window has the ImGuiWindowFlags_NoScrollWithMouse flag, we give a chance to scroll its parent (unless either ImGuiWindowFlags_NoInputs or ImGuiWindowFlags_NoScrollbar are also set).
         ImGuiWindow* window = g.HoveredWindow;
-        if (g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
-        {
-            // Zoom / Scale window
-            const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
-            const float scale = new_font_scale / window->FontWindowScale;
-            window->FontWindowScale = new_font_scale;
+        ImGuiWindow* scroll_window = window;
+        while ((scroll_window->Flags & ImGuiWindowFlags_ChildWindow) && (scroll_window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(scroll_window->Flags & ImGuiWindowFlags_NoScrollbar) && !(scroll_window->Flags & ImGuiWindowFlags_NoInputs) && scroll_window->ParentWindow)
+            scroll_window = scroll_window->ParentWindow;
+        const bool scroll_allowed = !(scroll_window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(scroll_window->Flags & ImGuiWindowFlags_NoInputs);
 
-            const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
-            window->Pos += offset;
-            window->PosFloat += offset;
-            window->Size *= scale;
-            window->SizeFull *= scale;
-        }
-        else if (!g.IO.KeyCtrl)
+        if (g.IO.MouseWheel != 0.0f)
         {
-            // Mouse wheel Scrolling
-            // If a child window has the ImGuiWindowFlags_NoScrollWithMouse flag, we give a chance to scroll its parent (unless either ImGuiWindowFlags_NoInputs or ImGuiWindowFlags_NoScrollbar are also set).
-            ImGuiWindow* scroll_window = window;
-            while ((scroll_window->Flags & ImGuiWindowFlags_ChildWindow) && (scroll_window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(scroll_window->Flags & ImGuiWindowFlags_NoScrollbar) && !(scroll_window->Flags & ImGuiWindowFlags_NoInputs) && scroll_window->ParentWindow)
-                scroll_window = scroll_window->ParentWindow;
-
-            if (!(scroll_window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(scroll_window->Flags & ImGuiWindowFlags_NoInputs))
+            if (g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
             {
+                // Zoom / Scale window
+                const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
+                const float scale = new_font_scale / window->FontWindowScale;
+                window->FontWindowScale = new_font_scale;
+
+                const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
+                window->Pos += offset;
+                window->PosFloat += offset;
+                window->Size *= scale;
+                window->SizeFull *= scale;
+            }
+            else if (!g.IO.KeyCtrl && scroll_allowed)
+            {
+                // Mouse wheel vertical scrolling
                 float scroll_amount = 5 * scroll_window->CalcFontSize();
                 scroll_amount = (float)(int)ImMin(scroll_amount, (scroll_window->ContentsRegionRect.GetHeight() + scroll_window->WindowPadding.y * 2.0f) * 0.67f);
                 SetWindowScrollY(scroll_window, scroll_window->Scroll.y - g.IO.MouseWheel * scroll_amount);
             }
+        }
+        if (g.IO.MouseWheelH != 0.0f && scroll_allowed)
+        {
+            // Mouse wheel horizontal scrolling (for hardware that supports it)
+            float scroll_amount = scroll_window->CalcFontSize();
+            if (!g.IO.KeyCtrl && !(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
+                SetWindowScrollX(window, window->Scroll.x - g.IO.MouseWheelH * scroll_amount);
         }
     }
 
@@ -2977,7 +2985,7 @@ void ImGui::EndFrame()
                     // Set ActiveId even if the _NoMove flag is set, without it dragging away from a window with _NoMove would activate hover on other windows.
                     FocusWindow(g.HoveredWindow);
                     SetActiveID(g.HoveredWindow->MoveId, g.HoveredWindow);
-                    g.ActiveIdClickOffset = g.IO.MousePos - g.HoveredWindow->Pos;
+                    g.ActiveIdClickOffset = g.IO.MousePos - g.HoveredRootWindow->Pos;
                     if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoMove))
                     {
                         g.MovingWindow = g.HoveredWindow;
@@ -3030,7 +3038,7 @@ void ImGui::EndFrame()
     g.Windows.swap(g.WindowsSortBuffer);
 
     // Clear Input data for next frame
-    g.IO.MouseWheel = 0.0f;
+    g.IO.MouseWheel = g.IO.MouseWheelH = 0.0f;
     memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
 
     g.FrameCountEnded = g.FrameCount;
@@ -3578,6 +3586,7 @@ bool ImGui::IsMousePosValid(const ImVec2* mouse_pos)
     return mouse_pos->x >= MOUSE_INVALID && mouse_pos->y >= MOUSE_INVALID;
 }
 
+// NB: This is only valid if IsMousePosValid(). Backends in theory should always keep mouse position valid when dragging even outside the client window.
 ImVec2 ImGui::GetMouseDragDelta(int button, float lock_threshold)
 {
     ImGuiContext& g = *GImGui;
@@ -4560,10 +4569,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     if (first_begin_of_the_frame)
     {
+        const bool window_is_child_tooltip = (flags & ImGuiWindowFlags_ChildWindow) && (flags & ImGuiWindowFlags_Tooltip); // FIXME-WIP: Undocumented behavior of Child+Tooltip for pinned tooltip (#1345)
+
         // Initialize
         window->ParentWindow = parent_window;
         window->RootWindow = window->RootNonPopupWindow = window;
-        if (parent_window && (flags & ImGuiWindowFlags_ChildWindow))
+        if (parent_window && (flags & ImGuiWindowFlags_ChildWindow) && !window_is_child_tooltip)
             window->RootWindow = parent_window->RootWindow;
         if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
             window->RootNonPopupWindow = parent_window->RootNonPopupWindow;
@@ -4649,12 +4660,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Apply minimum/maximum window size constraints and final size
         window->SizeFull = CalcSizeAfterConstraint(window, window->SizeFull);
-        window->Size = window->Collapsed ? window->TitleBarRect().GetSize() : window->SizeFull;
-        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup))
-        {
-            IM_ASSERT(window_size_x_set_by_api && window_size_y_set_by_api); // Submitted by BeginChild()
-            window->Size = window->SizeFull;
-        }
+        window->Size = window->Collapsed && !(flags & ImGuiWindowFlags_ChildWindow) ? window->TitleBarRect().GetSize() : window->SizeFull;
 
         // SCROLLBAR STATUS
 
@@ -4686,8 +4692,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             window->BeginOrderWithinParent = parent_window->DC.ChildWindows.Size;
             parent_window->DC.ChildWindows.push_back(window);
-
-            if (!(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api)
+            if (!(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api && !window_is_child_tooltip)
                 window->Pos = window->PosFloat = parent_window->DC.CursorPos;
         }
 
@@ -4718,7 +4723,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         }
 
         // Position tooltip (always follows mouse)
-        if ((flags & ImGuiWindowFlags_Tooltip) != 0 && !window_pos_set_by_api)
+        if ((flags & ImGuiWindowFlags_Tooltip) != 0 && !window_pos_set_by_api && !window_is_child_tooltip)
         {
             ImVec2 ref_pos = g.IO.MousePos;
             ImRect rect_to_avoid(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24, ref_pos.y + 24); // FIXME: Completely hard-coded. Store boxes in mouse cursor data? Scale? Center on cursor hit-point?
@@ -4776,7 +4781,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DrawList->Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
         window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
         ImRect fullscreen_rect(GetVisibleRect());
-        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup))
+        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_is_child_tooltip)
             PushClipRect(parent_window->ClipRect.Min, parent_window->ClipRect.Max, true);
         else
             PushClipRect(fullscreen_rect.Min, fullscreen_rect.Max, true);
@@ -5611,6 +5616,13 @@ ImVec2 ImGui::GetWindowPos()
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     return window->Pos;
+}
+
+static void SetWindowScrollX(ImGuiWindow* window, float new_scroll_x)
+{
+    window->DC.CursorMaxPos.x += window->Scroll.x; // SizeContents is generally computed based on CursorMaxPos which is affected by scroll position, so we need to apply our change to it.
+    window->Scroll.x = new_scroll_x;
+    window->DC.CursorMaxPos.x -= window->Scroll.x;
 }
 
 static void SetWindowScrollY(ImGuiWindow* window, float new_scroll_y)
@@ -7620,16 +7632,19 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
             float v_cur = g.DragCurrentValue;
             const ImVec2 mouse_drag_delta = GetMouseDragDelta(0, 1.0f);
             float adjust_delta = 0.0f;
-            //if (g.ActiveIdSource == ImGuiInputSource_Mouse)
+            if (IsMousePosValid())
             {
-                adjust_delta = mouse_drag_delta.x - g.DragLastMouseDelta.x;
-                if (g.IO.KeyShift && g.DragSpeedScaleFast >= 0.0f)
-                    adjust_delta *= g.DragSpeedScaleFast;
-                if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
-                    adjust_delta *= g.DragSpeedScaleSlow;
+                //if (g.ActiveIdSource == ImGuiInputSource_Mouse)
+                {
+                    adjust_delta = mouse_drag_delta.x - g.DragLastMouseDelta.x;
+                    if (g.IO.KeyShift && g.DragSpeedScaleFast >= 0.0f)
+                        adjust_delta *= g.DragSpeedScaleFast;
+                    if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
+                        adjust_delta *= g.DragSpeedScaleSlow;
+                }
+                g.DragLastMouseDelta.x = mouse_drag_delta.x;
             }
             adjust_delta *= v_speed;
-            g.DragLastMouseDelta.x = mouse_drag_delta.x;
 
             if (fabsf(adjust_delta) > 0.0f)
             {
@@ -8607,8 +8622,11 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         }
         else if (io.MouseClicked[0] && !edit_state.SelectedAllMouseLock)
         {
-            stb_textedit_click(&edit_state, &edit_state.StbState, mouse_x, mouse_y);
-            edit_state.CursorAnimReset();
+            if (hovered)
+            {
+                stb_textedit_click(&edit_state, &edit_state.StbState, mouse_x, mouse_y);
+                edit_state.CursorAnimReset();
+            }
         }
         else if (io.MouseDown[0] && !edit_state.SelectedAllMouseLock && (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f))
         {
@@ -11392,7 +11410,7 @@ bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_s
         cond = ImGuiCond_Always;
 
     IM_ASSERT(type != NULL);
-    IM_ASSERT(strlen(type) < IM_ARRAYSIZE(payload.DataType));       // Payload type can be at most 8 characters longs
+    IM_ASSERT(strlen(type) < IM_ARRAYSIZE(payload.DataType) && "Payload type can be at most 12 characters long");
     IM_ASSERT((data != NULL && data_size > 0) || (data == NULL && data_size == 0));
     IM_ASSERT(cond == ImGuiCond_Always || cond == ImGuiCond_Once);
     IM_ASSERT(payload.SourceId != 0);                               // Not called between BeginDragDropSource() and EndDragDropSource()
