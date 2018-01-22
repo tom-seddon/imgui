@@ -84,7 +84,7 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.KeyMap[ImGuiKey_PageDown] = SDL_SCANCODE_PAGEDOWN;
     io.KeyMap[ImGuiKey_Home] = SDL_SCANCODE_HOME;
     io.KeyMap[ImGuiKey_End] = SDL_SCANCODE_END;
-    io.KeyMap[ImGuiKey_Insert] = SDLK_INSERT;
+    io.KeyMap[ImGuiKey_Insert] = SDL_SCANCODE_INSERT;
     io.KeyMap[ImGuiKey_Delete] = SDLK_DELETE;
     io.KeyMap[ImGuiKey_Backspace] = SDLK_BACKSPACE;
     io.KeyMap[ImGuiKey_Enter] = SDLK_RETURN;
@@ -318,6 +318,7 @@ static void ImImplMainLoopFrame(void* pDone)	{
         case SDL_MOUSEWHEEL:
             // positive away from the user and negative toward the user
             io.MouseWheel = (event.wheel.y != 0) ? event.wheel.y > 0 ? 1 : - 1 : 0;           // Mouse wheel: -1,0,+1
+            io.MouseWheelH= (event.wheel.x != 0) ? event.wheel.x > 0 ? 1 : - 1 : 0;      // Mouse wheel: -1,0,+1
             //fprintf(stderr,"io.MouseWheel = %d (%d,%d)\n",io.MouseWheel,event.wheel.x,event.wheel.y); // set correctly, but why it does not seem to work ?
             break;
         case SDL_MOUSEMOTION:
@@ -380,7 +381,7 @@ static void ImImplMainLoopFrame(void* pDone)	{
     static int curFramesDelay = -1;
     if (!gImGuiPaused)	{
         gImGuiWereOutsideImGui = !ImGui::IsMouseHoveringAnyWindow() && !ImGui::IsAnyItemActive();
-        const bool imguiNeedsInputNow = !gImGuiWereOutsideImGui && (io.WantTextInput || io.MouseDelta.x!=0 || io.MouseDelta.y!=0 || io.MouseWheel!=0);// || io.MouseDownOwned[0] || io.MouseDownOwned[1] || io.MouseDownOwned[2]);
+        const bool imguiNeedsInputNow = !gImGuiWereOutsideImGui && (io.WantTextInput || io.MouseDelta.x!=0 || io.MouseDelta.y!=0 || io.MouseWheel!=0 || io.MouseWheelH!=0);// || io.MouseDownOwned[0] || io.MouseDownOwned[1] || io.MouseDownOwned[2]);
         if (gImGuiCapturesInput != imguiNeedsInputNow) {
             gImGuiCapturesInput = imguiNeedsInputNow;
             //fprintf(stderr,"gImGuiCapturesInput=%s\n",gImGuiCapturesInput?"true":"false");

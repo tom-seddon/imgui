@@ -2116,8 +2116,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
                                   //-40.f; // If < 0, it's the number of lines that fit the whole screen (but without any kind of vertical spacing)
     ImFontConfig cfg;
 #   ifdef IMIMPL_BUILD_SDF
-    cfg.OversampleH=1;cfg.OversampleV=1;    // signed distance fonts works better when these values are equal (default: 3,1 are not equal)
-	//ImImpl_SdfShaderSetParams(ImVec4(0.460f,0.365f,0.120f,0.04f));	// (optional) Sets sdf params
+    cfg.OversampleH=cfg.OversampleV=1;    // signed distance fonts works better when these values are equal (default: 3,1 are not equal)
+    //ImImpl_SdfShaderSetParams(ImVec4(0.460f,0.365f,0.120f,0.04f));	// (optional) Sets sdf params
 #   endif //IMIMPL_BUILD_SDF
 
 
