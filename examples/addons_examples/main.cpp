@@ -1600,47 +1600,61 @@ void DrawGL()	// Mandatory
         static SoLoud::Soloud soloud; // Engine core
 
         static bool soloudEnabled = false;
-        if (!soloudEnabled && ImGui::Checkbox("Start SoLoud Test",&soloudEnabled))    {
+        if (soloudEnabled)  {
+            if (ImGui::Button("Stop SoLoud Test")) {
+                soloudEnabled=false;
+                //soloud.stopAll(); // For some odd reasons, if I stop all, then I cannot restart piano (tested WITH_OPENAL only)
+                soloud.deinit();
+            }
+        }
+        else if (ImGui::Button("Start SoLoud Test")) {
+            soloudEnabled = true;
             soloud.init();// Initialize SoLoud (the opposite should be: soloud.stopAll();soloud.deinit();)
             //soloud.setVisualizationEnable(1); // enable visualization for FFT calc
 
+            // START SOME DEMO SOUNDS HERE ==================================
+            {
 #           ifndef NO_IMGUISOLOUD_WAV   // Wav audiosource (SoLoud::WavStream and SoLoud::Wav (i.e. .wav,.ogg) is enabled by default. All the rest must be manually enabled a.t.p.l.)
-            // Here we play some files soon after initing SoLoud:
-            static SoLoud::WavStream ogg; // (SoLoud::Wav still works with ogg too)
-            ogg.load("tetsno.ogg");       // Load an ogg file in streaming mode
-            soloud.play(ogg);
+                // Here we play some files soon after initing SoLoud:
+                static SoLoud::WavStream ogg; // (SoLoud::Wav still works with ogg too)
+                ogg.load("tetsno.ogg");       // Load an ogg file in streaming mode
+                soloud.play(ogg);
 
-            static SoLoud::Wav wav;                 // One sample source
-            wav.load("AKWF_c604_0024.wav");       // Load a wave file
-            //wav.setLooping(1);                          // Tell SoLoud to loop the sound
-            /*int handle1 = */soloud.play(wav);             // Play it
-            //soloud.setVolume(handle1, 0.5f);            // Set volume; 1.0f is "normal"
-            //soloud.setPan(handle1, -0.2f);              // Set pan; -1 is left, 1 is right
-            //soloud.setRelativePlaySpeed(handle1, 0.9f); // Play a bit slower; 1.0f is normal
+                static SoLoud::Wav wav;                 // One sample source
+                wav.load("AKWF_c604_0024.wav");       // Load a wave file
+                //wav.setLooping(1);                          // Tell SoLoud to loop the sound
+                /*int handle1 = */soloud.play(wav);             // Play it
+                //soloud.setVolume(handle1, 0.5f);            // Set volume; 1.0f is "normal"
+                //soloud.setPan(handle1, -0.2f);              // Set pan; -1 is left, 1 is right
+                //soloud.setRelativePlaySpeed(handle1, 0.9f); // Play a bit slower; 1.0f is normal
 #           endif //NO_IMGUISOLOUD_WAV
 
-/*          // These should work too (AFAIK), but audio files are missing...
+            // These should work too (AFAIK), but audio files are missing...
+            /*
 #           ifdef YES_IMGUISOLOUD_MODPLUG
-            static SoLoud::Modplug mod;
-            mod.load("audio/BRUCE.S3M");
-            soloud.play(mod);
+                static SoLoud::Modplug mod;
+                mod.load("audio/BRUCE.S3M");
+                soloud.play(mod);
 #           endif //YES_IMGUISOLOUD_MODPLUG
 #           ifdef YES_IMGUISOLOUD_MONOTONE
-            static SoLoud::Monotone mon;
-            mon.load("audio/Jakim - Aboriginal Derivatives.mon");
-            soloud.play(mon);
+                static SoLoud::Monotone mon;
+                mon.load("audio/Jakim - Aboriginal Derivatives.mon");
+                soloud.play(mon);
 #           endif //YES_IMGUISOLOUD_MONOTONE
 #           ifdef YES_IMGUISOLOUD_TEDSID
-            static SoLoud::TedSid ted;
-            ted.load("audio/ted_storm.prg.dump");
-            soloud.play(ted);
-            static SoLoud::TedSid sid;
-            sid.load("audio/Modulation.sid.dump");
-            soloud.play(sid);
+                static SoLoud::TedSid ted;
+                ted.load("audio/ted_storm.prg.dump");
+                soloud.play(ted);
+                static SoLoud::TedSid sid;
+                sid.load("audio/Modulation.sid.dump");
+                soloud.play(sid);
 #           endif //YES_IMGUISOLOUD_TEDSID
-*/
+            */
             // (soloud.getVoiceCount()==0) can be used to check if any sound is playing
+            }
+            // ==============================================================
         }
+
         if (soloudEnabled && ImGui::TreeNode("SoLoud Stuff"))   {
             // extra sources need additional definitions (at the project level not here), unless you define YES_IMGUISOLOUD_ALL (a.t.p.l. not here).
             // For example:
@@ -1675,6 +1689,37 @@ void DrawGL()	// Mandatory
                 soloud.play(speech);    // Play the sound source (we could do this several times if we wanted)
             }
 #           endif //YES_IMGUISOLOUD_SPEECH
+#           if  (!defined(NO_IMGUIFILESYSTEM) && !defined(NO_IMGUIHELPER)  && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
+#           ifdef YES_IMGUISOLOUD_MODPLUG
+            {
+                // Load dialog
+                static ImGuiFs::Dialog loadDlg;
+                ImGui::AlignFirstTextHeightToWidgets();
+                ImGui::Text("Mod File:");ImGui::SameLine();
+                ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.35f);
+                ImGui::InputText("###ModFiletoplayloadID",(char*)loadDlg.getChosenPath(),ImGuiFs::MAX_PATH_BYTES,ImGuiInputTextFlags_ReadOnly);
+                ImGui::PopItemWidth();
+                ImGui::SameLine(0,0);
+                const bool browseButton = ImGui::Button("...##ModFiletoplayloadbuttonID");
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Supported extensions:\n\"%s\"\n(but .mid and .abc files require additional setup to work).",SoLoud::Modplug::SupportedExtensions);
+                loadDlg.chooseFileDialog(browseButton,loadDlg.getLastDirectory(),SoLoud::Modplug::SupportedExtensions);
+                const bool filePathToStringifyIsValid = strlen(loadDlg.getChosenPath())>0;
+                ImGui::SameLine(0.f,50.f);
+                static SoLoud::Modplug mod;
+                if (ImGui::Button("Play##ModPlayButton")) {
+                    if (filePathToStringifyIsValid && ImGuiFs::FileExists(loadDlg.getChosenPath()))   {
+                        soloud.stopAudioSource(mod);
+                        mod.load(loadDlg.getChosenPath());
+                        soloud.play(mod);
+                    }
+                }
+                ImGui::SameLine(0,0);
+                if (ImGui::Button("Stop##ModStopButton")) {
+                    soloud.stopAudioSource(mod);
+                }
+            }
+#           endif //YES_IMGUISOLOUD_MODPLUG
+#           endif //!defined(NO_IMGUIFILESYSTEM)
 #           ifdef IMGUISOLOUD_HAS_BASICPIANO    // This is an automatic definition (that depends on other definitions)
             const bool pianoEnabled = ImGui::TreeNode("Play piano using the PC keyboard");
             if (ImGui::IsItemHovered()) {
@@ -1691,7 +1736,7 @@ void DrawGL()	// Mandatory
 
                 ImGui::TreePop();
             }
-#           endif
+#           endif //IMGUISOLOUD_HAS_BASICPIANO
             ImGui::TreePop();
         }
         ImGui::TreePop();

@@ -240,13 +240,13 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         else
             PushClipRect(fullscreen_rect.Min, fullscreen_rect.Max, true);
 
-        if (window_just_activated_by_user)
+        /*if (window_just_activated_by_user)
         {
             // Popup first latch mouse position, will position itself when it appears next frame
             window->AutoPosLastDirection = ImGuiDir_None;
             if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api)
                 window->PosFloat = g.IO.MousePos;
-        }
+        }*/
 
         // Collapse window by double-clicking on title bar
         // At this point we don't have a clipping rectangle setup yet, so we can use the title bar area for hit detection and drawing
@@ -378,6 +378,13 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         // POSITION
 
+        // Popup latch its initial position, will position itself when it appears next frame
+        if (window_just_activated_by_user)
+        {
+            window->AutoPosLastDirection = ImGuiDir_None;
+            if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api)
+                window->Pos = window->PosFloat = g.CurrentPopupStack.back().OpenPopupPos;
+        }
 
         // Position child window
         if (flags & ImGuiWindowFlags_ChildWindow)
@@ -387,8 +394,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             if (!(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api && !window_is_child_tooltip)
                  window->Pos = window->PosFloat = parent_window->DC.CursorPos;
         }
-        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api)
-            window->Pos = window->PosFloat = parent_window->DC.CursorPos;
+        //if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api)
+        //    window->Pos = window->PosFloat = parent_window->DC.CursorPos;
 
         const bool window_pos_with_pivot = (window->SetWindowPosVal.x != FLT_MAX && window->HiddenFrames == 0);
         if (window_pos_with_pivot)
@@ -466,6 +473,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         // Draw window + handle manual resize
         ImRect title_bar_rect = window->TitleBarRect();
+        const bool window_is_focused = want_focus || (g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow);
         if (window->Collapsed)
         {
             // Title bar only
@@ -571,7 +579,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
             // Title bar
             if (!(flags & ImGuiWindowFlags_NoTitleBar)) {
-                const bool window_is_focused = g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow;
+                //const bool window_is_focused = g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow;
 #               if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
                 if (gImGuiDockpanelManagerExtendedStyle)    {
                     ImU32 col = GetColorU32(window_is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);

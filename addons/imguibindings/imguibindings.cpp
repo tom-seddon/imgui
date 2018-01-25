@@ -1705,7 +1705,6 @@ void ImImpl_NewFramePaused()    {
 
     // New
     g.MovingWindow = NULL;
-    g.MovingWindowMoveId = 0;
 
     // New
     g.TooltipOverrideCount = 0;
