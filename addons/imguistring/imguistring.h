@@ -299,9 +299,16 @@ public:
     }
 
     IMGUI_FORCE_INLINE  void                 push_back(const value_type& v)  {
-        if (Size == Capacity) reserve(_grow_capacity(Size+1));
-        IMIMPL_PLACEMENT_NEW(&Data[Size]) T();
-        Data[Size++] = v;
+        if (Size == Capacity) {
+			const value_type v_val = v;	// Now v can point to old Data field
+			reserve(_grow_capacity(Size+1));
+        	IMIMPL_PLACEMENT_NEW(&Data[Size]) T();
+        	Data[Size++] = v_val;
+		}
+		else {
+        	IMIMPL_PLACEMENT_NEW(&Data[Size]) T();
+        	Data[Size++] = v;
+		}
     }
     IMGUI_FORCE_INLINE  void                 pop_back()                      {
         IM_ASSERT(Size > 0);
