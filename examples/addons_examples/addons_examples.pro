@@ -85,6 +85,7 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/ImImpl_Binding_WinAPI.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/ImImpl_Binding_Direct3D9.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/imguibindings.h"		    \
+	   $$IMGUI_BASE_PATH"/addons/imguibindings/stb_image.h"			    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/imguistring/imguistring.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguifilesystem/imguifilesystem.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguifilesystem/dirent_portable.h"		    \
