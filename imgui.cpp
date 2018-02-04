@@ -510,11 +510,11 @@
 
  Q: How can I easily use icons in my application?
  A: The most convenient and practical way is to merge an icon font such as FontAwesome inside you main font. Then you can refer to icons within your 
-    strings. Read 'How can I load multiple fonts?' and the file 'extra_fonts/README.txt' for instructions and useful header files.
+    strings. Read 'How can I load multiple fonts?' and the file 'misc/fonts/README.txt' for instructions and useful header files.
 
  Q: How can I load multiple fonts?
  A: Use the font atlas to pack them into a single texture:
-    (Read extra_fonts/README.txt and the code in ImFontAtlas for more details.)
+    (Read misc/fonts/README.txt and the code in ImFontAtlas for more details.)
 
       ImGuiIO& io = ImGui::GetIO();
       ImFont* font0 = io.Fonts->AddFontDefault();
@@ -669,7 +669,6 @@ static void             MarkIniSettingsDirty(ImGuiWindow* window);
 
 static ImRect           GetViewportRect();
 
-static void             CloseInactivePopups(ImGuiWindow* ref_window);
 static void             ClosePopupToLevel(int remaining);
 static ImGuiWindow*     GetFrontMostModalRootWindow();
 
@@ -775,6 +774,7 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     GrabRounding = ImFloor(GrabRounding * scale_factor);
     DisplayWindowPadding = ImFloor(DisplayWindowPadding * scale_factor);
     DisplaySafeAreaPadding = ImFloor(DisplaySafeAreaPadding * scale_factor);
+    MouseCursorScale = ImFloor(MouseCursorScale * scale_factor);
 }
 
 ImGuiIO::ImGuiIO()
@@ -2549,7 +2549,7 @@ void ImGui::NewFrame()
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
     g.CurrentWindowStack.resize(0);
     g.CurrentPopupStack.resize(0);
-    CloseInactivePopups(g.NavWindow);
+    ClosePopupsOverWindow(g.NavWindow);
 
     // Create implicit window - we will only render it if the user has added something to it.
     // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
@@ -3000,7 +3000,7 @@ void ImGui::EndFrame()
             }
 
             // With right mouse button we close popups without changing focus
-            // (The left mouse button path calls FocusWindow which will lead NewFrame->CloseInactivePopups to trigger)
+            // (The left mouse button path calls FocusWindow which will lead NewFrame->ClosePopupsOverWindow to trigger)
             if (g.IO.MouseClicked[1])
             {
                 // Find the top-most window between HoveredWindow and the front most Modal Window.
@@ -3017,7 +3017,7 @@ void ImGui::EndFrame()
                     if (window == g.HoveredWindow)
                         hovered_window_above_modal = true;
                 }
-                CloseInactivePopups(hovered_window_above_modal ? g.HoveredWindow : modal);
+                ClosePopupsOverWindow(hovered_window_above_modal ? g.HoveredWindow : modal);
             }
         }
     }
@@ -3074,11 +3074,12 @@ void ImGui::Render()
         {
             const ImVec2 pos = g.IO.MousePos - offset;
             const ImTextureID tex_id = g.IO.Fonts->TexID;
+            const float sc = g.Style.MouseCursorScale;
             g.OverlayDrawList.PushTextureID(tex_id);
-            g.OverlayDrawList.AddImage(tex_id, pos+ImVec2(1,0), pos+ImVec2(1,0) + size, uv[2], uv[3], IM_COL32(0,0,0,48));        // Shadow
-            g.OverlayDrawList.AddImage(tex_id, pos+ImVec2(2,0), pos+ImVec2(2,0) + size, uv[2], uv[3], IM_COL32(0,0,0,48));        // Shadow
-            g.OverlayDrawList.AddImage(tex_id, pos,             pos + size,             uv[2], uv[3], IM_COL32(0,0,0,255));       // Black border
-            g.OverlayDrawList.AddImage(tex_id, pos,             pos + size,             uv[0], uv[1], IM_COL32(255,255,255,255)); // White fill
+            g.OverlayDrawList.AddImage(tex_id, pos + ImVec2(1,0)*sc, pos+ImVec2(1,0)*sc + size*sc, uv[2], uv[3], IM_COL32(0,0,0,48));        // Shadow
+            g.OverlayDrawList.AddImage(tex_id, pos + ImVec2(2,0)*sc, pos+ImVec2(2,0)*sc + size*sc, uv[2], uv[3], IM_COL32(0,0,0,48));        // Shadow
+            g.OverlayDrawList.AddImage(tex_id, pos,                  pos + size*sc,                uv[2], uv[3], IM_COL32(0,0,0,255));       // Black border
+            g.OverlayDrawList.AddImage(tex_id, pos,                  pos + size*sc,                uv[0], uv[1], IM_COL32(255,255,255,255)); // White fill
             g.OverlayDrawList.PopTextureID();
         }
         if (!g.OverlayDrawList.VtxBuffer.empty())
@@ -3772,7 +3773,7 @@ void ImGui::OpenPopupEx(ImGuiID id)
         else
             g.OpenPopupStack[current_stack_size] = popup_ref;
 
-        // When reopening a popup we first refocus its parent, otherwise if its parent is itself a popup it would get closed by CloseInactivePopups().
+        // When reopening a popup we first refocus its parent, otherwise if its parent is itself a popup it would get closed by ClosePopupsOverWindow().
         // This is equivalent to what ClosePopupToLevel() does.
         //if (g.OpenPopupStack[current_stack_size].PopupId == id)
         //    FocusWindow(parent_window);
@@ -3785,7 +3786,7 @@ void ImGui::OpenPopup(const char* str_id)
     OpenPopupEx(g.CurrentWindow->GetID(str_id));
 }
 
-static void CloseInactivePopups(ImGuiWindow* ref_window)
+void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window)
 {
     ImGuiContext& g = *GImGui;
     if (g.OpenPopupStack.empty())
@@ -4724,8 +4725,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Position tooltip (always follows mouse)
         if ((flags & ImGuiWindowFlags_Tooltip) != 0 && !window_pos_set_by_api && !window_is_child_tooltip)
         {
+            float sc = g.Style.MouseCursorScale;
             ImVec2 ref_pos = g.IO.MousePos;
-            ImRect rect_to_avoid(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24, ref_pos.y + 24); // FIXME: Completely hard-coded. Store boxes in mouse cursor data? Scale? Center on cursor hit-point?
+            ImRect rect_to_avoid(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24 * sc, ref_pos.y + 24 * sc); // FIXME: Hard-coded based on mouse cursor shape expectation. Exact dimension not very important.
             window->PosFloat = FindBestWindowPosForPopup(ref_pos, window->Size, &window->AutoPosLastDirection, rect_to_avoid);
             if (window->AutoPosLastDirection == ImGuiDir_None)
                 window->PosFloat = ref_pos + ImVec2(2,2); // If there's not enough room, for tooltip we prefer avoiding the cursor at all cost even if it means that part of the tooltip won't be visible.
@@ -5161,7 +5163,8 @@ void ImGui::Scrollbar(ImGuiLayoutType direction)
 void ImGui::BringWindowToFront(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
-    if (g.Windows.back() == window)
+    ImGuiWindow* current_front_window = g.Windows.back();
+    if (current_front_window == window || current_front_window->RootWindow == window)
         return;
     for (int i = g.Windows.Size - 2; i >= 0; i--) // We can ignore the front most window
         if (g.Windows[i] == window)
@@ -6458,12 +6461,13 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
 
     // Render
     const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_CloseButtonActive : hovered ? ImGuiCol_CloseButtonHovered : ImGuiCol_CloseButton);
-    const ImVec2 center = bb.GetCenter();
+    ImVec2 center = bb.GetCenter();
     window->DrawList->AddCircleFilled(center, ImMax(2.0f, radius), col, 12);
 
     const float cross_extent = (radius * 0.7071f) - 1.0f;
     if (hovered)
     {
+        center -= ImVec2(0.5f, 0.5f);
         window->DrawList->AddLine(center + ImVec2(+cross_extent,+cross_extent), center + ImVec2(-cross_extent,-cross_extent), GetColorU32(ImGuiCol_Text));
         window->DrawList->AddLine(center + ImVec2(+cross_extent,-cross_extent), center + ImVec2(-cross_extent,+cross_extent), GetColorU32(ImGuiCol_Text));
     }
@@ -6570,8 +6574,9 @@ void ImGui::LogToTTY(int max_depth)
         return;
     ImGuiWindow* window = g.CurrentWindow;
 
-    g.LogEnabled = true;
+    IM_ASSERT(g.LogFile == NULL);
     g.LogFile = stdout;
+    g.LogEnabled = true;
     g.LogStartDepth = window->DC.TreeDepth;
     if (max_depth >= 0)
         g.LogAutoExpandMaxDepth = max_depth;
@@ -6592,6 +6597,7 @@ void ImGui::LogToFile(int max_depth, const char* filename)
             return;
     }
 
+    IM_ASSERT(g.LogFile == NULL);
     g.LogFile = ImFileOpen(filename, "ab");
     if (!g.LogFile)
     {
@@ -6612,8 +6618,9 @@ void ImGui::LogToClipboard(int max_depth)
         return;
     ImGuiWindow* window = g.CurrentWindow;
 
-    g.LogEnabled = true;
+    IM_ASSERT(g.LogFile == NULL);
     g.LogFile = NULL;
+    g.LogEnabled = true;
     g.LogStartDepth = window->DC.TreeDepth;
     if (max_depth >= 0)
         g.LogAutoExpandMaxDepth = max_depth;
@@ -6626,7 +6633,6 @@ void ImGui::LogFinish()
         return;
 
     LogText(IM_NEWLINE);
-    g.LogEnabled = false;
     if (g.LogFile != NULL)
     {
         if (g.LogFile == stdout)
@@ -6640,6 +6646,7 @@ void ImGui::LogFinish()
         SetClipboardText(g.LogClipboard->begin());
         g.LogClipboard->clear();
     }
+    g.LogEnabled = false;
 }
 
 // Helper to display logging buttons
