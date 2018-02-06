@@ -45,6 +45,7 @@ struct ImGuiWindowSettings;
 typedef int ImGuiLayoutType;        // enum: horizontal or vertical             // enum ImGuiLayoutType_
 typedef int ImGuiButtonFlags;       // flags: for ButtonEx(), ButtonBehavior()  // enum ImGuiButtonFlags_
 typedef int ImGuiItemFlags;         // flags: for PushItemFlag()                // enum ImGuiItemFlags_
+typedef int ImGuiItemStatusFlags;   // flags: storage for DC.LastItemXXX        // enum ImGuiItemStatusFlags_
 typedef int ImGuiSeparatorFlags;    // flags: for Separator() - internal        // enum ImGuiSeparatorFlags_
 typedef int ImGuiSliderFlags;       // flags: for SliderBehavior()              // enum ImGuiSliderFlags_
 
@@ -214,6 +215,13 @@ enum ImGuiSeparatorFlags_
 {
     ImGuiSeparatorFlags_Horizontal          = 1 << 0,   // Axis default to current layout type, so generally Horizontal unless e.g. in a menu bar
     ImGuiSeparatorFlags_Vertical            = 1 << 1
+};
+
+// Storage for LastItem data
+enum ImGuiItemStatusFlags_
+{
+    ImGuiItemStatusFlags_HoveredRect        = 1 << 0,
+    ImGuiItemStatusFlags_HasDisplayRect     = 1 << 1
 };
 
 // FIXME: this is in development, not exposed/functional as a generic feature yet.
@@ -673,6 +681,7 @@ struct ImGuiContext
 };
 
 // Transient per-window flags, reset at the beginning of the frame. For child window, inherited from parent on first Begin().
+// This is going to be exposed in imgui.h when stabilized enough.
 enum ImGuiItemFlags_
 {
     ImGuiItemFlags_AllowKeyboardFocus           = 1 << 0,  // true
@@ -699,8 +708,9 @@ struct IMGUI_API ImGuiDrawContext
     float                   LogLinePosY;
     int                     TreeDepth;
     ImGuiID                 LastItemId;
-    ImRect                  LastItemRect;
-    bool                    LastItemRectHoveredRect;
+    ImGuiItemStatusFlags    LastItemStatusFlags;
+    ImRect                  LastItemRect;           // Interaction rect
+    ImRect                  LastItemDisplayRect;    // End-user display rect (only valid if LastItemStatusFlags & ImGuiItemStatusFlags_HasDisplayRect)
     bool                    MenuBarAppending;
     float                   MenuBarOffsetX;
     ImVector<ImGuiWindow*>  ChildWindows;
@@ -730,8 +740,8 @@ struct IMGUI_API ImGuiDrawContext
         LogLinePosY = -1.0f;
         TreeDepth = 0;
         LastItemId = 0;
-        LastItemRect = ImRect();
-        LastItemRectHoveredRect = false;
+        LastItemStatusFlags = 0;
+        LastItemRect = LastItemDisplayRect = ImRect();
         MenuBarAppending = false;
         MenuBarOffsetX = 0.0f;
         StateStorage = NULL;
@@ -838,13 +848,14 @@ public:
 // Backup and restore just enough data to be able to use IsItemHovered() on item A after another B in the same window has overwritten the data.  
 struct ImGuiItemHoveredDataBackup
 {
-    ImGuiID     LastItemId;
-    ImRect      LastItemRect;
-    bool        LastItemRectHoveredRect;
+    ImGuiID                 LastItemId;
+    ImGuiItemStatusFlags    LastItemStatusFlags;
+    ImRect                  LastItemRect;
+    ImRect                  LastItemDisplayRect;
 
     ImGuiItemHoveredDataBackup() { Backup(); }
-    void Backup()        { ImGuiWindow* window = GImGui->CurrentWindow; LastItemId = window->DC.LastItemId; LastItemRect = window->DC.LastItemRect; LastItemRectHoveredRect = window->DC.LastItemRectHoveredRect; }
-    void Restore() const { ImGuiWindow* window = GImGui->CurrentWindow; window->DC.LastItemId = LastItemId; window->DC.LastItemRect = LastItemRect; window->DC.LastItemRectHoveredRect = LastItemRectHoveredRect; }
+    void Backup()        { ImGuiWindow* window = GImGui->CurrentWindow; LastItemId = window->DC.LastItemId; LastItemStatusFlags = window->DC.LastItemStatusFlags; LastItemRect = window->DC.LastItemRect; LastItemDisplayRect = window->DC.LastItemDisplayRect; }
+    void Restore() const { ImGuiWindow* window = GImGui->CurrentWindow; window->DC.LastItemId = LastItemId; window->DC.LastItemStatusFlags = LastItemStatusFlags; window->DC.LastItemRect = LastItemRect; window->DC.LastItemDisplayRect = LastItemDisplayRect; }
 };
 
 //-----------------------------------------------------------------------------
