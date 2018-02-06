@@ -1738,6 +1738,7 @@ static TabWindowDragData gDragData;
 struct MyTabWindowHelperStruct {
     bool isRMBclicked;
     static bool isMouseDragging;
+    static bool isMouseDraggingJustStarted;
     static bool LockedDragging; // better dragging experience when trying to drag non-draggable tab labels
     bool isASplitterActive;
     static TabWindow::TabLabel* tabLabelPopup;
@@ -1773,12 +1774,14 @@ struct MyTabWindowHelperStruct {
     ImGuiWindowFlags flags;
 
     MyTabWindowHelperStruct(TabWindow* _tabWindow) {
-        isMouseDragging = ImGui::IsMouseDragging(0,2.f);
+        const float draggingThresholdTime = 1.5f;        // Tweakable
+        isMouseDragging = ImGui::IsMouseDragging(0,draggingThresholdTime);
+        isMouseDraggingJustStarted = isMouseDragging && (ImGui::GetIO().MouseDownDuration[0] <= draggingThresholdTime*.25f);// ImGui::GetIO().MouseDown[0] does not work!
         isRMBclicked = ImGui::IsMouseClicked(1);
         isASplitterActive = false;
         tabWindow = _tabWindow;
         allowExchangeTabLabels = !gDragData.draggingTabSrc || (gDragData.draggingTabWindowSrc && gDragData.draggingTabWindowSrc->canExchangeTabLabelsWith(tabWindow));
-    //mustOpenAskForClosingPopup = false;
+        //mustOpenAskForClosingPopup = false;
 
         ImGuiStyle& style = ImGui::GetStyle();
         itemSpacing =   style.ItemSpacing;
@@ -1831,6 +1834,7 @@ bool  MyTabWindowHelperStruct::tabLabelPopupChanged = false;
 bool  MyTabWindowHelperStruct::tabLabelGroupPopupChanged = false;
 TabWindowNode*  MyTabWindowHelperStruct::tabLabelGroupPopupNode = NULL;
 bool MyTabWindowHelperStruct::isMouseDragging = false;
+bool MyTabWindowHelperStruct::isMouseDraggingJustStarted = false;
 bool MyTabWindowHelperStruct::LockedDragging = false;
 ImVector<TabWindow::TabLabel*> MyTabWindowHelperStruct::TabsToClose;
 ImVector<TabWindow*> MyTabWindowHelperStruct::TabsToCloseParents;
@@ -2031,38 +2035,40 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
                     if (tab.tooltip && mhs.isWindowHovered && strlen(tab.tooltip)>0 && (&tab!=mhs.tabLabelPopup || GImGui->OpenPopupStack.size()==0) )  ImGui::SetTooltip("%s",tab.tooltip);
 
                     if (isDraggingCorrectly) {
-                        if (!dd.draggingTabSrc) {
-                            if (mhs.isWindowHovered)    {
-                                if (!tab.draggable) mhs.LockedDragging = true;
-                                else    {
-                                    dd.draggingTabSrc = &tab;
-                                    dd.draggingTabNodeSrc = this;
-                                    dd.draggingTabImGuiWindowSrc = g.HoveredWindow;
-                                    dd.draggingTabWindowSrc = mhs.tabWindow;
-                                    dd.draggingTabSrcIsSelected = (selectedTab == &tab);
+                        if (mhs.isMouseDraggingJustStarted)  {
+                            if (!dd.draggingTabSrc) {
+                                if (mhs.isWindowHovered)    {
+                                    if (!tab.draggable) mhs.LockedDragging = true;
+                                    else {
+                                        dd.draggingTabSrc = &tab;
+                                        dd.draggingTabNodeSrc = this;
+                                        dd.draggingTabImGuiWindowSrc = g.HoveredWindow;
+                                        dd.draggingTabWindowSrc = mhs.tabWindow;
+                                        dd.draggingTabSrcIsSelected = (selectedTab == &tab);
 
-                                    dd.draggingTabSrcSize = ImGui::GetItemRectSize();
-                                    const ImVec2& mp = ImGui::GetIO().MousePos;
-                                    const ImVec2 draggingTabCursorPos = ImGui::GetCursorPos();
-                                    dd.draggingTabSrcOffset=ImVec2(
-                                                mp.x+dd.draggingTabSrcSize.x*0.5f-sumX+ImGui::GetScrollX(),
-                                                mp.y+dd.draggingTabSrcSize.y*0.5f-draggingTabCursorPos.y+ImGui::GetScrollY()
-                                                );
+                                        dd.draggingTabSrcSize = ImGui::GetItemRectSize();
+                                        const ImVec2& mp = ImGui::GetIO().MousePos;
+                                        const ImVec2 draggingTabCursorPos = ImGui::GetCursorPos();
+                                        dd.draggingTabSrcOffset=ImVec2(
+                                                    mp.x+dd.draggingTabSrcSize.x*0.5f-sumX+ImGui::GetScrollX(),
+                                                    mp.y+dd.draggingTabSrcSize.y*0.5f-draggingTabCursorPos.y+ImGui::GetScrollY()
+                                                    );
 
-                                    //fprintf(stderr,"Hovered Start Window:%s\n",g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
+                                        //fprintf(stderr,"Hovered Start Window:%s\n",g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
+                                    }
                                 }
                             }
-                        }
-                        else if (dd.draggingTabSrc && (!tab.draggable || !mhs.allowExchangeTabLabels)) {
-                            // Prohibition sign-------
-                            const ImVec2& itemSize = ImGui::GetItemRectSize();
-                            const ImVec2 itemPos =ImVec2(
-                                        sumX-itemSize.x*0.5f-ImGui::GetScrollX(),
-                                        ImGui::GetCursorPos().y-itemSize.y*0.5f-ImGui::GetScrollY()
-                                        );
-                            ImDrawList* drawList = ImGui::GetWindowDrawList();  // main problem is that the sign is covered by the dragging tab (even if the latter is semi-transparent...)
-                            const ImVec2 wp = g.HoveredWindow->Pos;
-                            dd.drawProhibitionSign(drawList,wp,itemPos,dd.draggingTabSrcSize.y*1.2f);
+                            else if (dd.draggingTabSrc && (!tab.draggable || !mhs.allowExchangeTabLabels)) {
+                                // Prohibition sign-------
+                                const ImVec2& itemSize = ImGui::GetItemRectSize();
+                                const ImVec2 itemPos =ImVec2(
+                                            sumX-itemSize.x*0.5f-ImGui::GetScrollX(),
+                                            ImGui::GetCursorPos().y-itemSize.y*0.5f-ImGui::GetScrollY()
+                                            );
+                                ImDrawList* drawList = ImGui::GetWindowDrawList();  // main problem is that the sign is covered by the dragging tab (even if the latter is semi-transparent...)
+                                const ImVec2 wp = g.HoveredWindow->Pos;
+                                dd.drawProhibitionSign(drawList,wp,itemPos,dd.draggingTabSrcSize.y*1.2f);
+                            }
                         }
                     }
                     else if (dd.draggingTabSrc && dd.draggingTabSrc!=&tab && g.HoveredRootWindow && g.CurrentWindow) {
@@ -2078,7 +2084,7 @@ void TabWindowNode::render(const ImVec2 &windowSize, MyTabWindowHelperStruct *pt
                         }
                     }
 
-                    if (mhs.isRMBclicked && mhs.isWindowHovered) {
+                    if (mhs.isRMBclicked && mhs.isWindowHovered && !dd.draggingTabSrc) {
                         // select it
                         selection_changed = (selectedTab != &tab);
                         newSelectedTab = &tab;

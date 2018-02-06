@@ -174,6 +174,13 @@ I think failing in SDL_Init() when a requested subsystem doesn't work properly i
     SDL_GL_CreateContext(window);
 
 
+    // 0 => immediate; 1 => vsync; -1 => vsync if possible, but late swaps happen immediately instead of waiting for the next retrace.
+    if (SDL_GL_SetSwapInterval(-1)==-1) {
+        //fprintf(stderr,"Warning SwapInterval(-1) not supported\n");
+        // It should fall back to 0 if unsupported
+        SDL_GL_SetSwapInterval(1);  // vsync
+    }
+
 #ifdef IMGUI_USE_GLAD
    if(!gladLoadGL()) {
         fprintf(stderr,"Error initializing GLAD!\n");
@@ -287,10 +294,9 @@ static void ImImplMainLoopFrame(void* pDone)	{
             key&=~SDLK_SCANCODE_MASK;
             // Don't remember what these 3 lines are for... removed because they prevent arrows key to work (TODO: understand what these lines were for).
             // Found these 3 lines here: https://github.com/ocornut/imgui/issues/729
-            /*if (event.key.keysym.sym & (1<<30)) {
+            //if (event.key.keysym.sym & (1<<30)) {
                 //fprintf(stderr,"SDL Highbit remask %x -> %x\n", event.key.keysym.sym, key);
-                key |= 0x100;
-            }*/
+                //key |= 0x100;}
             if (key>=0 && key<512)  io.KeysDown[key] = down;
         }
             break;
@@ -340,10 +346,17 @@ static void ImImplMainLoopFrame(void* pDone)	{
     }
 
     // Setup io.DeltaTime
-    static Uint32  time = SDL_GetTicks();
+    /*static Uint32  time = SDL_GetTicks();
     const Uint32  current_time =  SDL_GetTicks();
     static float deltaTime = (float)(0.001*(double)(current_time - time));
-    deltaTime = (float)(0.001*(double)(current_time - time));
+    deltaTime = (float)(0.001*(double)(current_time - time));*/
+
+    static const Uint64 frequency = SDL_GetPerformanceFrequency();
+    static Uint64 time = SDL_GetPerformanceCounter();
+    const Uint64 current_time = SDL_GetPerformanceCounter();
+    static float deltaTime = 0.f;
+    deltaTime = (float)((double)(current_time - time) / frequency);
+
     if (deltaTime<=0) deltaTime=1.0f/60.0f;
     time = current_time;
 
