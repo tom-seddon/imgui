@@ -2947,7 +2947,9 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
     static bool draggingLocked = false;
 
     const bool isRMBclicked = ImGui::IsMouseClicked(1);
-    const bool isMouseDragging = ImGui::IsMouseDragging(0,2.f);
+    const float mouseDraggingThresholdTime = 1.5f;        // Tweakable
+    const bool isMouseDragging = ImGui::IsMouseDragging(0,mouseDraggingThresholdTime);
+    const bool isMouseDraggingJustStarted = isMouseDragging && (ImGui::GetIO().MouseDownDuration[0] <= mouseDraggingThresholdTime*.25f);// ImGui::GetIO().MouseDown[0] does not work!
     int justClosedTabIndex = -1,newSelectedIndex = selectedIndex;
 
     ImVec2 startGroupCursorPos = ImGui::GetCursorPos();
@@ -2960,20 +2962,20 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
         i = pOptionalItemOrdering ? pOptionalItemOrdering[j] : j;
         if (i==-1) continue;
 
-	if (!wrapMode) {if (!noButtonDrawn) ImGui::SameLine();canUseSizeOptimization=false;}
+        if (!wrapMode) {if (!noButtonDrawn) ImGui::SameLine();canUseSizeOptimization=false;}
         else if (sumX > 0.f) {
             sumX+=style.ItemSpacing.x;   // Maybe we can skip it if we use SameLine(0,0) below
             ImGui::TabButton(tabLabels[i],(i == selectedIndex),allowTabClosing ? &mustCloseTab : NULL,NULL,&tabButtonSz,&tabStyle);
             sumX+=tabButtonSz.x;
             if (sumX>windowWidth) sumX = 0.f;
             else ImGui::SameLine();
-	    canUseSizeOptimization = true;
+            canUseSizeOptimization = true;
         }
-	else canUseSizeOptimization = false;
+        else canUseSizeOptimization = false;
 
         // Draw the button
         ImGui::PushID(i);   // otherwise two tabs with the same name would clash.
-	if (ImGui::TabButton(tabLabels[i],i == selectedIndex,allowTabClosing ? &mustCloseTab : NULL,NULL,NULL,&tabStyle,NULL,NULL,NULL,canUseSizeOptimization))   {
+        if (ImGui::TabButton(tabLabels[i],i == selectedIndex,allowTabClosing ? &mustCloseTab : NULL,NULL,NULL,&tabStyle,NULL,NULL,NULL,canUseSizeOptimization))   {
             selection_changed = (selectedIndex!=i);
             newSelectedIndex = i;
         }
@@ -2996,8 +2998,8 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
 
             if (pOptionalItemOrdering)  {
                 if (allowTabReorder)  {
-            if (isMouseDragging) {
-            if (draggingTabIndex==-1 && !draggingLocked) {
+                    if (isMouseDragging) {
+                        if (draggingTabIndex==-1 && !draggingLocked && isMouseDraggingJustStarted) {
                             draggingTabIndex = j;
                             draggingTabWasSelected = (i == selectedIndex);
                             draggingTabSize = ImGui::GetItemRectSize();
@@ -3385,7 +3387,9 @@ bool TabLabelsVertical(bool textIsRotatedCCW, int numTabs, const char** tabLabel
     static bool draggingLocked = false;
 
     const bool isRMBclicked = ImGui::IsMouseClicked(1);
-    const bool isMouseDragging = ImGui::IsMouseDragging(0,2.f);
+    const float mouseDraggingThresholdTime = 1.5f;        // Tweakable
+    const bool isMouseDragging = ImGui::IsMouseDragging(0,mouseDraggingThresholdTime);
+    const bool isMouseDraggingJustStarted = isMouseDragging && (ImGui::GetIO().MouseDownDuration[0] <= mouseDraggingThresholdTime*.25f);// ImGui::GetIO().MouseDown[0] does not work!
     int justClosedTabIndex = -1,newSelectedIndex = selectedIndex;
 
     ImVec2 startGroupCursorPos = ImGui::GetCursorPos();
@@ -3393,7 +3397,7 @@ bool TabLabelsVertical(bool textIsRotatedCCW, int numTabs, const char** tabLabel
     //ImVec2 tabButtonSz(0,0);
     bool mustCloseTab = false;bool canUseSizeOptimization = false;
     const bool isWindowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
-    bool selection_changed = false;bool noButtonDrawn = true;
+    bool selection_changed = false;//bool noButtonDrawn = true;
     for (int j = 0,i; j < numTabs; j++)
     {
         i = pOptionalItemOrdering ? pOptionalItemOrdering[j] : j;
@@ -3421,7 +3425,7 @@ bool TabLabelsVertical(bool textIsRotatedCCW, int numTabs, const char** tabLabel
             newSelectedIndex = i;
         }
         ImGui::PopID();
-        noButtonDrawn = false;
+        //noButtonDrawn = false;
 
         /*if (wrapMode) {
             if (sumX==0.f) sumX = style.WindowPadding.x + ImGui::GetItemRectSize().x; // First element of a line
@@ -3440,7 +3444,7 @@ bool TabLabelsVertical(bool textIsRotatedCCW, int numTabs, const char** tabLabel
             if (pOptionalItemOrdering)  {
                 if (allowTabReorder)  {
                     if (isMouseDragging) {
-                        if (draggingTabIndex==-1 && !draggingLocked) {
+                        if (draggingTabIndex==-1 && !draggingLocked && isMouseDraggingJustStarted) {
                             draggingTabIndex = j;
                             draggingTabWasSelected = (i == selectedIndex);
                             draggingTabSize = ImGui::GetItemRectSize();
