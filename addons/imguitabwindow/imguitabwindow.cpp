@@ -1774,9 +1774,8 @@ struct MyTabWindowHelperStruct {
     ImGuiWindowFlags flags;
 
     MyTabWindowHelperStruct(TabWindow* _tabWindow) {
-        const float draggingThresholdTime = 1.5f;        // Tweakable
-        isMouseDragging = ImGui::IsMouseDragging(0,draggingThresholdTime);
-        isMouseDraggingJustStarted = isMouseDragging && (ImGui::GetIO().MouseDownDuration[0] <= draggingThresholdTime*.25f);// ImGui::GetIO().MouseDown[0] does not work!
+        isMouseDragging = ImGui::IsMouseDragging(0,3.f);
+        isMouseDraggingJustStarted = isMouseDragging && (ImGui::GetIO().MouseDownDuration[0] < 0.35f);// ImGui::GetIO().MouseDown[0] does not work!
         isRMBclicked = ImGui::IsMouseClicked(1);
         isASplitterActive = false;
         tabWindow = _tabWindow;
@@ -2947,9 +2946,8 @@ bool TabLabels(int numTabs, const char** tabLabels, int& selectedIndex, const ch
     static bool draggingLocked = false;
 
     const bool isRMBclicked = ImGui::IsMouseClicked(1);
-    const float mouseDraggingThresholdTime = 1.5f;        // Tweakable
-    const bool isMouseDragging = ImGui::IsMouseDragging(0,mouseDraggingThresholdTime);
-    const bool isMouseDraggingJustStarted = isMouseDragging && (ImGui::GetIO().MouseDownDuration[0] <= mouseDraggingThresholdTime*.25f);// ImGui::GetIO().MouseDown[0] does not work!
+    const bool isMouseDragging = ImGui::IsMouseDragging(0,3.f);
+    const bool isMouseDraggingJustStarted = isMouseDragging && (ImGui::GetIO().MouseDownDuration[0] < 0.35f);// ImGui::GetIO().MouseDown[0] does not work!
     int justClosedTabIndex = -1,newSelectedIndex = selectedIndex;
 
     ImVec2 startGroupCursorPos = ImGui::GetCursorPos();
@@ -3387,9 +3385,8 @@ bool TabLabelsVertical(bool textIsRotatedCCW, int numTabs, const char** tabLabel
     static bool draggingLocked = false;
 
     const bool isRMBclicked = ImGui::IsMouseClicked(1);
-    const float mouseDraggingThresholdTime = 1.5f;        // Tweakable
-    const bool isMouseDragging = ImGui::IsMouseDragging(0,mouseDraggingThresholdTime);
-    const bool isMouseDraggingJustStarted = isMouseDragging && (ImGui::GetIO().MouseDownDuration[0] <= mouseDraggingThresholdTime*.25f);// ImGui::GetIO().MouseDown[0] does not work!
+    const bool isMouseDragging = ImGui::IsMouseDragging(0,3.f);
+    const bool isMouseDraggingJustStarted = isMouseDragging && (ImGui::GetIO().MouseDownDuration[0] < 0.35f);// ImGui::GetIO().MouseDown[0] does not work!
     int justClosedTabIndex = -1,newSelectedIndex = selectedIndex;
 
     ImVec2 startGroupCursorPos = ImGui::GetCursorPos();
