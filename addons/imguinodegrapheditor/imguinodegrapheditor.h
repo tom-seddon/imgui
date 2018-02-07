@@ -501,7 +501,7 @@ class NodeGraphEditor
     bool show_node_copy_paste_buttons;
     static bool UseSlidersInsteadOfDragControls;
     mutable void* user_ptr;
-    static Style& GetStyle() {return style;}
+    static Style& GetStyle() {static Style style;return style;}
     /*mutable ImGuiColorEditMode colorEditMode;*/
     float nodesBaseWidth;
 

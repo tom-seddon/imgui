@@ -89,6 +89,7 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.KeyMap[ImGuiKey_Backspace] = SDLK_BACKSPACE;
     io.KeyMap[ImGuiKey_Enter] = SDLK_RETURN;
     io.KeyMap[ImGuiKey_Escape] = SDLK_ESCAPE;
+    io.KeyMap[ImGuiKey_Space] = SDLK_SPACE;
     io.KeyMap[ImGuiKey_A] = SDLK_a;
     io.KeyMap[ImGuiKey_C] = SDLK_c;
     io.KeyMap[ImGuiKey_V] = SDLK_v;
@@ -437,6 +438,7 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
     }
     //---------------------------------------------------------------
 
+    ImGui::CreateContext();
     InitImGui(pOptionalInitParams);
     ImGuiIO& io = ImGui::GetIO();           
     
@@ -458,7 +460,7 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
 #	endif //__EMSCRIPTEN__
 
     DestroyGL();
-    ImGui::Shutdown();
+    ImGui::DestroyContext();
     DestroyImGuiFontTexture();
     DestroyImGuiProgram();
     DestroyImGuiBuffer();

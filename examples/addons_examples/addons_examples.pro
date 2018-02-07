@@ -268,4 +268,3 @@ LIBS+= -ld3d9 -luser32 -lkernel32 -static-libgcc -static-libstdc++
 #DEFINES+=IMGUISTRING_STL_FALLBACK
 #DEFINES+=IMGUIBINDINGS_DONT_CLEAR_INPUT_DATA_SOON # It's now mandatory for Software Cursors
 
-

@@ -207,6 +207,9 @@ void InitGL()	// Mandatory
 #   endif //NO_IMGUISTYLESERIALIZER
 // We might just choose one predefined style:
 //ImGui::ResetStyle(ImGuiStyle_Gray,ImGui::GetStyle());
+
+// This is something that does not work properly with the addons:
+//ImGui::GetIO().NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Must stay commented out
 }
 void ResizeGL(int /*w*/,int /*h*/)	// Mandatory
 {

@@ -198,6 +198,7 @@ IMIMPL_BUILD_SDF				# builds Signed Distance Fonts for ImGui. To display them co
 						# Warning: ARTIFACTS will appear when displaying any user ImTextureID fragment with ALPHA inside the range (0,255) (edges excluded).
 						# This also affects all the images displayed in the imguiimageeditor addon, when their ALPHA is not 0 or 255.
 						# (This happens because we use a single shader to display everything).
+						# Warning: I'm not sure this works with the imguifreetype addon (YES_IMGUIFREETYPE).
 
 IMGUIBINDINGS_DONT_CLEAR_INPUT_DATA_SOON:	# Normally ImGui::GetIO()->Fonts->ClearInputData() and ImGui::GetIO()->Fonts->ClearTexData() are called as soon as possible to save some memory.
 						# However this prevents you from appending new fonts later (e.g. in InitGL() instead of in the main() method).
