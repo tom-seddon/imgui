@@ -659,6 +659,7 @@ namespace RevertUpstreamBeginChildCommit   {
 // That commit [2016/11/06 (1.50)] broke everything!
 static bool OldBeginChild(const char* str_id, const ImVec2& size_arg = ImVec2(0,0), ImGuiWindowFlags extra_flags = 0)    {
     ImGuiWindow* parent_window = ImGui::GetCurrentWindow();
+    const ImGuiID id = parent_window->GetID(str_id);
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_ChildWindow;
 
     const ImVec2 content_avail = ImGui::GetContentRegionAvail();
@@ -679,13 +680,22 @@ static bool OldBeginChild(const char* str_id, const ImVec2& size_arg = ImVec2(0,
     char title[256];
     ImFormatString(title, IM_ARRAYSIZE(title), "%s.%s", parent_window->Name, str_id);
 
-    //bool ret = ImGui::Begin(title, NULL, size, -1.0f, flags); // This triggers an asset now, but this is OK:
     ImGui::SetNextWindowSize(size);
     bool ret = ImGui::Begin(title, NULL, flags);
 
     ImGuiWindow* child_window = ImGui::GetCurrentWindow();
+    child_window->ChildId = id;
     child_window->AutoFitChildAxises = auto_fit_axises;
     //if (!(parent_window->Flags & ImGuiWindowFlags_ShowBorders)) child_window->Flags &= ~ImGuiWindowFlags_ShowBorders;
+
+    // Process navigation-in immediately so NavInit can run on first frame
+    if (!(flags & ImGuiWindowFlags_NavFlattened) && (child_window->DC.NavLayerActiveMask != 0 || child_window->DC.NavHasScroll) && GImGui->NavActivateId == id)
+    {
+        ImGui::FocusWindow(child_window);
+        ImGui::NavInitWindow(child_window, false);
+        ImGui::SetActiveID(id+1, child_window); // Steal ActiveId with a dummy id so that key-press won't activate child item
+        GImGui->ActiveIdSource = ImGuiInputSource_Nav;
+    }
 
     return ret;
 }
