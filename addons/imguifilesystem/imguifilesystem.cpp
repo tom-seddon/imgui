@@ -2521,7 +2521,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
     // MAIN BROWSING FRAME:
     //-----------------------------------------------------------------------------
     {
-        ImGui::BeginChild("BrowsingFrame",ImVec2(0,(isSaveFileDialog || isSelectFolderDialog)?(ImGui::GetContentRegionAvail().y-1.2f*ImGui::GetTextLineHeightWithSpacing()-ImGui::GetStyle().WindowPadding.y):0));
+        if (ImGui::BeginChild("BrowsingFrame",ImVec2(0,(isSaveFileDialog || isSelectFolderDialog)?(ImGui::GetContentRegionAvail().y-1.2f*ImGui::GetTextLineHeightWithSpacing()-ImGui::GetStyle().WindowPadding.y):0)))  {
 
         I.calculateBrowsingDataTableSizes(ImGui::GetWindowSize());  // (Actually we could save this call every frame, but it's difficult to detect whn we need it)
 
@@ -2687,6 +2687,7 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
         }
         //-----------------------------------------------------------------------------
         ImGui::PopID();
+        }   // ImGui::BeginChild(...)
         ImGui::EndChild();
 
     }
@@ -2805,7 +2806,6 @@ const char* ChooseFileMainMethod(Dialog& ist,const char* directory,const bool _i
 const char* Dialog::chooseFileDialog(bool dialogTriggerButton,const char* directory,const char* fileFilterExtensionString,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha) {
     if (dialogTriggerButton)    {internal->open = internal->rescan = internal->forceSetWindowPositionAndSize = true;internal->chosenPath[0]='\0';internal->userHasJustCancelledDialog = false;}
     if (dialogTriggerButton || (!internal->rescan && internal->open && strlen(getChosenPath())==0)) {
-	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,false,false,"",fileFilterExtensionString,windowTitle,windowSize,windowPos,windowAlpha);
         if (!internal->open) {  // AFAIK this should happen only when user clicks the close button (but not when he clicks cancel)
             internal->userHasJustCancelledDialog = true;
@@ -2821,7 +2821,6 @@ const char* Dialog::chooseFileDialog(bool dialogTriggerButton,const char* direct
 const char* Dialog::chooseFolderDialog(bool dialogTriggerButton,const char* directory,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha)  {
     if (dialogTriggerButton) {internal->open = internal->rescan = internal->forceSetWindowPositionAndSize = true;internal->chosenPath[0]='\0';internal->userHasJustCancelledDialog = false;}
     if (dialogTriggerButton || (!internal->rescan && internal->open && strlen(getChosenPath())==0)) {
-	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,true,false,"","",windowTitle,windowSize,windowPos,windowAlpha);
         if (!internal->open) {
             internal->userHasJustCancelledDialog = true;
@@ -2837,7 +2836,6 @@ const char* Dialog::chooseFolderDialog(bool dialogTriggerButton,const char* dire
 const char* Dialog::saveFileDialog(bool dialogTriggerButton,const char* directory,const char* startingFileNameEntry,const char* fileFilterExtensionString,const char* windowTitle,const ImVec2& windowSize,const ImVec2& windowPos,const float windowAlpha)    {
     if (dialogTriggerButton) {internal->open = internal->rescan = internal->forceSetWindowPositionAndSize = true;internal->chosenPath[0]='\0';internal->userHasJustCancelledDialog = false;}
     if (dialogTriggerButton || (!internal->rescan && internal->open && strlen(getChosenPath())==0)) {
-	if (this->internal->open) ImGui::SetNextWindowFocus();  // Not too sure about this line (it seems to just keep the window on the top, but it does not prevent other windows to be used...)
         const char* cp = ChooseFileMainMethod(*this,directory,false,true,startingFileNameEntry,fileFilterExtensionString,windowTitle,windowSize,windowPos,windowAlpha);
         if (!internal->open) {
             internal->userHasJustCancelledDialog = true;

@@ -533,6 +533,9 @@ if (!ImGui::LoadStyle("./myimgui.style",ImGui::GetStyle()))   {
     fprintf(stderr,"Warning: \"./myimgui.style\" not present.\n");
 }
 */
+// This is something that does not work properly with all the addons:
+//ImGui::GetIO().NavFlags |= ImGuiNavFlags_EnableKeyboard;
+
 
 if (!myImageTextureId) myImageTextureId = ImImpl_LoadTexture("./Tile8x8.png");
 if (!myImageTextureId2) myImageTextureId2 = ImImpl_LoadTexture("./myNumbersTexture.png");
