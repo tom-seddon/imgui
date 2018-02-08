@@ -991,6 +991,17 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
                 ImGui::SameLine();
                 if (ImGui::Checkbox("Show Main Menu",(bool*)gpShowMainMenuBar)) SetPanelManagerBoundsToIncludeMainMenuIfPresent();
             }
+            // Here we test the Nav feature (not serialized)
+            ImGui::Spacing();
+            unsigned int* pNavFlags = (unsigned int*) &ImGui::GetIO().NavFlags;
+            ImGui::AlignFirstTextHeightToWidgets();ImGui::TextUnformatted("NavFlags:");
+            ImGui::SameLine();ImGui::CheckboxFlags("EnableKeyboard",pNavFlags,ImGuiNavFlags_EnableKeyboard);
+            //ImGui::SameLine();ImGui::CheckboxFlags("EnableGamepad",pNavFlags,ImGuiNavFlags_EnableGamepad);
+            ImGui::SameLine();ImGui::CheckboxFlags("MoveMouse",pNavFlags,ImGuiNavFlags_MoveMouse);
+            //ImGui::SameLine();ImGui::CheckboxFlags("NoCaptureKeyboard",pNavFlags,ImGuiNavFlags_NoCaptureKeyboard);
+            if (ImGui::GetIO().NavFlags&ImGuiNavFlags_EnableKeyboard) {ImGui::SameLine(0,30);ImGui::TextDisabled("%s","Keys: CTRL+TAB and CTRL+SHIFT+TAB, Space and Esc, Arrows");}
+
+
 	    // Here we test saving/loading the ImGui::PanelManager layout (= the sizes of the 4 docked windows and the buttons that are selected on the 4 toolbars)
 	    // Please note that the API should allow loading/saving different items into a single file and loading/saving from/to memory too, but we don't show it now.
 #           if (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))

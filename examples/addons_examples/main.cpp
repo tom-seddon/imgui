@@ -410,6 +410,17 @@ void DrawGL()	// Mandatory
             ImGui::SameLine(0,10);
             if (ImGui::SmallButton("Reset##glClearColorReset")) clearColor = defaultClearColor;
         }
+
+        // Here we test the Nav feature
+        ImGui::Spacing();
+        unsigned int* pNavFlags = (unsigned int*) &ImGui::GetIO().NavFlags;
+        ImGui::AlignFirstTextHeightToWidgets();ImGui::TextUnformatted("NavFlags:");
+        ImGui::SameLine();ImGui::CheckboxFlags("EnableKeyboard",pNavFlags,ImGuiNavFlags_EnableKeyboard);
+        //ImGui::SameLine();ImGui::CheckboxFlags("EnableGamepad",pNavFlags,ImGuiNavFlags_EnableGamepad);
+        ImGui::SameLine();ImGui::CheckboxFlags("MoveMouse",pNavFlags,ImGuiNavFlags_MoveMouse);
+        //ImGui::SameLine();ImGui::CheckboxFlags("NoCaptureKeyboard",pNavFlags,ImGuiNavFlags_NoCaptureKeyboard);
+        if (ImGui::GetIO().NavFlags&ImGuiNavFlags_EnableKeyboard) ImGui::TextDisabled("%s","Keys: CTRL+TAB and CTRL+SHIFT+TAB, Space and Esc, Arrows");
+
         ImGui::TreePop();
         }
 
