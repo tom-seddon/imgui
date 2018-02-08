@@ -368,8 +368,8 @@ static void ImImplMainLoopFrame(void* pDone)	{
             if (io.WantMoveMouse)  {
                 // Set mouse position if requested by io.WantMoveMouse flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
                 // SDL_WarpMouseInWindow() and SDL_WarpMouseGlobal()
-                SDL_WarpMouseGlobal((int)io.MousePos.x, (int)io.MousePos.y);
-                //SDL_WarpMouseInWindow(window,(int)io.MousePos.x, (int)io.MousePos.y);
+                //SDL_WarpMouseGlobal((int)io.MousePos.x, (int)io.MousePos.y);  // Wrong!
+                SDL_WarpMouseInWindow(window,(int)io.MousePos.x, (int)io.MousePos.y);
             }
             /*else    {
                 // Get mouse position in screen coordinates (set to -1,-1 if no mouse / on another screen, etc.)
