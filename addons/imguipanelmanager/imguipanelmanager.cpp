@@ -218,14 +218,13 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         // Initialize
         window->ParentWindow = parent_window;
-        window->RootWindow = window->RootNonPopupWindow = window;
+        window->RootWindow = window->RootWindowForTitleBarHighlight = window->RootWindowForTabbing = window->RootWindowForNav = window;
         if (parent_window && (flags & ImGuiWindowFlags_ChildWindow) && !window_is_child_tooltip)
             window->RootWindow = parent_window->RootWindow;
         if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
-            window->RootNonPopupWindow = parent_window->RootNonPopupWindow;
-        window->NavRootWindow = window;
-        while (window->NavRootWindow->Flags & ImGuiWindowFlags_NavFlattened)
-            window->NavRootWindow = window->NavRootWindow->ParentWindow;
+            window->RootWindowForTitleBarHighlight = window->RootWindowForTabbing = parent_window->RootWindowForTitleBarHighlight; // Same value in master branch, will differ for docking
+        while (window->RootWindowForNav->Flags & ImGuiWindowFlags_NavFlattened)
+            window->RootWindowForNav = window->RootWindowForNav->ParentWindow;
 
         window->Active = true;
         window->BeginOrderWithinParent = 0;
@@ -494,14 +493,14 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             window->DrawList->AddRectFilled(viewport_rect.Min, viewport_rect.Max, GetColorU32(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
 
         // Draw window + handle manual resize
-        ImRect title_bar_rect = window->TitleBarRect();
-        const bool window_is_focused = want_focus || (g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow);
-        ImU32 title_bar_col = GetColorU32(window->Collapsed ? ImGuiCol_TitleBgCollapsed : window_is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
+        const bool title_bar_is_highlight = want_focus || (g.NavWindow && window->RootWindowForTitleBarHighlight == g.NavWindow->RootWindowForTitleBarHighlight);
+        const ImRect title_bar_rect = window->TitleBarRect();
         if (window->Collapsed)
         {
             // Title bar only
             float backup_border_size = style.FrameBorderSize;
             g.Style.FrameBorderSize = window->WindowBorderSize;
+            ImU32 title_bar_col = GetColorU32((title_bar_is_highlight && !g.NavDisableHighlight) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBgCollapsed);
             RenderFrame(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, true, window_rounding);
             g.Style.FrameBorderSize = backup_border_size;
         }
@@ -601,6 +600,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
 
             // Title bar
+            ImU32 title_bar_col = GetColorU32(window->Collapsed ? ImGuiCol_TitleBgCollapsed : title_bar_is_highlight ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
             if (!(flags & ImGuiWindowFlags_NoTitleBar)) {
                 //const bool window_is_focused = g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow;
 #               if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
@@ -669,11 +669,21 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         // Draw navigation selection/windowing rectangle border
         if (g.NavWindowingTarget == window)
         {
-            ImRect bb = window->Rect();
+            /*ImRect bb = window->Rect();
             bb.Expand(g.FontSize);
             if (bb.Contains(viewport_rect))
                 bb.Expand(-g.FontSize - 2.0f);
-            window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), g.Style.WindowRounding, ~0, 3.0f);
+            window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), g.Style.WindowRounding, ~0, 3.0f);*/
+
+            float rounding = ImMax(window->WindowRounding, g.Style.WindowRounding);
+            ImRect bb = window->Rect();
+            bb.Expand(g.FontSize);
+            if (bb.Contains(viewport_rect)) // If a window fits the entire viewport, adjust its highlight inward
+            {
+                bb.Expand(-g.FontSize - 1.0f);
+                rounding = window->WindowRounding;
+            }
+            window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), rounding, ~0, 3.0f);
         }
 
         // Store a backup of SizeFull which we will use next frame to decide if we need scrollbars.

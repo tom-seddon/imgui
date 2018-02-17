@@ -411,16 +411,6 @@ void DrawGL()	// Mandatory
             if (ImGui::SmallButton("Reset##glClearColorReset")) clearColor = defaultClearColor;
         }
 
-        // Here we test the Nav feature
-        ImGui::Spacing();
-        unsigned int* pNavFlags = (unsigned int*) &ImGui::GetIO().NavFlags;
-        ImGui::AlignFirstTextHeightToWidgets();ImGui::TextUnformatted("NavFlags:");
-        ImGui::SameLine();ImGui::CheckboxFlags("EnableKeyboard",pNavFlags,ImGuiNavFlags_EnableKeyboard);
-        //ImGui::SameLine();ImGui::CheckboxFlags("EnableGamepad",pNavFlags,ImGuiNavFlags_EnableGamepad);
-        ImGui::SameLine();ImGui::CheckboxFlags("MoveMouse",pNavFlags,ImGuiNavFlags_MoveMouse);
-        //ImGui::SameLine();ImGui::CheckboxFlags("NoCaptureKeyboard",pNavFlags,ImGuiNavFlags_NoCaptureKeyboard);
-        if (ImGui::GetIO().NavFlags&ImGuiNavFlags_EnableKeyboard) ImGui::TextDisabled("%s","Keys: CTRL+TAB and CTRL+SHIFT+TAB, Space and Esc, Arrows");
-
         ImGui::TreePop();
         }
 
@@ -905,6 +895,7 @@ void DrawGL()	// Mandatory
 #       ifndef NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
         // One instance per image, but it can feed multiple widgets
         static ImGui::AnimatedImage gif(myImageTextureId2,64,64,9,3,3,30,true);
+        //static ImGui::AnimatedImage gif("extra/download.gif",true);
         ImGui::SameLine();
         gif.render();
         ImGui::SameLine();

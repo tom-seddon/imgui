@@ -338,7 +338,7 @@ inline static bool ColorChooserInternal(ImVec4 *pColorOut,bool supportsAlpha,boo
         ImRect bb(window->Pos, window->Pos + window->Size);
         bool hovered, held;
         /*bool pressed = */ImGui::ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_NoKeyModifiers);///*false,*/ false);
-        if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
+        if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
         if (held)   {
             ImVec2 pos = g.IO.MousePos - window->Pos;
             sat = ImSaturate(pos.x / (float)quadSize);
@@ -386,7 +386,7 @@ inline static bool ColorChooserInternal(ImVec4 *pColorOut,bool supportsAlpha,boo
         const ImGuiID id = window->GetID("Tint");
         ImRect bb(window->Pos, window->Pos + window->Size);
         /*bool pressed = */ButtonBehavior(bb, id, &hovered, &held,ImGuiButtonFlags_NoKeyModifiers);// /*false,*/ false);
-        if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
+        if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
         if (held)
         {
 
@@ -862,7 +862,7 @@ struct AnimatedImageInternal {
     bool persistentTexIdIsNotOwned;
     mutable bool isAtLeastOneWidgetInHoverMode;  // internal
 
-    mutable  int lastFrameNum;
+    mutable int lastFrameNum;
     mutable float delay;
     mutable float timer;
     mutable ImTextureID texId;
@@ -871,7 +871,7 @@ struct AnimatedImageInternal {
 
     inline void updateTexture() const   {
         // fix updateTexture() to use persistentTexID when necessary
-        IM_ASSERT(AnimatedImage::GenerateOrUpdateTextureCb!=NULL);	// Please use ImGui::AnimatedGif::SetGenerateOrUpdateTextureCallback(...) before calling this method
+        IM_ASSERT(AnimatedImage::GenerateOrUpdateTextureCb!=NULL);	// Please use ImGui::AnimatedImage::SetGenerateOrUpdateTextureCallback(...) before calling this method
         if (frames<=0) return;
         else if (frames==1) {
             if (!texId) AnimatedImage::GenerateOrUpdateTextureCb(texId,w,h,4,&buffer[0],false,false,false);
@@ -979,10 +979,6 @@ struct AnimatedImageInternal {
 
             ag.frames = 0;
 
-            // static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y, int *z, int *comp, int req_comp)
-            // this function is designed to support animated gifs, although stb_image doesn't support it
-            // two back is the image from two frames ago, used for a very specific disposal format
-            // static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, int req_comp, stbi_uc *two_back)
             while ((gr->data = stbi__gif_load_next(&s, &g, &c, 4)))
             {
                 if (gr->data == (unsigned char*)&s)
@@ -1431,7 +1427,7 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
             zoomCenter.x-=io.MouseDelta.x/(imageSz.x*zoom);
             zoomCenter.y-=io.MouseDelta.y/(imageSz.y*zoom);
             rv = true;
-            ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
         }
     }
 
@@ -2569,6 +2565,14 @@ bool InputComboWithAutoCompletion(const char* label, int *current_item, size_t a
 
 // Tree view stuff starts here ==============================================================
 #include <stdlib.h> // qsort (Maybe we could add a define to exclude sorting...)
+
+// Enforce cdecl calling convention for functions called by the standard library, in case compilation settings changed the default to e.g. __vectorcall
+#ifdef _MSC_VER
+#define IMGUIVC_CDECL __cdecl
+#else
+#define IMGUIVC_CDECL
+#endif
+
 namespace ImGui {
 
 struct MyTreeViewHelperStruct {
@@ -2620,42 +2624,42 @@ struct MyTreeViewHelperStruct {
         if (event.state!=TreeViewNode::STATE_NONE) event.type = TreeViewNode::EVENT_STATE_CHANGED;
     }
     // Sorters
-    inline static int SorterByDisplayName(const void *pn1, const void *pn2)  {
+    inline static int IMGUIVC_CDECL SorterByDisplayName(const void *pn1, const void *pn2)  {
         const char* s1 = (*((const TreeViewNode**)pn1))->data.displayName;
         const char* s2 = (*((const TreeViewNode**)pn2))->data.displayName;
         return strcmp(s1,s2);   // Hp) displayName can't be NULL
     }
-    inline static int SorterByDisplayNameReverseOrder(const void *pn1, const void *pn2)  {
+    inline static int IMGUIVC_CDECL SorterByDisplayNameReverseOrder(const void *pn1, const void *pn2)  {
         const char* s2 = (*((const TreeViewNode**)pn1))->data.displayName;
         const char* s1 = (*((const TreeViewNode**)pn2))->data.displayName;
         return strcmp(s1,s2);   // Hp) displayName can't be NULL
     }
-    inline static int SorterByTooltip(const void *pn1, const void *pn2)  {
+    inline static int IMGUIVC_CDECL SorterByTooltip(const void *pn1, const void *pn2)  {
         const char* s1 = (*((const TreeViewNode**)pn1))->data.tooltip;
         const char* s2 = (*((const TreeViewNode**)pn2))->data.tooltip;
         return (s1 && s2) ? (strcmp(s1,s2)) : (s1 ? -1 : (s2 ? 1 : -1));
     }
-    inline static int SorterByTooltipReverseOrder(const void *pn1, const void *pn2)  {
+    inline static int IMGUIVC_CDECL SorterByTooltipReverseOrder(const void *pn1, const void *pn2)  {
         const char* s2 = (*((const TreeViewNode**)pn1))->data.tooltip;
         const char* s1 = (*((const TreeViewNode**)pn2))->data.tooltip;
         return (s1 && s2) ? (strcmp(s1,s2)) : (s1 ? -1 : (s2 ? 1 : -1));
     }
-    inline static int SorterByUserText(const void *pn1, const void *pn2)  {
+    inline static int IMGUIVC_CDECL SorterByUserText(const void *pn1, const void *pn2)  {
         const char* s1 = (*((const TreeViewNode**)pn1))->data.userText;
         const char* s2 = (*((const TreeViewNode**)pn2))->data.userText;
         return (s1 && s2) ? (strcmp(s1,s2)) : (s1 ? -1 : (s2 ? 1 : -1));
     }
-    inline static int SorterByUserTextReverseOrder(const void *pn1, const void *pn2)  {
+    inline static int IMGUIVC_CDECL SorterByUserTextReverseOrder(const void *pn1, const void *pn2)  {
         const char* s2 = (*((const TreeViewNode**)pn1))->data.userText;
         const char* s1 = (*((const TreeViewNode**)pn2))->data.userText;
         return (s1 && s2) ? (strcmp(s1,s2)) : (s1 ? -1 : (s2 ? 1 : -1));
     }
-    inline static int SorterByUserId(const void *pn1, const void *pn2)  {
+    inline static int IMGUIVC_CDECL SorterByUserId(const void *pn1, const void *pn2)  {
         const TreeViewNode* n1 = *((const TreeViewNode**)pn1);
         const TreeViewNode* n2 = *((const TreeViewNode**)pn2);
         return n1->data.userId-n2->data.userId;
     }
-    inline static int SorterByUserIdReverseOrder(const void *pn1, const void *pn2)  {
+    inline static int IMGUIVC_CDECL SorterByUserIdReverseOrder(const void *pn1, const void *pn2)  {
         const TreeViewNode* n2 = *((const TreeViewNode**)pn1);
         const TreeViewNode* n1 = *((const TreeViewNode**)pn2);
         return n1->data.userId-n2->data.userId;
@@ -3635,7 +3639,7 @@ bool TimelineEvent(const char* str_id, float* values,bool keep_range_constant)
         if (values[0]<0) {values[1]-=values[0];values[0]=0;}
     }
 
-    if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
+    if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
 
     ImGui::NextColumn();
     return changed;
