@@ -1657,6 +1657,7 @@ void ImImpl_NewFramePaused()    {
     // so that we can still process input using ImGui calls
 
     ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.Initialized);
     g.Time += g.IO.DeltaTime;
 
     // Update keyboard input state
