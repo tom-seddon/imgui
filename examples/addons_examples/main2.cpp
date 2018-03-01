@@ -993,13 +993,15 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
             }
             // Here we test the Nav feature (not serialized)
             ImGui::Spacing();
-            unsigned int* pNavFlags = (unsigned int*) &ImGui::GetIO().NavFlags;
-            ImGui::AlignFirstTextHeightToWidgets();ImGui::TextUnformatted("NavFlags:");
-            ImGui::SameLine();ImGui::CheckboxFlags("EnableKeyboard",pNavFlags,ImGuiNavFlags_EnableKeyboard);
-            //ImGui::SameLine();ImGui::CheckboxFlags("EnableGamepad",pNavFlags,ImGuiNavFlags_EnableGamepad);
-            ImGui::SameLine();ImGui::CheckboxFlags("MoveMouse",pNavFlags,ImGuiNavFlags_MoveMouse);
-            //ImGui::SameLine();ImGui::CheckboxFlags("NoCaptureKeyboard",pNavFlags,ImGuiNavFlags_NoCaptureKeyboard);
-            if (ImGui::GetIO().NavFlags&ImGuiNavFlags_EnableKeyboard) {ImGui::SameLine(0,30);ImGui::TextDisabled("%s","Keys: CTRL+TAB and CTRL+SHIFT+TAB, Space and Esc, Arrows");}
+            unsigned int* pNavFlags = (unsigned int*) &ImGui::GetIO().ConfigFlags;
+            ImGui::AlignFirstTextHeightToWidgets();ImGui::TextUnformatted("ConfigFlags:");
+            ImGui::SameLine();ImGui::CheckboxFlags("NavEnableKeyboard",pNavFlags,ImGuiConfigFlags_NavEnableKeyboard);
+#           ifdef IMGUI_USE_GLFW_BINDING
+            ImGui::SameLine();ImGui::CheckboxFlags("NavEnableGamepad",pNavFlags,ImGuiConfigFlags_NavEnableGamepad);
+#           endif //IMGUI_USE_GLFW_BINDING
+            ImGui::SameLine();ImGui::CheckboxFlags("NavMoveMouse",pNavFlags,ImGuiConfigFlags_NavMoveMouse);
+            //ImGui::SameLine();ImGui::CheckboxFlags("NavNoCaptureKeyboard",pNavFlags,ImGuiConfigFlags_NavNoCaptureKeyboard);
+            if (ImGui::GetIO().ConfigFlags&ImGuiConfigFlags_NavEnableKeyboard) {ImGui::SameLine(0,30);ImGui::TextDisabled("%s","Keys: CTRL+TAB and CTRL+SHIFT+TAB, Space and Esc, Arrows");}
 
 
 	    // Here we test saving/loading the ImGui::PanelManager layout (= the sizes of the 4 docked windows and the buttons that are selected on the 4 toolbars)

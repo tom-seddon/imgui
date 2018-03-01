@@ -445,7 +445,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             float sc = g.Style.MouseCursorScale;
             ImVec2 ref_pos = (!g.NavDisableHighlight && g.NavDisableMouseHover) ? NavCalcPreferredMousePos() : g.IO.MousePos;
             ImRect rect_to_avoid;
-            if (!g.NavDisableHighlight && g.NavDisableMouseHover && !(g.IO.NavFlags & ImGuiNavFlags_MoveMouse))
+            if (!g.NavDisableHighlight && g.NavDisableMouseHover && !(g.IO.ConfigFlags & ImGuiConfigFlags_NavMoveMouse))
                 rect_to_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 16, ref_pos.y + 8);
             else
                 rect_to_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24 * sc, ref_pos.y + 24 * sc); // FIXME: Hard-coded based on mouse cursor shape expectation. Exact dimension not very important.
@@ -724,7 +724,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->DC.TextWrapPosStack.resize(0);
         window->DC.ColumnsSet = NULL;
         window->DC.TreeDepth = 0;
-        window->DC.TreeDepthMayCloseOnPop = 0x00;
+        window->DC.TreeDepthMayJumpToParentOnPop = 0x00;
         window->DC.StateStorage = &window->StateStorage;
         window->DC.GroupStack.resize(0);
         window->MenuColumns.Update(3, style.ItemSpacing.x, window_just_activated_by_user);
