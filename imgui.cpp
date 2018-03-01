@@ -77,7 +77,7 @@
    - ESCAPE to revert text to its original value.
    - You can apply arithmetic operators +,*,/ on numerical values. Use +- to subtract (because - would set a negative value!)
    - Controls are automatically adjusted for OSX to match standard OSX text editing operations.
- - Gamepad navigation: see suggested mappings in imgui.h ImGuiNavInput_
+ - Gamepad navigation: see suggested mappings in imgui.h ImGuiNavInput_ + download PNG/PSD at goo.gl/9LgVZW.
 
 
  PROGRAMMER GUIDE
@@ -216,29 +216,30 @@
  - Ask questions and report issues at https://github.com/ocornut/imgui/issues/787
  - The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable.
  - Keyboard:
-    - Set io.NavFlags |= ImGuiNavFlags_EnableKeyboard to enable. NewFrame() will automatically fill io.NavInputs[] based on your io.KeyDown[] + io.KeyMap[] arrays.
-    - When keyboard navigation is active (io.NavActive + NavFlags_EnableKeyboard), the io.WantCaptureKeyboard flag will be set.
+    - Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard to enable. NewFrame() will automatically fill io.NavInputs[] based on your io.KeyDown[] + io.KeyMap[] arrays.
+    - When keyboard navigation is active (io.NavActive + ImGuiConfigFlags_NavEnableKeyboard), the io.WantCaptureKeyboard flag will be set.
       For more advanced uses, you may want to read from:
        - io.NavActive: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
        - io.NavVisible: true when the navigation cursor is visible (and usually goes false when mouse is used).
        - or query focus information with e.g. IsWindowFocused(), IsItemFocused() etc. functions.
       Please reach out if you think the game vs navigation input sharing could be improved.
  - Gamepad:
-    - Set io.NavFlags |= ImGuiNavFlags_EnableGamepad to enable. Fill the io.NavInputs[] fields before calling NewFrame(). Note that io.NavInputs[] is cleared by EndFrame().
+    - Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad to enable. Fill the io.NavInputs[] fields before calling NewFrame(). Note that io.NavInputs[] is cleared by EndFrame().
     - See 'enum ImGuiNavInput_' in imgui.h for a description of inputs. For each entry of io.NavInputs[], set the following values:
          0.0f= not held. 1.0f= fully held. Pass intermediate 0.0f..1.0f values for analog triggers/sticks.
     - We uses a simple >0.0f test for activation testing, and won't attempt to test for a dead-zone.
       Your code will probably need to transform your raw inputs (such as e.g. remapping your 0.2..0.9 raw input range to 0.0..1.0 imgui range, maybe a power curve, etc.).
+    - You can download PNG/PSD files depicting the gamepad controls for common controllers at: goo.gl/9LgVZW.
     - If you need to share inputs between your game and the imgui parts, the easiest approach is to go all-or-nothing, with a buttons combo to toggle the target.
       Please reach out if you think the game vs navigation input sharing could be improved.
  - Mouse:
     - PS4 users: Consider emulating a mouse cursor with DualShock4 touch pad or a spare analog stick as a mouse-emulation fallback.
     - Consoles/Tablet/Phone users: Consider using Synergy host (on your computer) + uSynergy.c (in your console/tablet/phone app) to use your PC mouse/keyboard.
-    - On a TV/console system where readability may be lower or mouse inputs may be awkward, you may want to set the ImGuiNavFlags_MoveMouse flag in io.NavFlags.
-      Enabling ImGuiNavFlags_MoveMouse instructs dear imgui to move your mouse cursor along with navigation movements.
+    - On a TV/console system where readability may be lower or mouse inputs may be awkward, you may want to set the ImGuiConfigFlags_NavMoveMouse flag.
+      Enabling ImGuiConfigFlags_NavMoveMouse instructs dear imgui to move your mouse cursor along with navigation movements.
       When enabled, the NewFrame() function may alter 'io.MousePos' and set 'io.WantMoveMouse' to notify you that it wants the mouse cursor to be moved.
       When that happens your back-end NEEDS to move the OS or underlying mouse cursor on the next frame. Some of the binding in examples/ do that.
-      (If you set the ImGuiNavFlags_MoveMouse flag but don't honor 'io.WantMoveMouse' properly, imgui will misbehave as it will see your mouse as moving back and forth.)
+      (If you set the NavMoveMouse flag but don't honor 'io.WantMoveMouse' properly, imgui will misbehave as it will see your mouse as moving back and forth!)
       (In a setup when you may not have easy control over the mouse cursor, e.g. uSynergy.c doesn't expose moving remote mouse cursor, you may want
        to set a boolean to ignore your other external mouse positions until the external source is moved again.)
 
@@ -250,7 +251,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
- - 2018/02/18 (1.60) - BeginDragDropSource(): temporarily removed the optional mouse_button=0 parameter because it is really usable in typical conditions at the moment. 
+ - 2018/02/18 (1.60) - BeginDragDropSource(): temporarily removed the optional mouse_button=0 parameter because it is not really usable in many situations at the moment. 
  - 2018/02/16 (1.60) - obsoleted the io.RenderDrawListsFn callback, you can call your graphics engine render function after ImGui::Render(). Use ImGui::GetDrawData() to retrieve the ImDrawData* to display.
  - 2018/02/07 (1.60) - reorganized context handling to be more explicit,
                        - YOU NOW NEED TO CALL ImGui::CreateContext() AT THE BEGINNING OF YOUR APP, AND CALL ImGui::DestroyContext() AT THE END.
@@ -340,18 +341,11 @@
                        this necessary change will break your rendering function! the fix should be very easy. sorry for that :(
                      - if you are using a vanilla copy of one of the imgui_impl_XXXX.cpp provided in the example, you just need to update your copy and you can ignore the rest.
                      - the signature of the io.RenderDrawListsFn handler has changed!
-                            ImGui_XXXX_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
-                       became:
-                            ImGui_XXXX_RenderDrawLists(ImDrawData* draw_data).
-                              argument   'cmd_lists'        -> 'draw_data->CmdLists'
-                              argument   'cmd_lists_count'  -> 'draw_data->CmdListsCount'
-                              ImDrawList 'commands'         -> 'CmdBuffer'
-                              ImDrawList 'vtx_buffer'       -> 'VtxBuffer'
-                              ImDrawList  n/a               -> 'IdxBuffer' (new)
-                              ImDrawCmd  'vtx_count'        -> 'ElemCount'
-                              ImDrawCmd  'clip_rect'        -> 'ClipRect'
-                              ImDrawCmd  'user_callback'    -> 'UserCallback'
-                              ImDrawCmd  'texture_id'       -> 'TextureId'
+                       old: ImGui_XXXX_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
+                       new: ImGui_XXXX_RenderDrawLists(ImDrawData* draw_data).
+                         argument:   'cmd_lists' becomes 'draw_data->CmdLists', 'cmd_lists_count' becomes 'draw_data->CmdListsCount'
+                         ImDrawList: 'commands' becomes 'CmdBuffer', 'vtx_buffer' becomes 'VtxBuffer', 'IdxBuffer' is new.
+                         ImDrawCmd:  'vtx_count' becomes 'ElemCount', 'clip_rect' becomes 'ClipRect', 'user_callback' becomes 'UserCallback', 'texture_id' becomes 'TextureId'.
                      - each ImDrawList now contains both a vertex buffer and an index buffer. For each command, render ElemCount/3 triangles using indices from the index buffer.
                      - if you REALLY cannot render indexed primitives, you can call the draw_data->DeIndexAllBuffers() method to de-index the buffers. This is slow and a waste of CPU/GPU. Prefer using indexed rendering!
                      - refer to code in the examples/ folder or ask on the GitHub if you are unsure of how to upgrade. please upgrade!
@@ -382,18 +376,9 @@
  - 2015/01/19 (1.30) - renamed ImGuiStorage::GetIntPtr()/GetFloatPtr() to GetIntRef()/GetIntRef() because Ptr was conflicting with actual pointer storage functions.
  - 2015/01/11 (1.30) - big font/image API change! now loads TTF file. allow for multiple fonts. no need for a PNG loader.
               (1.30) - removed GetDefaultFontData(). uses io.Fonts->GetTextureData*() API to retrieve uncompressed pixels.
-                       this sequence:
-                           const void* png_data;
-                           unsigned int png_size;
-                           ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
-                           // <Copy to GPU>
-                       became:
-                           unsigned char* pixels;
-                           int width, height;
-                           io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-                           // <Copy to GPU>
-                           io.Fonts->TexID = (your_texture_identifier);
-                       you now have much more flexibility to load multiple TTF fonts and manage the texture buffer for internal needs.
+                       font init:  const void* png_data; unsigned int png_size; ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size); <..Upload texture to GPU..>
+                       became:     unsigned char* pixels; int width, height; io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height); <..Upload texture to GPU>; io.Fonts->TexId = YourTextureIdentifier;
+                       you now more flexibility to load multiple TTF fonts and manage the texture buffer for internal needs.
                        it is now recommended that you sample the font texture with bilinear interpolation.
               (1.30) - added texture identifier in ImDrawCmd passed to your render function (we can now render images). make sure to set io.Fonts->TexID.
               (1.30) - removed IO.PixelCenterOffset (unnecessary, can be handled in user projection matrix)
@@ -863,7 +848,7 @@ ImGuiIO::ImGuiIO()
     // Settings
     DisplaySize = ImVec2(-1.0f, -1.0f);
     DeltaTime = 1.0f/60.0f;
-    NavFlags = 0x00;
+    ConfigFlags = 0x00;
     IniSavingRate = 5.0f;
     IniFilename = "imgui.ini";
     LogFilename = "imgui_log.txt";
@@ -939,13 +924,6 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
 
 #define IM_F32_TO_INT8_UNBOUND(_VAL)    ((int)((_VAL) * 255.0f + ((_VAL)>=0 ? 0.5f : -0.5f)))   // Unsaturated, for display purpose 
 #define IM_F32_TO_INT8_SAT(_VAL)        ((int)(ImSaturate(_VAL) * 255.0f + 0.5f))               // Saturated, always output 0..255
-
-// Play it nice with Windows users. Notepad in 2015 still doesn't display text data with Unix-style \n.
-#ifdef _WIN32
-#define IM_NEWLINE "\r\n"
-#else
-#define IM_NEWLINE "\n"
-#endif
 
 ImVec2 ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p)
 {
@@ -2826,7 +2804,7 @@ static void ImGui::NavUpdateWindowing()
     bool apply_toggle_layer = false;
 
     bool start_windowing_with_gamepad = !g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_Menu, ImGuiInputReadMode_Pressed);
-    bool start_windowing_with_keyboard = !g.NavWindowingTarget && g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab) && (g.IO.NavFlags & ImGuiNavFlags_EnableKeyboard);
+    bool start_windowing_with_keyboard = !g.NavWindowingTarget && g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab) && (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard);
     if (start_windowing_with_gamepad || start_windowing_with_keyboard)
         if (ImGuiWindow* window = g.NavWindow ? g.NavWindow : FindWindowNavigable(g.Windows.Size - 1, -INT_MAX, -1))
         {
@@ -2981,7 +2959,7 @@ static void ImGui::NavUpdate()
 
     // Update Keyboard->Nav inputs mapping
     memset(g.IO.NavInputs + ImGuiNavInput_InternalStart_, 0, (ImGuiNavInput_COUNT - ImGuiNavInput_InternalStart_) * sizeof(g.IO.NavInputs[0]));
-    if (g.IO.NavFlags & ImGuiNavFlags_EnableKeyboard)
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)
     {
         #define NAV_MAP_KEY(_KEY, _NAV_INPUT)   if (g.IO.KeyMap[_KEY] != -1 && IsKeyDown(g.IO.KeyMap[_KEY])) g.IO.NavInputs[_NAV_INPUT] = 1.0f;
         NAV_MAP_KEY(ImGuiKey_Space,     ImGuiNavInput_Activate );
@@ -3053,7 +3031,7 @@ static void ImGui::NavUpdate()
     if (g.NavMousePosDirty && g.NavIdIsAlive)
     {
         // Set mouse position given our knowledge of the nav widget position from last frame
-        if (g.IO.NavFlags & ImGuiNavFlags_MoveMouse)
+        if (g.IO.ConfigFlags & ImGuiConfigFlags_NavMoveMouse)
         {
             g.IO.MousePos = g.IO.MousePosPrev = NavCalcPreferredMousePos();
             g.IO.WantMoveMouse = true;
@@ -3073,7 +3051,7 @@ static void ImGui::NavUpdate()
     NavUpdateWindowing();
 
     // Set output flags for user application
-    g.IO.NavActive = (g.IO.NavFlags & (ImGuiNavFlags_EnableGamepad | ImGuiNavFlags_EnableKeyboard)) && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs);
+    g.IO.NavActive = (g.IO.ConfigFlags & (ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NavEnableKeyboard)) && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs);
     g.IO.NavVisible = (g.IO.NavActive && g.NavId != 0 && !g.NavDisableHighlight) || (g.NavWindowingTarget != NULL) || g.NavInitRequest;
 
     // Process NavCancel input (to close a popup, get back to parent, clear focus)
@@ -3227,7 +3205,7 @@ static void ImGui::NavUpdate()
     }
 
     // For scoring we use a single segment on the left side our current item bounding box (not touching the edge to avoid box overlap with zero-spaced items)
-    ImRect nav_rect_rel = (g.NavWindow && g.NavWindow->NavRectRel[g.NavLayer].IsFinite()) ? g.NavWindow->NavRectRel[g.NavLayer] : ImRect(0,0,0,0);
+    ImRect nav_rect_rel = (g.NavWindow && !g.NavWindow->NavRectRel[g.NavLayer].IsInverted()) ? g.NavWindow->NavRectRel[g.NavLayer] : ImRect(0,0,0,0);
     g.NavScoringRectScreen = g.NavWindow ? ImRect(g.NavWindow->Pos + nav_rect_rel.Min, g.NavWindow->Pos + nav_rect_rel.Max) : GetViewportRect();
     g.NavScoringRectScreen.Min.x = ImMin(g.NavScoringRectScreen.Min.x + 1.0f, g.NavScoringRectScreen.Max.x);
     g.NavScoringRectScreen.Max.x = g.NavScoringRectScreen.Min.x;
@@ -3298,7 +3276,7 @@ void ImGui::NewFrame()
         IM_ASSERT(g.IO.KeyMap[n] >= -1 && g.IO.KeyMap[n] < IM_ARRAYSIZE(g.IO.KeysDown) && "io.KeyMap[] contains an out of bound value (need to be 0..512, or -1 for unmapped key)");
 
     // Do a simple check for required key mapping (we intentionally do NOT check all keys to not pressure user into setting up everything, but Space is required and was super recently added in 1.60 WIP)
-    if (g.IO.NavFlags & ImGuiNavFlags_EnableKeyboard)
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)
         IM_ASSERT(g.IO.KeyMap[ImGuiKey_Space] != -1 && "ImGuiKey_Space is not mapped, required for keyboard navigation.");
 
     // Load settings on first frame
@@ -3465,7 +3443,7 @@ void ImGui::NewFrame()
         g.IO.WantCaptureKeyboard = (g.WantCaptureKeyboardNextFrame != 0);
     else
         g.IO.WantCaptureKeyboard = (g.ActiveId != 0) || (modal_window != NULL);
-    if (g.IO.NavActive && (g.IO.NavFlags & ImGuiNavFlags_EnableKeyboard) && !(g.IO.NavFlags & ImGuiNavFlags_NoCaptureKeyboard))
+    if (g.IO.NavActive && (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) && !(g.IO.ConfigFlags & ImGuiConfigFlags_NavNoCaptureKeyboard))
         g.IO.WantCaptureKeyboard = true;
 
     g.IO.WantTextInput = (g.WantTextInputNextFrame != -1) ? (g.WantTextInputNextFrame != 0) : 0;
@@ -5860,7 +5838,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             float sc = g.Style.MouseCursorScale;
             ImVec2 ref_pos = (!g.NavDisableHighlight && g.NavDisableMouseHover) ? NavCalcPreferredMousePos() : g.IO.MousePos;
             ImRect rect_to_avoid;
-            if (!g.NavDisableHighlight && g.NavDisableMouseHover && !(g.IO.NavFlags & ImGuiNavFlags_MoveMouse))
+            if (!g.NavDisableHighlight && g.NavDisableMouseHover && !(g.IO.ConfigFlags & ImGuiConfigFlags_NavMoveMouse))
                 rect_to_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 16, ref_pos.y + 8); 
             else
                 rect_to_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24 * sc, ref_pos.y + 24 * sc); // FIXME: Hard-coded based on mouse cursor shape expectation. Exact dimension not very important.
@@ -6060,7 +6038,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.TextWrapPosStack.resize(0);
         window->DC.ColumnsSet = NULL;
         window->DC.TreeDepth = 0;
-        window->DC.TreeDepthMayCloseOnPop = 0x00;
+        window->DC.TreeDepthMayJumpToParentOnPop = 0x00;
         window->DC.StateStorage = &window->StateStorage;
         window->DC.GroupStack.resize(0);
         window->MenuColumns.Update(3, style.ItemSpacing.x, window_just_activated_by_user);
@@ -8020,8 +7998,8 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // Store a flag for the current depth to tell if we will allow closing this node when navigating one of its child. 
     // For this purpose we essentially compare if g.NavIdIsAlive went from 0 to 1 between TreeNode() and TreePop().
     // This is currently only support 32 level deep and we are fine with (1 << Depth) overflowing into a zero.
-    if (is_open && !g.NavIdIsAlive && (flags & ImGuiTreeNodeFlags_NavCloseFromChild) && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
-        window->DC.TreeDepthMayCloseOnPop |= (1 << window->DC.TreeDepth);
+    if (is_open && !g.NavIdIsAlive && (flags & ImGuiTreeNodeFlags_NavLeftJumpsBackHere) && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
+        window->DC.TreeDepthMayJumpToParentOnPop |= (1 << window->DC.TreeDepth);
 
     bool item_add = ItemAdd(interact_bb, id);
     window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_HasDisplayRect;
@@ -12689,12 +12667,12 @@ void ImGui::TreePop()
 
     window->DC.TreeDepth--;
     if (g.NavMoveDir == ImGuiDir_Left && g.NavWindow == window && NavMoveRequestButNoResultYet())
-        if (g.NavIdIsAlive && (window->DC.TreeDepthMayCloseOnPop & (1 << window->DC.TreeDepth)))
+        if (g.NavIdIsAlive && (window->DC.TreeDepthMayJumpToParentOnPop & (1 << window->DC.TreeDepth)))
         {
             SetNavID(window->IDStack.back(), g.NavLayer);
             NavMoveRequestCancel();
         }
-    window->DC.TreeDepthMayCloseOnPop &= (1 << window->DC.TreeDepth) - 1;
+    window->DC.TreeDepthMayJumpToParentOnPop &= (1 << window->DC.TreeDepth) - 1;
 
     PopID();
 }
@@ -13218,7 +13196,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 ImGui::BulletText("Active: %d, WriteAccessed: %d", window->Active, window->WriteAccessed);
                 ImGui::BulletText("NavLastIds: 0x%08X,0x%08X, NavLayerActiveMask: %X", window->NavLastIds[0], window->NavLastIds[1], window->DC.NavLayerActiveMask);
                 ImGui::BulletText("NavLastChildNavWindow: %s", window->NavLastChildNavWindow ? window->NavLastChildNavWindow->Name : "NULL");
-                if (window->NavRectRel[0].IsFinite())
+                if (window->NavRectRel[0].IsInverted())
                     ImGui::BulletText("NavRectRel[0]: (%.1f,%.1f)(%.1f,%.1f)", window->NavRectRel[0].Min.x, window->NavRectRel[0].Min.y, window->NavRectRel[0].Max.x, window->NavRectRel[0].Max.y);
                 else
                     ImGui::BulletText("NavRectRel[0]: <None>");
