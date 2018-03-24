@@ -14,7 +14,7 @@ static const bool* gpShowCentralWindow = NULL;    // We'll bind it to a "manual"
 
 
 #ifdef TEST_ICONS_INSIDE_TTF
-#include "fonts/Icons/FontAwesome/definitions.h"
+#include "fonts/Icons/FontAwesome4/definitions.h"
 static void DrawAllFontAwesomeIcons();  // defined at the bottom of this file
 
 #ifndef NO_IMGUIFILESYSTEM  // Optional stuff to enhance file system dialogs with icons
@@ -996,10 +996,10 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
             unsigned int* pNavFlags = (unsigned int*) &ImGui::GetIO().ConfigFlags;
             ImGui::AlignFirstTextHeightToWidgets();ImGui::TextUnformatted("ConfigFlags:");
             ImGui::SameLine();ImGui::CheckboxFlags("NavEnableKeyboard",pNavFlags,ImGuiConfigFlags_NavEnableKeyboard);
-#           ifdef IMGUI_USE_GLFW_BINDING
-            ImGui::SameLine();ImGui::CheckboxFlags("NavEnableGamepad",pNavFlags,ImGuiConfigFlags_NavEnableGamepad);
-#           endif //IMGUI_USE_GLFW_BINDING
-            ImGui::SameLine();ImGui::CheckboxFlags("NavMoveMouse",pNavFlags,ImGuiConfigFlags_NavMoveMouse);
+            if (ImGui::GetIO().BackendFlags&ImGuiBackendFlags_HasGamepad)   {
+                ImGui::SameLine();ImGui::CheckboxFlags("NavEnableGamepad",pNavFlags,ImGuiConfigFlags_NavEnableGamepad);
+            }
+            ImGui::SameLine();ImGui::CheckboxFlags("NavMoveMouse",pNavFlags,ImGuiConfigFlags_NavEnableSetMousePos);
             //ImGui::SameLine();ImGui::CheckboxFlags("NavNoCaptureKeyboard",pNavFlags,ImGuiConfigFlags_NavNoCaptureKeyboard);
             if (ImGui::GetIO().ConfigFlags&ImGuiConfigFlags_NavEnableKeyboard) {ImGui::SameLine(0,30);ImGui::TextDisabled("%s","Keys: CTRL+TAB and CTRL+SHIFT+TAB, Space and Esc, Arrows");}
 
@@ -1206,7 +1206,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
     static const ImWchar iconFontRanges[] ={ICON_MIN_FA,ICON_MAX_FA,0};
     ImFontConfig fntCfg;fntCfg.MergeMode = true;fntCfg.PixelSnapH = true;
     fntCfg.OversampleV=fntCfg.OversampleH=1;    // To save texture memory (but commenting it out makes icons look better)
-    gImGuiInitParams.fonts.push_back(ImImpl_InitParams::FontData("fonts/Icons/FontAwesome/font.ttf",fontSizeInPixels,&iconFontRanges[0],&fntCfg));
+    gImGuiInitParams.fonts.push_back(ImImpl_InitParams::FontData("fonts/Icons/FontAwesome4/font.ttf",fontSizeInPixels,&iconFontRanges[0],&fntCfg));
     }
 #   endif //TEST_ICONS_INSIDE_TTF
 

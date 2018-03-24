@@ -215,6 +215,10 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.DisplaySize = ImVec2((float)fb_w, (float)fb_h);  // Display size, in pixels. For clamping windows positions.
     io.DeltaTime = 1.0f/60.0f;                          // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
     //io.PixelCenterOffset = 0.0f;                        // Align OpenGL texels
+
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;   // We can honor GetMouseCursor() values
+    io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;    // We can honor io.WantSetMousePos requests (optional, rarely used)
+
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;             // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
@@ -545,6 +549,8 @@ static void ImImplMainLoopFrame(void* userPtr)	{
             }
 #           undef MAP_BUTTON
 #           undef MAP_ANALOG
+            if (axes_count > 0 && buttons_count > 0) io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+            else io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
             }
             else {
                 // gEmulateGamepadWithKeyboard
@@ -581,6 +587,7 @@ static void ImImplMainLoopFrame(void* userPtr)	{
 #               undef MAP_BUTTON_PRESSED
 #               undef MAP_BUTTON_DOWN
 #               undef MAP_ANALOG
+                io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
             }
         //------------------------------------------------------------------------
         }
@@ -600,8 +607,8 @@ static void ImImplMainLoopFrame(void* userPtr)	{
             g_MousePressed[i] = false;
         }
         if (!gImGuiPaused) {
-            if (io.WantMoveMouse)  {
-                // Set mouse position if requested by io.WantMoveMouse flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
+            if (io.WantSetMousePos)  {
+                // Set mouse position if requested by io.WantSetMousePos flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
                 glfwSetCursorPos(window, (double)io.MousePos.x, (double)io.MousePos.y);
             }
             /*else    {

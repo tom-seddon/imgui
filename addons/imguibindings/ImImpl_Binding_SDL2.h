@@ -75,6 +75,9 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.DeltaTime = 1.0f/60.0f;                          // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
     //io.PixelCenterOffset = 0.0f;                        // Align OpenGL texels
 
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;   // We can honor GetMouseCursor() values
+    io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;    // We can honor io.WantSetMousePos requests (optional, rarely used)
+
     io.KeyMap[ImGuiKey_Tab] = SDLK_TAB;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     io.KeyMap[ImGuiKey_LeftArrow] = SDL_SCANCODE_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = SDL_SCANCODE_RIGHT;
@@ -365,8 +368,8 @@ static void ImImplMainLoopFrame(void* pDone)	{
     {
         io.DeltaTime = deltaTime;
         if (!gImGuiPaused) {
-            if (io.WantMoveMouse)  {
-                // Set mouse position if requested by io.WantMoveMouse flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
+            if (io.WantSetMousePos)  {
+                // Set mouse position if requested by io.WantSetMousePos flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
                 // SDL_WarpMouseInWindow() and SDL_WarpMouseGlobal()
                 //SDL_WarpMouseGlobal((int)io.MousePos.x, (int)io.MousePos.y);  // Wrong!
                 SDL_WarpMouseInWindow(window,(int)io.MousePos.x, (int)io.MousePos.y);

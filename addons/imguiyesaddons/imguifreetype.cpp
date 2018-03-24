@@ -289,6 +289,10 @@ bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 extra_flags=0,const ImVector<ImU3
         FreeTypeFont& font_face = fonts[input_i];
         ImFont* dst_font = cfg.DstFont;
 
+        // New...----
+        if (cfg.MergeMode)  dst_font->BuildLookupTable();
+        //-----------
+
         const float ascent = font_face.Info.Ascender;
         const float descent = font_face.Info.Descender;
         ImFontAtlasBuildSetupFont(atlas, dst_font, &cfg, ascent, descent);
@@ -305,7 +309,7 @@ bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 extra_flags=0,const ImVector<ImU3
         {
             for (uint32_t codepoint = in_range[0]; codepoint <= in_range[1]; ++codepoint)
             {
-                if (cfg.MergeMode && dst_font->FindGlyph((unsigned short)codepoint))
+                if (cfg.MergeMode && dst_font->FindGlyphNoFallback((unsigned short)codepoint))
                     continue;
 
                 FT_Glyph ft_glyph = NULL;

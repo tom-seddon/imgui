@@ -236,8 +236,8 @@ static void GlutDrawGL()    {
             }
         }
 
-        if (io.WantMoveMouse)  {
-            // Set mouse position if requested by io.WantMoveMouse flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
+        if (io.WantSetMousePos)  {
+            // Set mouse position if requested by io.WantSetMousePos flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
             glutWarpPointer((int)io.MousePos.x, (int)io.MousePos.y);;
         }
         /*else    {
@@ -319,6 +319,9 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)    {
     io.DisplaySize = ImVec2((float)fb_w, (float)fb_h);  // Display size, in pixels. For clamping windows positions.
     io.DeltaTime = 1.0f/60.0f;                          // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
     //io.PixelCenterOffset = 0.0f;                        // Align OpenGL texels
+
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;   // We can honor GetMouseCursor() values
+    io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;    // We can honor io.WantSetMousePos requests (optional, rarely used)
 
     // Set up ImGui
     io.KeyMap[ImGuiKey_Tab] = 9;    // tab (ascii)
