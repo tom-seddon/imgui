@@ -58,6 +58,7 @@ static ImVec4 gClearColor = gDefaultClearColor;
 
 // Here are two static methods useful to handle the change of size of the togglable mainMenu we will use
 // Returns the height of the main menu based on the current font (from: ImGui::CalcMainMenuHeight() in imguihelper.h)
+// However according to https://github.com/ocornut/imgui/issues/252 this approach can fail [Better call ImGui::GetWindowSize().y from inside the menu and store the result somewhere]
 inline static float CalcMainMenuHeight() {
     ImGuiIO& io = ImGui::GetIO();
     ImGuiStyle& style = ImGui::GetStyle();
