@@ -449,16 +449,15 @@ struct DockContext
 
     static ImRect getDockedRect(const ImRect& rect, ImGuiDockSlot dock_slot)
     {
-        ImVec2 half_size = rect.GetSize() * 0.5f;
-        switch (dock_slot)
-        {
-        default: return rect;
-	//case ImGuiDockSlot_Top: return ImRect(rect.Min, ImVec2(rect.Max.x, rect.Min.y + half_size.y));	  //  original
-	case ImGuiDockSlot_Top: return ImRect(rect.Min, rect.Min + ImVec2(rect.Max.x - rect.Min.x, half_size.y)); //  @r-lyeh
-        case ImGuiDockSlot_Right: return ImRect(rect.Min + ImVec2(half_size.x, 0), rect.Max);
-        case ImGuiDockSlot_Bottom: return ImRect(rect.Min + ImVec2(0, half_size.y), rect.Max);
-        case ImGuiDockSlot_Left: return ImRect(rect.Min, ImVec2(rect.Min.x + half_size.x, rect.Max.y));
-        }
+	ImVec2 size = rect.GetSize();
+	switch (dock_slot)
+	{
+	default: return rect;
+	case ImGuiDockSlot_Top: return ImRect(rect.Min, rect.Min + ImVec2(size.x, size.y * 0.5f));
+	case ImGuiDockSlot_Right: return ImRect(rect.Min + ImVec2(size.x * 0.5f, 0), rect.Max);
+	case ImGuiDockSlot_Bottom: return ImRect(rect.Min + ImVec2(0, size.y * 0.5f), rect.Max);
+	case ImGuiDockSlot_Left: return ImRect(rect.Min, rect.Min + ImVec2(size.x * 0.5f, rect.GetSize().y));
+	}
     }
 
 
@@ -1287,34 +1286,39 @@ struct DockContext
 };
 
 
-static DockContext g_default_dock;
-static DockContext *g_dock = &g_default_dock;
+static DockContext *g_default_dock=NULL;
+static DockContext *g_dock = NULL;
 
 DockContext* CreateDockContext()
 {
-    return new DockContext;
+    //return new DockContext; // Original code
+    DockContext* ptr = (DockContext*) ImGui::MemAlloc(sizeof(DockContext));IM_PLACEMENT_NEW (ptr) DockContext();return ptr; // Alternative
 }
 
 void DestroyDockContext(DockContext* dock)
 {
-    if (dock == &g_default_dock)
-    {
-        // No-op.
+    if (dock==NULL) dock=g_default_dock;
+    if (dock!=NULL) {
+	//delete dock;					// Original code
+	dock->~DockContext();ImGui::MemFree(dock);      // Alternative
     }
-    else
-    {
-        if (dock == g_dock)
-            SetCurrentDockContext(NULL);
-
-        delete dock;
-        dock = NULL;
+    if (dock==g_default_dock) {
+	if (g_dock==dock) g_dock=NULL;
+	g_default_dock=NULL;
+    }	//Deleted
+    else if (dock==g_dock) {
+	g_dock=NULL;			// leave it without any DockContext or
+	//SetCurrentDockContext(NULL);	// Back to g_default_dock (not sure what it's better)
     }
+    dock = NULL;    // useless
 }
 
 void SetCurrentDockContext(DockContext* dock)
 {
-    if (!dock)
-        g_dock = &g_default_dock;
+    if (!dock) {
+	if (!g_default_dock) g_default_dock = CreateDockContext();
+	g_dock = g_default_dock;
+    }
     else
         g_dock = dock;
 }
@@ -1326,6 +1330,7 @@ DockContext* GetCurrentDockContext()
 
 void ShutdownDock()
 {
+    IM_ASSERT(g_dock);
     g_dock->Shutdown();
 }
 
@@ -1336,6 +1341,7 @@ void SetNextDock(ImGuiDockSlot slot) {
 void BeginDockspace() {
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar;
     BeginChild("###workspace", ImVec2(0,0), false, flags);
+    if (!g_dock) SetCurrentDockContext(NULL);
     g_dock->m_workspace_pos = GetWindowPos();
     g_dock->m_workspace_size = GetWindowSize();
 }

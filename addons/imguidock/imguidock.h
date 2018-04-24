@@ -90,17 +90,21 @@ namespace ImGui{
 
 struct DockContext;
 
-// Create, destroy and change dock contexts. These functions are
-// entirely optional if you only need one dock context - a default
-// dock context is created on startup and set by default.
+// Create, destroy and change dock contexts.
+// Since a default dock context is created on the heap the first time BeginDockspace() is called,
+// only a single call to ImGui::DestroyDockContext() at program shutdown is really required (*).
+
+// (*)  This is really mandatory only if you're not using an IMGUI_USE_XXX_BINDING, or if you don't know
+//      what IMGUI_USE_XXX_BINDING is.
 
 // Each created context must be destroyed using DestroyDockContext.
 IMGUI_API DockContext* CreateDockContext();
 
-// Destroying the default dock context is a no-op.
-IMGUI_API void DestroyDockContext(DockContext* dock);
+// Destroying the default dock context is equivalent to calling this with NULL
+// and it's mandatory if the default dock context is used (tip: always call it at shutdown)
+IMGUI_API void DestroyDockContext(DockContext* dock=NULL);
 
-// SetCurrentDockContext(NULL) will select the default dock context.
+// SetCurrentDockContext(NULL) will select the default dock context (and create it on the heap if necessary).
 IMGUI_API void SetCurrentDockContext(DockContext* dock);
 
 IMGUI_API DockContext* GetCurrentDockContext();

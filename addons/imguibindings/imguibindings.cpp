@@ -586,6 +586,9 @@ void DestroyImGuiFontTexture()	{
         ImGui::TabWindow::DockPanelIconTextureID = NULL;
     }
 #   endif //NO_IMGUITABWINDOW
+#   ifndef NO_IMGUIDOCK
+    ImGui::DestroyDockContext();
+#   endif //NO_IMGUIDOCK
 }
 
 #ifndef _WIN32
