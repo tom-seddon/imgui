@@ -90,12 +90,24 @@ namespace ImGui{
 
 struct DockContext;
 
-// Create, destroy and change dock contexts.
-// Since a default dock context is created on the heap the first time BeginDockspace() is called,
-// only a single call to ImGui::DestroyDockContext() at program shutdown is really required (*).
+// Create, destroy and change dock contexts (*).
+
+// EXAMPLE USAGE:
+/* ImGui::DockContext* myDockContext=NULL; // global variable
+
+   // When you init your application:
+   myDockContext = ImGui::CreateDockContext();
+   ImGui::SetCurrentDockContext(myDockContext);
+   // From now on you can use imguidock [calling BeginDockspace()/EndDockspace() and so on].
+
+   // When you destroy your application:
+   ImGui::DestroyDockContext(myDockContext);myDockContext=NULL;
+*/
 
 // (*)  This is really mandatory only if you're not using an IMGUI_USE_XXX_BINDING, or if you don't know
-//      what IMGUI_USE_XXX_BINDING is.
+//      what IMGUI_USE_XXX_BINDING is (because otherwise the code above is already called for you in addons/imguibindings/imguibindings.cpp).
+
+
 
 // Each created context must be destroyed using DestroyDockContext.
 IMGUI_API DockContext* CreateDockContext();

@@ -335,6 +335,10 @@ void ImImpl_ClearColorBuffer(const ImVec4& bgColor)  {
 #endif //defined(IMGUI_USE_DIRECT3D9_BINDING)
 
 
+#   ifndef NO_IMGUIDOCK
+    static ImGui::DockContext* gDockContent = NULL;
+#   endif //NO_IMGUIDOCK
+
 static void AddFontFromMemoryTTFCloningFontData(ImGuiIO& io, ImVector<char>& buffVec, ImFont*& my_font, const float sizeInPixels, const ImImpl_InitParams::FontData& fd)    {
     char* tempBuffer = NULL;void* bufferToFeedImGui = NULL;
     tempBuffer = (char*)ImGui::MemAlloc(buffVec.size());
@@ -561,7 +565,10 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
         ImImpl_GenerateOrUpdateTexture(ImGui::TabWindow::DockPanelIconTextureID,w,h,4,&rgba_buffer[0]);
     }
 #   endif //NO_IMGUITABWINDOW
-
+#   ifndef NO_IMGUIDOCK
+    if (!gDockContent) gDockContent = ImGui::CreateDockContext();
+    ImGui::SetCurrentDockContext(gDockContent);
+#   endif //NO_IMGUIDOCK
 }
 
 void DestroyImGuiFontTexture()	{
@@ -587,7 +594,7 @@ void DestroyImGuiFontTexture()	{
     }
 #   endif //NO_IMGUITABWINDOW
 #   ifndef NO_IMGUIDOCK
-    ImGui::DestroyDockContext();
+    if (gDockContent) {ImGui::DestroyDockContext(gDockContent);gDockContent=NULL;}
 #   endif //NO_IMGUIDOCK
 }
 
