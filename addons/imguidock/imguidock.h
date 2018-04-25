@@ -107,19 +107,14 @@ struct DockContext;
 // (*)  This is really mandatory only if you're not using an IMGUI_USE_XXX_BINDING, or if you don't know
 //      what IMGUI_USE_XXX_BINDING is (because otherwise the code above is already called for you in addons/imguibindings/imguibindings.cpp).
 
-
-
-// Each created context must be destroyed using DestroyDockContext.
+// Each created context must be set current using SetCurrentDockContext and destroyed using DestroyDockContext.
 IMGUI_API DockContext* CreateDockContext();
+IMGUI_API void DestroyDockContext(DockContext* dock);
 
-// Destroying the default dock context is equivalent to calling this with NULL
-// and it's mandatory if the default dock context is used (tip: always call it at shutdown)
-IMGUI_API void DestroyDockContext(DockContext* dock=NULL);
-
-// SetCurrentDockContext(NULL) will select the default dock context (and create it on the heap if necessary).
 IMGUI_API void SetCurrentDockContext(DockContext* dock);
-
 IMGUI_API DockContext* GetCurrentDockContext();
+
+
 
 IMGUI_API void BeginDockspace();
 IMGUI_API void EndDockspace();
