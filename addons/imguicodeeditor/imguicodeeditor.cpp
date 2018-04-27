@@ -2258,7 +2258,6 @@ void CodeEditor::render()   {
 
         const ImVec2 offset = (g.IO.MousePos - window->Pos) * (1.0f - scale);
         window->Pos += offset;
-        window->PosFloat += offset;
         // these two don't affect child windows AFAIK
         //window->Size *= scale;
         //window->SizeFull *= scale;
@@ -3576,7 +3575,6 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
         const ImVec2 offset = (g.IO.MousePos - window->Pos) * (1.0f - scale);
         window->Pos += offset;
-        window->PosFloat += offset;
         // these two don't affect child windows AFAIK
         //window->Size *= scale;
         //window->SizeFull *= scale;
@@ -4210,7 +4208,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
         // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
         if (is_editable)
-            g.OsImePosRequest = ImVec2(cursor_screen_pos.x - 1, cursor_screen_pos.y - g.FontSize);
+            g.PlatformImePos = ImVec2(cursor_screen_pos.x - 1, cursor_screen_pos.y - g.FontSize);
 
     }
 

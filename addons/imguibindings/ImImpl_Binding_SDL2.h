@@ -441,6 +441,7 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
     }
     //---------------------------------------------------------------
 
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     InitImGui(pOptionalInitParams);
     ImGuiIO& io = ImGui::GetIO();           

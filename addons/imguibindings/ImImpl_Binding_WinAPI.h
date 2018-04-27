@@ -337,6 +337,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
     gImGuiInverseFPSClampOutsideImGui = pOptionalInitParams ? ((pOptionalInitParams->gFpsClampOutsideImGui!=0) ? (1.0f/pOptionalInitParams->gFpsClampOutsideImGui) : 1.0f) : -1.0f;
     gImGuiDynamicFPSInsideImGui = pOptionalInitParams ? pOptionalInitParams->gFpsDynamicInsideImGui : false;
 
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     InitImGui(pOptionalInitParams);
     InitGL();

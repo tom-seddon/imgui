@@ -172,14 +172,12 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         {
             SetWindowPos(window, g.NextWindowData.PosVal, g.NextWindowData.PosCond);
         }
-        g.NextWindowData.PosCond = 0;
     }
     if (g.NextWindowData.SizeCond)
     {
         window_size_x_set_by_api = (window->SetWindowSizeAllowFlags & g.NextWindowData.SizeCond) != 0 && (g.NextWindowData.SizeVal.x > 0.0f);
         window_size_y_set_by_api = (window->SetWindowSizeAllowFlags & g.NextWindowData.SizeCond) != 0 && (g.NextWindowData.SizeVal.y > 0.0f);
         SetWindowSize(window, g.NextWindowData.SizeVal, g.NextWindowData.SizeCond);
-        g.NextWindowData.SizeCond = 0;
     }
     if (g.NextWindowData.ContentSizeCond)
     {
@@ -187,22 +185,15 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->SizeContentsExplicit = g.NextWindowData.SizeVal;
         if (window->SizeContentsExplicit.y != 0.0f)
             window->SizeContentsExplicit.y += window->TitleBarHeight() + window->MenuBarHeight();
-        g.NextWindowData.ContentSizeCond = 0;
     }
     else if (first_begin_of_the_frame)
     {
         window->SizeContentsExplicit = ImVec2(0.0f, 0.0f);
     }
     if (g.NextWindowData.CollapsedCond)
-    {
         SetWindowCollapsed(window, g.NextWindowData.CollapsedVal, g.NextWindowData.CollapsedCond);
-        g.NextWindowData.CollapsedCond = 0;
-    }
     if (g.NextWindowData.FocusCond)
-    {
-        SetWindowFocus();
-        g.NextWindowData.FocusCond = 0;
-    }
+        FocusWindow(window);
     if (window->Appearing)
         SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, false);
 
@@ -234,6 +225,35 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->ClipRect = ImVec4(-FLT_MAX,-FLT_MAX,+FLT_MAX,+FLT_MAX);
         window->LastFrameActive = current_frame;
         window->IDStack.resize(1);
+
+        // UPDATE CONTENTS SIZE, UPDATE HIDDEN STATUS
+
+        // Update contents size from last frame for auto-fitting (or use explicit size)
+        window->SizeContents = CalcSizeContents(window);
+        if (window->HiddenFrames > 0)
+            window->HiddenFrames--;
+
+        // Hide new windows for one frame until they calculate their size
+        if (window_just_created && (!window_size_x_set_by_api || !window_size_y_set_by_api))
+            window->HiddenFrames = 1;
+
+        // Hide popup/tooltip window when re-opening while we measure size (because we recycle the windows)
+        // We reset Size/SizeContents for reappearing popups/tooltips early in this function, so further code won't be tempted to use the old size.
+        if (window_just_activated_by_user && (flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0)
+        {
+            window->HiddenFrames = 1;
+            if (flags & ImGuiWindowFlags_AlwaysAutoResize)
+            {
+                if (!window_size_x_set_by_api)
+                    window->Size.x = window->SizeFull.x = 0.f;
+                if (!window_size_y_set_by_api)
+                    window->Size.y = window->SizeFull.y = 0.f;
+                window->SizeContents = ImVec2(0.f, 0.f);
+            }
+        }
+
+        SetCurrentWindow(window);
+
 
         // Setup draw list and outer clipping rectangle
         window->DrawList->Clear();
@@ -297,35 +317,6 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         //else window->Collapsed = false;
 
 
-        //const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFrames == 1);
-        //window->Appearing = (window_just_activated_by_user || window_just_appearing_after_hidden_for_resize);
-
-        // SIZE
-
-        // Update contents size from last frame for auto-fitting (unless explicitly specified)
-        //window->SizeContents.x = (float)(int)((window->SizeContentsExplicit.x != 0.0f) ? window->SizeContentsExplicit.x : ((window_is_new ? 0.0f : window->DC.CursorMaxPos.x - window->Pos.x) + window->Scroll.x));
-        //window->SizeContents.y = (float)(int)((window->SizeContentsExplicit.y != 0.0f) ? window->SizeContentsExplicit.y : ((window_is_new ? 0.0f : window->DC.CursorMaxPos.y - window->Pos.y) + window->Scroll.y));
-        window->SizeContents = CalcSizeContents(window);
-
-
-        // Hide popup/tooltip window when first appearing while we measure size (because we recycle them)
-        if (window->HiddenFrames > 0)
-            window->HiddenFrames--;
-        if (window_just_activated_by_user && (flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0)
-        {
-            window->HiddenFrames = 1;
-            if (flags & ImGuiWindowFlags_AlwaysAutoResize)
-            {
-                if (!window_size_x_set_by_api)
-                    window->Size.x = window->SizeFull.x = 0.f;
-                if (!window_size_y_set_by_api)
-                    window->Size.y = window->SizeFull.y = 0.f;
-                window->SizeContents = ImVec2(0.f, 0.f);
-            }
-        }
-
-        // Lock window rounding, border size and rounding so that altering the border sizes for children doesn't have side-effects.
-        window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
         window->WindowBorderSize = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildBorderSize : ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupBorderSize : style.WindowBorderSize;
         window->WindowPadding = style.WindowPadding;
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_Popup)) && window->WindowBorderSize == 0.0f)
@@ -397,7 +388,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         {
             window->AutoPosLastDirection = ImGuiDir_None;
             if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api)
-                window->Pos = window->PosFloat = g.CurrentPopupStack.back().OpenPopupPos;
+                window->Pos = g.CurrentPopupStack.back().OpenPopupPos;
         }
 
         // Position child window
@@ -406,7 +397,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             window->BeginOrderWithinParent = parent_window->DC.ChildWindows.Size;
             parent_window->DC.ChildWindows.push_back(window);
             if (!(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api && !window_is_child_tooltip)
-                 window->Pos = window->PosFloat = parent_window->DC.CursorPos;
+                 window->Pos = parent_window->DC.CursorPos;
         }
         //if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api)
         //    window->Pos = window->PosFloat = parent_window->DC.CursorPos;
@@ -415,11 +406,11 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         if (window_pos_with_pivot)
             SetWindowPos(window, ImMax(style.DisplaySafeAreaPadding, window->SetWindowPosVal - window->SizeFull * window->SetWindowPosPivot), 0); // Position given a pivot (e.g. for centering)
         else if ((flags & ImGuiWindowFlags_ChildMenu) != 0)
-            window->PosFloat = FindBestWindowPosForPopup(window);
+            window->Pos = FindBestWindowPosForPopup(window);
         else if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api && window_just_appearing_after_hidden_for_resize)
-            window->PosFloat = FindBestWindowPosForPopup(window);
+            window->Pos = FindBestWindowPosForPopup(window);
         else if ((flags & ImGuiWindowFlags_Tooltip) != 0 && !window_pos_set_by_api && !window_is_child_tooltip)
-            window->PosFloat = FindBestWindowPosForPopup(window);
+            window->Pos = FindBestWindowPosForPopup(window);
 
         // Clamp position so it stays visible
         if (!(flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
@@ -427,17 +418,21 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             if (!window_pos_set_by_api && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
             {
                 ImVec2 padding = ImMax(style.DisplayWindowPadding, style.DisplaySafeAreaPadding);
-                window->PosFloat = ImMax(window->PosFloat + window->Size, padding) - window->Size;
-                window->PosFloat = ImMin(window->PosFloat, g.IO.DisplaySize - padding);
+                window->Pos = ImMax(window->Pos + window->Size, padding) - window->Size;
+                window->Pos = ImMin(window->Pos, g.IO.DisplaySize - padding);
             }
         }
-        window->Pos = ImFloor(window->PosFloat);
+        window->Pos = ImFloor(window->Pos);
 
         // Default item width. Make it proportional to window size if window manually resizes
         if (window->Size.x > 0.0f && !(flags & ImGuiWindowFlags_Tooltip) && !(flags & ImGuiWindowFlags_AlwaysAutoResize))
             window->ItemWidthDefault = (float)(int)(window->Size.x * 0.65f);
         else
             window->ItemWidthDefault = (float)(int)(g.FontSize * 16.0f);
+
+        // Lock window rounding for the frame (so that altering them doesn't cause inconsistencies)
+        window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
+
 
         // Prepare for focus requests
         window->FocusIdxAllRequestCurrent = (window->FocusIdxAllRequestNext == INT_MAX || window->FocusIdxAllCounter == -1) ? INT_MAX : (window->FocusIdxAllRequestNext + (window->FocusIdxAllCounter+1)) % (window->FocusIdxAllCounter+1);
@@ -805,7 +800,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->WriteAccessed = false;
 
     window->BeginCount++;
-    g.NextWindowData.SizeConstraintCond = 0;
+    g.NextWindowData.Clear();
 
     // Child window can be out of sight and have "negative" clip windows.
     // Mark them as collapsed so commands are skipped earlier (we can't manually collapse because they have no title bar).

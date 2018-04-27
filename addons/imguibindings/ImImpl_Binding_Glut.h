@@ -491,6 +491,7 @@ static void ImImplMainLoopFrame()	{
 int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** argv)
 {
     if (!InitBinding(pOptionalInitParams,argc,argv)) return -1;	
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     InitImGui(pOptionalInitParams);
     ImGuiIO& io = ImGui::GetIO();        
