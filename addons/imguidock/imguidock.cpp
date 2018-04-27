@@ -594,8 +594,6 @@ struct DockContext
 
 	Begin("##Overlay",
               NULL,
-	      ImVec2(0, 0),
-	      0.f,
               ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove |
               ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings |
               ImGuiWindowFlags_AlwaysAutoResize);
