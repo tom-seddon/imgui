@@ -265,7 +265,7 @@ struct DockContext
         m_docks.clear();
     }
 
-    Dock& getDock(const char* label, bool opened, const ImVec2& default_size)
+    Dock& getDock(const char* label, bool opened, const ImVec2& default_size, const ImVec2& default_pos)
     {
         ImU32 id = ImHash(label, 0);
 	for (int i = 0,iSz = m_docks.size(); i < iSz; ++i)
@@ -281,7 +281,7 @@ struct DockContext
         new_dock->id = id;
         new_dock->setActive();
         new_dock->status = (m_docks.size() == 1)?Status_Docked:Status_Float;
-        new_dock->pos = ImVec2(0, 0);
+        new_dock->pos = default_pos;
 	//new_dock->size = GetIO().DisplaySize;
 	new_dock->size.x = default_size.x < 0 ? GetIO().DisplaySize.x : default_size.x;
 	new_dock->size.y = default_size.y < 0 ? GetIO().DisplaySize.y : default_size.y;
@@ -1081,11 +1081,11 @@ struct DockContext
 	}
     }
 
-    bool begin(const char* label, bool* opened, ImGuiWindowFlags extra_flags, const ImVec2& default_size)
+    bool begin(const char* label, bool* opened, ImGuiWindowFlags extra_flags, const ImVec2& default_size, const ImVec2& default_pos)
     {
 	IM_ASSERT(!m_is_begin_open);
 	m_is_begin_open = true;
-	Dock& dock = getDock(label, !opened || *opened, default_size);
+	Dock& dock = getDock(label, !opened || *opened, default_size, default_pos);
 	if (dock.last_frame != 0 && m_last_frame != ImGui::GetFrameCount())
 	{
 	    cleanDocks();
@@ -1344,10 +1344,10 @@ void SetDockActive()
 }
 
 
-bool BeginDock(const char* label, bool* opened, ImGuiWindowFlags extra_flags, const ImVec2& default_size)
+bool BeginDock(const char* label, bool* opened, ImGuiWindowFlags extra_flags, const ImVec2& default_size, const ImVec2& default_pos)
 {
     IM_ASSERT(g_dock != NULL && "No current context. Did you call ImGui::CreateDockContext() or ImGui::SetCurrentDockContext()?");
-    return g_dock->begin(label, opened, extra_flags, default_size);
+    return g_dock->begin(label, opened, extra_flags, default_size, default_pos);
 }
 
 
