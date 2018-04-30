@@ -124,7 +124,7 @@ IMGUI_API void SetNextDock(ImGuiDockSlot slot);
 // When the floating/undocked window is manually resized, the last modified window size is kept (and the passed argument is ignored).
 // If 'default_size' is negative, any manual resizing (of the floating window) will be lost when the window is re-docked.
 // Please note that if you LoadDock(...) the last saved value will be used (so 'default_size' can still be ignored).
-IMGUI_API bool BeginDock(const char* label, bool* opened = NULL, ImGuiWindowFlags extra_flags = 0, const ImVec2& default_size = ImVec2(0,0));
+IMGUI_API bool BeginDock(const char* label, bool* opened = NULL, ImGuiWindowFlags extra_flags = 0, const ImVec2& default_size = ImVec2(0,0), const ImVec2& default_pos = ImVec2(0,0));
 IMGUI_API void EndDock();
 IMGUI_API void SetDockActive();
 IMGUI_API void DockDebugWindow();
