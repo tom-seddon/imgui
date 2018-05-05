@@ -232,6 +232,9 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
 // Application code
 int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine, int iCmdShow)
 {
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+
     WNDCLASS wc;
     HWND hWnd;
     HDC hDC;
@@ -337,8 +340,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
     gImGuiInverseFPSClampOutsideImGui = pOptionalInitParams ? ((pOptionalInitParams->gFpsClampOutsideImGui!=0) ? (1.0f/pOptionalInitParams->gFpsClampOutsideImGui) : 1.0f) : -1.0f;
     gImGuiDynamicFPSInsideImGui = pOptionalInitParams ? pOptionalInitParams->gFpsDynamicInsideImGui : false;
 
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
+
     InitImGui(pOptionalInitParams);
     InitGL();
     if (gImGuiPostInitGLCallback) gImGuiPostInitGLCallback();
@@ -481,7 +483,6 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
     }
 
     DestroyGL();
-    ImGui::DestroyContext();
     DestroyImGuiFontTexture();
     DestroyImGuiProgram();
     DestroyImGuiBuffer();
@@ -499,6 +500,8 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
 
     // destroy the window explicitly
     DestroyWindow( hWnd );
+
+    ImGui::DestroyContext();
 
     return msg.wParam;
 }

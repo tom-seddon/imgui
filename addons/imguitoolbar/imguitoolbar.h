@@ -188,10 +188,8 @@ public:
         static const ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse|
                 ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings/*|ImGuiWindowFlags_Tooltip*/;
         //const bool dontSkip = inWindowMode || ImGui::Begin(name,NULL,toolbarWindowSize,0,flags);
-        bool dontSkip;
-        if (inWindowMode) {
-            dontSkip = true;
-        } else {
+        bool dontSkip = inWindowMode;
+        if (!inWindowMode) {
             ImGui::SetNextWindowSize(toolbarWindowSize, ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowBgAlpha(0.0f);
             dontSkip = ImGui::Begin(name,NULL,flags);
