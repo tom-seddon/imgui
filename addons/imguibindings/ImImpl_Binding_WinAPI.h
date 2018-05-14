@@ -11,7 +11,7 @@
 static HWND window = NULL;
 static ImVec2 mousePosScale(1.0f, 1.0f);
 
-static const LPCTSTR win32CursorIds[ImGuiMouseCursor_Count_+1] = {
+static const LPCTSTR win32CursorIds[ImGuiMouseCursor_COUNT+1] = {
     IDC_ARROW,
     IDC_IBEAM,
     IDC_SIZEALL,      //SDL_SYSTEM_CURSOR_HAND,    // or SDL_SYSTEM_CURSOR_SIZEALL  //ImGuiMouseCursor_ResizeAll,                  // Unused by ImGui
@@ -21,7 +21,7 @@ static const LPCTSTR win32CursorIds[ImGuiMouseCursor_Count_+1] = {
     IDC_SIZENWSE,     //ImGuiMouseCursor_ResizeNWSE,          // Unused by ImGui
     IDC_ARROW         //,ImGuiMouseCursor_Arrow
 };
-static HCURSOR win32Cursors[ImGuiMouseCursor_Count_+1];
+static HCURSOR win32Cursors[ImGuiMouseCursor_COUNT+1];
 
 
 // Notify OS Input Method Editor of text input position (e.g. when using Japanese/Chinese inputs, otherwise this isn't needed)
@@ -217,7 +217,7 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.KeyMap[ImGuiKey_Y] = 'Y';
     io.KeyMap[ImGuiKey_Z] = 'Z';
 
-    io.RenderDrawListsFn = ImImpl_RenderDrawLists;
+    //io.RenderDrawListsFn = ImImpl_RenderDrawLists;
     io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;
 
     // 3 common init steps
@@ -295,7 +295,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
     //----------------------------------------------------------------------------------
 
     // New: create cursors-------------------------------------------
-    for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
+    for (int i=0,isz=ImGuiMouseCursor_COUNT+1;i<isz;i++) {
         win32Cursors[i] = LoadCursor(NULL,(LPCTSTR) win32CursorIds[i]);
         if (i==0) SetCursor(win32Cursors[i]);
     }
@@ -421,7 +421,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
                 if (oldMustHideCursor!=io.MouseDrawCursor) {
                     ShowCursor(!io.MouseDrawCursor);
                     oldMustHideCursor = io.MouseDrawCursor;
-                    oldCursor = ImGuiMouseCursor_Count_;
+                    oldCursor = ImGuiMouseCursor_COUNT;
                 }
                 if (!io.MouseDrawCursor) {
                     if (oldCursor!=ImGui::GetMouseCursor()) {
@@ -446,7 +446,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
         static const int numFramesDelay = 12;
         static int curFramesDelay = -1;
         if (!gImGuiPaused)	{
-            gImGuiWereOutsideImGui = !ImGui::IsMouseHoveringAnyWindow() && !ImGui::IsAnyItemActive();
+            gImGuiWereOutsideImGui = !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && !ImGui::IsAnyItemActive();
             const bool imguiNeedsInputNow = !gImGuiWereOutsideImGui && (io.WantTextInput || io.MouseDelta.x!=0 || io.MouseDelta.y!=0 || io.MouseWheel!=0);// || io.MouseDownOwned[0] || io.MouseDownOwned[1] || io.MouseDownOwned[2]);
             if (gImGuiCapturesInput != imguiNeedsInputNow) {
                 gImGuiCapturesInput = imguiNeedsInputNow;
@@ -460,6 +460,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
 
             // Rendering
             ImGui::Render();
+            ImImpl_RenderDrawLists(ImGui::GetDrawData());
         }
         else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
@@ -488,7 +489,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
     DestroyImGuiBuffer();
 
     // New: delete cursors-------------------------------------------
-    for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
+    for (int i=0,isz=ImGuiMouseCursor_COUNT+1;i<isz;i++) {
         //DestroyCursor(win32Cursors[i]);   // Nope: LoadCursor() loads SHARED cursors that should not be destroyed
     }
     //---------------------------------------------------------------

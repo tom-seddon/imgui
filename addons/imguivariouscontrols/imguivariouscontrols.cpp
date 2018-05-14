@@ -471,7 +471,9 @@ bool ColorChooser(bool* open,ImVec4 *pColorOut,bool supportsAlpha)   {
 
     if (open) ImGui::SetNextWindowFocus();
     //if (ImGui::BeginPopupModal("Color Chooser##myColorChoserPrivate",open,WindowFlags))
-    if (ImGui::Begin("Color Chooser##myColorChoserPrivate",open,windowSize,-1.f,WindowFlags))
+    //if (ImGui::Begin("Color Chooser##myColorChoserPrivate",open,windowSize,-1.f,WindowFlags)) // Old API
+    ImGui::SetNextWindowSize(windowSize, ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Color Chooser##myColorChoserPrivate",open,WindowFlags))
     {
         colorSelected = ColorChooserInternal(pColorOut,supportsAlpha,true);
 
@@ -2307,7 +2309,11 @@ bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size, 
             ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,0);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(0,0));
 
-            if (ImGui::Begin("##TooltipAutocomplete", NULL,ttWindowSize,InputTextWithAutoCompletionData::Opacity,ImGuiWindowFlags_Tooltip|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))  {
+            //if (ImGui::Begin("##TooltipAutocomplete", NULL,ttWindowSize,InputTextWithAutoCompletionData::Opacity,ImGuiWindowFlags_Tooltip|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))  // Old API
+            ImGui::SetNextWindowSize(ttWindowSize, ImGuiCond_FirstUseEver);
+            if (InputTextWithAutoCompletionData::Opacity>=0.f) ImGui::SetNextWindowBgAlpha(InputTextWithAutoCompletionData::Opacity);
+            if (ImGui::Begin("##TooltipAutocomplete", NULL,ImGuiWindowFlags_Tooltip|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))
+            {
                 // We must always use newCursorScreenPos when mnually drawing inside this window
                 if (!window) window = ImGui::GetCurrentWindowRead();
                 for (int i=firstTTItemIndex,iSz=firstTTItemIndex+numTTItems;i<iSz;i++) {

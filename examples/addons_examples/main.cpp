@@ -286,7 +286,6 @@ void DrawGL()	// Mandatory
     static bool show_test_window = true;
     static bool show_another_window = false;
     static bool show_node_graph_editor_window = false;
-    static bool show_splitter_test_window = false;
     static bool show_dock_window = false;
     static bool show_tab_windows = false;
     static bool show_performance = false;
@@ -297,7 +296,11 @@ void DrawGL()	// Mandatory
 
     // 1. Show a simple window
     static bool open = true;static float bg_alpha = -1.f;
-    if (ImGui::Begin("ImGui Addons", &open, ImVec2(450,300),bg_alpha,0))   {
+    //if (ImGui::Begin("ImGui Addons", &open, ImVec2(450,300),bg_alpha,0))   // Old API
+    ImGui::SetNextWindowSize(ImVec2(450,300), ImGuiCond_FirstUseEver);
+    if (bg_alpha>=0.f) ImGui::SetNextWindowBgAlpha(bg_alpha);
+    if (ImGui::Begin("ImGui Addons",&open,0))
+    {
 
         if (ImGui::TreeNodeEx("Pause/Resume ImGui and process input as usual",ImGuiTreeNodeFlags_CollapsingHeader)) {
         //ImGui::Text("\n");ImGui::Separator();ImGui::Text("Pause/Resume ImGui and process input as usual");ImGui::Separator();
@@ -322,8 +325,6 @@ void DrawGL()	// Mandatory
         show_node_graph_editor_window ^= ImGui::Button("ImGui Node Graph Editor");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","From the imguinodegrapheditor addon");
 #       endif //NO_IMGUINODEGRAPHEDITOR
-        show_splitter_test_window ^= ImGui::Button("Splitter Test");
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","This is just some reference code to make\nsplitters without using the ImGui Columns API");
 #       ifndef NO_IMGUIDOCK
         show_dock_window ^= ImGui::Button("ImGui Dock");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","An example of imguidock\n(LumixEngine's Docking System)");
@@ -651,7 +652,7 @@ void DrawGL()	// Mandatory
   int tm_wday;			 Day of week.	[0-6]
   int tm_yday;			 Days in year.[0-365]
   };*/
-        ImGui::AlignFirstTextHeightToWidgets();
+        ImGui::AlignTextToFramePadding();
         ImGui::Text("Choose a date:");
         ImGui::SameLine();
         static tm myDate={};       // IMPORTANT: must be static! (plenty of compiler warnings here if we write: static tm myDate={0}; Is there any difference?)
@@ -683,7 +684,7 @@ void DrawGL()	// Mandatory
         // ColorChooser Test:
         static ImVec4 chosenColor(1,1,1,1);
         static bool openColorChooser = false;
-        ImGui::AlignFirstTextHeightToWidgets();ImGui::Text("Please choose a color:");ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();ImGui::Text("Please choose a color:");ImGui::SameLine();
         openColorChooser|=ImGui::ColorButton("color button",chosenColor);
         //if (openColorChooser) chosenColor.z=0.f;
         if (ImGui::ColorChooser(&openColorChooser,&chosenColor)) {
@@ -918,7 +919,7 @@ void DrawGL()	// Mandatory
                 const void* ptr_id = &myTreeNodeIsOpen;
                 const float curPosX = ImGui::GetCursorPosX();   // used for clipping
                 ImGui::BeginGroup();    // Not sure grouping is strictly necessary here
-                myTreeNodeIsOpen = ImGui::TreeNodeEx(ptr_id,ImGuiTreeNodeFlags_CollapsingHeader|ImGuiTreeNodeFlags_AllowOverlapMode,"Collapsable %d",1);
+                myTreeNodeIsOpen = ImGui::TreeNodeEx(ptr_id,ImGuiTreeNodeFlags_CollapsingHeader|ImGuiTreeNodeFlags_AllowItemOverlap,"Collapsable %d",1);
                 const bool isCollapsableHeaderHovered = ImGui::IsItemHovered();
                 if (!displayButtonsOnlyOnItemHovering || isCollapsableHeaderHovered)
                 {
@@ -1064,7 +1065,7 @@ void DrawGL()	// Mandatory
             if (ImGui::TreeNode("Options:##TreeNodeOptions")) {
             {
                 bool changed = false;
-                ImGui::AlignFirstTextHeightToWidgets();ImGui::TextDisabled("Selection Mode:");ImGui::SameLine();
+                ImGui::AlignTextToFramePadding();ImGui::TextDisabled("Selection Mode:");ImGui::SameLine();
                 changed|=ImGui::CheckboxFlags("Root##TreeViewSelectRoot",&tv.selectionMode,ImGui::TreeViewNode::MODE_ROOT);ImGui::SameLine();
                 changed|=ImGui::CheckboxFlags("Intermediate##TreeViewSelectIntermediate",&tv.selectionMode,ImGui::TreeViewNode::MODE_INTERMEDIATE);ImGui::SameLine();
                 changed|=ImGui::CheckboxFlags("Leaf##TreeViewSelectLeaf",&tv.selectionMode,ImGui::TreeViewNode::MODE_LEAF);
@@ -1076,7 +1077,7 @@ void DrawGL()	// Mandatory
                 if (changed) tv.removeStateFromAllDescendants(ImGui::TreeViewNode::STATE_SELECTED);
 
                 changed = false;
-                ImGui::AlignFirstTextHeightToWidgets();ImGui::TextDisabled("Checkbox Mode:");ImGui::SameLine();
+                ImGui::AlignTextToFramePadding();ImGui::TextDisabled("Checkbox Mode:");ImGui::SameLine();
                 changed|=ImGui::CheckboxFlags("Root##TreeViewCheckboxRoot",&tv.checkboxMode,ImGui::TreeViewNode::MODE_ROOT);ImGui::SameLine();
                 changed|=ImGui::CheckboxFlags("Intermediate##TreeViewCheckboxIntermediate",&tv.checkboxMode,ImGui::TreeViewNode::MODE_INTERMEDIATE);ImGui::SameLine();
                 changed|=ImGui::CheckboxFlags("Leaf##TreeViewCheckboxLeaf",&tv.checkboxMode,ImGui::TreeViewNode::MODE_LEAF);
@@ -1699,7 +1700,7 @@ void DrawGL()	// Mandatory
             {
                 // Load dialog
                 static ImGuiFs::Dialog loadDlg;
-                ImGui::AlignFirstTextHeightToWidgets();
+                ImGui::AlignTextToFramePadding();
                 ImGui::Text("Mod File:");ImGui::SameLine();
                 ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.35f);
                 ImGui::InputText("###ModFiletoplayloadID",(char*)loadDlg.getChosenPath(),ImGuiFs::MAX_PATH_BYTES,ImGuiInputTextFlags_ReadOnly);
@@ -1788,7 +1789,10 @@ void DrawGL()	// Mandatory
 #   ifndef NO_IMGUITOOLBAR
     if (show_another_window)
     {
-        ImGui::Begin("Another Window", &show_another_window, ImVec2(500,100),bg_alpha,0);
+        //if (ImGui::Begin("Another Window", &show_another_window, ImVec2(500,100),bg_alpha,0))   // Old API
+        ImGui::SetNextWindowSize(ImVec2(500,100), ImGuiCond_FirstUseEver);
+        if (bg_alpha>=0.f) ImGui::SetNextWindowBgAlpha(bg_alpha);
+        if (ImGui::Begin("Another Window",&show_another_window,0))
         {
             // imguitoolbar test (note that it can be used both inside and outside windows (see below)
             ImGui::Separator();ImGui::Text("imguitoolbar");ImGui::Separator();
@@ -1812,9 +1816,10 @@ void DrawGL()	// Mandatory
             }
             const int pressed = toolbar.render();
             if (pressed>=0) fprintf(stderr,"Toolbar1: pressed:%d\n",pressed);
+
+            // Here we can open a child window if we want to toolbar not to scroll
+            ImGui::Spacing();ImGui::Text("imguitoolbar can be used inside windows too.\nThe first series of buttons can be used as a tab control.\nPlease resize the window and see the dynamic layout.\n");
         }
-        // Here we can open a child window if we want to toolbar not to scroll
-        ImGui::Spacing();ImGui::Text("imguitoolbar can be used inside windows too.\nThe first series of buttons can be used as a tab control.\nPlease resize the window and see the dynamic layout.\n");
         ImGui::End();
     }
 #   endif //NO_IMGUITOOLBAR
@@ -1829,7 +1834,11 @@ void DrawGL()	// Mandatory
 #   endif // NO_IMGUISTYLESERIALIZER
 #   ifndef NO_IMGUINODEGRAPHEDITOR
     if (show_node_graph_editor_window) {
-        if (ImGui::Begin("Example: Custom Node Graph", &show_node_graph_editor_window,ImVec2(700,600),0.95f,ImGuiWindowFlags_NoScrollbar)){
+        //if (ImGui::Begin("Example: Custom Node Graph", &show_node_graph_editor_window,ImVec2(700,600),0.95f,ImGuiWindowFlags_NoScrollbar))    // Old API
+        ImGui::SetNextWindowSize(ImVec2(700,600), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowBgAlpha(0.95f);
+        if (ImGui::Begin("Example: Custom Node Graph",&show_node_graph_editor_window,ImGuiWindowFlags_NoScrollbar))
+        {
 #           ifndef IMGUINODEGRAPHEDITOR_NOTESTDEMO
             ImGui::TestNodeGraphEditor();   // see its code for further info
 #           endif //IMGUINODEGRAPHEDITOR_NOTESTDEMO            
@@ -1837,64 +1846,13 @@ void DrawGL()	// Mandatory
         ImGui::End();
     }
 #   endif //NO_IMGUINODEGRAPHEDITOR
-    if (show_splitter_test_window)  {
-        // based on a snippet by Omar
-        static ImVec2 lastWindowSize(500,500);      // initial window size
-        static const float splitterWidth = 6.f;
-        static float w = 200.0f;                    // initial size of the top/left window
-        static float h = 300.0f;
-
-        ImGui::Begin("Splitter test",&show_splitter_test_window,lastWindowSize);//,-1.f,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize);
-        const ImVec2 windowSize = ImGui::GetWindowSize();
-        const bool sizeChanged = lastWindowSize.x!=windowSize.x || lastWindowSize.y!=windowSize.y;
-        if (sizeChanged) lastWindowSize = windowSize;
-        bool splitterActive = false;
-        const ImVec2 os(ImGui::GetStyle().FramePadding.x + ImGui::GetStyle().WindowPadding.x,
-                        ImGui::GetStyle().FramePadding.y + ImGui::GetStyle().WindowPadding.y);
-
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
-
-        // window top left
-        ImGui::BeginChild("child1", ImVec2(w, h), true);
-        ImGui::EndChild();
-        // horizontal splitter
-        ImGui::SameLine();
-        ImGui::InvisibleButton("hsplitter", ImVec2(splitterWidth,h));
-        if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
-        splitterActive = ImGui::IsItemActive();
-        if (splitterActive)  w += ImGui::GetIO().MouseDelta.x;
-        if (splitterActive || sizeChanged)  {
-            const float minw = ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().FramePadding.x;
-            const float maxw = minw + windowSize.x - splitterWidth - ImGui::GetStyle().WindowMinSize.x;
-            if (w>maxw)         w = maxw;
-            else if (w<minw)    w = minw;
-        }
-        ImGui::SameLine();
-        // window top right
-        ImGui::BeginChild("child2", ImVec2(0, h), true);
-        ImGui::EndChild();
-        // vertical splitter
-        ImGui::InvisibleButton("vsplitter", ImVec2(-1,splitterWidth));
-        if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
-        splitterActive = ImGui::IsItemActive();
-        if (splitterActive)  h += ImGui::GetIO().MouseDelta.y;
-        if (splitterActive || sizeChanged)  {
-            const float minh = ImGui::GetStyle().WindowPadding.y + ImGui::GetStyle().FramePadding.y;
-            const float maxh = windowSize.y - splitterWidth - ImGui::GetStyle().WindowMinSize.y;
-            if (h>maxh)         h = maxh;
-            else if (h<minh)    h = minh;
-        }
-        // window bottom
-        ImGui::BeginChild("child3", ImVec2(0,0), true);
-        ImGui::EndChild();
-
-        ImGui::PopStyleVar();
-
-        ImGui::End();
-    }
 #   ifndef NO_IMGUIDOCK
     if (show_dock_window)   {
-        if (ImGui::Begin("imguidock window (= lumix engine's dock system)",&show_dock_window,ImVec2(500, 500),0.95f,ImGuiWindowFlags_NoScrollbar)) {
+        //if (ImGui::Begin("imguidock window (= lumix engine's dock system)",&show_dock_window,ImVec2(500, 500),0.95f,ImGuiWindowFlags_NoScrollbar))  // Old API
+        ImGui::SetNextWindowSize(ImVec2(700,600), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowBgAlpha(0.95f);
+        if (ImGui::Begin("imguidock window (= lumix engine's dock system)",&show_dock_window,ImGuiWindowFlags_NoScrollbar))
+        {
             ImGui::BeginDockspace();
             static char tmp[128];
             for (int i=0;i<10;i++)  {
@@ -1963,7 +1921,11 @@ void DrawGL()	// Mandatory
         static bool showTabWindow[2] = {true,true};
 
         if (showTabWindow[0])   {
-            if (ImGui::Begin("TabWindow1", &showTabWindow[0], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar))  {
+            //if (ImGui::Begin("TabWindow1", &showTabWindow[0], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar))  // Old API
+            ImGui::SetNextWindowSize(ImVec2(400,600), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowBgAlpha(0.95f);
+            if (ImGui::Begin("TabWindow1", &showTabWindow[0],ImGuiWindowFlags_NoScrollbar))
+            {
                 ImGui::TabWindow&  tabWindow = tabWindows[0];
                 if (!tabWindow.isInited()) {
                     static const char* tabNames[] = {"Test","Render","Layers","Scene","World","Object","Constraints","Modifiers","Data","Material","Texture","Particle","Physics"};
@@ -1979,7 +1941,11 @@ void DrawGL()	// Mandatory
         }
 
         if (showTabWindow[1])   {
-            if (ImGui::Begin("TabWindow2", &showTabWindow[1], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar))  {
+            //if (ImGui::Begin("TabWindow2", &showTabWindow[1], ImVec2(400,600),.95f,ImGuiWindowFlags_NoScrollbar))  // Old API
+            ImGui::SetNextWindowSize(ImVec2(400,600), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowBgAlpha(0.95f);
+            if (ImGui::Begin("TabWindow2", &showTabWindow[1],ImGuiWindowFlags_NoScrollbar))
+            {
                 ImGui::TabWindow&  tabWindow2 = tabWindows[1];
                 tabWindow2.render();
             }
@@ -1994,7 +1960,11 @@ void DrawGL()	// Mandatory
     }
 #   endif //NO_IMGUITABWINDOW
     if (show_performance)   {
-        if (ImGui::Begin("Performance Window",&show_performance,ImVec2(0,0),0.9f,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoResize))   {
+        //if (ImGui::Begin("Performance Window",&show_performance,ImVec2(0,0),0.9f,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoResize))   // Old API
+        //ImGui::SetNextWindowSize(ImVec2(0,0), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowBgAlpha(0.9f);
+        if (ImGui::Begin("Performance Window",&show_performance,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoResize))
+        {
             ImGui::Text("Frame rate %.1f FPS",ImGui::GetIO().Framerate);
             ImGui::Text("Num texture bindings per frame: %d",gImGuiNumTextureBindingsPerFrame);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Consider that we're using\njust a single extra texture\nwith all the icons (numbers).");
@@ -2004,7 +1974,11 @@ void DrawGL()	// Mandatory
 #   ifdef YES_IMGUIMINIGAMES
 #   ifndef NO_IMGUIMINIGAMES_MINE
     if (show_mine_game) {
-        if (ImGui::Begin("Mine Game",&show_mine_game,ImVec2(400,400),.95f,ImGuiWindowFlags_NoScrollbar))  {
+        //if (ImGui::Begin("Mine Game",&show_mine_game,ImVec2(400,400),.95f,ImGuiWindowFlags_NoScrollbar))  // Old API
+        ImGui::SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowBgAlpha(.95f);
+        if (ImGui::Begin("Mine Game",&show_mine_game,ImGuiWindowFlags_NoScrollbar))
+        {
             static ImGuiMiniGames::Mine mineGame;
             mineGame.render();
         }
@@ -2013,7 +1987,11 @@ void DrawGL()	// Mandatory
 #   endif //NO_IMGUIMINIGAMES_MINE
 #   ifndef NO_IMGUIMINIGAMES_SUDOKU
     if (show_sudoku_game) {
-        if (ImGui::Begin("Sudoku Game",&show_sudoku_game,ImVec2(400,400),.95f,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))  {
+        //if (ImGui::Begin("Sudoku Game",&show_sudoku_game,ImVec2(400,400),.95f,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))  // Old API
+        ImGui::SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowBgAlpha(.95f);
+        if (ImGui::Begin("Sudoku Game",&show_sudoku_game,ImGuiWindowFlags_NoScrollbar))
+        {
             static ImGuiMiniGames::Sudoku sudokuGame;
             sudokuGame.render();
         }
@@ -2022,7 +2000,11 @@ void DrawGL()	// Mandatory
 #   endif //NO_IMGUIMINIGAMES_SUDOKU
 #   ifndef NO_IMGUIMINIGAMES_FIFTEEN
     if (show_fifteen_game) {
-        if (ImGui::Begin("Fifteen Game",&show_fifteen_game,ImVec2(400,400),.95f,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))  {
+        //if (ImGui::Begin("Fifteen Game",&show_fifteen_game,ImVec2(400,400),.95f,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))  // Old API
+        ImGui::SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowBgAlpha(.95f);
+        if (ImGui::Begin("Fifteen Game",&show_fifteen_game,ImGuiWindowFlags_NoScrollbar))
+        {
             static ImGuiMiniGames::Fifteen fifteenGame;
             fifteenGame.render();
         }
@@ -2032,7 +2014,11 @@ void DrawGL()	// Mandatory
 #   endif //YES_IMGUIMINIGAMES
 #   ifdef YES_IMGUIIMAGEEDITOR
     if (show_image_editor)  {
-        if (ImGui::Begin("Image Editor",&show_image_editor,ImVec2(750,600),0.95f,0))   {
+        //if (ImGui::Begin("Image Editor",&show_image_editor,ImVec2(750,600),0.95f,0))   // Old API
+        ImGui::SetNextWindowSize(ImVec2(750,600), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowBgAlpha(.95f);
+        if (ImGui::Begin("Image Editor",&show_image_editor))
+        {
             static ImGui::ImageEditor imageEditor;
             if (!imageEditor.isInited()) 	{
                 if (!imageEditor.loadFromFile("./blankImage.png")) {

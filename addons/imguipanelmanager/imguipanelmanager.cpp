@@ -441,7 +441,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->FocusIdxAllRequestNext = window->FocusIdxTabRequestNext = INT_MAX;
 
         // Apply scrolling
-        window->Scroll = CalcNextScrollFromScrollTargetAndClamp(window);
+        window->Scroll = CalcNextScrollFromScrollTargetAndClamp(window, true);
         window->ScrollTarget = ImVec2(FLT_MAX, FLT_MAX);
 
         // Apply focus, new windows appears in front
@@ -758,8 +758,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         }
 
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
-        window->WindowRectClipped = window->Rect();
-        window->WindowRectClipped.ClipWith(window->ClipRect);
+        window->OuterRectClipped = window->Rect();
+        window->OuterRectClipped.ClipWith(window->ClipRect);
 
         // Pressing CTRL+C while holding on a window copy its content to the clipboard
         // This works but 1. doesn't handle multiple Begin/End pairs, 2. recursing into another Begin/End pair - so we need to work that out and add better logging scope.
@@ -773,10 +773,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         // Inner rectangle
         // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
         // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
-        window->InnerRect.Min.x = title_bar_rect.Min.x;
-        window->InnerRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight();
-        window->InnerRect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x;
-        window->InnerRect.Max.y = window->Pos.y + window->Size.y - window->ScrollbarSizes.y;
+        window->InnerMainRect.Min.x = title_bar_rect.Min.x;
+        window->InnerMainRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight();
+        window->InnerMainRect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x;
+        window->InnerMainRect.Max.y = window->Pos.y + window->Size.y - window->ScrollbarSizes.y;
         //window->DrawList->AddRect(window->InnerRect.Min, window->InnerRect.Max, IM_COL32_WHITE);
 
         // After Begin() we fill the last item / hovered data using the title bar data. Make that a standard behavior (to allow usage of context menus on title bar only, etc.).
@@ -789,10 +789,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     // Force round operator last to ensure that e.g. (int)(max.x-min.x) in user's render code produce correct result.
     const float border_size = window->WindowBorderSize;
     ImRect clip_rect;
-    clip_rect.Min.x = ImFloor(0.5f + window->InnerRect.Min.x + ImMax(0.0f, ImFloor(window->WindowPadding.x*0.5f - border_size)));
-    clip_rect.Min.y = ImFloor(0.5f + window->InnerRect.Min.y);
-    clip_rect.Max.x = ImFloor(0.5f + window->InnerRect.Max.x - ImMax(0.0f, ImFloor(window->WindowPadding.x*0.5f - border_size)));
-    clip_rect.Max.y = ImFloor(0.5f + window->InnerRect.Max.y);
+    clip_rect.Min.x = ImFloor(0.5f + window->InnerMainRect.Min.x + ImMax(0.0f, ImFloor(window->WindowPadding.x*0.5f - border_size)));
+    clip_rect.Min.y = ImFloor(0.5f + window->InnerMainRect.Min.y);
+    clip_rect.Max.x = ImFloor(0.5f + window->InnerMainRect.Max.x - ImMax(0.0f, ImFloor(window->WindowPadding.x*0.5f - border_size)));
+    clip_rect.Max.y = ImFloor(0.5f + window->InnerMainRect.Max.y);
     PushClipRect(clip_rect.Min, clip_rect.Max, true);
 
     // Clear 'accessed' flag last thing

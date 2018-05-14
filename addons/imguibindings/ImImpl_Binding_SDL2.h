@@ -7,7 +7,7 @@
 /*static*/ SDL_Window* window = NULL;
 static ImVec2 mousePosScale(1.0f, 1.0f);
 
-static const SDL_SystemCursor sdlCursorIds[ImGuiMouseCursor_Count_+1] = {
+static const SDL_SystemCursor sdlCursorIds[ImGuiMouseCursor_COUNT+1] = {
     SDL_SYSTEM_CURSOR_ARROW,
     SDL_SYSTEM_CURSOR_IBEAM,
     SDL_SYSTEM_CURSOR_HAND,//SDL_SYSTEM_CURSOR_SIZEALL,      //SDL_SYSTEM_CURSOR_HAND,    // or SDL_SYSTEM_CURSOR_SIZEALL  //ImGuiMouseCursor_ResizeAll,                  // Unused by ImGui
@@ -17,7 +17,7 @@ static const SDL_SystemCursor sdlCursorIds[ImGuiMouseCursor_Count_+1] = {
     SDL_SYSTEM_CURSOR_SIZENWSE,     //ImGuiMouseCursor_ResizeNWSE,          // Unused by ImGui
     SDL_SYSTEM_CURSOR_ARROW         //,ImGuiMouseCursor_Arrow
 };
-static SDL_Cursor* sdlCursors[ImGuiMouseCursor_Count_+1];
+static SDL_Cursor* sdlCursors[ImGuiMouseCursor_COUNT+1];
 
 // NB: ImGui already provide OS clipboard support for Windows so this isn't needed if you are using Windows only.
 static const char* ImImpl_GetClipboardTextFn(void*)
@@ -100,7 +100,7 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.KeyMap[ImGuiKey_Y] = SDLK_y;
     io.KeyMap[ImGuiKey_Z] = SDLK_z;
 
-    io.RenderDrawListsFn = ImImpl_RenderDrawLists;
+    //io.RenderDrawListsFn = ImImpl_RenderDrawLists;
     io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
     io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
 #ifdef _MSC_VER
@@ -237,7 +237,7 @@ static void ImImplMainLoopFrame(void* pDone)	{
         if (oldMustHideCursor!=io.MouseDrawCursor) {
             SDL_ShowCursor(io.MouseDrawCursor?0:1);
             oldMustHideCursor = io.MouseDrawCursor;
-            oldCursor = ImGuiMouseCursor_Count_;
+            oldCursor = ImGuiMouseCursor_COUNT;
         }
         if (!io.MouseDrawCursor) {
             if (oldCursor!=ImGui::GetMouseCursor()) {
@@ -397,7 +397,7 @@ static void ImImplMainLoopFrame(void* pDone)	{
     static const int numFramesDelay = 12;
     static int curFramesDelay = -1;
     if (!gImGuiPaused)	{
-        gImGuiWereOutsideImGui = !ImGui::IsMouseHoveringAnyWindow() && !ImGui::IsAnyItemActive();
+        gImGuiWereOutsideImGui = !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && !ImGui::IsAnyItemActive();
         const bool imguiNeedsInputNow = !gImGuiWereOutsideImGui && (io.WantTextInput || io.MouseDelta.x!=0 || io.MouseDelta.y!=0 || io.MouseWheel!=0 || io.MouseWheelH!=0);// || io.MouseDownOwned[0] || io.MouseDownOwned[1] || io.MouseDownOwned[2]);
         if (gImGuiCapturesInput != imguiNeedsInputNow) {
             gImGuiCapturesInput = imguiNeedsInputNow;
@@ -410,6 +410,7 @@ static void ImImplMainLoopFrame(void* pDone)	{
         if (gImGuiWereOutsideImGui) curFramesDelay = -1;
 
         ImGui::Render();
+        ImImpl_RenderDrawLists(ImGui::GetDrawData());
     }
     else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
@@ -436,7 +437,7 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
 {
     if (!InitBinding(pOptionalInitParams,argc,argv)) return -1;
     // New: create cursors-------------------------------------------
-    for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
+    for (int i=0,isz=ImGuiMouseCursor_COUNT+1;i<isz;i++) {
         sdlCursors[i] = SDL_CreateSystemCursor(sdlCursorIds[i]);
     }
     //---------------------------------------------------------------
@@ -470,7 +471,7 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
     DestroyImGuiBuffer();
 
     // New: delete cursors-------------------------------------------
-    for (int i=0,isz=ImGuiMouseCursor_Count_+1;i<isz;i++) {
+    for (int i=0,isz=ImGuiMouseCursor_COUNT+1;i<isz;i++) {
         SDL_FreeCursor(sdlCursors[i]);
     }
     //---------------------------------------------------------------

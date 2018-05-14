@@ -216,7 +216,7 @@ static void GlutDrawGL()    {
             glutSetCursor(GLUT_CURSOR_NONE);
             //glfwSetInputMode(window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
             oldMustHideCursor = io.MouseDrawCursor;
-            oldCursor = ImGuiMouseCursor_Count_;
+            oldCursor = ImGuiMouseCursor_COUNT;
         }
         if (!io.MouseDrawCursor) {
             if (oldCursor!=ImGui::GetMouseCursor()) {
@@ -231,7 +231,7 @@ static void GlutDrawGL()    {
                     GLUT_CURSOR_BOTTOM_RIGHT_CORNER, //ImGuiMouseCursor_ResizeNWSE,          // Unused by ImGui
                     GLUT_CURSOR_INHERIT        //,ImGuiMouseCursor_Arrow
                 };
-                IM_ASSERT(sizeof(glutCursors)/sizeof(glutCursors[0])==ImGuiMouseCursor_Count_+1);
+                IM_ASSERT(sizeof(glutCursors)/sizeof(glutCursors[0])==ImGuiMouseCursor_COUNT+1);
                 glutSetCursor(glutCursors[oldCursor]);
             }
         }
@@ -261,7 +261,7 @@ static void GlutDrawGL()    {
     static const int numFramesDelay = 12;
     static int curFramesDelay = -1;
     if (!gImGuiPaused)	{
-        gImGuiWereOutsideImGui = !ImGui::IsMouseHoveringAnyWindow() && !ImGui::IsAnyItemActive();
+        gImGuiWereOutsideImGui = !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && !ImGui::IsAnyItemActive();
         const bool imguiNeedsInputNow = !gImGuiWereOutsideImGui && (io.WantTextInput || io.MouseDelta.x!=0 || io.MouseDelta.y!=0 || io.MouseWheel!=0);// || io.MouseDownOwned[0] || io.MouseDownOwned[1] || io.MouseDownOwned[2]);
         if (gImGuiCapturesInput != imguiNeedsInputNow) {
             gImGuiCapturesInput = imguiNeedsInputNow;
@@ -275,6 +275,7 @@ static void GlutDrawGL()    {
 
         // Rendering
         ImGui::Render();
+        ImImpl_RenderDrawLists(ImGui::GetDrawData());
     }
     else {gImGuiWereOutsideImGui=true;curFramesDelay = -1;}
 
@@ -350,7 +351,7 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)    {
     io.KeyMap[ImGuiKey_Y] = 25;
     io.KeyMap[ImGuiKey_Z] = 26;
 
-    io.RenderDrawListsFn = ImImpl_RenderDrawLists;
+    //io.RenderDrawListsFn = ImImpl_RenderDrawLists;
 #ifndef _WIN32
     //io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
     //io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
