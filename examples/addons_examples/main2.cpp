@@ -995,7 +995,7 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
             // Here we test the Nav feature (not serialized)
             ImGui::Spacing();
             unsigned int* pNavFlags = (unsigned int*) &ImGui::GetIO().ConfigFlags;
-            ImGui::AlignFirstTextHeightToWidgets();ImGui::TextUnformatted("ConfigFlags:");
+            ImGui::AlignTextToFramePadding();ImGui::TextUnformatted("ConfigFlags:");
             ImGui::SameLine();ImGui::CheckboxFlags("NavEnableKeyboard",pNavFlags,ImGuiConfigFlags_NavEnableKeyboard);
             if (ImGui::GetIO().BackendFlags&ImGuiBackendFlags_HasGamepad)   {
                 ImGui::SameLine();ImGui::CheckboxFlags("NavEnableGamepad",pNavFlags,ImGuiConfigFlags_NavEnableGamepad);
@@ -1048,19 +1048,22 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
     else {
         // Here we draw our toggle windows (in our case ToggleWindowNames) in the usual way:
         // We can use -1.f for alpha here, instead of mgr.getDockedWindowsAlpha(), that can be too low (but choose what you like)
-        if (ImGui::Begin(wd.name,&wd.open,wd.size,-1.f,ImGuiWindowFlags_NoSavedSettings))  {
+        //if (ImGui::Begin(wd.name,&wd.open,wd.size,-1.f,ImGuiWindowFlags_NoSavedSettings)) // Old API
+        ImGui::SetNextWindowSize(wd.size, ImGuiCond_FirstUseEver);
+        if (ImGui::Begin(wd.name,&wd.open,ImGuiWindowFlags_NoSavedSettings))
+        {
             if (strcmp(wd.name,ToggleWindowNames[0])==0)   {
                 // Draw Toggle Window 1
-                ImGui::SetWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x*0.15f,ImGui::GetIO().DisplaySize.y*0.24f),ImGuiSetCond_FirstUseEver);
-                ImGui::SetWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x*0.25f,ImGui::GetIO().DisplaySize.y*0.24f),ImGuiSetCond_FirstUseEver);
+                ImGui::SetWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x*0.15f,ImGui::GetIO().DisplaySize.y*0.24f),ImGuiCond_FirstUseEver);
+                ImGui::SetWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x*0.25f,ImGui::GetIO().DisplaySize.y*0.24f),ImGuiCond_FirstUseEver);
 
                 ImGui::Text("Hello world from toggle window \"%s\"",wd.name);                
             }
             else
             {
                 // Draw Toggle Window
-                ImGui::SetWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x*0.25f,ImGui::GetIO().DisplaySize.y*0.34f),ImGuiSetCond_FirstUseEver);
-                ImGui::SetWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x*0.5f,ImGui::GetIO().DisplaySize.y*0.34f),ImGuiSetCond_FirstUseEver);
+                ImGui::SetWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x*0.25f,ImGui::GetIO().DisplaySize.y*0.34f),ImGuiCond_FirstUseEver);
+                ImGui::SetWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x*0.5f,ImGui::GetIO().DisplaySize.y*0.34f),ImGuiCond_FirstUseEver);
                 ImGui::Text("Hello world from toggle window \"%s\"",wd.name);
 
                 //ImGui::Checkbox("wd.open",&wd.open);  // This can be used to close the window too
@@ -1085,7 +1088,8 @@ void DrawGL()	// Mandatory
             if (iqs.x>ImGui::GetStyle().WindowMinSize.x && iqs.y>ImGui::GetStyle().WindowMinSize.y) {
                 ImGui::SetNextWindowPos(mgr.getCentralQuadPosition());
                 ImGui::SetNextWindowSize(mgr.getCentralQuadSize());
-                if (ImGui::Begin("Central Window",NULL,ImVec2(0,0),mgr.getDockedWindowsAlpha(),ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove  | ImGuiWindowFlags_NoResize | mgr.getDockedWindowsExtraFlags() /*| ImGuiWindowFlags_NoBringToFrontOnFocus*/))    {
+                ImGui::SetNextWindowBgAlpha(mgr.getDockedWindowsAlpha());
+                if (ImGui::Begin("Central Window",NULL,ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove  | ImGuiWindowFlags_NoResize | mgr.getDockedWindowsExtraFlags() /*| ImGuiWindowFlags_NoBringToFrontOnFocus*/))    {
 #                   ifndef NO_IMGUITABWINDOW
                     tabWindows[0].render(); // Must be called inside "its" window (and sets isInited() to false). [ChildWindows can't be used here (but they can be used inside Tab Pages). Basically all the "Central Window" must be given to 'tabWindow'.]
 #                   else // NO_IMGUITABWINDOW
