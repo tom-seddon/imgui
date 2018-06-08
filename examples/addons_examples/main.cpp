@@ -227,6 +227,8 @@ void DrawGL()	// Mandatory
     static ImVec4 clearColor = defaultClearColor;
     ImImpl_ClearColorBuffer(clearColor);    // Warning: it does not clear depth buffer
 
+    const ImGuiTreeNodeFlags collapsingHeaderFlags = ImGuiTreeNodeFlags_CollapsingHeader & (~ImGuiTreeNodeFlags_NoTreePushOnOpen);
+
     // Pause/Resume ImGui and process input as usual
     if (!ImGui::GetIO().WantCaptureKeyboard)    {
         if (ImGui::IsKeyPressed('h',false)       // case sensitive
@@ -302,7 +304,7 @@ void DrawGL()	// Mandatory
     if (ImGui::Begin("ImGui Addons",&open,0))
     {
 
-        if (ImGui::TreeNodeEx("Pause/Resume ImGui and process input as usual",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        if (ImGui::TreeNodeEx("Pause/Resume ImGui and process input as usual",collapsingHeaderFlags)) {
         //ImGui::Text("\n");ImGui::Separator();ImGui::Text("Pause/Resume ImGui and process input as usual");ImGui::Separator();
         ImGui::Text("Press F1 (or lowercase 'h') to turn ImGui on and off.");
         ImVec4 halfTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];halfTextColor.w*=0.5f;
@@ -311,7 +313,7 @@ void DrawGL()	// Mandatory
         ImGui::TreePop();
         }
 
-        if (ImGui::TreeNodeEx("Other Windows",ImGuiTreeNodeFlags_CollapsingHeader|ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::TreeNodeEx("Other Windows",collapsingHeaderFlags|ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::BeginGroup();
 #       if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_SAVE_STYLE))
         show_test_window ^= ImGui::Button("Test Window");
@@ -361,7 +363,7 @@ void DrawGL()	// Mandatory
         }
 
         // Calculate and show framerate
-        if (ImGui::TreeNodeEx("Frame rate options",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        if (ImGui::TreeNodeEx("Frame rate options",collapsingHeaderFlags)) {
         ImGui::TextWrapped("%s","It might be necessary to move the mouse \"outside\" and \"inside\" ImGui for these options to update properly.");
         ImGui::Separator();
         ImGui::Text("Frame rate %.1f FPS (average %.3f ms/frame)",ImGui::GetIO().Framerate,1000.0f / ImGui::GetIO().Framerate);
@@ -385,7 +387,7 @@ void DrawGL()	// Mandatory
         ImGui::TreePop();
         }
 
-        if (ImGui::TreeNodeEx("Font options",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        if (ImGui::TreeNodeEx("Font options",collapsingHeaderFlags)) {
         //ImGui::Checkbox("Font Allow User Scaling", &ImGui::GetIO().FontAllowUserScaling);
         //if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","If true, CTRL + mouse wheel scales the window\n(or just its font size if child window).");
         ImGui::PushItemWidth(275);
@@ -400,7 +402,7 @@ void DrawGL()	// Mandatory
         }
 
         // Some options ported from imgui_demo.cpp
-        if (ImGui::TreeNodeEx("Window options",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        if (ImGui::TreeNodeEx("Window options",collapsingHeaderFlags)) {
         ImGui::PushItemWidth(100);
         ImGui::DragFloat("Window Fill Alpha", &bg_alpha, 0.005f, -0.01f, 1.0f, bg_alpha < 0.0f ? "(default)" : "%.3f"); // Not exposing zero here so user doesn't "close" the UI (zero alpha clips all widgets). But application code could have a toggle to switch between zero and non-zero.
         ImGui::PopItemWidth();
@@ -416,7 +418,7 @@ void DrawGL()	// Mandatory
         }
 
         // imguistyleserializer test
-        if (ImGui::TreeNodeEx("imguistyleserializer",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        if (ImGui::TreeNodeEx("imguistyleserializer",collapsingHeaderFlags)) {
 #       if (!defined(NO_IMGUISTYLESERIALIZER) && !defined(NO_IMGUISTYLESERIALIZER_SAVE_STYLE))
         ImGui::Text("Please modify the current style in:");
         ImGui::Text("ImGui Demo->Window Options->Style Editor");
@@ -494,7 +496,7 @@ void DrawGL()	// Mandatory
         }
 
         // imguifilesystem tests:
-        if (ImGui::TreeNodeEx("imguifilesystem",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        if (ImGui::TreeNodeEx("imguifilesystem",collapsingHeaderFlags)) {
 #       ifndef NO_IMGUIFILESYSTEM
         const char* startingFolder = "./";
         const char* optionalFileExtensionFilterString = "";//".jpg;.jpeg;.png;.tiff;.bmp;.gif;.txt";
@@ -553,7 +555,7 @@ void DrawGL()	// Mandatory
 
         // imguitinyfiledialogs tests (-->> not portable to emscripten and mobile platforms I guess <<--):
 #       ifdef YES_IMGUITINYFILEDIALOGS
-        if (ImGui::TreeNodeEx("imguitinyfiledialogs (yes_addon)",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        if (ImGui::TreeNodeEx("imguitinyfiledialogs (yes_addon)",collapsingHeaderFlags)) {
 
             const char* startingFolder = "./";
             const char* optionalFileFilterPatterns[7] = {"*.jpg","*.jpeg","*.png","*.tiff","*.bmp","*.gif","*.txt"};
@@ -640,7 +642,7 @@ void DrawGL()	// Mandatory
 #       endif //YES_IMGUITINYFILEDIALOGS
 
         // DateChooser Test:
-        if (ImGui::TreeNodeEx("imguidatechooser",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        if (ImGui::TreeNodeEx("imguidatechooser",collapsingHeaderFlags)) {
 #       ifndef NO_IMGUIDATECHOOSER
         /*struct tm {
   int tm_sec;			 Seconds.	[0-60] (1 leap second)
@@ -668,7 +670,7 @@ void DrawGL()	// Mandatory
         }
 
         // imguivariouscontrols
-        if (ImGui::TreeNodeEx("imguivariouscontrols",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        if (ImGui::TreeNodeEx("imguivariouscontrols",collapsingHeaderFlags)) {
 #       ifndef NO_IMGUIVARIOUSCONTROLS
 
         // Check Buttons
@@ -919,7 +921,7 @@ void DrawGL()	// Mandatory
                 const void* ptr_id = &myTreeNodeIsOpen;
                 const float curPosX = ImGui::GetCursorPosX();   // used for clipping
                 ImGui::BeginGroup();    // Not sure grouping is strictly necessary here
-                myTreeNodeIsOpen = ImGui::TreeNodeEx(ptr_id,ImGuiTreeNodeFlags_CollapsingHeader|ImGuiTreeNodeFlags_AllowItemOverlap,"Collapsable %d",1);
+                myTreeNodeIsOpen = ImGui::TreeNodeEx(ptr_id,collapsingHeaderFlags|ImGuiTreeNodeFlags_AllowItemOverlap,"Collapsable %d",1);
                 const bool isCollapsableHeaderHovered = ImGui::IsItemHovered();
                 if (!displayButtonsOnlyOnItemHovering || isCollapsableHeaderHovered)
                 {
@@ -1305,7 +1307,7 @@ void DrawGL()	// Mandatory
         }
 
         // TabLabels Test:
-        if (ImGui::TreeNodeEx("imguitabwindow",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        if (ImGui::TreeNodeEx("imguitabwindow",collapsingHeaderFlags)) {
         ImGui::TreePop();
 #       ifndef NO_IMGUITABWINDOW
         // Based on the code by krys-spectralpixel (https://github.com/krys-spectralpixel), posted here: https://github.com/ocornut/imgui/issues/261
@@ -1373,7 +1375,7 @@ void DrawGL()	// Mandatory
     }
 
         // BadCodeEditor Test:
-    if (ImGui::TreeNodeEx("imguicodeeditor",ImGuiTreeNodeFlags_CollapsingHeader)) {
+    if (ImGui::TreeNodeEx("imguicodeeditor",collapsingHeaderFlags)) {
         ImGui::TreePop();
 #       ifndef NO_IMGUICODEEDITOR
         ImGui::Text("ImGui::InputTextWithSyntaxHighlighting(...) [Experimental] (CTRL+MW: zoom):");
@@ -1403,7 +1405,7 @@ void DrawGL()	// Mandatory
         }
 
 #       if (defined(YES_IMGUISTRINGIFIER) && !defined(NO_IMGUIFILESYSTEM) && !defined(NO_IMGUIHELPER)  && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
-    if (ImGui::TreeNodeEx("imguistringifier (yes_addon)",ImGuiTreeNodeFlags_CollapsingHeader)) {
+    if (ImGui::TreeNodeEx("imguistringifier (yes_addon)",collapsingHeaderFlags)) {
         ImGui::TextWrapped("%s","It should allow users to make files embeddable in their source code.");
         ImGui::Separator();
 	if (ImGui::TreeNode("Stringify files for embedded usage:")) {
@@ -1553,7 +1555,7 @@ void DrawGL()	// Mandatory
 #       ifdef YES_IMGUISDF
         // The following check is to ensure ImGui::SdfAddCharsetFromFile(...) can be called (some users don't like to use FILE* in <stdio.h>, and prefer loading stuff from memory only)
 #       if (!defined(NO_IMGUISDF_LOAD) || (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD)))
-        if (ImGui::TreeNodeEx("imguisdf (yes_addon)",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        if (ImGui::TreeNodeEx("imguisdf (yes_addon)",collapsingHeaderFlags)) {
         // Well, we should move the init stuff to InitGL(), clean up textures, etc. (all skipped to avoid multiple preprocessor branches around this file)
         static ImTextureID sdfTexture = 0;
         static ImGui::SdfTextChunk* sdfTextChunk = NULL;
@@ -1600,7 +1602,7 @@ void DrawGL()	// Mandatory
 #       endif //YES_IMGUISDF
 
 #       ifdef YES_IMGUISOLOUD
-        if (ImGui::TreeNodeEx("imguisoloud (yes_addon)",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        if (ImGui::TreeNodeEx("imguisoloud (yes_addon)",collapsingHeaderFlags)) {
 
         // Code dirty-copied from the SoLoud Welcome example (I'm a newbie...)
         static SoLoud::Soloud soloud; // Engine core
@@ -1750,7 +1752,7 @@ void DrawGL()	// Mandatory
 #       endif //YES_IMGUISOLOUD
 
 #       ifdef YES_IMGUISQLITE3
-        if (ImGui::TreeNodeEx("imguisqlite3 (yes_addon)",ImGuiTreeNodeFlags_CollapsingHeader)) {
+        if (ImGui::TreeNodeEx("imguisqlite3 (yes_addon)",collapsingHeaderFlags)) {
         // Just a simple test here (based on http://www.codeproject.com/Articles/6343/CppSQLite-C-Wrapper-for-SQLite)
         static bool testDone = false;
         static bool performSQLiteTest = false;
@@ -1772,7 +1774,7 @@ void DrawGL()	// Mandatory
 #       endif //YES_IMGUISQLITE3
 
         // ListView Test:
-    if (ImGui::TreeNodeEx("imguilistview",ImGuiTreeNodeFlags_CollapsingHeader)) {
+    if (ImGui::TreeNodeEx("imguilistview",collapsingHeaderFlags)) {
         ImGui::TreePop();
 #       ifndef NO_IMGUILISTVIEW
         MyTestListView();
