@@ -272,27 +272,45 @@ void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,in
     //glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
     GLenum luminanceAlphaEnum = 0x190A; // 0x190A -> GL_LUMINANCE_ALPHA [Note that we're FORCING this definition even if when it's not defined! What should we use for 2 channels?]
+    GLenum compressedLuminanceAlphaEnum = 0x84EB; // 0x84EB -> GL_COMPRESSED_LUMINANCE_ALPHA [Note that we're FORCING this definition even if when it's not defined! What should we use for 2 channels?]
 #   ifdef GL_LUMINANCE_ALPHA
     luminanceAlphaEnum = GL_LUMINANCE_ALPHA;
 #   endif //GL_LUMINANCE_ALPHA
+#   ifdef GL_COMPRESSED_LUMINANCE_ALPHA
+    compressedLuminanceAlphaEnum = GL_COMPRESSED_LUMINANCE_ALPHA;
+#   endif //GL_COMPRESSED_LUMINANCE_ALPHA
 
 #   ifdef IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY
     if (&imtexid==&gImImplPrivateParams.fontTex && channels==1) {
         GLint swizzleMask[] = {GL_ONE, GL_ONE, GL_ONE, GL_ALPHA};
         glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-        printf("IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY used.\n");
+        //printf("IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY used.\n");
     }
 #   endif //IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY
 
-    const GLenum ifmt = channels==1 ? GL_ALPHA : channels==2 ? luminanceAlphaEnum : channels==3 ? GL_RGB : GL_RGBA;  // channels == 1 could be GL_LUMINANCE, GL_ALPHA, GL_RED ...
-    const GLenum fmt = ifmt;
+    GLenum ifmt = channels==1 ? GL_ALPHA : channels==2 ? luminanceAlphaEnum : channels==3 ? GL_RGB : GL_RGBA;  // channels == 1 could be GL_LUMINANCE, GL_ALPHA, GL_RED ...
+    GLenum fmt = ifmt;
+#   ifdef IMIMPL_USE_ARB_TEXTURE_COMPRESSION_TO_COMPRESS_FONT_TEXTURE
+    if (&imtexid==&gImImplPrivateParams.fontTex)    {
+        ifmt = channels==1 ? GL_COMPRESSED_ALPHA : channels==2 ? compressedLuminanceAlphaEnum : channels==3 ? GL_COMPRESSED_RGB : GL_COMPRESSED_RGBA;  // channels == 1 could be GL_COMPRESSED_LUMINANCE, GL_COMPRESSED_ALPHA, GL_COMPRESSED_RED ...
+    }
+#   endif //IMIMPL_USE_ARB_TEXTURE_COMPRESSION_TO_COMPRESS_FONT_TEXTURE
     glTexImage2D(GL_TEXTURE_2D, 0, ifmt, width, height, 0, fmt, GL_UNSIGNED_BYTE, potImageBuffer ? potImageBuffer : pixels);
+
+#   ifdef IMIMPL_USE_ARB_TEXTURE_COMPRESSION_TO_COMPRESS_FONT_TEXTURE
+    if (&imtexid==&gImImplPrivateParams.fontTex)    {
+        GLint compressed = GL_FALSE;
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_COMPRESSED, &compressed);
+        if (compressed==GL_FALSE)
+            printf("Font texture compressed = %s\n",compressed==GL_TRUE?"true":"false");
+    }
+#   endif //IMIMPL_USE_ARB_TEXTURE_COMPRESSION_TO_COMPRESS_FONT_TEXTURE
 
     if (potImageBuffer) {STBI_FREE(potImageBuffer);potImageBuffer=NULL;}
 
-#       ifndef NO_IMGUI_OPENGL_GLGENERATEMIPMAP
+#   ifndef NO_IMGUI_OPENGL_GLGENERATEMIPMAP
     if (useMipmapsIfPossible) glGenerateMipmap(GL_TEXTURE_2D);
-#       endif //NO_IMGUI_OPENGL_GLGENERATEMIPMAP
+#   endif //NO_IMGUI_OPENGL_GLGENERATEMIPMAP
 }
 void ImImpl_ClearColorBuffer(const ImVec4& bgColor)  {
     glClearColor(bgColor.x,bgColor.y,bgColor.z,bgColor.w);
