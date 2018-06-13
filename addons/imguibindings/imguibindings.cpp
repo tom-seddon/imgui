@@ -276,6 +276,14 @@ void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,in
     luminanceAlphaEnum = GL_LUMINANCE_ALPHA;
 #   endif //GL_LUMINANCE_ALPHA
 
+#   ifdef IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY
+    if (imtexid==gImImplPrivateParams.fontTex && channels==1) {
+        GLint swizzleMask[] = {GL_ONE, GL_ONE, GL_ONE, GL_ALPHA};
+        glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+        //printf("IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY used.\n");
+    }
+#   endif //IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY
+
     const GLenum ifmt = channels==1 ? GL_ALPHA : channels==2 ? luminanceAlphaEnum : channels==3 ? GL_RGB : GL_RGBA;  // channels == 1 could be GL_LUMINANCE, GL_ALPHA, GL_RED ...
     const GLenum fmt = ifmt;
     glTexImage2D(GL_TEXTURE_2D, 0, ifmt, width, height, 0, fmt, GL_UNSIGNED_BYTE, potImageBuffer ? potImageBuffer : pixels);
@@ -519,7 +527,7 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
 
     // Load font texture
     unsigned char* pixels;
-    int width, height;
+    int width, height,numChannels = 4;
     //fprintf(stderr,"Loading font texture\n");
 #	ifdef IMIMPL_BUILD_SDF
 	if (!io.Fonts->TexPixelsAlpha8) {
@@ -531,18 +539,29 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
 	}    	
 	ImGui::PostBuildForSignedDistanceFontEffect(io.Fonts);
 #	endif
-#   ifndef YES_IMGUIFREETYPE
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-#   else //YES_IMGUIFREETYPE
-    ImGuiFreeType::GetTexDataAsRGBA32(io.Fonts,&pixels, &width, &height,NULL,ImGuiFreeType::DefaultRasterizationFlags,&ImGuiFreeType::DefaultRasterizationFlagVector);
-#   endif //YES_IMGUIFREETYPE
+
+#   ifndef IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY
+#       ifndef YES_IMGUIFREETYPE
+        io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+#       else //YES_IMGUIFREETYPE
+        ImGuiFreeType::GetTexDataAsRGBA32(io.Fonts,&pixels, &width, &height,NULL,ImGuiFreeType::DefaultRasterizationFlags,&ImGuiFreeType::DefaultRasterizationFlagVector);
+#       endif //YES_IMGUIFREETYPE
+#   else //IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY
+        numChannels = 1;
+#       ifndef YES_IMGUIFREETYPE
+        io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
+#       else //YES_IMGUIFREETYPE
+        ImGuiFreeType::GetTexDataAsAlpha8(io.Fonts,&pixels, &width, &height,NULL,ImGuiFreeType::DefaultRasterizationFlags,&ImGuiFreeType::DefaultRasterizationFlagVector);
+#       endif //YES_IMGUIFREETYPE
+#   endif //IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY
 
     bool minFilterNearest = false,magFilterNearest=false;
 #   if ((!defined(IMIMPL_USE_SDF_SHADER) && !defined(IMIMPL_USE_ALPHA_SHARPENER_SHADER) && !defined(IMIMPL_USE_FONT_TEXTURE_LINEAR_FILTERING)) || defined(IMIMPL_USE_FONT_TEXTURE_NEAREST_FILTERING))
     magFilterNearest = true;
     //printf("Using nearest filtering for ImGui Font Texture\n");
 #   endif // (!defined(IMGUI_USE_SDL_SHADER) && ! !defined(IMGUI_USE_ALPHA_SHARPENER_SHADER))
-    ImImpl_GenerateOrUpdateTexture(gImImplPrivateParams.fontTex,width,height,4,pixels,false,false,false,minFilterNearest,magFilterNearest);
+
+    ImImpl_GenerateOrUpdateTexture(gImImplPrivateParams.fontTex,width,height,numChannels,pixels,false,false,false,minFilterNearest,magFilterNearest);
 
 
 
