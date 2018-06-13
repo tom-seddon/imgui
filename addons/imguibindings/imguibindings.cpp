@@ -277,10 +277,10 @@ void ImImpl_GenerateOrUpdateTexture(ImTextureID& imtexid,int width,int height,in
 #   endif //GL_LUMINANCE_ALPHA
 
 #   ifdef IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY
-    if (imtexid==gImImplPrivateParams.fontTex && channels==1) {
+    if (&imtexid==&gImImplPrivateParams.fontTex && channels==1) {
         GLint swizzleMask[] = {GL_ONE, GL_ONE, GL_ONE, GL_ALPHA};
         glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-        //printf("IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY used.\n");
+        printf("IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY used.\n");
     }
 #   endif //IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY
 
@@ -540,7 +540,8 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
 	ImGui::PostBuildForSignedDistanceFontEffect(io.Fonts);
 #	endif
 
-#   ifndef IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY
+#   if (defined(IMGUI_USE_DIRECT3D9_BINDING) || !defined(IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY))
+        numChannels = 4;
 #       ifndef YES_IMGUIFREETYPE
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 #       else //YES_IMGUIFREETYPE
