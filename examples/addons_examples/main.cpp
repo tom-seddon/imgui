@@ -1740,6 +1740,8 @@ void DrawGL()	// Mandatory
                     piano.init(soloud);
                 }
                 piano.play();
+                ImGui::Spacing();
+                ImGui::TextUnformatted("Keys: Q W E R T Y U I O P");
                 piano.renderGUI();
 
                 ImGui::TreePop();
