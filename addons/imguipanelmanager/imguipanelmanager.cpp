@@ -130,7 +130,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window_just_activated_by_user |= (window != popup_ref.Window);
     }
     window->Appearing = (window_just_activated_by_user || window_just_appearing_after_hidden_for_resize);
-    window->CloseButton = (p_opened != NULL);
+    window->HasCloseButton = (p_opened != NULL);
     if (window->Appearing)
         SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, true);
 

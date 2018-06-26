@@ -4051,10 +4051,10 @@ bool CheckboxStyled(const char* label, bool* v,const ImU32* pOptionalEightColors
     if (timeID==id) {
         float elapsedTime = ImGui::GetTime()-timeBegin;
         if (elapsedTime>timeActionLength) {timeBegin=-1;timeID=0;}
-	else {
-	    t = 1.f-elapsedTime/timeActionLength;
-	    animationActive = t>0;
-	}
+        else {
+            t = 1.f-elapsedTime/timeActionLength;
+            animationActive = t>0;
+        }
     }
     if (*v) t = 1.f-t;
     if (t<0) t=0;
@@ -4071,12 +4071,12 @@ bool CheckboxStyled(const char* label, bool* v,const ImU32* pOptionalEightColors
     if (t>0) {
 	ImU32 fillColor0 = pOptionalEightColors ? ((held || hovered) ? pOptionalEightColors[5] : pOptionalEightColors[4]) :
 	    (GetColorU32((held || hovered) ? ImGuiCol_ButtonHovered : ImGuiCol_Button));
-        window->DrawList->AddRectFilled(innerFrame0.Min, innerFrame0.Max, fillColor0, rounding, t<1 ? 9 : 15);
+        window->DrawList->AddRectFilled(innerFrame0.Min, innerFrame0.Max, fillColor0, rounding, t<1 ? ImDrawCornerFlags_Left : ImDrawCornerFlags_All/*9 : 15*/);
     }
     if (t<1) {
 	ImU32 fillColor1 = pOptionalEightColors ? ((held || hovered) ? pOptionalEightColors[7] : pOptionalEightColors[6]) :
-            (GetColorU32((held || hovered) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg));
-        window->DrawList->AddRectFilled(innerFrame1.Min, innerFrame1.Max, fillColor1, rounding, t>0 ? 6 : 15);
+        (GetColorU32((held || hovered) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg));
+        window->DrawList->AddRectFilled(innerFrame1.Min, innerFrame1.Max, fillColor1, rounding, t>0 ?  ImDrawCornerFlags_Right : ImDrawCornerFlags_All/*6 : 15*/);
     }
     if (style.FrameBorderSize)   {
         ImRect innerFrame(innerFrame0.Min,innerFrame1.Max);
