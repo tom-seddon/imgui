@@ -954,6 +954,15 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
             }
 
             ImGui::Spacing();ImGui::Separator();
+            ImGui::TextDisabled("Testing animations:");ImGui::Separator();
+            static const char* hourglass_frames[] = {ICON_FA_HOURGLASS_START,ICON_FA_HOURGLASS_HALF,ICON_FA_HOURGLASS_END};
+            static const ImU32 hourglass_num_frames = sizeof(hourglass_frames)/sizeof(hourglass_frames[0]);
+            ImGui::Text("Please wait:\t\t%s",hourglass_frames[(int)(ImGui::GetTime() / 0.5f) % hourglass_num_frames]);
+            static const char* battery_frames[] = {ICON_FA_BATTERY_FULL,ICON_FA_BATTERY_THREE_QUARTERS,ICON_FA_BATTERY_HALF,ICON_FA_BATTERY_QUARTER,ICON_FA_BATTERY_EMPTY,ICON_FA_BATTERY_QUARTER,ICON_FA_BATTERY_HALF,ICON_FA_BATTERY_THREE_QUARTERS};
+            static const ImU32 battery_num_frames = sizeof(battery_frames)/sizeof(battery_frames[0]);
+            ImGui::Text("Battery state:\t%s",battery_frames[(int)(ImGui::GetTime() / 0.2f) % battery_num_frames]);
+
+            ImGui::Spacing();ImGui::Separator();
             ImGui::TextDisabled("Testing styled check boxes by dougbinks");
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","https://gist.github.com/dougbinks/8089b4bbaccaaf6fa204236978d165a9\nThey work better with a Monospace font");
             ImGui::Separator();ImGui::Spacing();
@@ -1211,6 +1220,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
     static const ImWchar iconFontRanges[] ={ICON_MIN_FA,ICON_MAX_FA,0};
     ImFontConfig fntCfg;fntCfg.MergeMode = true;fntCfg.PixelSnapH = true;
     fntCfg.OversampleV=fntCfg.OversampleH=1;    // To save texture memory (but commenting it out makes icons look better)
+    fntCfg.GlyphMinAdvanceX=fontSizeInPixels;   // Optional (to better align icons: we can use a slightly bigger value here)
     gImGuiInitParams.fonts.push_back(ImImpl_InitParams::FontData("fonts/Icons/FontAwesome4/font.ttf",fontSizeInPixels,&iconFontRanges[0],&fntCfg));
     }
 #   endif //TEST_ICONS_INSIDE_TTF
