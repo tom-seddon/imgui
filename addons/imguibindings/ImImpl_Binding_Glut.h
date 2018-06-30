@@ -229,6 +229,7 @@ static void GlutDrawGL()    {
                     GLUT_CURSOR_LEFT_RIGHT, //ImGuiMouseCursor_ResizeEW,              // Unused by ImGui
                     GLUT_CURSOR_TOP_RIGHT_CORNER,//ImGuiMouseCursor_ResizeNESW,
                     GLUT_CURSOR_BOTTOM_RIGHT_CORNER, //ImGuiMouseCursor_ResizeNWSE,          // Unused by ImGui
+                    GLUT_CURSOR_INFO,        // ImGuiMouseCursor_Hand
                     GLUT_CURSOR_INHERIT        //,ImGuiMouseCursor_Arrow
                 };
                 IM_ASSERT(sizeof(glutCursors)/sizeof(glutCursors[0])==ImGuiMouseCursor_COUNT+1);

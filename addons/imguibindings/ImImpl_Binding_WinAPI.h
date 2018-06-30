@@ -19,6 +19,11 @@ static const LPCTSTR win32CursorIds[ImGuiMouseCursor_COUNT+1] = {
     IDC_SIZEWE,       //ImGuiMouseCursor_ResizeEW,              // Unused by ImGui
     IDC_SIZENESW,     //ImGuiMouseCursor_ResizeNESW,
     IDC_SIZENWSE,     //ImGuiMouseCursor_ResizeNWSE,          // Unused by ImGui
+#   ifdef IDC_HAND    // winuser.h defines it if(WINVER >= 0x0500)
+    IDC_HAND,         //ImGuiMouseCursor_Hand // Unused by ImGui
+#   else
+    IDC_ARROW,         //ImGuiMouseCursor_Hand // Unused by ImGui
+#   endif
     IDC_ARROW         //,ImGuiMouseCursor_Arrow
 };
 static HCURSOR win32Cursors[ImGuiMouseCursor_COUNT+1];

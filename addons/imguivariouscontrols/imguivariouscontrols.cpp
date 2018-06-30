@@ -326,7 +326,7 @@ inline static bool ColorChooserInternal(ImVec4 *pColorOut,bool supportsAlpha,boo
         ImRect bb(window->Pos, window->Pos + window->Size);
         bool hovered, held;
         /*bool pressed = */ImGui::ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_NoKeyModifiers);///*false,*/ false);
-        if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+        if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
         if (held)   {
             ImVec2 pos = g.IO.MousePos - window->Pos;
             sat = ImSaturate(pos.x / (float)quadSize);
@@ -374,7 +374,7 @@ inline static bool ColorChooserInternal(ImVec4 *pColorOut,bool supportsAlpha,boo
         const ImGuiID id = window->GetID("Tint");
         ImRect bb(window->Pos, window->Pos + window->Size);
         /*bool pressed = */ButtonBehavior(bb, id, &hovered, &held,ImGuiButtonFlags_NoKeyModifiers);// /*false,*/ false);
-        if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+        if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
         if (held)
         {
 
@@ -1370,7 +1370,7 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
             zoomCenter.x-=io.MouseDelta.x/(imageSz.x*zoom);
             zoomCenter.y-=io.MouseDelta.y/(imageSz.y*zoom);
             rv = true;
-            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
         }
     }
 
@@ -3587,7 +3587,7 @@ bool TimelineEvent(const char* str_id, float* values,bool keep_range_constant)
         if (values[0]<0) {values[1]-=values[0];values[0]=0;}
     }
 
-    if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+    if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 
     ImGui::NextColumn();
     return changed;
