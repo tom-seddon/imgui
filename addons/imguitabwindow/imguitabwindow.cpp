@@ -11,7 +11,9 @@
 // TODO: Clean this code, it's a mess!
 
 #if !defined(alloca)
-#   ifdef _WIN32
+#	if defined(__GLIBC__) || defined(__sun) || defined(__CYGWIN__)
+#		include <alloca.h>     // alloca (glibc uses <alloca.h>. Note that Cygwin may have _WIN32 defined, so the order matters here)
+#	elif defined(_WIN32)
 #       include <malloc.h>     // alloca
 #       if !defined(alloca)
 #           define alloca _alloca  // for clang with MS Codegen
