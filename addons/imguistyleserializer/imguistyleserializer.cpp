@@ -224,6 +224,18 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
 			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
 			    break;
 			}
+			else if (strcmp(name,"ModalWindowDarkening")==0)	{
+			    npf = 4;
+			    ImVec4& color = style.Colors[ImGuiCol_NavWindowListDimBg];
+			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
+			    break;
+			}
+			else if (strcmp(name,"NavWindowingHighlight")==0)	{
+			    npf = 4;
+			    ImVec4& color = style.Colors[ImGuiCol_NavWindowListHighlight];
+			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
+			    break;
+			}
 			else if (strcmp(name,"ColumnHovered")==0)	{
 			    npf = 4;
 			    ImVec4& color = style.Colors[ImGuiCol_SeparatorHovered];
@@ -465,7 +477,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_PlotHistogram]         = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.00f, 0.00f, 0.66f, 0.34f);
-	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+	style.Colors[ImGuiCol_ModalWindowDimBg]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
     }
     break;
     case ImGuiStyle_Light:
@@ -532,7 +544,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_PlotHistogram]         = ImVec4(0.81f, 0.00f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.48f, 0.61f, 0.98f, 1.00f);
-	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.39f, 0.12f, 0.12f, 0.20f);
+	style.Colors[ImGuiCol_ModalWindowDimBg]  = ImVec4(0.39f, 0.12f, 0.12f, 0.20f);
     }
     break;
     case ImGuiStyle_OSX:
@@ -582,7 +594,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
 	style.Colors[ImGuiCol_PopupBg]		     = ImVec4(1.00f, 1.00f, 1.00f, 0.94f);
 	//style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.86f, 0.86f, 0.86f, 0.99f);
-	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+	style.Colors[ImGuiCol_ModalWindowDimBg]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 
 	if (styleEnum == ImGuiStyle_OSXInverse) {
 	    InvertStyleColors(style);
@@ -657,7 +669,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_PlotHistogram]         = ImVec4(0.90f, 0.78f, 0.37f, 1.00f);
 	style.Colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(1.00f, 0.77f, 0.41f, 1.00f);
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.26f, 0.26f, 0.63f, 1.00f);
-	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+	style.Colors[ImGuiCol_ModalWindowDimBg]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 
 	if (styleEnum == ImGuiStyle_DarkOpaqueInverse) {
 	    InvertStyleColors(style);
@@ -711,7 +723,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
 	style.Colors[ImGuiCol_PopupBg]		     = ImVec4(1.00f, 1.00f, 1.00f, 0.94f);
 	//style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.86f, 0.86f, 0.86f, 0.99f);
-	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+	style.Colors[ImGuiCol_ModalWindowDimBg]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 
 	if (styleEnum == ImGuiStyle_OSXOpaqueInverse) {
 	    InvertStyleColors(style);
@@ -788,7 +800,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_PlotHistogram]         = ImVec4(0.40f, 0.39f, 0.38f, 0.63f);
 	style.Colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.25f, 1.00f, 0.00f, 0.43f);
-	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
+	style.Colors[ImGuiCol_ModalWindowDimBg]  = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
     }
     break;
     case ImGuiStyle_EdinBlack: {
@@ -838,7 +850,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_PlotHistogram]         = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.27f, 0.36f, 0.59f, 0.61f);
-	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+	style.Colors[ImGuiCol_ModalWindowDimBg]  = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 
 
     }
@@ -890,7 +902,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_PlotHistogram]         = ImVec4(0.64f, 0.50f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(0.37f, 0.22f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.46f, 0.61f, 1.00f, 0.61f);
-	style.Colors[ImGuiCol_ModalWindowDarkening]  = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+	style.Colors[ImGuiCol_ModalWindowDimBg]  = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 
     }
     break;
@@ -946,7 +958,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	style.Colors[ImGuiCol_PlotHistogram]         = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.32f, 0.52f, 0.65f, 1.00f);
-	style.Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(0.20f, 0.20f, 0.20f, 0.50f);
+	style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.20f, 0.20f, 0.20f, 0.50f);
 
     }
     break;
