@@ -226,13 +226,7 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
 			}
 			else if (strcmp(name,"ModalWindowDarkening")==0)	{
 			    npf = 4;
-			    ImVec4& color = style.Colors[ImGuiCol_NavWindowListDimBg];
-			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
-			    break;
-			}
-			else if (strcmp(name,"NavWindowingHighlight")==0)	{
-			    npf = 4;
-			    ImVec4& color = style.Colors[ImGuiCol_NavWindowListHighlight];
+			    ImVec4& color = style.Colors[ImGuiCol_ModalWindowDimBg];
 			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
 			    break;
 			}

@@ -455,7 +455,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         const bool dim_bg_for_window_list = g.NavWindowingTarget && (window == g.NavWindowingTarget->RootWindow);
         if (dim_bg_for_modal || dim_bg_for_window_list)
         {
-            const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowListDimBg, g.DimBgRatio);
+            const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowingDimBg, g.DimBgRatio);
             window->DrawList->AddRectFilled(viewport_rect.Min, viewport_rect.Max, dim_bg_col);
         }
 
@@ -465,7 +465,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
              ImRect bb = window->Rect();
              bb.Expand(g.FontSize);
              if (!bb.Contains(viewport_rect)) // Avoid drawing if the window covers all the viewport anyway
-                window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowListHighlight, g.NavWindowingHighlightAlpha * 0.25f), g.Style.WindowRounding);
+                window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha * 0.25f), g.Style.WindowRounding);
         }
 
         // Draw window + handle manual resize
@@ -661,7 +661,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 bb.Expand(-g.FontSize - 1.0f);
                 rounding = window->WindowRounding;
             }
-            window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowListHighlight, g.NavWindowingHighlightAlpha), rounding, ~0, 3.0f);
+            window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), rounding, ~0, 3.0f);
         }
 
         // Store a backup of SizeFull which we will use next frame to decide if we need scrollbars.
