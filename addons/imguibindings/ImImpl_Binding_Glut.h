@@ -200,7 +200,7 @@ static void GlutDrawGL()    {
     if (gImGuiAppIconized) WaitFor(1000);
 
     // Setup timestep
-    static double time = 0.0f;
+    static double time = 0.0;
     const double current_time =  (double) glutGet(GLUT_ELAPSED_TIME)*0.001;
     static float deltaTime = (float)(current_time -time);
     deltaTime = (float) (current_time - time);

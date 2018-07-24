@@ -408,7 +408,7 @@ ImImplMainLoopFrameStruct() : done(false) {}
 static void ImImplMainLoopFrame(void* userPtr)	{
     ImImplMainLoopFrameStruct& mainLoopFrameStruct = *((ImImplMainLoopFrameStruct*) userPtr);
 
-    static double time = 0.0f;
+    static double time = 0.0;
     ImGuiIO& io = ImGui::GetIO();
 
     for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
@@ -607,7 +607,7 @@ static void ImImplMainLoopFrame(void* userPtr)	{
 
     // Start the frame
     {
-        io.DeltaTime = (float) deltaTime;
+        io.DeltaTime = deltaTime;
         for (size_t i = 0; i < 5; i++) {
             io.MouseDown[i]= g_MousePressed[i] || glfwGetMouseButton(window, i); // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
             g_MousePressed[i] = false;

@@ -328,7 +328,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
     //---------------------------------------------------------------
 
 
-    static double time = 0.0f;
+    static double time = 0.0;
     gImGuiInverseFPSClampInsideImGui = pOptionalInitParams ? ((pOptionalInitParams->gFpsClampInsideImGui!=0) ? (1.0f/pOptionalInitParams->gFpsClampInsideImGui) : 1.0f) : -1.0f;
     gImGuiInverseFPSClampOutsideImGui = pOptionalInitParams ? ((pOptionalInitParams->gFpsClampOutsideImGui!=0) ? (1.0f/pOptionalInitParams->gFpsClampOutsideImGui) : 1.0f) : -1.0f;
     gImGuiDynamicFPSInsideImGui = pOptionalInitParams ? pOptionalInitParams->gFpsDynamicInsideImGui : false;
@@ -364,8 +364,8 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
         };
 
 
-        const double current_time =  ::GetTickCount();
-        static float deltaTime = 0;
+        const double current_time = (double) ::GetTickCount();
+        static double deltaTime = 0;
         static const int numFramesDelay = 12;
         static int curFramesDelay = -1;
 
@@ -377,8 +377,8 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
 
 
             // Setup timestep
-            float deltaTime = (float)(0.001*(double)(current_time - time));
-            deltaTime = (float)(0.001*(double)(current_time - time));
+            static float deltaTime = (float)(0.001*(current_time - time));
+            deltaTime = (float)(0.001*(current_time - time));
             time = current_time;
             if (deltaTime<=0) deltaTime=1.0f/60.0f;
 

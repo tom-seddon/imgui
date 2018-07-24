@@ -340,7 +340,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
    }
 #endif //IMGUI_USE_GLEW
 
-    static double time = 0.0f;
+    static double time = 0.0;
     gImGuiInverseFPSClampInsideImGui = pOptionalInitParams ? ((pOptionalInitParams->gFpsClampInsideImGui!=0) ? (1.0f/pOptionalInitParams->gFpsClampInsideImGui) : 1.0f) : -1.0f;
     gImGuiInverseFPSClampOutsideImGui = pOptionalInitParams ? ((pOptionalInitParams->gFpsClampOutsideImGui!=0) ? (1.0f/pOptionalInitParams->gFpsClampOutsideImGui) : 1.0f) : -1.0f;
     gImGuiDynamicFPSInsideImGui = pOptionalInitParams ? pOptionalInitParams->gFpsDynamicInsideImGui : false;
@@ -376,9 +376,9 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
 
 
         // Setup timestep
-        const double current_time =  ::GetTickCount();
-        static float deltaTime = (float)(0.001*(double)(current_time - time));
-        deltaTime = (float)(0.001*(double)(current_time - time));
+        const double current_time =  (double) ::GetTickCount();
+        static float deltaTime = (float)(0.001*(current_time - time));
+        deltaTime = (float)(0.001*(current_time - time));
         time = current_time;
         if (deltaTime<=0) deltaTime=1.0f/60.0f;
 
