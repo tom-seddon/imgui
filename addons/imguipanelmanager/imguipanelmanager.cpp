@@ -128,7 +128,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
     // Update the Appearing flag
     bool window_just_activated_by_user = (window->LastFrameActive < current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
-    const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFrames > 0);
+    const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFramesForResize > 0);
     if (flags & ImGuiWindowFlags_Popup)
     {
         ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.CurrentPopupStack.Size];
@@ -203,20 +203,12 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     const ImVec4 bg_color_backup = g.Style.Colors[bg_color_idx];
     if (bg_alpha >= 0.0f) g.Style.Colors[bg_color_idx].w = bg_alpha;
 
-   // When reusing window again multiple times a frame, just append content (don't need to setup again)
+    // When reusing window again multiple times a frame, just append content (don't need to setup again)
     if (first_begin_of_the_frame)
     {
-        const bool window_is_child_tooltip = (flags & ImGuiWindowFlags_ChildWindow) && (flags & ImGuiWindowFlags_Tooltip); // FIXME-WIP: Undocumented behavior of Child+Tooltip for pinned tooltip (#1345)
-
         // Initialize
-        window->ParentWindow = parent_window;
-        window->RootWindow = window->RootWindowForTitleBarHighlight = window->RootWindowForNav = window;
-        if (parent_window && (flags & ImGuiWindowFlags_ChildWindow) && !window_is_child_tooltip)
-            window->RootWindow = parent_window->RootWindow;
-        if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
-            window->RootWindowForTitleBarHighlight = parent_window->RootWindowForTitleBarHighlight;
-        while (window->RootWindowForNav->Flags & ImGuiWindowFlags_NavFlattened)
-            window->RootWindowForNav = window->RootWindowForNav->ParentWindow;
+        const bool window_is_child_tooltip = (flags & ImGuiWindowFlags_ChildWindow) && (flags & ImGuiWindowFlags_Tooltip); // FIXME-WIP: Undocumented behavior of Child+Tooltip for pinned tooltip (#1345)
+        UpdateWindowParentAndRootLinks(window, flags, parent_window);
 
         window->Active = true;
         window->BeginOrderWithinParent = 0;
@@ -230,18 +222,20 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         // Update contents size from last frame for auto-fitting (or use explicit size)
         window->SizeContents = CalcSizeContents(window);
-        if (window->HiddenFrames > 0)
-            window->HiddenFrames--;
+        if (window->HiddenFramesRegular > 0)
+            window->HiddenFramesRegular--;
+        if (window->HiddenFramesForResize > 0)
+            window->HiddenFramesForResize--;
 
         // Hide new windows for one frame until they calculate their size
         if (window_just_created && (!window_size_x_set_by_api || !window_size_y_set_by_api))
-            window->HiddenFrames = 1;
+            window->HiddenFramesForResize = 1;
 
         // Hide popup/tooltip window when re-opening while we measure size (because we recycle the windows)
         // We reset Size/SizeContents for reappearing popups/tooltips early in this function, so further code won't be tempted to use the old size.
         if (window_just_activated_by_user && (flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0)
         {
-            window->HiddenFrames = 1;
+            window->HiddenFramesForResize = 1;
             if (flags & ImGuiWindowFlags_AlwaysAutoResize)
             {
                 if (!window_size_x_set_by_api)
@@ -328,7 +322,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         // Hide new windows for one frame until they calculate their size
         if (window_just_created && (!window_size_x_set_by_api || !window_size_y_set_by_api))
-            window->HiddenFrames = 1;
+            window->HiddenFramesForResize = 1;
 
         // Calculate auto-fit size, handle automatic resize
         const ImVec2 size_auto_fit = CalcSizeAutoFit(window, window->SizeContents);
@@ -402,7 +396,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         //if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api)
         //    window->Pos = window->PosFloat = parent_window->DC.CursorPos;
 
-        const bool window_pos_with_pivot = (window->SetWindowPosVal.x != FLT_MAX && window->HiddenFrames == 0);
+        const bool window_pos_with_pivot = (window->SetWindowPosVal.x != FLT_MAX && window->HiddenFramesForResize == 0);
         if (window_pos_with_pivot)
             SetWindowPos(window, ImMax(style.DisplaySafeAreaPadding, window->SetWindowPosVal - window->SizeFull * window->SetWindowPosPivot), 0); // Position given a pivot (e.g. for centering)
         else if ((flags & ImGuiWindowFlags_ChildMenu) != 0)
@@ -450,9 +444,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 want_focus = true;
 
         // Draw modal window background (darkens what is behind them, all viewports)
-        //if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostPopupModal())  window->DrawList->AddRectFilled(viewport_rect.Min, viewport_rect.Max, GetColorU32(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
-        const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetFrontMostPopupModal() && window->HiddenFrames <= 0;
-        const bool dim_bg_for_window_list = g.NavWindowingTarget && (window == g.NavWindowingTarget->RootWindow);
+        const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetFrontMostPopupModal() && window->HiddenFramesForResize <= 0;
+        const bool dim_bg_for_window_list = g.NavWindowingTargetAnim && (window == g.NavWindowingTargetAnim->RootWindow);
         if (dim_bg_for_modal || dim_bg_for_window_list)
         {
             const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowingDimBg, g.DimBgRatio);
@@ -460,7 +453,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         }
 
         // Draw navigation selection/windowing rectangle background
-        if (dim_bg_for_window_list && window == g.NavWindowingTarget->RootWindow)
+        if (dim_bg_for_window_list && window == g.NavWindowingTargetAnim)
         {
              ImRect bb = window->Rect();
              bb.Expand(g.FontSize);
@@ -645,7 +638,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         }
 
         // Draw navigation selection/windowing rectangle border
-        if (g.NavWindowingTarget == window)
+        if (g.NavWindowingTargetAnim == window)
         {
             /*ImRect bb = window->Rect();
             bb.Expand(g.FontSize);
@@ -823,6 +816,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         // Child window can be out of sight and have "negative" clip windows.
         // Mark them as collapsed so commands are skipped earlier (we can't manually collapse them because they have no title bar).
         IM_ASSERT((flags & ImGuiWindowFlags_NoTitleBar) != 0);
+        /*
         window->Collapsed = parent_window && parent_window->Collapsed;
 
         if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
@@ -832,14 +826,27 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         // (we could perform the check earlier in the function but it is simpler at this point)
         if (window->Collapsed)
             window->Active = false;
+        */
+        if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
+            if (window->OuterRectClipped.Min.x >= window->OuterRectClipped.Max.x || window->OuterRectClipped.Min.y >= window->OuterRectClipped.Max.y)
+                window->HiddenFramesRegular = 1;
+
+        // Completely hide along with parent or if parent is collapsed
+        if (parent_window && (parent_window->Collapsed || parent_window->Hidden))
+            window->HiddenFramesRegular = 1;
+
     }
     // Don't render if style alpha is 0.0 at the time of Begin(). This is arbitrary and inconsistent but has been there for a long while (may remove at some point)
     if (style.Alpha <= 0.0f)
-        window->Active = false;
+        //window->Active = false;
+        window->HiddenFramesRegular = 1;
+
+    // Update the Hidden flag
+    window->Hidden = (window->HiddenFramesRegular > 0) || (window->HiddenFramesForResize);
+
 
     // Return false if we don't intend to display anything to allow user to perform an early out optimization
-    window->SkipItems = (window->Collapsed || !window->Active) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0;
-
+    window->SkipItems = (window->Collapsed || !window->Active || window->Hidden) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && window->HiddenFramesForResize <= 0;
 
     if (bg_alpha >= 0.0f) g.Style.Colors[bg_color_idx] = bg_color_backup;
 
