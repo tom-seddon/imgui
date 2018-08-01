@@ -608,6 +608,7 @@ struct ImGuiNextWindowData
 struct ImGuiContext
 {
     bool                    Initialized;
+    bool                    FrameScopeActive;                   // Set by NewFrame(), cleared by EndFrame()/Render()
     bool                    FontAtlasOwnedByContext;            // Io.Fonts-> is owned by the ImGuiContext and will be destructed along with it.
     ImGuiIO                 IO;
     ImGuiStyle              Style;
@@ -709,6 +710,7 @@ struct ImGuiContext
     bool                    DragDropActive;
     bool                    DragDropWithinSourceOrTarget;
     ImGuiDragDropFlags      DragDropSourceFlags;
+    int                     DragDropSourceFrameCount;
     int                     DragDropMouseButton;
     ImGuiPayload            DragDropPayload;
     ImRect                  DragDropTargetRect;
@@ -761,6 +763,7 @@ struct ImGuiContext
     ImGuiContext(ImFontAtlas* shared_font_atlas) : OverlayDrawList(NULL)
     {
         Initialized = false;
+        FrameScopeActive = false;
         Font = NULL;
         FontSize = FontBaseSize = 0.0f;
         FontAtlasOwnedByContext = shared_font_atlas ? false : true;
@@ -828,6 +831,7 @@ struct ImGuiContext
 
         DragDropActive = DragDropWithinSourceOrTarget = false;
         DragDropSourceFlags = 0;
+        DragDropSourceFrameCount = -1;
         DragDropMouseButton = -1;
         DragDropTargetId = 0;
         DragDropAcceptFlags = 0;
@@ -1041,6 +1045,7 @@ public:
     ImGuiID     GetID(const char* str, const char* str_end = NULL);
     ImGuiID     GetID(const void* ptr);
     ImGuiID     GetIDNoKeepAlive(const char* str, const char* str_end = NULL);
+    ImGuiID     GetIDNoKeepAlive(const void* ptr);
     ImGuiID     GetIDFromRectangle(const ImRect& r_abs);
 
     // We don't use g.FontSize because the window may be != g.CurrentWidow.
@@ -1202,8 +1207,8 @@ namespace ImGui
     IMGUI_API void          PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size);
 
     // Shade functions (write over already created vertices)
-    IMGUI_API void          ShadeVertsLinearColorGradientKeepAlpha(ImDrawVert* vert_start, ImDrawVert* vert_end, ImVec2 gradient_p0, ImVec2 gradient_p1, ImU32 col0, ImU32 col1);
-    IMGUI_API void          ShadeVertsLinearUV(ImDrawVert* vert_start, ImDrawVert* vert_end, const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, bool clamp);
+    IMGUI_API void          ShadeVertsLinearColorGradientKeepAlpha(ImDrawList* draw_list, int vert_start_idx, int vert_end_idx, ImVec2 gradient_p0, ImVec2 gradient_p1, ImU32 col0, ImU32 col1);
+    IMGUI_API void          ShadeVertsLinearUV(ImDrawList* draw_list, int vert_start_idx, int vert_end_idx, const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, bool clamp);
 
 } // namespace ImGui
 
