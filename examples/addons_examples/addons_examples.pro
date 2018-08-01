@@ -259,6 +259,8 @@ LIBS+= -ld3d9 -luser32 -lkernel32 -static-libgcc -static-libstdc++
 #QMAKE_CXXFLAGS+=--std=c++0x
 }
 
+QMAKE_LFLAGS += -no-pie
+
 # Dev stuff here (should be commented out)
 #DEFINES+=IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 #DEFINES+=NO_IMGUIVARIOUSCONTROLS

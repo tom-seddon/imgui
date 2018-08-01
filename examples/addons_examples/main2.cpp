@@ -794,7 +794,6 @@ if (!tabWindow.isInited()) {
 #       endif //NO_IMGUIFILESYSTEM
     }
 
-
 }
 #endif // NO_IMGUITABWINDOW
 

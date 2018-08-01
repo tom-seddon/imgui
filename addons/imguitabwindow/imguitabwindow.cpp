@@ -2800,7 +2800,7 @@ bool TabWindow::Save(const char *filename, TabWindow *pTabWindows, int numTabWin
     ImGuiHelper::Serializer s(filename);
     bool ok = true;
     for (int i=0;i<numTabWindows;i++)   {
-        ok|=pTabWindows[i].save(s);
+        ok&=pTabWindows[i].save(s);
     }
     return ok;
 }
@@ -2833,7 +2833,7 @@ bool TabWindow::Load(const char *filename, TabWindow *pTabWindows, int numTabWin
     ImGuiHelper::Deserializer d(filename);
     const char* amount = 0; bool ok = true;
     for (int i=0;i<numTabWindows;i++)   {
-        ok|=pTabWindows[i].load(d,&amount);
+        ok&=pTabWindows[i].load(d,&amount);
     }
     return ok;
 }
