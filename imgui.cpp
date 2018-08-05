@@ -848,14 +848,14 @@
 #endif
 #endif
 
-static const ImS32  IM_S32_MIN = 0x80000000; // INT_MIN;
-static const ImS32  IM_S32_MAX = 0x7FFFFFFF; // INT_MAX;
+static const ImS32  IM_S32_MIN = INT_MIN;    // (-2147483647 - 1), (0x80000000);
+static const ImS32  IM_S32_MAX = INT_MAX;    // (2147483647), (0x7FFFFFFF)
 static const ImU32  IM_U32_MIN = 0;
-static const ImU32  IM_U32_MAX = 0xFFFFFFFF;
-static const ImS64  IM_S64_MIN = -9223372036854775807ll - 1ll;
-static const ImS64  IM_S64_MAX = 9223372036854775807ll;
+static const ImU32  IM_U32_MAX = UINT_MAX;   // (0xFFFFFFFF)
+static const ImS64  IM_S64_MIN = LLONG_MIN;  // (-9223372036854775807ll - 1ll);
+static const ImS64  IM_S64_MAX = LLONG_MAX;  // (9223372036854775807ll);
 static const ImU64  IM_U64_MIN = 0;
-static const ImU64  IM_U64_MAX = 0xFFFFFFFFFFFFFFFFull;
+static const ImU64  IM_U64_MAX = ULLONG_MAX; // (0xFFFFFFFFFFFFFFFFull);
 
 // When using CTRL+TAB (or Gamepad Square+L/R) we delay the visual a little in order to reduce visual noise doing a fast switch.
 static const float NAV_WINDOWING_HIGHLIGHT_DELAY   = 0.20f; // Time before the highlight and screen dimming starts fading in
@@ -2128,7 +2128,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     Active = WasActive = false;
     WriteAccessed = false;
     Collapsed = false;
-    CollapseToggleWanted = false;
+    WantCollapseToggle = false;
     SkipItems = false;
     Appearing = false;
     Hidden = false;
@@ -4356,6 +4356,8 @@ static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* d
 
 static void AddWindowToDrawData(ImVector<ImDrawList*>* out_render_list, ImGuiWindow* window)
 {
+    ImGuiContext& g = *GImGui;
+    g.IO.MetricsRenderWindows++;
     AddDrawListToDrawData(out_render_list, window->DrawList);
     for (int i = 0; i < window->DC.ChildWindows.Size; i++)
     {
@@ -4368,7 +4370,6 @@ static void AddWindowToDrawData(ImVector<ImDrawList*>* out_render_list, ImGuiWin
 static void AddWindowToDrawDataSelectLayer(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
-    g.IO.MetricsActiveWindows++;
     if (window->Flags & ImGuiWindowFlags_Tooltip)
         AddWindowToDrawData(&g.DrawDataBuilder.Layers[1], window);
     else
@@ -4518,6 +4519,7 @@ void ImGui::EndFrame()
 
     IM_ASSERT(g.Windows.Size == g.WindowsSortBuffer.Size);  // we done something wrong
     g.Windows.swap(g.WindowsSortBuffer);
+    g.IO.MetricsActiveWindows = g.WindowsActiveCount;
 
     // Unlock font atlas
     g.IO.Fonts->Locked = false;
@@ -4541,7 +4543,7 @@ void ImGui::Render()
     g.FrameCountRendered = g.FrameCount;
 
     // Gather windows to render
-    g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsActiveWindows = 0;
+    g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsRenderWindows = 0;
     g.DrawDataBuilder.Clear();
     ImGuiWindow* windows_to_render_front_most[2];
     windows_to_render_front_most[0] = (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)) ? g.NavWindowingTarget->RootWindow : NULL;
@@ -6405,8 +6407,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // We don't use a regular button+id to test for double-click on title bar (mostly due to legacy reason, could be fixed), so verify that we don't have items over the title bar.
             ImRect title_bar_rect = window->TitleBarRect();
             if (g.HoveredWindow == window && g.HoveredId == 0 && g.HoveredIdPreviousFrame == 0 && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max) && g.IO.MouseDoubleClicked[0])
-                window->CollapseToggleWanted = true;
-            if (window->CollapseToggleWanted)
+                window->WantCollapseToggle = true;
+            if (window->WantCollapseToggle)
             {
                 window->Collapsed = !window->Collapsed;
                 MarkIniSettingsDirty(window);
@@ -6417,7 +6419,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             window->Collapsed = false;
         }
-        window->CollapseToggleWanted = false;
+        window->WantCollapseToggle = false;
 
         // SIZE
 
@@ -6727,7 +6729,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Collapse button
             if (!(flags & ImGuiWindowFlags_NoCollapse))
                 if (CollapseButton(window->GetID("#COLLAPSE"), window->Pos))
-                    window->CollapseToggleWanted = true; // Defer collapsing to next frame as we are too far in the Begin() function
+                    window->WantCollapseToggle = true; // Defer collapsing to next frame as we are too far in the Begin() function
 
             // Close button
             if (p_open != NULL)
@@ -14037,9 +14039,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     {
         static bool show_draw_cmd_clip_rects = true;
         static bool show_window_begin_order = false;
+        ImGuiIO& io = ImGui::GetIO();
         ImGui::Text("Dear ImGui %s", ImGui::GetVersion());
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::Text("%d vertices, %d indices (%d triangles)", ImGui::GetIO().MetricsRenderVertices, ImGui::GetIO().MetricsRenderIndices, ImGui::GetIO().MetricsRenderIndices / 3);
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+        ImGui::Text("%d vertices, %d indices (%d triangles)", io.MetricsRenderVertices, io.MetricsRenderIndices, io.MetricsRenderIndices / 3);
+        ImGui::Text("%d active windows (%d visible)", io.MetricsActiveWindows, io.MetricsRenderWindows);
         ImGui::Text("%d allocations", (int)GImAllocatorActiveAllocationsCount);
         ImGui::Checkbox("Show clipping rectangles when hovering draw commands", &show_draw_cmd_clip_rects);
         ImGui::Checkbox("Ctrl shows window begin order", &show_window_begin_order);
