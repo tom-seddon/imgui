@@ -625,7 +625,7 @@ void DrawGL()	// Mandatory
             static ImVec4 chosenColor(1,1,1,1);
             ImGui::AlignFirstTextHeightToWidgets();ImGui::Text("Please choose a color:");ImGui::SameLine();
             ImGui::PushID(20);  // (I reuse ImGui::ColorButton(...) below without pushing any ID)
-            if (ImGui::ColorButton(chosenColor))    {
+            if (ImGui::ColorButton("###MyColorButtonControl",chosenColor))    {
                 unsigned char aoResultRGB[3] = {(unsigned char)(chosenColor.x*255.f),(unsigned char)(chosenColor.y*255.f),(unsigned char)(chosenColor.z*255.f)};
 
                 char const * hexString =            /* returns the hexcolor as a string "#FF0000" */
@@ -2336,7 +2336,7 @@ void PerformCppSQLiteTest(ImGuiTextBuffer& rv,int nRowsToCreate) {
 	bufSQL.format("insert into bindata values ('testing', %Q);",
 		      blob.getEncoded());
 	db.execDML(bufSQL);
-    rv.appendf("Stored binary Length: %d\n",sizeof bin);
+    rv.appendf("Stored binary Length: %ld\n",sizeof bin);
 
 	q = db.execQuery("select data from bindata where desc = 'testing';");
 	if (!q.eof())   {

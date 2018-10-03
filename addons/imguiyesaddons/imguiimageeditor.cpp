@@ -618,7 +618,7 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
     // Here we use the whole size (although it can be partially empty)
     ImRect bb(window->DC.CursorPos, ImVec2(window->DC.CursorPos.x + wndSz.x,window->DC.CursorPos.y + wndSz.y));
     ImGui::ItemSize(bb);
-    if (!ImGui::ItemAdd(bb, NULL)) return rv;
+    if (!ImGui::ItemAdd(bb, 0, NULL)) return rv;
 
     ImVec2 imageSz = wndSz;
     ImVec2 remainingWndSize(0,0);
@@ -1568,7 +1568,9 @@ static bool ApplyLightEffect(unsigned char* im,int w,int h, int c,int lightStren
                 Dx = (double)x / wf;
                 total = (int) ImGuiIE::round (extension * (0.5 - sqrt (Dx * Dy)));  //should be a number between -extension/2 and extension/2
                 R = (int)pim[0] + total;G = (int)pim[1] + total;B = (int)pim[2] + total;if (hasAlpha) A = (int)pim[3];
-                if (R < 0) R = 0;if (G < 0) G = 0;if (B < 0) B = 0;
+                if (R < 0) R = 0;
+                if (G < 0) G = 0;
+                if (B < 0) B = 0;
                 if (!clampColorComponentsAtAlpha) {if (R>255) R=255;if (G>255) G=255;if (B>255) B=255;}
                 else {if (B > A) B = A;if (G > A) G = A;if (R > A) R = A;}
                 *pim++ = (unsigned char)R;*pim++ = (unsigned char)G;*pim++ = (unsigned char)B;if (hasAlpha) pim++;
@@ -1591,7 +1593,9 @@ static bool ApplyLightEffect(unsigned char* im,int w,int h, int c,int lightStren
                 sqrtValue = (double) sqrt (Dx*Dx+Dy*Dy)/(float)hwf;
                 total = (int) ImGuiIE::round (extension * (0.5-sqrtValue));  //should be a number between -extension/2 and extension/2
                 R = (int)pim[0] + total;G = (int)pim[1] + total;B = (int)pim[2] + total;if (hasAlpha) A = (int)pim[3];
-                if (R < 0) R = 0;if (G < 0) G = 0;if (B < 0) B = 0;
+                if (R < 0) R = 0;
+                if (G < 0) G = 0;
+                if (B < 0) B = 0;
                 if (!clampColorComponentsAtAlpha) {if (R>255) R=255;if (G>255) G=255;if (B>255) B=255;}
                 else {if (B > A) B = A;if (G > A) G = A;if (R > A) R = A;}
                 *pim++ = (unsigned char)R;*pim++ = (unsigned char)G;*pim++ = (unsigned char)B;if (hasAlpha) pim++;
@@ -1610,7 +1614,9 @@ static bool ApplyLightEffect(unsigned char* im,int w,int h, int c,int lightStren
                 dist = 0.5 * (1.0 - (Dx + Dy)); //-0.5<dist<0.5
                 total = (int) ImGuiIE::round (dist * extension); //should be a number between -extension/2 and extension/2
                 R = (int)pim[0] + total;G = (int)pim[1] + total;B = (int)pim[2] + total;if (hasAlpha) A = (int)pim[3];
-                if (R < 0) R = 0;if (G < 0) G = 0;if (B < 0) B = 0;
+                if (R < 0) R = 0;
+                if (G < 0) G = 0;
+                if (B < 0) B = 0;
                 if (!clampColorComponentsAtAlpha) {if (R>255) R=255;if (G>255) G=255;if (B>255) B=255;}
                 else {if (B > A) B = A;if (G > A) G = A;if (R > A) R = A;}
                 *pim++ = (unsigned char)R;*pim++ = (unsigned char)G;*pim++ = (unsigned char)B;if (hasAlpha) pim++;
@@ -4664,8 +4670,10 @@ struct StbImage {
                         const int W = finalSelection.Max.x - finalSelection.Min.x;
                         const int H = finalSelection.Max.y - finalSelection.Min.y;
                         int X = finalSelection.Min.x+offset,Y = finalSelection.Min.y;if (wrapMode) X%=w;
-                        if (X+W>w) X = w-W;if (Y+H>h) Y = h-H;
-                        if (X<0) X=0;if (Y<0) Y=0;
+                        if (X+W>w) X = w-W;
+                        if (Y+H>h) Y = h-H;
+                        if (X<0) X=0;
+                        if (Y<0) Y=0;
                         finalSelection.Min.x=X;finalSelection.Min.y=Y;
                         finalSelection.Max.x=X+W;finalSelection.Max.y=Y+H;
                     }
@@ -4715,7 +4723,8 @@ struct StbImage {
                         const int W = finalSelection.Max.x - finalSelection.Min.x;
                         const int H = finalSelection.Max.y - finalSelection.Min.y;
                         int X = finalSelection.Min.x,Y = finalSelection.Min.y;
-                        if (X+W>w) X = w-W;if (Y+H>h) Y = h-H;
+                        if (X+W>w) X = w-W;
+                        if (Y+H>h) Y = h-H;
                         finalSelection.Min.x=X;finalSelection.Min.y=Y;
                         finalSelection.Max.x=X+W;finalSelection.Max.y=Y+H;
                     }
@@ -4744,8 +4753,10 @@ struct StbImage {
                         const int W = finalSelection.Max.x - finalSelection.Min.x;
                         const int H = finalSelection.Max.y - finalSelection.Min.y;
                         int X = finalSelection.Min.x,Y = finalSelection.Min.y+offset;if (wrapMode) Y%=h;
-                        if (X+W>w) X = w-W;if (Y+H>h) Y = h-H;
-                        if (X<0) X=0;if (Y<0) Y=0;
+                        if (X+W>w) X = w-W;
+                        if (Y+H>h) Y = h-H;
+                        if (X<0) X=0;
+                        if (Y<0) Y=0;
                         finalSelection.Min.x=X;finalSelection.Min.y=Y;
                         finalSelection.Max.x=X+W;finalSelection.Max.y=Y+H;
                     }
@@ -6479,7 +6490,7 @@ struct StbImage {
         // Here we use the whole size (although it can be partially empty)
         ImRect bb(window->DC.CursorPos, ImVec2(window->DC.CursorPos.x + wndSz.x,window->DC.CursorPos.y + wndSz.y));
         ImGui::ItemSize(bb);
-        if (!ImGui::ItemAdd(bb, NULL)) {ImGui::PopID();return rv;}
+        if (!ImGui::ItemAdd(bb, 0, NULL)) {ImGui::PopID();return rv;}
 
         imageSz = wndSz;
         ImVec2 remainingWndSize(0,0);

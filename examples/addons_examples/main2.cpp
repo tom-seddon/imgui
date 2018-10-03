@@ -10,7 +10,7 @@ static const bool* gpShowCentralWindow = NULL;    // We'll bind it to a "manual"
 // Tweakable definitions
 //#define NO_IMGUITABWINDOW         // Optional (but useful to learn ImGui::PanelManager only). [Users usually define this kind of definitions at the project level].
 //#define NO_IMGUIHELPER	    // Disables all saving/loading methods. [Users usually define this kind of definitions at the project level].
-//#define TEST_ICONS_INSIDE_TTF     // Optional to test FontAwesome (a ttf file containing icons) [Local definition]
+#define TEST_ICONS_INSIDE_TTF     // Optional to test FontAwesome (a ttf file containing icons) [Local definition]
 
 
 #ifdef TEST_ICONS_INSIDE_TTF
