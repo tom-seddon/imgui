@@ -7,7 +7,7 @@
 
 
 bool gImGuiDockpanelManagerExtendedStyle = true;
-float gImGuiDockPanelManagerActiveResizeSize = 6.f;
+float gImGuiDockPanelManagerActiveResizeSize = 8.f;
 bool gImGuiDockPanelManagerAddExtraTitleBarResizing = false;
 bool gImGuiDockPanelManagerAlwaysDrawExternalBorders = true;
 
@@ -669,14 +669,14 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         // Setup drawing context
         // (NB: That term "drawing context / DC" lost its meaning a long time ago. Initially was meant to hold transient data only. Nowadays difference between window-> and window->DC-> is dubious.)
-        window->DC.IndentX = 0.0f + window->WindowPadding.x - window->Scroll.x;
-        window->DC.GroupOffsetX = 0.0f;
-        window->DC.ColumnsOffsetX = 0.0f;
-        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.IndentX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding.y - window->Scroll.y);
+        window->DC.Indent.x = 0.0f + window->WindowPadding.x - window->Scroll.x;
+        window->DC.GroupOffset.x = 0.0f;
+        window->DC.ColumnsOffset.x = 0.0f;
+        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.Indent.x + window->DC.ColumnsOffset.x, window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding.y - window->Scroll.y);
         window->DC.CursorPos = window->DC.CursorStartPos;
         window->DC.CursorPosPrevLine = window->DC.CursorPos;
         window->DC.CursorMaxPos = window->DC.CursorStartPos;
-        window->DC.CurrentLineHeight = window->DC.PrevLineHeight = 0.0f;
+        window->DC.CurrentLineSize = window->DC.PrevLineSize = ImVec2(0.0f, 0.0f);
         window->DC.CurrentLineTextBaseOffset = window->DC.PrevLineTextBaseOffset = 0.0f;
         window->DC.NavHideHighlightOneFrame = false;
         window->DC.NavHasScroll = (GetScrollMaxY() > 0.0f);

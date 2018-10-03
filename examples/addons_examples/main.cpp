@@ -125,7 +125,7 @@ inline void MyTestListView() {
     }
 
     // 2 lines just to have some feedback
-    if (ImGui::Button("Scroll to selected row")) lv.scrollToSelectedRow();ImGui::SameLine();
+    if (ImGui::Button("Scroll to selected row")) {lv.scrollToSelectedRow();}    ImGui::SameLine();
     ImGui::Text("selectedRow:%d selectedColumn:%d isInEditingMode:%s",lv.getSelectedRow(),lv.getSelectedColumn(),lv.isInEditingMode() ? "true" : "false");
 
     /*
@@ -203,6 +203,7 @@ void InitGL()	// Mandatory
 #   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER & C
     if (!ImGui::LoadStyle(pStyleFileName,ImGui::GetStyle()))   {
         printf("Warning: \"%s\" not present.\n",pStyleFileName);fflush(stdout);
+        ImGui::ResetStyle(ImGuiStyle_Gray);
     }
 #   endif //NO_IMGUISTYLESERIALIZER
 // We might just choose one predefined style:
@@ -447,6 +448,8 @@ void DrawGL()	// Mandatory
             else if (styleEnumNum==ImGuiStyle_Maya) ImGui::SetTooltip("%s","\"Maya\"\nPosted by @ongamex here:\nhttps://gist.github.com/ongamex/4ee36fb23d6c527939d0f4ba72144d29\n(hope I can use it)");
             else if (styleEnumNum==ImGuiStyle_LightGreen) ImGui::SetTooltip("%s","\"LightGreen\"\nPosted by @ebachard here:\nhttps://github.com/ocornut/imgui/pull/1776\n(hope I can use it)");
             else if (styleEnumNum==ImGuiStyle_Design) ImGui::SetTooltip("%s","\"Design\"\nPosted by @usernameiwantedwasalreadytaken here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
+            else if (styleEnumNum==ImGuiStyle_Dracula) ImGui::SetTooltip("%s","\"Dracula\"\nPosted by @ice1000 here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
+            else if (styleEnumNum==ImGuiStyle_Greenish) ImGui::SetTooltip("%s","\"Greenish\"\nPosted by @dertseha here:\nhttps://github.com/ocornut/imgui/issues/1902\n(hope I can use it)");
         }
 
         ImGui::SameLine();

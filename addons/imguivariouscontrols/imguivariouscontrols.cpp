@@ -652,7 +652,7 @@ struct MultilineScrollState {
     int SelectionEnd;   //                                      // Read
 };
 // Based on the code from: https://github.com/Roflraging (see https://github.com/ocornut/imgui/issues/383)
-static int MultilineScrollCallback(ImGuiTextEditCallbackData *data) {
+static int MultilineScrollCallback(ImGuiInputTextCallbackData *data) {
     //static int cnt=0;fprintf(stderr,"MultilineScrollCallback (%d)\n",++cnt);
     MultilineScrollState *scrollState = (MultilineScrollState *)data->UserData;
 
@@ -1547,11 +1547,15 @@ struct ImGuiPlotMultiArrayGetterData    {
         const int A = (unsigned char) (c>>IM_COL32_A_SHIFT);
 
         int r = R+fcgi, g = G+fcgi, b = B+fcgi;
-        if (r>255) r=255;if (g>255) g=255;if (b>255) b=255;
+        if (r>255) r=255;
+        if (g>255) g=255;
+        if (b>255) b=255;
         if (negative) bc = IM_COL32(r,g,b,A); else tc = IM_COL32(r,g,b,A);
 
         r = R-fcgi; g = G-fcgi; b = B-fcgi;
-        if (r<0) r=0;if (g<0) g=0;if (b<0) b=0;
+        if (r<0) r=0;
+        if (g<0) g=0;
+        if (b<0) b=0;
         if (negative) tc = IM_COL32(r,g,b,A); else bc = IM_COL32(r,g,b,A);
 
         /* // Old legacy code (to remove)... [However here we lerp alpha too...]
@@ -2145,7 +2149,7 @@ void PlotMultiHistograms(
 }
 // End PlotMultiLines(...) and PlotMultiHistograms(...)--------------------------
 
-int DefaultInputTextAutoCompletionCallback(ImGuiTextEditCallbackData *data) {
+int DefaultInputTextAutoCompletionCallback(ImGuiInputTextCallbackData *data) {
     InputTextWithAutoCompletionData& mad = *((InputTextWithAutoCompletionData*) data->UserData);
     if (mad.newTextToSet.size()>0 && mad.newTextToSet[0]!='\0') {
         data->DeleteChars(0,data->BufTextLen);

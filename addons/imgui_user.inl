@@ -6,6 +6,10 @@
 #ifndef IMGUI_USER_ADDONS_INL_
 #define IMGUI_USER_ADDONS_INL_
 
+#ifdef STB_TEXTEDIT_IMPLEMENTATION  // because imstb_textedit.h is included by imgui_widgets.cpp
+#   error. Please do not compile imgui_widgets.cpp yourself when using this file.
+#endif //STB_TEXTEDIT_IMPLEMENTATION
+#include <imgui_widgets.cpp>
 
 #ifndef NO_IMGUISTRING
 #include "./imguistring/imguistring.cpp"

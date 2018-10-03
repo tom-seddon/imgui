@@ -412,7 +412,7 @@ class InputTextWithAutoCompletionData  {
     static float Opacity;   // 0.6f;
 
     friend bool InputTextWithAutoCompletion(const char* label, char* buf, size_t buf_size,InputTextWithAutoCompletionData* pAutocompletion_data, bool (*autocompletion_items_getter)(void*, int, const char**), int autocompletion_items_size, void* autocompletion_user_data, int num_visible_autocompletion_items);
-    friend int DefaultInputTextAutoCompletionCallback(ImGuiTextEditCallbackData *data);
+    friend int DefaultInputTextAutoCompletionCallback(ImGuiInputTextCallbackData *data);
 
     // Some useful helper methods
     IMGUI_API static int HelperGetItemInsertionPosition(const char* txt,bool (*items_getter)(void*, int, const char**), int items_count, void* user_data=NULL,bool* item_is_already_present_out=NULL);
@@ -678,7 +678,8 @@ protected:
     inline unsigned int getMode() const {
         int m = MODE_NONE;if (childNodes==NULL) m|=MODE_LEAF;
         if (!parentNode || !parentNode->parentNode) m|=MODE_ROOT;
-        if (m==MODE_NONE) m = MODE_INTERMEDIATE;return m;
+        if (m==MODE_NONE) m = MODE_INTERMEDIATE;
+        return m;
     }
     inline static bool MatchMode(unsigned int m,unsigned int nodeM) {
         // Hp) nodeM can't be MODE_NONE

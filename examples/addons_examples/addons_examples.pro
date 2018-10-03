@@ -77,8 +77,9 @@ INCLUDEPATH+= 	$$IMGUI_BASE_PATH				\
 
 
 HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
-	   $$IMGUI_BASE_PATH"/addons/imgui_user.h"				    \
-	   $$IMGUI_BASE_PATH"/addons/imguibindings/ImImpl_RenderDrawLists.h"	    \
+           $$IMGUI_BASE_PATH"/imgui_internal.h"				    \
+           $$IMGUI_BASE_PATH"/addons/imgui_user.h"				    \
+           $$IMGUI_BASE_PATH"/addons/imguibindings/ImImpl_RenderDrawLists.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/ImImpl_Binding_Glfw3.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/ImImpl_Binding_Glut.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/ImImpl_Binding_SDL2.h"	    \
@@ -105,8 +106,10 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imgui*.h"
 
 SOURCES+=  $$IMGUI_BASE_PATH"/imgui.cpp" \
-	   $$IMGUI_BASE_PATH"/imgui_draw.cpp" \
-	   $$IMGUI_BASE_PATH"/imgui_demo.cpp" \ #\ # optional: for ImGui::ShowTestWindow()
+           $$IMGUI_BASE_PATH"/imgui_draw.cpp" #\
+           #$$IMGUI_BASE_PATH"/imgui_widgets.cpp"
+
+OTHER_FILES+= $$IMGUI_BASE_PATH"/imgui_widgets.cpp" # This (new) file is automatically included in imgui_user.inl. Please don't compile it.
 
 use_main6 {
 SOURCES+=main6.cpp
@@ -139,6 +142,7 @@ TARGET = imgui_addons_example2
 } #use_main2
 !use_main2 {
 SOURCES+=main.cpp
+SOURCES+=$$IMGUI_BASE_PATH"/imgui_demo.cpp" # for ImGui::ShowTestWindow()
 TARGET = imgui_addons_example1
 } #!use_main2
 } #!use_main3
@@ -263,6 +267,7 @@ QMAKE_LFLAGS += -no-pie
 
 # Dev stuff here (should be commented out)
 #DEFINES+=IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+#DEFINES+=NO_IMGUICODEEDITOR
 #DEFINES+=NO_IMGUIVARIOUSCONTROLS
 #DEFINES+=NO_IMGUIPANELMANAGER
 #DEFINES+=NO_IMGUIDATECHOOSER

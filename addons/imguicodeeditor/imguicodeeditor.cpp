@@ -30,6 +30,18 @@
 #define IMGUI_NEW(type)         IM_PLACEMENT_NEW (ImGui::MemAlloc(sizeof(type) ) ) type
 #define IMGUI_DELETE(type, obj) reinterpret_cast<type*>(obj)->~type(), ImGui::MemFree(obj)
 
+#ifndef IMGUI_USER_ADDONS_INL_
+// This serves only for the compilation stage (linker stage still misses these)-----------------
+extern "C" {
+void stb_textedit_initialize_state(ImGuiStb::STB_TexteditState *, int );
+void stb_textedit_click(STB_TEXTEDIT_STRING *str, ImGuiStb::STB_TexteditState *state, float x, float y);
+void stb_textedit_drag(STB_TEXTEDIT_STRING *str, ImGuiStb::STB_TexteditState *state, float x, float y);
+int  stb_textedit_cut(STB_TEXTEDIT_STRING *str, ImGuiStb::STB_TexteditState *state);
+int  stb_textedit_paste(STB_TEXTEDIT_STRING *str, ImGuiStb::STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE *text, int len);
+}
+// ---------------------------------------------------------------------------------------------
+#endif //IMGUI_USER_ADDONS_INL_
+
 namespace ImGui {
 
 namespace CodeEditorDrawListHelper {
@@ -2321,7 +2333,7 @@ void CodeEditor::render()   {
         bool mustSkipNextVisibleLine = false;
         for (int i = lineStart;i<=lineEnd;i++) {
             if (i>=lines.size()) break;
-            if (i==scrollToLine) ImGui::SetScrollHere();
+            if (i==scrollToLine) ImGui::SetScrollHereY();
             Line* line = lines[i];
             if (line->isHidden()) {
                 //fprintf(stderr,"line %d is hidden\n",line->lineNumber+1); // This seems to happen on "//endregion" lines only
@@ -2778,7 +2790,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
         const int text_len = (int)(text_end - text);
         if (text_len > 0)   {
             ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, ImGui::GetColorU32(ImGuiCol_Text), text, text_end);
-            if (g.LogEnabled) LogRenderedText(&pos, text, text_end);
+            if (g.LogEnabled) ImGui::LogRenderedText(&pos, text, text_end);
         }
         return;
     }
@@ -2796,7 +2808,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                 const int text_len = (int)(text_end - text);
                 if (text_len > 0)   {
                     ImGui::ImDrawListAddTextLine(window->DrawList,const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_COMMENT]]), g.FontSize, pos, style.color_syntax_highlighting[SH_COMMENT], text, text_end);
-                    if (g.LogEnabled) LogRenderedText(&pos, text, text_end);
+                    if (g.LogEnabled) ImGui::LogRenderedText(&pos, text, text_end);
                 }
                 return;
             }
@@ -2810,7 +2822,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                 const int text_len = (int)(endCmt - text);
                 if (text_len > 0)   {
                     ImGui::ImDrawListAddTextLine(window->DrawList,const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_COMMENT]]), g.FontSize, pos, style.color_syntax_highlighting[SH_COMMENT], text, endCmt);
-                    if (g.LogEnabled) LogRenderedText(&pos, text, endCmt);
+                    if (g.LogEnabled) ImGui::LogRenderedText(&pos, text, endCmt);
                 }
                 if (tk2 && endCmt<text_end) RenderTextLineWrappedWithSH(pos,endCmt,text_end);    // Draw after "*/"
                 return;
@@ -2832,7 +2844,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                     // Draw String:
                     const ImVec2 oldPos = pos;
                     ImGui::ImDrawListAddTextLine(window->DrawList,const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[SH_STRING]]), g.FontSize, pos, style.color_syntax_highlighting[SH_STRING], tk, endStringSH);
-                    if (g.LogEnabled) LogRenderedText(&pos, tk, endStringSH);
+                    if (g.LogEnabled) ImGui::LogRenderedText(&pos, tk, endStringSH);
                     const float token_width = pos.x - oldPos.x;  //MyCalcTextWidth(tk,endStringSH);
                     // TEST: Mouse interaction on token (gIsCurlineHovered == true when CTRL is pressed)-------------------
                     if (gIsCurlineHovered) {
@@ -2874,7 +2886,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
     while (*s==sp || *s==tab)	{
     if (s+1==text_end)  {
         ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, ImGui::GetColorU32(ImGuiCol_Text), text, text_end);
-        if (g.LogEnabled) LogRenderedText(&pos, text, text_end);
+        if (g.LogEnabled) ImGui::LogRenderedText(&pos, text, text_end);
         return;
     }
     ++s;
@@ -2882,7 +2894,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
     if (s>text)	{
         // Draw Tabs and spaces
         ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, ImGui::GetColorU32(ImGuiCol_Text), text, s);
-        if (g.LogEnabled) LogRenderedText(&pos, text, s);
+        if (g.LogEnabled) ImGui::LogRenderedText(&pos, text, s);
         text=s;
     }
 
@@ -2922,7 +2934,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                 if (sht==-1 && !shTypePunctuationMap.get(*ch,sht)) sht = -1;
                 if (sht>=0 && sht<SH_COUNT) ImGui::ImDrawListAddTextLine(window->DrawList,const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1);
                 else ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, ImGui::GetColorU32(ImGuiCol_Text), s+j, s+j+1);
-                if (g.LogEnabled) LogRenderedText(&pos, s+j, s+j+1);
+                if (g.LogEnabled) ImGui::LogRenderedText(&pos, s+j, s+j+1);
             }
         }
         s+=offset;
@@ -2955,7 +2967,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
                 //fprintf(stderr,"Not Getting shTypeMap: \"%s\",%d\n",tok,sht);
                 ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, ImGui::GetColorU32(ImGuiCol_Text), tok, tok+len_tok);
             }
-            if (g.LogEnabled) LogRenderedText(&pos, tok, tok+len_tok);
+            if (g.LogEnabled) ImGui::LogRenderedText(&pos, tok, tok+len_tok);
             const float token_width = pos.x - oldPos.x;//MyCalcTextWidth(tok,tok+len_tok);   // We'll use this later
             // TEST: Mouse interaction on token (gIsCurlineHovered == true when CTRL is pressed)-------------------
             if (gIsCurlineHovered) {
@@ -2990,7 +3002,7 @@ void CodeEditor::RenderTextLineWrappedWithSH(ImVec2& pos, const char* text, cons
             if (sht==-1 && !shTypePunctuationMap.get(*ch,sht)) sht = -1;
             if (sht>=0 && sht<SH_COUNT) ImGui::ImDrawListAddTextLine(window->DrawList,const_cast<ImFont*>(ImFonts[style.font_syntax_highlighting[sht]]), g.FontSize, pos, style.color_syntax_highlighting[sht], s+j, s+j+1);
             else ImGui::ImDrawListAddTextLine(window->DrawList,g.Font, g.FontSize, pos, ImGui::GetColorU32(ImGuiCol_Text), s+j, s+j+1);
-            if (g.LogEnabled) LogRenderedText(&pos, s+j, s+j+1);
+            if (g.LogEnabled) ImGui::LogRenderedText(&pos, s+j, s+j+1);
         }
     }
 
@@ -3443,9 +3455,135 @@ static void MyTextLineWithSH(const BadCodeEditorData& ceData,const char* fmt, ..
     va_end(args);
 }
 
+#ifndef IMGUI_USER_ADDONS_INL_
+// ============================================================================
+// START COPYING DEFINITIONS AND METHODS BURIED INTO imgui_widgets.cpp
+//=============================================================================
+
+// We don't use an enum so we can build even with conflicting symbols (if another user of stb_textedit.h leak their STB_TEXTEDIT_K_* symbols)
+#define STB_TEXTEDIT_K_LEFT         0x10000 // keyboard input to move cursor left
+#define STB_TEXTEDIT_K_RIGHT        0x10001 // keyboard input to move cursor right
+#define STB_TEXTEDIT_K_UP           0x10002 // keyboard input to move cursor up
+#define STB_TEXTEDIT_K_DOWN         0x10003 // keyboard input to move cursor down
+#define STB_TEXTEDIT_K_LINESTART    0x10004 // keyboard input to move cursor to start of line
+#define STB_TEXTEDIT_K_LINEEND      0x10005 // keyboard input to move cursor to end of line
+#define STB_TEXTEDIT_K_TEXTSTART    0x10006 // keyboard input to move cursor to start of text
+#define STB_TEXTEDIT_K_TEXTEND      0x10007 // keyboard input to move cursor to end of text
+#define STB_TEXTEDIT_K_DELETE       0x10008 // keyboard input to delete selection or character under cursor
+#define STB_TEXTEDIT_K_BACKSPACE    0x10009 // keyboard input to delete selection or character left of cursor
+#define STB_TEXTEDIT_K_UNDO         0x1000A // keyboard input to perform undo
+#define STB_TEXTEDIT_K_REDO         0x1000B // keyboard input to perform redo
+#define STB_TEXTEDIT_K_WORDLEFT     0x1000C // keyboard input to move cursor left one word
+#define STB_TEXTEDIT_K_WORDRIGHT    0x1000D // keyboard input to move cursor right one word
+#define STB_TEXTEDIT_K_SHIFT        0x20000
 
 
-bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data,ImGuiID* pOptionalItemIDOut)
+// Return false to discard a character (same as InputTextFilterCharacter(...) from imgui_widgets.cpp).
+static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
+{
+    unsigned int c = *p_char;
+
+    if (c < 128 && c != ' ' && !isprint((int)(c & 0xFF)))
+    {
+        bool pass = false;
+        pass |= (c == '\n' && (flags & ImGuiInputTextFlags_Multiline));
+        pass |= (c == '\t' && (flags & ImGuiInputTextFlags_AllowTabInput));
+        if (!pass)
+            return false;
+    }
+
+    if (c >= 0xE000 && c <= 0xF8FF) // Filter private Unicode range. I don't imagine anybody would want to input them. GLFW on OSX seems to send private characters for special keys like arrow keys.
+        return false;
+
+    if (flags & (ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_CharsNoBlank | ImGuiInputTextFlags_CharsScientific))
+    {
+        if (flags & ImGuiInputTextFlags_CharsDecimal)
+            if (!(c >= '0' && c <= '9') && (c != '.') && (c != '-') && (c != '+') && (c != '*') && (c != '/'))
+                return false;
+
+        if (flags & ImGuiInputTextFlags_CharsScientific)
+            if (!(c >= '0' && c <= '9') && (c != '.') && (c != '-') && (c != '+') && (c != '*') && (c != '/') && (c != 'e') && (c != 'E'))
+                return false;
+
+        if (flags & ImGuiInputTextFlags_CharsHexadecimal)
+            if (!(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') && !(c >= 'A' && c <= 'F'))
+                return false;
+
+        if (flags & ImGuiInputTextFlags_CharsUppercase)
+            if (c >= 'a' && c <= 'z')
+                *p_char = (c += (unsigned int)('A'-'a'));
+
+        if (flags & ImGuiInputTextFlags_CharsNoBlank)
+            if (ImCharIsBlankW(c))
+                return false;
+    }
+
+    if (flags & ImGuiInputTextFlags_CallbackCharFilter)
+    {
+        ImGuiInputTextCallbackData callback_data;
+        memset(&callback_data, 0, sizeof(ImGuiInputTextCallbackData));
+        callback_data.EventFlag = ImGuiInputTextFlags_CallbackCharFilter;
+        callback_data.EventChar = (ImWchar)c;
+        callback_data.Flags = flags;
+        callback_data.UserData = user_data;
+        if (callback(&callback_data) != 0)
+            return false;
+        *p_char = callback_data.EventChar;
+        if (!callback_data.EventChar)
+            return false;
+    }
+
+    return true;
+}
+static ImVec2 InputTextCalcTextSizeW(const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining=NULL, ImVec2* out_offset=NULL, bool stop_on_new_line=false)
+{
+    ImFont* font = GImGui->Font;
+    const float line_height = GImGui->FontSize;
+    const float scale = line_height / font->FontSize;
+
+    ImVec2 text_size = ImVec2(0,0);
+    float line_width = 0.0f;
+
+    const ImWchar* s = text_begin;
+    while (s < text_end)
+    {
+        unsigned int c = (unsigned int)(*s++);
+        if (c == '\n')
+        {
+            text_size.x = ImMax(text_size.x, line_width);
+            text_size.y += line_height;
+            line_width = 0.0f;
+            if (stop_on_new_line)
+                break;
+            continue;
+        }
+        if (c == '\r')
+            continue;
+
+        const float char_width = font->GetCharAdvance((ImWchar)c) * scale;
+        line_width += char_width;
+    }
+
+    if (text_size.x < line_width)
+        text_size.x = line_width;
+
+    if (out_offset)
+        *out_offset = ImVec2(line_width, text_size.y + line_height);  // offset allow for the possibility of sitting after a trailing \n
+
+    if (line_width > 0 || text_size.y == 0.0f)                        // whereas size.y will ignore the trailing \n
+        text_size.y += line_height;
+
+    if (remaining)
+        *remaining = s;
+
+    return text_size;
+}
+// ============================================================================
+// END COPYING DEFINITIONS AND METHODS BURIED INTO imgui_widgets.cpp
+//=============================================================================
+#endif //IMGUI_USER_ADDONS_INL_
+
+bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data,ImGuiID* pOptionalItemIDOut)
 {
 //#define BAD_CODE_EDITOR_HAS_HORIZONTAL_SCROLLBAR  // doesn't work... maybe we can fix it someday... but default ImGui::InputTextMultiline() should be made with it...
 #   ifndef BAD_CODE_EDITOR_HAS_HORIZONTAL_SCROLLBAR
@@ -3590,7 +3728,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     textLineHeight = ImGui::GetTextLineHeight();
 
     // NB: we are only allowed to access 'edit_state' if we are the active widget.
-    ImGuiTextEditState& edit_state = g.InputTextState;
+    ImGuiInputTextState& edit_state = g.InputTextState;
 
     const bool is_ctrl_down = io.KeyCtrl;
     const bool is_shift_down = io.KeyShift;
@@ -3606,7 +3744,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         g.MouseCursor = ImGuiMouseCursor_TextInput;
     }
     const bool user_clicked = hovered && io.MouseClicked[0];
-    const bool user_scrolled = g.ActiveId == 0 && edit_state.Id == id && g.ActiveIdPreviousFrame == draw_window->GetID("#SCROLLY");
+    const bool user_scrolled = g.ActiveId == 0 && edit_state.ID == id && g.ActiveIdPreviousFrame == draw_window->GetID("#SCROLLY");
 
     bool select_all = (g.ActiveId != id) && (flags & ImGuiInputTextFlags_AutoSelectAll) != 0;
     if (focus_requested || user_clicked || user_scrolled)
@@ -3617,17 +3755,17 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
             // From the moment we focused we are ignoring the content of 'buf' (unless we are in read-only mode)
             const int prev_len_w = edit_state.CurLenW;
-            edit_state.Text.resize(buf_size+1);        // wchar count <= utf-8 count. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
+            edit_state.TextW.resize(buf_size+1);        // wchar count <= utf-8 count. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
             edit_state.InitialText.resize(buf_size+1); // utf-8. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
             ImFormatString(edit_state.InitialText.Data, edit_state.InitialText.Size, "%s", buf);
             const char* buf_end = NULL;
-            edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text.Data, edit_state.Text.Size, buf, NULL, &buf_end);
+            edit_state.CurLenW = ImTextStrFromUtf8(edit_state.TextW.Data, edit_state.TextW.Size, buf, NULL, &buf_end);
             edit_state.CurLenA = (int)(buf_end - buf); // We can't get the result from ImFormatString() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
             edit_state.CursorAnimReset();
 
             // Preserve cursor position and undo/redo stack if we come back to same widget
             // FIXME: We should probably compare the whole buffer to be on the safety side. Comparing buf (utf8) and edit_state.Text (wchar).
-            const bool recycle_state = (edit_state.Id == id) && (prev_len_w == edit_state.CurLenW);
+            const bool recycle_state = (edit_state.ID == id) && (prev_len_w == edit_state.CurLenW);
             if (recycle_state)
             {
                 // Recycle existing cursor/selection/undo stack but clamp position
@@ -3636,7 +3774,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             }
             else
             {
-                edit_state.Id = id;
+                edit_state.ID = id;
                 edit_state.ScrollX = 0.0f;
                 stb_textedit_initialize_state(&edit_state.StbState, false);
             }
@@ -3662,14 +3800,14 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         if (!is_editable && !g.ActiveIdIsJustActivated)
         {
             // When read-only we always use the live data passed to the function
-            edit_state.Text.resize(buf_size+1);
+            edit_state.TextW.resize(buf_size+1);
             const char* buf_end = NULL;
-            edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text.Data, edit_state.Text.Size, buf, NULL, &buf_end);
+            edit_state.CurLenW = ImTextStrFromUtf8(edit_state.TextW.Data, edit_state.TextW.Size, buf, NULL, &buf_end);
             edit_state.CurLenA = (int)(buf_end - buf);
             edit_state.CursorClamp();
         }
 
-        edit_state.BufSizeA = buf_size;
+        edit_state.BufCapacityA = buf_size;
 
         // Although we are active we don't prevent mouse from hovering other elements unless we are interacting right now with the widget.
         // Down the line we should have a cleaner library-wide concept of Selected vs Active.
@@ -3825,9 +3963,9 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             {
                 const int ib = edit_state.HasSelection() ? ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end) : 0;
                 const int ie = edit_state.HasSelection() ? ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end) : edit_state.CurLenW;
-                edit_state.TempTextBuffer.resize((ie-ib) * 4 + 1);
-                ImTextStrToUtf8(edit_state.TempTextBuffer.Data, edit_state.TempTextBuffer.Size, edit_state.Text.Data+ib, edit_state.Text.Data+ie);
-                SetClipboardText(edit_state.TempTextBuffer.Data);
+                edit_state.TempBuffer.resize((ie-ib) * 4 + 1);
+                ImTextStrToUtf8(edit_state.TempBuffer.Data, edit_state.TempBuffer.Size, edit_state.TextW.Data+ib, edit_state.TextW.Data+ie);
+                SetClipboardText(edit_state.TempBuffer.Data);
             }
 
             if (is_cut)
@@ -3884,8 +4022,8 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             // FIXME-OPT: CPU waste to do this every time the widget is active, should mark dirty state from the stb_textedit callbacks.
             if (is_editable)
             {
-                edit_state.TempTextBuffer.resize(edit_state.Text.Size * 4);
-                ImTextStrToUtf8(edit_state.TempTextBuffer.Data, edit_state.TempTextBuffer.Size, edit_state.Text.Data, NULL);
+                edit_state.TempBuffer.resize(edit_state.TextW.Size * 4);
+                ImTextStrToUtf8(edit_state.TempBuffer.Data, edit_state.TempBuffer.Size, edit_state.TextW.Data, NULL);
             }
 
             // User callback
@@ -3914,21 +4052,21 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
                 if (event_flag) //event_key != ImGuiKey_COUNT || (flags & ImGuiInputTextFlags_CallbackAlways) != 0)
                 {
-                    ImGuiTextEditCallbackData callback_data;
-                    memset(&callback_data, 0, sizeof(ImGuiTextEditCallbackData));
+                    ImGuiInputTextCallbackData callback_data;
+                    memset(&callback_data, 0, sizeof(ImGuiInputTextCallbackData));
                     callback_data.EventFlag = event_flag;
                     callback_data.Flags = flags;
                     callback_data.UserData = user_data;
-                    callback_data.ReadOnly = !is_editable;
+                    //callback_data.ReadOnly = !is_editable;
 
                     callback_data.EventKey = event_key;
-                    callback_data.Buf = edit_state.TempTextBuffer.Data;
+                    callback_data.Buf = edit_state.TempBuffer.Data;
                     callback_data.BufTextLen = edit_state.CurLenA;
-                    callback_data.BufSize = edit_state.BufSizeA;
+                    callback_data.BufSize = edit_state.BufCapacityA;
                     callback_data.BufDirty = false;
 
                     // We have to convert from wchar-positions to UTF-8-positions, which can be pretty slow (an incentive to ditch the ImWchar buffer, see https://github.com/nothings/stb/issues/188)
-                    ImWchar* text = edit_state.Text.Data;
+                    ImWchar* text = edit_state.TextW.Data;
                     const int utf8_cursor_pos = callback_data.CursorPos = ImTextCountUtf8BytesFromStr(text, text + edit_state.StbState.cursor);
                     const int utf8_selection_start = callback_data.SelectionStart = ImTextCountUtf8BytesFromStr(text, text + edit_state.StbState.select_start);
                     const int utf8_selection_end = callback_data.SelectionEnd = ImTextCountUtf8BytesFromStr(text, text + edit_state.StbState.select_end);
@@ -3937,18 +4075,18 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                     callback(&callback_data);
 
                     // Read back what user may have modified
-                    IM_ASSERT(callback_data.Buf == edit_state.TempTextBuffer.Data);  // Invalid to modify those fields
-                    IM_ASSERT(callback_data.BufSize == edit_state.BufSizeA);
+                    IM_ASSERT(callback_data.Buf == edit_state.TempBuffer.Data);  // Invalid to modify those fields
+                    IM_ASSERT(callback_data.BufSize == edit_state.BufCapacityA);
                     IM_ASSERT(callback_data.Flags == flags);
                     if (callback_data.CursorPos != utf8_cursor_pos)            edit_state.StbState.cursor = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.CursorPos);
                     if (callback_data.SelectionStart != utf8_selection_start)  edit_state.StbState.select_start = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionStart);
                     if (callback_data.SelectionEnd != utf8_selection_end)      edit_state.StbState.select_end = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionEnd);
                     if (callback_data.BufDirty)
                     {
-                        //edit_state.CurLenW = ImTextStrFromUtf8(text, edit_state.Text.Size, edit_state.TempTextBuffer.Data, NULL);
-                        //edit_state.CurLenA = (int)strlen(edit_state.TempTextBuffer.Data);
+                        //edit_state.CurLenW = ImTextStrFromUtf8(text, edit_state.TextW.Size, edit_state.TempBuffer.Data, NULL);
+                        //edit_state.CurLenA = (int)strlen(edit_state.TempBuffer.Data);
                         IM_ASSERT(callback_data.BufTextLen == (int)strlen(callback_data.Buf)); // You need to maintain BufTextLen if you change the text!
-                        edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text.Data, edit_state.Text.Size, callback_data.Buf, NULL);
+                        edit_state.CurLenW = ImTextStrFromUtf8(edit_state.TextW.Data, edit_state.TextW.Size, callback_data.Buf, NULL);
                         edit_state.CurLenA = callback_data.BufTextLen;  // Assume correct length and valid UTF-8 from user, saves us an extra strlen()
 
                         edit_state.CursorAnimReset();
@@ -3957,9 +4095,9 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             }
 
             // Copy back to user buffer
-            if (is_editable && strcmp(edit_state.TempTextBuffer.Data, buf) != 0)
+            if (is_editable && strcmp(edit_state.TempBuffer.Data, buf) != 0)
             {
-                ImFormatString(buf, buf_size, "%s", edit_state.TempTextBuffer.Data);
+                ImFormatString(buf, buf_size, "%s", edit_state.TempBuffer.Data);
                 value_changed = true;
             }
         }
@@ -3969,7 +4107,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x, frame_bb.Min.y + size.y); // Not using frame_bb.Max because we have adjusted size
     ImVec2 render_pos = draw_window->DC.CursorPos;
 
-    const bool canModifyText = g.ActiveId == id || (edit_state.Id == id && g.ActiveId == draw_window->GetID("#SCROLLY"));
+    const bool canModifyText = g.ActiveId == id || (edit_state.ID == id && g.ActiveId == draw_window->GetID("#SCROLLY"));
     ImVec2 cursor_offset(0,0),render_scroll(0,0);
     if (canModifyText)
     {
@@ -3980,7 +4118,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         // - Handle scrolling, highlight selection, display cursor (those all requires some form of 1d->2d cursor position calculation)
         // - Measure text height (for scrollbar)
         // We are attempting to do most of that in **one main pass** to minimize the computation cost (non-negligible for large amount of text) + 2nd pass for selection rendering (we could merge them by an extra refactoring effort)
-        const ImWchar* text_begin = edit_state.Text.Data;
+        const ImWchar* text_begin = edit_state.TextW.Data;
         ImVec2 select_start_offset;
         int line_count = 0;
 
@@ -4200,7 +4338,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
     if (canModifyText)   {
         // Draw blinking cursor
-        bool cursor_is_visible = (!g.IO.ConfigCursorBlink) || (g.InputTextState.CursorAnim <= 0.0f) || fmodf(g.InputTextState.CursorAnim, 1.20f) <= 0.80f;
+        bool cursor_is_visible = (!g.IO.ConfigInputTextCursorBlink) || (g.InputTextState.CursorAnim <= 0.0f) || fmodf(g.InputTextState.CursorAnim, 1.20f) <= 0.80f;
         ImVec2 cursor_screen_pos = render_pos + cursor_offset - render_scroll;
         ImRect cursor_screen_rect(cursor_screen_pos.x, cursor_screen_pos.y-g.FontSize+0.5f, cursor_screen_pos.x+1.0f, cursor_screen_pos.y-1.5f);
         if (cursor_is_visible && cursor_screen_rect.Overlaps(clip_rect))
@@ -4332,7 +4470,7 @@ void ImStringNonStdResize(ImString& s,int size) {
 
 namespace ImGui {
 
-bool InputTextWithSyntaxHighlighting(ImGuiID& staticItemIDInOut, ImString& text,ImGuiCe::Language lang,const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data) {
+bool InputTextWithSyntaxHighlighting(ImGuiID& staticItemIDInOut, ImString& text,ImGuiCe::Language lang,const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data) {
     bool rv = false;
     const bool is_editable = (flags & ImGuiInputTextFlags_ReadOnly) == 0;
     const bool is_active = staticItemIDInOut>0 && ImGui::GetCurrentContext()->ActiveId==staticItemIDInOut;
@@ -4344,7 +4482,7 @@ bool InputTextWithSyntaxHighlighting(ImGuiID& staticItemIDInOut, ImString& text,
     ImGui::PushID(&staticItemIDInOut);
     if (is_editable && is_active) {
         const ImGuiIO& io = ImGui::GetIO();
-        ImGuiTextEditState &edit_state = ImGui::GetCurrentContext()->InputTextState;    // Hope this always points to the active InputText...
+        ImGuiInputTextState &edit_state = ImGui::GetCurrentContext()->InputTextState;    // Hope this always points to the active InputText...
         const char* clipText = (io.KeyMap[ImGuiKey_V] && io.KeyCtrl) ? ImGui::GetClipboardText() : "";
         const size_t clipSize = strlen(clipText);
         size_t sizeToAdd = clipSize+((io.InputCharacters[0] && (!(io.KeyCtrl && !io.KeyAlt)))?(5*IM_ARRAYSIZE(io.InputCharacters)):0);
@@ -4361,7 +4499,7 @@ bool InputTextWithSyntaxHighlighting(ImGuiID& staticItemIDInOut, ImString& text,
             const size_t oldTextLen = (size_t)text.length();
             const size_t newTextLen = oldTextLen+sizeToAdd;
             ImStringNonStdResize(text,newTextLen);  // See its code: it sets text[i]='\0' too
-            edit_state.Text.resize(text.length()+1);
+            edit_state.TextW.resize(text.length()+1);
             edit_state.InitialText.resize(text.length()+1);
 
             rv = ImGui::InputTextWithSyntaxHighlighting("###DummyID_ITWSH",&text[0],newTextLen,lang,size_arg,flags,callback,user_data,&staticItemIDInOut);
@@ -4376,7 +4514,7 @@ bool InputTextWithSyntaxHighlighting(ImGuiID& staticItemIDInOut, ImString& text,
             if  (ImGui::GetCurrentContext()->ActiveId==staticItemIDInOut)    // Otherwise edit_state points to something else
             {
                 //Allows the textbox to expand while active.
-                edit_state.Text.resize(text.length()+1);
+                edit_state.TextW.resize(text.length()+1);
                 edit_state.InitialText.resize(text.length()+1);
             }
         }

@@ -16,6 +16,8 @@ If you want to compile the examples to .html yourself, or you can't run the exam
 
 UPDATE: There's a third demo named main3.cpp, but it's currently used to develop imguicodeeditor (see below).
 
+NOTE: Even if recent versions of imgui include the file imgui_widgets.cpp, to compile the examples this file must be left out (the old compilation scripts/projects should still work)!
+
 -----------------------------
 NOTE FOR VISUAL STUDIO USERS:
 -----------------------------
@@ -43,6 +45,8 @@ UPDATE: Now GLEW can be optionally replaced by GLAD or by GL3W. The latter is al
 so that we have another Windows binding that should work without additional libraries.
 
 P.S.2: The order of the .cpp files is important! main.cpp must be the last of all the source files in the command line.
+
+NOTE: Even if recent versions of imgui include the file imgui_widgets.cpp, to compile the examples this file must be left out.
 
 ====================================
 WHAT IS "IMGUI ADDONS" ?
@@ -147,7 +151,9 @@ Basically to use and compile projects that use the imgui addon framework you can
 	 This way the two files "imgui_user.h" and "imgui_user.inl" should include all the addons automatically.
 	 Note: currently "imgui_user.h" defines IMGUI_INCLUDE_IMGUI_USER_INL if it is not already defined: so only
      IMGUI_INCLUDE_IMGUI_USER_H should be mandatory (TODO: test it).
-
+    ==================
+    IMPORTANT NEW STEP: Since imgui_user.inl now includes imgui_widgets.cpp, imgui_widgets.cpp MUST BE EXCLUDED FROM YOUR PROJECT (otherwise it will be compiled twice).
+    ==================
 
 2 -> OPTIONALLY define ONE (and only one) of the following at the project level (typically when you're using ImGui in a new demo project):
 IMGUI_USE_GLUT_BINDING		# needs -lglut (or maybe -lGLUT)
@@ -272,6 +278,9 @@ because they use some methods that are static inside imgui.cpp, and not exposed 
 
 P.S. imguibindings is NOT considered an addon that you can easily extract and use inside your code!
 
+IMPORTANT: Of course if you don't use the file imgui_user.inl (that includes addons/imgui_user.inl), then you
+need to compile imgui_widgets.cpp too (together with imgui.cpp and imgui_draw.cpp).
+P.S. As I've already written before, addons/imgui_user.inl now includes imgui_widgets.cpp.
 -----------------------------------------------------------------------------------------------------------------------------------
 A MINIMAL EXAMPLE: mainBasic.cpp
 ---------------------------------

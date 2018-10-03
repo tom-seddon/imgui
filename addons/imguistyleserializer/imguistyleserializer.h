@@ -22,6 +22,8 @@ enum ImGuiStyleEnum {
     ImGuiStyle_Maya,        // Posted by @ongamex here https://gist.github.com/ongamex/4ee36fb23d6c527939d0f4ba72144d29
     ImGuiStyle_LightGreen,  // Posted by @ebachard here: https://github.com/ocornut/imgui/pull/1776 (hope I can use it)
     ImGuiStyle_Design,      // Posted by @usernameiwantedwasalreadytaken here: https://github.com/ocornut/imgui/issues/707 (hope I can use it)
+    ImGuiStyle_Dracula,     // Posted by @ice1000 here: https://github.com/ocornut/imgui/issues/707 (hope I can use it)
+    ImGuiStyle_Greenish,    // Posted by @dertseha here: https://github.com/ocornut/imgui/issues/1902 (Hope I can use it)
 
     ImGuiStyle_DarkOpaqueInverse,
     ImGuiStyle_GrayCodz01Inverse,

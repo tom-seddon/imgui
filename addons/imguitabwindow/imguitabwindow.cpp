@@ -59,11 +59,15 @@ inline static void GetVerticalGradientTopAndBottomColors(ImU32 c,float fillColor
     const int A = (unsigned char) (c>>IM_COL32_A_SHIFT);
 
     int r = R+fcgi, g = G+fcgi, b = B+fcgi;
-    if (r>255) r=255;if (g>255) g=255;if (b>255) b=255;
+    if (r>255) r=255;
+    if (g>255) g=255;
+    if (b>255) b=255;
     if (negative) bc = IM_COL32(r,g,b,A); else tc = IM_COL32(r,g,b,A);
 
     r = R-fcgi; g = G-fcgi; b = B-fcgi;
-    if (r<0) r=0;if (g<0) g=0;if (b<0) b=0;
+    if (r<0) r=0;
+    if (g<0) g=0;
+    if (b<0) b=0;
     if (negative) tc = IM_COL32(r,g,b,A); else bc = IM_COL32(r,g,b,A);
 
     // Old legacy code (to remove)... [However here we lerp alpha too...]
@@ -2217,6 +2221,7 @@ const char* dialogTitleLine1,const char* dialogTitleLine2) {
             bool ok = false;
             if (TabWindow::TabLabelSaveCb) ok = TabWindow::TabLabelSaveCb(tabLabel,*tabWindow,NULL);   // can't we check return value ?
             else ok = tabLabel->saveAs(NULL);
+            (void)ok;   // to silence 'variable set but not used' warning
         }
 
         if (closeTabsAfterSaving)   {
@@ -2734,6 +2739,7 @@ bool TabWindow::CloseTabLabelsHelper(ImVector<TabWindow::TabLabel *> &tabs, ImVe
                     bool ok = false;
                     if (TabWindow::TabLabelSaveCb) ok = TabWindow::TabLabelSaveCb(tab,*tw,NULL);   // can't we check return value ?
                     else ok = tab->saveAs(NULL);
+                    (void)ok;   // to silence 'variable set but not used' warning
                 }
             }
         }
@@ -2767,6 +2773,7 @@ void TabWindow::saveAll(ImVector<TabWindow::TabLabel *> *ptabs)	{
     bool ok = false;
     if (TabWindow::TabLabelSaveCb) ok = TabWindow::TabLabelSaveCb(tab,*this,NULL);   // can't we check return value ?
     else ok = tab->saveAs(NULL);
+    (void)ok;   // to silence 'variable set but not used' warning
     }
 }
 bool TabWindow::startCloseAllDialog(ImVector<TabWindow::TabLabel *> *ptabs, bool allowCancelDialog)  {

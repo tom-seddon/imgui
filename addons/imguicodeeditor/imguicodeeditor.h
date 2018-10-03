@@ -30,6 +30,19 @@
 
 #include "../imguistring/imguistring.h" // TODO: see if it's possible to hide ImString,ImVectorEx and ImHashMaps instances in the cpp file
 
+
+//#warning imguicodeeditor cannot work anymore with recent versions of imgui unless you embed imgui_widgets.cpp someway. Please define NO_IMGUICODEEDITOR globally and recompile to exclude this addon.
+// Reason and workaround: imgui.cpp has been splitted into two files: imgui.cpp and imgui_widgets.cpp.
+// imgui.cpp includes "imgui_user.inl" at its end so that we can access its static methods.
+// So now the static methods that have been moved from imgui.cpp into imgui_widgets.cpp are not accessible anymore.
+// To overcome this issue, in imguicodeeditor.cpp I've copied all the static methods that I needed, BUT,
+// since imgui_widgets.cpp includes imstb_textedit.h, all its static methods are not accessible anymore.
+// A possible workaround could be to modify imstb_textedit.h so that its functions are no more static (at least the ones that are used here).
+// But I won't do it.
+// Instead I've fixed the issue this way: the user does not compile imgui_widgets.cpp manually. Instead imgui_user.inl includes it,
+// so that we can have access to everything again!
+
+
 // ImGui::InputTextWithSyntaxHighlighting(..):
 /*
   Since ImGuiCe::CodeEditor is far from being usable (read the comment block below),
@@ -44,6 +57,8 @@
   -> See if adding horizontal scrollbar is possible or not
   -> speed: add a global static id-map to hold some state info could speed up the ctrl considerably
 
+  // TODO:
+  -> Rewrite all the dynamic-string handling to match the standard and more robust implementation inside ./mist/stl/imgui_stl.h/cpp.
 */
 
 // ImGuiCe::CodeEditor
@@ -320,7 +335,7 @@ private:
     IMGUI_API void TextLineWithSH(const char *fmt...);
 
     IMGUI_API static void StaticInit();
-    friend bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang,const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data, ImGuiID* pOptionalItemIDOut);
+    friend bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang,const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data, ImGuiID* pOptionalItemIDOut);
     friend const char* GetSupportedExtensions();
     friend Language GetLanguageFromExtension(const char* ext);
 };
@@ -332,7 +347,7 @@ private:
 namespace ImGuiCe {
 
 
-IMGUI_API bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL,ImGuiID* pOptionalItemIDOut=NULL);
+IMGUI_API bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL,ImGuiID* pOptionalItemIDOut=NULL);
 
 } // namespace ImGuiCe
 
@@ -340,7 +355,7 @@ IMGUI_API bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGui
 namespace ImGui {
 
 
-inline bool InputTextWithSyntaxHighlighting(const char* labelJustForID, char* buf, size_t buf_size,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL,ImGuiID* pOptionalItemIDOut=NULL) {
+inline bool InputTextWithSyntaxHighlighting(const char* labelJustForID, char* buf, size_t buf_size,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL,ImGuiID* pOptionalItemIDOut=NULL) {
     return ImGuiCe::BadCodeEditor(labelJustForID,buf,buf_size,lang,size_arg,flags,callback,user_data,pOptionalItemIDOut);
 }
 
@@ -360,7 +375,7 @@ inline bool InputTextWithSyntaxHighlighting(const char* labelJustForID, char* bu
 #ifndef ImGuiInputTextFlags_ResetText
 #   define ImGuiInputTextFlags_ResetText   (1 << 19)
 #endif //ImGuiInputTextFlags_ResetText
-IMGUI_API bool InputTextWithSyntaxHighlighting(ImGuiID& staticItemIDInOut, ImString& text,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
+IMGUI_API bool InputTextWithSyntaxHighlighting(ImGuiID& staticItemIDInOut, ImString& text,ImGuiCe::Language lang =  ImGuiCe::LANG_CPP,const ImVec2& size_arg = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL);
 
 }   // namespace ImGui
 
