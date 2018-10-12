@@ -2802,12 +2802,12 @@ bool TabWindow::save(const char* filename)  {
     ImGuiHelper::Serializer s(filename);    
     return save(s);
 }
-bool TabWindow::Save(const char *filename, TabWindow *pTabWindows, int numTabWindows)   {
+int TabWindow::Save(const char *filename, TabWindow *pTabWindows, int numTabWindows)   {
     IM_ASSERT(pTabWindows && numTabWindows>0);
     ImGuiHelper::Serializer s(filename);
-    bool ok = true;
+    int ok = 0;
     for (int i=0;i<numTabWindows;i++)   {
-        ok&=pTabWindows[i].save(s);
+        ok+=(pTabWindows[i].save(s)?1:0);
     }
     return ok;
 }
@@ -2832,15 +2832,15 @@ bool TabWindow::load(const char* filename)  {
     ImGuiHelper::Deserializer d(filename);
     return load(d);
 }
-bool TabWindow::Load(const char *filename, TabWindow *pTabWindows, int numTabWindows)   {
+int TabWindow::Load(const char *filename, TabWindow *pTabWindows, int numTabWindows)   {
     IM_ASSERT(pTabWindows && numTabWindows>0);
     for (int i=0;i<numTabWindows;i++)   {
         pTabWindows[i].clear(); // Well, shouldn't we ask for modified unclosed tab labels here ?
     }
     ImGuiHelper::Deserializer d(filename);
-    const char* amount = 0; bool ok = true;
+    const char* amount = 0; int ok = 0;
     for (int i=0;i<numTabWindows;i++)   {
-        ok&=pTabWindows[i].load(d,&amount);
+        ok+=(pTabWindows[i].load(d,&amount)?1:0);
     }
     return ok;
 }

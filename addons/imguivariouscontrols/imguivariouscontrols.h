@@ -784,13 +784,13 @@ public:
 public:
         IMGUI_API bool save(ImGuiHelper::Serializer& s);
         IMGUI_API bool save(const char* filename);
-        IMGUI_API static bool Save(const char* filename, TreeView **pTreeViews, int numTreeviews);
+        IMGUI_API static int Save(const char* filename, TreeView **pTreeViews, int numTreeviews);   // returns the number of saved TreeViews
 #       endif //NO_IMGUIHELPER_SERIALIZATION_SAVE
 #       ifndef NO_IMGUIHELPER_SERIALIZATION_LOAD
 public:
         IMGUI_API bool load(ImGuiHelper::Deserializer& d,const char** pOptionalBufferStart=NULL);
         IMGUI_API bool load(const char* filename);
-        IMGUI_API static bool Load(const char* filename,TreeView** pTreeViews,int numTreeviews);
+        IMGUI_API static int Load(const char* filename,TreeView** pTreeViews,int numTreeviews);   // returns the number of loaded TreeViews
 #       endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #       endif //NO_IMGUIHELPER_SERIALIZATION
 //--------------------------------------------------------------------------------

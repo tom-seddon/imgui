@@ -97,7 +97,7 @@ static bool LoadTabWindowsIfSupported() {
     if (ImGuiHelper::FileExists(tabWindowsSaveNamePersistent)) pSaveName = tabWindowsSaveNamePersistent;
 #   endif //YES_IMGUIEMSCRIPTENPERSISTENTFOLDER
     //loadedFromFile = tabWindow.load(pSaveName);   // This is good for a single TabWindow
-    loadedFromFile = ImGui::TabWindow::Load(pSaveName,&tabWindows[0],sizeof(tabWindows)/sizeof(tabWindows[0]));  // This is OK for a multiple TabWindows
+    loadedFromFile = ImGui::TabWindow::Load(pSaveName,&tabWindows[0],sizeof(tabWindows)/sizeof(tabWindows[0]));  // This is OK for a multiple TabWindows (it returns the number of loaded TabWindows)
 #   endif //!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION) && ...
     return loadedFromFile;
 }
@@ -297,11 +297,10 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             // However I need some kind of spot to further test ImGui::InputTextWithSyntaxHighlighting(...).
             // Note that this test only works for an instance and we never SAVE any modified file!
 
-            static ImGuiID codeEditorID = 0;
             static ImString codeEditorText = "__MUST_INIT__";
             static bool fileNotPresent = false;
 
-            ImGuiInputTextFlags codeEditorFlags = 0;
+            //ImGuiInputTextFlags codeEditorFlags = 0;
             const char* chosenPath = "";
             const bool browseButtonPressed = ImGui::Button("Load###LoadCodeEditorFile");
 
@@ -314,7 +313,7 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
                 //fprintf(stderr,"No match with \"%s\"\n",tab->getLabel());
             }
 
-            if ((codeEditorID==0 && codeEditorText=="__MUST_INIT__") || mustReload) {
+            if ((codeEditorText=="__MUST_INIT__") || mustReload) {
                 codeEditorText="";
                 chosenPath = tab->getTooltip();
             }
@@ -336,7 +335,7 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
                     if (tmp.size()>0) codeEditorText = &tmp[0];
                     ImGuiFs::PathGetExtension(chosenPath,relativePath); // relativePath now is ".cpp" or something like that
                     tab->userInt=500+(int)ImGuiCe::GetLanguageFromExtension(relativePath);
-                    codeEditorFlags = ImGuiInputTextFlags_ResetText;
+                    //codeEditorFlags = ImGuiInputTextFlags_ResetText;
                     //fprintf(stderr,"Loading \"%s\"\n",tab->getTooltip());
                 }
             }
@@ -346,7 +345,7 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
             if (fileNotPresent) {
                 ImGui::Text("Error: \"%s\" Not present.",tab->getTooltip());
             }
-            else if (ImGui::InputTextWithSyntaxHighlighting(codeEditorID,codeEditorText,(ImGuiCe::Language) (tab->userInt-500),ImVec2(0,-1),codeEditorFlags)) tab->setModified(true);
+            else if (ImGui::InputTextWithSyntaxHighlighting("MyCodeEditorInstance",codeEditorText,(ImGuiCe::Language) (tab->userInt-500),ImVec2(0,-1))) tab->setModified(true);
 #       else //NO_IMGUICODEEDITOR || NO_IMGUIFILESYSTEM
         ImGui::Text("Disabled for this build.");
 #       endif //NO_IMGUICODEEDITOR || NO_IMGUIFILESYSTEM

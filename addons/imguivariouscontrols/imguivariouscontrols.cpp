@@ -3377,13 +3377,13 @@ void TreeView::setTextColorForStateColor(int aStateColorFlag, const ImVec4 &text
             ImGuiHelper::Serializer s(filename);
             return save(s);
         }
-        bool TreeView::Save(const char* filename,TreeView** pTreeViews,int numTreeviews)    {
+        int TreeView::Save(const char* filename,TreeView** pTreeViews,int numTreeviews)    {
             IM_ASSERT(pTreeViews && numTreeviews>0);
             ImGuiHelper::Serializer s(filename);
-            bool ok = true;
+            int ok = 0;
             for (int i=0;i<numTreeviews;i++)   {
                 IM_ASSERT(pTreeViews[i]);
-                ok&=pTreeViews[i]->save(s);
+                ok+=(pTreeViews[i]->save(s)?1:0);
             }
             return ok;
         }
@@ -3407,16 +3407,16 @@ void TreeView::setTextColorForStateColor(int aStateColorFlag, const ImVec4 &text
             ImGuiHelper::Deserializer d(filename);
             return load(d);
         }
-        bool TreeView::Load(const char* filename,TreeView** pTreeViews,int numTreeviews) {
+        int TreeView::Load(const char* filename,TreeView** pTreeViews,int numTreeviews) {
             IM_ASSERT(pTreeViews && numTreeviews>0);
             for (int i=0;i<numTreeviews;i++)   {
                 IM_ASSERT(pTreeViews[i]);
                 pTreeViews[i]->clear();
             }
             ImGuiHelper::Deserializer d(filename);
-            const char* amount = 0; bool ok = true;
+            const char* amount = 0; int ok = 0;
             for (int i=0;i<numTreeviews;i++)   {
-                ok&=pTreeViews[i]->load(d,&amount);
+                ok+=(pTreeViews[i]->load(d,&amount)?1:0);
             }
             return ok;
         }
