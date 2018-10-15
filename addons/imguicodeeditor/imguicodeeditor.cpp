@@ -3646,7 +3646,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         if (remainingSpace>0) size.x = remainingSpace;
     }
     if (showLineNumbers) {
-        // FIXME: This chunk of code is executed avery frame (even if the editor is out of view/hidden)
+        // FIXME: This chunk of code is executed every frame (even if the editor is out of view/hidden)
 
         int firstVisibleLineNumber = 0; // It's not available right now and we don't store any 'state' here.
 
@@ -3760,8 +3760,10 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     const bool user_scrolled = g.ActiveId == 0 && edit_state.ID == id && g.ActiveIdPreviousFrame == draw_window->GetIDNoKeepAlive("#SCROLLY");
     const bool user_nav_input_start = (g.ActiveId != id) && ((g.NavInputId == id) || (g.NavActivateId == id && g.NavInputSource == ImGuiInputSource_NavKeyboard));
 
-    bool select_all = (g.ActiveId != id) && (flags & ImGuiInputTextFlags_AutoSelectAll) != 0;
-    if (focus_requested || user_clicked || user_scrolled)
+    bool clear_active_id = false;
+
+    bool select_all = (g.ActiveId != id) && ((flags & ImGuiInputTextFlags_AutoSelectAll) != 0  || user_nav_input_start);
+    if (focus_requested || user_clicked || user_scrolled || user_nav_input_start)
     {
         if (g.ActiveId != id)
         {
@@ -3796,13 +3798,13 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                 edit_state.StbState.insert_mode = true;
         }
         SetActiveID(id, window);
+        SetFocusID(id, window);
         FocusWindow(window);
     }
     else if (io.MouseClicked[0])
     {
         // Release focus when we click outside
-        if (g.ActiveId == id)
-            ClearActiveID();
+        clear_active_id = true;
     }
 
     bool value_changed = false;
@@ -3888,6 +3890,8 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
         // Handle various key-presses
         bool cancel_edit = false;
+        if (!g.ActiveIdIsJustActivated && !clear_active_id)
+        {
         // Handle key-presses
         const int k_mask = (io.KeyShift ? STB_TEXTEDIT_K_SHIFT : 0);
         const bool is_shortcut_key = (io.ConfigMacOSXBehaviors ? (io.KeySuper && !io.KeyCtrl) : (io.KeyCtrl && !io.KeySuper)) && !io.KeyAlt; // OS X style: Shortcuts using Cmd/Super instead of Ctrl
@@ -3937,8 +3941,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             bool ctrl_enter_for_new_line = (flags & ImGuiInputTextFlags_CtrlEnterForNewLine) != 0;
             if ((ctrl_enter_for_new_line && !is_ctrl_down) || (!ctrl_enter_for_new_line && is_ctrl_down))
             {
-                ClearActiveID();
-                enter_pressed = true;
+                enter_pressed = clear_active_id = true;
             }
             else if (is_editable)
             {
@@ -3973,7 +3976,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             if (InputTextFilterCharacter(&c, flags, callback, callback_user_data))
                 edit_state.OnKeyPressed((int)c);
         }
-        else if (IsKeyPressedMap(ImGuiKey_Escape))                              { SetActiveID(0,NULL); cancel_edit = true; }
+        else if (IsKeyPressedMap(ImGuiKey_Escape))                              { clear_active_id = cancel_edit = true; }
         else if (is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_Z) && is_editable && is_undoable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); edit_state.ClearSelection(); }
         else if (((is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_Y)) || (is_shortcut_key_with_shift && IsKeyPressedMap(ImGuiKey_Z))) && is_editable && is_undoable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); edit_state.ClearSelection(); }
         else if (is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_A))                   { edit_state.SelectAll(); edit_state.CursorFollow = true; }
@@ -4022,9 +4025,8 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                 }
                 ImGui::MemFree(clipboard_filtered);
             }
-
         }
-
+        }
 
         const char* apply_new_text = NULL;
         int apply_new_text_length = 0;
@@ -4160,6 +4162,9 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
     }
 
+    if (clear_active_id && g.ActiveId == id)
+        ClearActiveID();
+
     // Render
     const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x, frame_bb.Min.y + size.y); // Not using frame_bb.Max because we have adjusted size
     ImVec2 render_pos = draw_window->DC.CursorPos;
@@ -4197,7 +4202,6 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             // In multi-line mode, we never exit the loop until all lines are counted, so add one extra to the searches_remaining counter.
             searches_remaining += 1;
 
-            //old code
             for (const ImWchar* s = text_begin; *s != L'\0'; s++)
                 if (*s == L'\n')
                 {
@@ -4205,14 +4209,6 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                     if (searches_result_line_number[0] == -1 && s >= searches_input_ptr[0]) { searches_result_line_number[0] = line_count; if (--searches_remaining <= 0) break; }
                     if (searches_result_line_number[1] == -1 && s >= searches_input_ptr[1]) { searches_result_line_number[1] = line_count; if (--searches_remaining <= 0) break; }
                 }
-            // replacement (that does not work for us)
-            /*for (const ImWchar* s = text_begin; (s = (const ImWchar*)wcschr((const wchar_t*)s, (wchar_t)L'\n')) != NULL; s++)
-            {
-                line_count++;
-                if (searches_result_line_number[0] == -1 && s >= searches_input_ptr[0]) { searches_result_line_number[0] = line_count; if (--searches_remaining <= 0) break; }
-                if (searches_result_line_number[1] == -1 && s >= searches_input_ptr[1]) { searches_result_line_number[1] = line_count; if (--searches_remaining <= 0) break; }
-            }*/
-
             line_count++;
             if (searches_result_line_number[0] == -1) searches_result_line_number[0] = line_count;
             if (searches_result_line_number[1] == -1) searches_result_line_number[1] = line_count;
@@ -4287,13 +4283,9 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                     break;
                 if (rect_pos.y < clip_rect.y)
                 {
-                    /* // old code
                       while (p < text_selected_end)
-                        if (*p++ == '\n')
-                            break;*/
-                    // replacement
-                    p = (const ImWchar*)wmemchr((const wchar_t*)p, '\n', text_selected_end - p);
-                    p = p ? p + 1 : text_selected_end;
+                        if (*p++ == L'\n')
+                            break;
                 }
                 else
                 {
@@ -4455,7 +4447,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         }
         else ImGui::PushStyleColor(ImGuiCol_FrameBg,ceStyle.color_background);
         //ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(style.WindowPadding.x,0.f));
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(style.ItemSpacing.x,0));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(style.ItemSpacing.x,0.f));//style.ItemSpacing.y));
         if (!ImGui::BeginChildFrame(id*3, ImVec2(lineNumberSize,size.y),/*ImGuiWindowFlags_ForceHorizontalScrollbar|*/ImGuiWindowFlags_NoScrollbar))
         {
             ImGui::EndChildFrame();

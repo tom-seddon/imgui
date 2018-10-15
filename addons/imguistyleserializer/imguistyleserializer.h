@@ -13,6 +13,7 @@ enum ImGuiStyleEnum {
     ImGuiStyle_Gray,        // (mine) This is the default theme of my main.cpp demo.
     ImGuiStyle_Light,       // (mine)
     ImGuiStyle_BlackCodz01, // Posted by @codz01 here: https://github.com/ocornut/imgui/issues/707 (hope I can use it)
+    ImGuiStyle_Black2Codz01,// Posted by @codz01 here: https://github.com/ocornut/imgui/issues/1902 (hope I can use it)
     ImGuiStyle_GrayCodz01,  // Posted by @codz01 here: https://github.com/ocornut/imgui/issues/1607 (hope I can use it)
     ImGuiStyle_Purple,      // Posted by here: https://github.com/ocornut/imgui/issues/1607  (hope I can use it)
     ImGuiStyle_DarkOpaque,  // (mine)

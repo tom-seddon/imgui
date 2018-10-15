@@ -59,7 +59,7 @@
 
   // DONE:
   -> Made code compatible with misc/cpp/imgui_stdlib.h. But it lacks testing. Expect bugs.
-        Known bug: when loading a new file scrolling gets mess up.
+        Known bug: when loading a new file scrolling gets messed up.
 */
 
 // ImGuiCe::CodeEditor
@@ -91,9 +91,11 @@ https://github.com/ocornut/imgui/issues/200
 
 // COMPILATION NOTES FOR PEOPLE WANTING TO EXTRACT THIS ADDON:
 /*
--> It's not possible to compile codeeditor.cpp separately (i.e. it must be included with IMGUI_INCLUDE_IMGUI_USER_H / IMGUI_INCLUDE_IMGUI_USER_INL).
+-> It's not possible to compile codeeditor.cpp separately
+        (i.e. it must be included with IMGUI_INCLUDE_IMGUI_USER_H / IMGUI_INCLUDE_IMGUI_USER_INL).
+        UPDATE: We should test this again... it might be possible that only the static methods inside imstb_textedit.h are missing (maybe there's a way to fix it).
 -> It depends on imguistring.h (ATM it's header-only, but please check).
--> The cpp file currently depends on "utf8helper.h" (it's header-only).
+-> The cpp file currently depends on "utf8helper.h" (it's header-only (and I think it's not difficult to remove this dependency)).
 */
 
 namespace ImGuiCe {
