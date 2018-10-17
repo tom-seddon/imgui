@@ -31,18 +31,6 @@
 #include "../imguistring/imguistring.h" // TODO: see if it's possible to hide ImString,ImVectorEx and ImHashMaps instances in the cpp file
 
 
-//#warning imguicodeeditor cannot work anymore with recent versions of imgui unless you embed imgui_widgets.cpp someway. Please define NO_IMGUICODEEDITOR globally and recompile to exclude this addon.
-// Reason and workaround: imgui.cpp has been splitted into two files: imgui.cpp and imgui_widgets.cpp.
-// imgui.cpp includes "imgui_user.inl" at its end so that we can access its static methods.
-// So now the static methods that have been moved from imgui.cpp into imgui_widgets.cpp are not accessible anymore.
-// To overcome this issue, in imguicodeeditor.cpp I've copied all the static methods that I needed, BUT,
-// since imgui_widgets.cpp includes imstb_textedit.h, all its static methods are not accessible anymore.
-// A possible workaround could be to modify imstb_textedit.h so that its functions are no more static (at least the ones that are used here).
-// But I won't do it.
-// Instead I've fixed the issue this way: the user does not compile imgui_widgets.cpp manually. Instead imgui_user.inl includes it,
-// so that we can have access to everything again!
-
-
 // ImGui::InputTextWithSyntaxHighlighting(..):
 /*
   Since ImGuiCe::CodeEditor is far from being usable (read the comment block below),
@@ -93,7 +81,8 @@ https://github.com/ocornut/imgui/issues/200
 /*
 -> It's not possible to compile codeeditor.cpp separately
         (i.e. it must be included with IMGUI_INCLUDE_IMGUI_USER_H / IMGUI_INCLUDE_IMGUI_USER_INL).
-        UPDATE: We should test this again... it might be possible that only the static methods inside imstb_textedit.h are missing (maybe there's a way to fix it).
+   UPDATE: It might be possible now to use codeeditor.h/.cpp as stand-alone files in user projects (even if I've never tested it (feedback needed)!)
+   ======
 -> It depends on imguistring.h (ATM it's header-only, but please check).
 -> The cpp file currently depends on "utf8helper.h" (it's header-only (and I think it's not difficult to remove this dependency)).
 */

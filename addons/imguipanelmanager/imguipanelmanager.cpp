@@ -556,8 +556,9 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             }
 
             // Window background, Default alpha
+            /* // old code
             ImGuiCol bg_color_idx = ImGuiCol_WindowBg;
-            if ((flags & ImGuiWindowFlags_Tooltip) != 0 || (flags & ImGuiWindowFlags_Popup) != 0 /*|| (flags & ImGuiWindowFlags_ComboBox) != 0*/)
+            if ((flags & ImGuiWindowFlags_Tooltip) != 0 || (flags & ImGuiWindowFlags_Popup) != 0) //|| (flags & ImGuiWindowFlags_ComboBox) != 0*
                 bg_color_idx = ImGuiCol_PopupBg;
             else if ((flags & ImGuiWindowFlags_ChildWindow) != 0)
                 bg_color_idx = ImGuiCol_ChildBg;
@@ -569,6 +570,16 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, ColorConvertFloat4ToU32(bg_color), window_rounding);
                 //window->DrawList->AddRectFilled(window->Pos+ImVec2(0,window->TitleBarHeight()), window->Pos+window->Size, ColorConvertFloat4ToU32(bg_color), window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImGuiCorner_All : ImGuiCorner_BottomLeft|ImGuiCorner_BottomRight);
                 //window->DrawList->AddRectFilled(window->Pos + ImVec2(0, window->TitleBarHeight()), window->Pos + window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImDrawCornerFlags_All : ImDrawCornerFlags_Bot);
+            */
+            // replacement
+            if (!(flags & ImGuiWindowFlags_NoBackground))
+            {
+                ImU32 bg_col = GetColorU32(GetWindowBgColorIdxFromFlags(flags));
+                if (g.NextWindowData.BgAlphaCond != 0)
+                    bg_col = (bg_col & ~IM_COL32_A_MASK) | (IM_F32_TO_INT8_SAT(g.NextWindowData.BgAlphaVal) << IM_COL32_A_SHIFT);
+                window->DrawList->AddRectFilled(window->Pos + ImVec2(0, window->TitleBarHeight()), window->Pos + window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImDrawCornerFlags_All : ImDrawCornerFlags_Bot);
+            }
+            g.NextWindowData.BgAlphaCond = 0;
 
 
             // Title bar
@@ -626,7 +637,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 window->DrawList->AddRect(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_Border), window_rounding);
                 if (!(flags & ImGuiWindowFlags_NoTitleBar)) window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border));
             }*/
-            if (window_border_size > 0.0f || gImGuiDockPanelManagerAlwaysDrawExternalBorders)
+            if ((window_border_size > 0.0f && !(flags & ImGuiWindowFlags_NoBackground)) || gImGuiDockPanelManagerAlwaysDrawExternalBorders)
                 window->DrawList->AddRect(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_Border), window_rounding, ImDrawCornerFlags_All, window_border_size);
             /*if (border_held != -1)
             {

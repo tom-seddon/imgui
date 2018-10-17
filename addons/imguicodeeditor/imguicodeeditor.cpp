@@ -30,8 +30,13 @@
 #define IMGUI_NEW(type)         IM_PLACEMENT_NEW (ImGui::MemAlloc(sizeof(type) ) ) type
 #define IMGUI_DELETE(type, obj) reinterpret_cast<type*>(obj)->~type(), ImGui::MemFree(obj)
 
-#ifndef IMGUI_USER_ADDONS_INL_
-// This serves only for the compilation stage (linker stage still misses these)-----------------
+#if (!defined(IMGUI_USER_ADDONS_INL_) || defined(NO_IMGUI_WIDGETS_CPP_AUTO_COMPILATION))
+#   define IMGUIEDITOR_STANDALONE
+#endif
+
+#ifdef IMGUIEDITOR_STANDALONE
+// old code
+/*// This hides errors only in the compilation stage (linker stage still misses these)-----------------
 extern "C" {
 void stb_textedit_initialize_state(ImGuiStb::STB_TexteditState *, int );
 void stb_textedit_click(STB_TEXTEDIT_STRING *str, ImGuiStb::STB_TexteditState *state, float x, float y);
@@ -39,8 +44,17 @@ void stb_textedit_drag(STB_TEXTEDIT_STRING *str, ImGuiStb::STB_TexteditState *st
 int  stb_textedit_cut(STB_TEXTEDIT_STRING *str, ImGuiStb::STB_TexteditState *state);
 int  stb_textedit_paste(STB_TEXTEDIT_STRING *str, ImGuiStb::STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE *text, int len);
 }
+*/
+// New code:
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+#include <imgui.h>
+#undef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include <imgui_internal.h>
 // ---------------------------------------------------------------------------------------------
-#endif //IMGUI_USER_ADDONS_INL_
+#endif //IMGUIEDITOR_STANDALONE
 
 namespace ImGui {
 
@@ -3463,29 +3477,11 @@ static void MyTextLineWithSH(const BadCodeEditorData& ceData,const char* fmt, ..
     va_end(args);
 }
 
-#ifndef IMGUI_USER_ADDONS_INL_
+#ifdef IMGUIEDITOR_STANDALONE
+}   // namespace ImGuiCe
 // ============================================================================
 // START COPYING DEFINITIONS AND METHODS BURIED INTO imgui_widgets.cpp
 //=============================================================================
-
-// We don't use an enum so we can build even with conflicting symbols (if another user of stb_textedit.h leak their STB_TEXTEDIT_K_* symbols)
-#define STB_TEXTEDIT_K_LEFT         0x10000 // keyboard input to move cursor left
-#define STB_TEXTEDIT_K_RIGHT        0x10001 // keyboard input to move cursor right
-#define STB_TEXTEDIT_K_UP           0x10002 // keyboard input to move cursor up
-#define STB_TEXTEDIT_K_DOWN         0x10003 // keyboard input to move cursor down
-#define STB_TEXTEDIT_K_LINESTART    0x10004 // keyboard input to move cursor to start of line
-#define STB_TEXTEDIT_K_LINEEND      0x10005 // keyboard input to move cursor to end of line
-#define STB_TEXTEDIT_K_TEXTSTART    0x10006 // keyboard input to move cursor to start of text
-#define STB_TEXTEDIT_K_TEXTEND      0x10007 // keyboard input to move cursor to end of text
-#define STB_TEXTEDIT_K_DELETE       0x10008 // keyboard input to delete selection or character under cursor
-#define STB_TEXTEDIT_K_BACKSPACE    0x10009 // keyboard input to delete selection or character left of cursor
-#define STB_TEXTEDIT_K_UNDO         0x1000A // keyboard input to perform undo
-#define STB_TEXTEDIT_K_REDO         0x1000B // keyboard input to perform redo
-#define STB_TEXTEDIT_K_WORDLEFT     0x1000C // keyboard input to move cursor left one word
-#define STB_TEXTEDIT_K_WORDRIGHT    0x1000D // keyboard input to move cursor right one word
-#define STB_TEXTEDIT_K_SHIFT        0x20000
-
-
 // Return false to discard a character (same as InputTextFilterCharacter(...) from imgui_widgets.cpp).
 static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
 {
@@ -3586,13 +3582,118 @@ static ImVec2 InputTextCalcTextSizeW(const ImWchar* text_begin, const ImWchar* t
 
     return text_size;
 }
+
+// Wrapper for stb_textedit.h to edit text (our wrapper is for: statically sized buffer, single-line, wchar characters. InputText converts between UTF-8 and wchar)
+namespace ImGuiStb
+{
+
+static int     STB_TEXTEDIT_STRINGLEN(const STB_TEXTEDIT_STRING* obj)                             { return obj->CurLenW; }
+static ImWchar STB_TEXTEDIT_GETCHAR(const STB_TEXTEDIT_STRING* obj, int idx)                      { return obj->TextW[idx]; }
+static float   STB_TEXTEDIT_GETWIDTH(STB_TEXTEDIT_STRING* obj, int line_start_idx, int char_idx)  { ImWchar c = obj->TextW[line_start_idx+char_idx]; if (c == '\n') return STB_TEXTEDIT_GETWIDTH_NEWLINE; return GImGui->Font->GetCharAdvance(c) * (GImGui->FontSize / GImGui->Font->FontSize); }
+static int     STB_TEXTEDIT_KEYTOTEXT(int key)                                                    { return key >= 0x10000 ? 0 : key; }
+static ImWchar STB_TEXTEDIT_NEWLINE = L'\n';
+static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, STB_TEXTEDIT_STRING* obj, int line_start_idx)
+{
+    const ImWchar* text = obj->TextW.Data;
+    const ImWchar* text_remaining = NULL;
+    const ImVec2 size = InputTextCalcTextSizeW(text + line_start_idx, text + obj->CurLenW, &text_remaining, NULL, true);
+    r->x0 = 0.0f;
+    r->x1 = size.x;
+    r->baseline_y_delta = size.y;
+    r->ymin = 0.0f;
+    r->ymax = size.y;
+    r->num_chars = (int)(text_remaining - (text + line_start_idx));
+}
+
+static bool is_separator(unsigned int c)                                        { return ImCharIsBlankW(c) || c==',' || c==';' || c=='(' || c==')' || c=='{' || c=='}' || c=='[' || c==']' || c=='|'; }
+static int  is_word_boundary_from_right(STB_TEXTEDIT_STRING* obj, int idx)      { return idx > 0 ? (is_separator( obj->TextW[idx-1] ) && !is_separator( obj->TextW[idx] ) ) : 1; }
+static int  STB_TEXTEDIT_MOVEWORDLEFT_IMPL(STB_TEXTEDIT_STRING* obj, int idx)   { idx--; while (idx >= 0 && !is_word_boundary_from_right(obj, idx)) idx--; return idx < 0 ? 0 : idx; }
+#ifdef __APPLE__    // FIXME: Move setting to IO structure
+static int  is_word_boundary_from_left(STB_TEXTEDIT_STRING* obj, int idx)       { return idx > 0 ? (!is_separator( obj->TextW[idx-1] ) && is_separator( obj->TextW[idx] ) ) : 1; }
+static int  STB_TEXTEDIT_MOVEWORDRIGHT_IMPL(STB_TEXTEDIT_STRING* obj, int idx)  { idx++; int len = obj->CurLenW; while (idx < len && !is_word_boundary_from_left(obj, idx)) idx++; return idx > len ? len : idx; }
+#else
+static int  STB_TEXTEDIT_MOVEWORDRIGHT_IMPL(STB_TEXTEDIT_STRING* obj, int idx)  { idx++; int len = obj->CurLenW; while (idx < len && !is_word_boundary_from_right(obj, idx)) idx++; return idx > len ? len : idx; }
+#endif
+#define STB_TEXTEDIT_MOVEWORDLEFT   STB_TEXTEDIT_MOVEWORDLEFT_IMPL    // They need to be #define for stb_textedit.h
+#define STB_TEXTEDIT_MOVEWORDRIGHT  STB_TEXTEDIT_MOVEWORDRIGHT_IMPL
+
+static void STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int pos, int n)
+{
+    ImWchar* dst = obj->TextW.Data + pos;
+
+    // We maintain our buffer length in both UTF-8 and wchar formats
+    obj->CurLenA -= ImTextCountUtf8BytesFromStr(dst, dst + n);
+    obj->CurLenW -= n;
+
+    // Offset remaining text (FIXME-OPT: Use memmove)
+    const ImWchar* src = obj->TextW.Data + pos + n;
+    while (ImWchar c = *src++)
+        *dst++ = c;
+    *dst = '\0';
+}
+
+static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const ImWchar* new_text, int new_text_len)
+{
+    const bool is_resizable = (obj->UserFlags & ImGuiInputTextFlags_CallbackResize) != 0;
+    const int text_len = obj->CurLenW;
+    IM_ASSERT(pos <= text_len);
+
+    const int new_text_len_utf8 = ImTextCountUtf8BytesFromStr(new_text, new_text + new_text_len);
+    if (!is_resizable && (new_text_len_utf8 + obj->CurLenA + 1 > obj->BufCapacityA))
+        return false;
+
+    // Grow internal buffer if needed
+    if (new_text_len + text_len + 1 > obj->TextW.Size)
+    {
+        if (!is_resizable)
+            return false;
+        IM_ASSERT(text_len < obj->TextW.Size);
+        obj->TextW.resize(text_len + ImClamp(new_text_len * 4, 32, ImMax(256, new_text_len)) + 1);
+    }
+
+    ImWchar* text = obj->TextW.Data;
+    if (pos != text_len)
+        memmove(text + pos + new_text_len, text + pos, (size_t)(text_len - pos) * sizeof(ImWchar));
+    memcpy(text + pos, new_text, (size_t)new_text_len * sizeof(ImWchar));
+
+    obj->CurLenW += new_text_len;
+    obj->CurLenA += new_text_len_utf8;
+    obj->TextW[obj->CurLenW] = '\0';
+
+    return true;
+}
+
+// We don't use an enum so we can build even with conflicting symbols (if another user of stb_textedit.h leak their STB_TEXTEDIT_K_* symbols)
+#define STB_TEXTEDIT_K_LEFT         0x10000 // keyboard input to move cursor left
+#define STB_TEXTEDIT_K_RIGHT        0x10001 // keyboard input to move cursor right
+#define STB_TEXTEDIT_K_UP           0x10002 // keyboard input to move cursor up
+#define STB_TEXTEDIT_K_DOWN         0x10003 // keyboard input to move cursor down
+#define STB_TEXTEDIT_K_LINESTART    0x10004 // keyboard input to move cursor to start of line
+#define STB_TEXTEDIT_K_LINEEND      0x10005 // keyboard input to move cursor to end of line
+#define STB_TEXTEDIT_K_TEXTSTART    0x10006 // keyboard input to move cursor to start of text
+#define STB_TEXTEDIT_K_TEXTEND      0x10007 // keyboard input to move cursor to end of text
+#define STB_TEXTEDIT_K_DELETE       0x10008 // keyboard input to delete selection or character under cursor
+#define STB_TEXTEDIT_K_BACKSPACE    0x10009 // keyboard input to delete selection or character left of cursor
+#define STB_TEXTEDIT_K_UNDO         0x1000A // keyboard input to perform undo
+#define STB_TEXTEDIT_K_REDO         0x1000B // keyboard input to perform redo
+#define STB_TEXTEDIT_K_WORDLEFT     0x1000C // keyboard input to move cursor left one word
+#define STB_TEXTEDIT_K_WORDRIGHT    0x1000D // keyboard input to move cursor right one word
+#define STB_TEXTEDIT_K_SHIFT        0x20000
+
+#define STB_TEXTEDIT_IMPLEMENTATION
+#include <imstb_textedit.h>
+
+} // ImGuiStb
+
 // ============================================================================
 // END COPYING DEFINITIONS AND METHODS BURIED INTO imgui_widgets.cpp
 //=============================================================================
-#endif //IMGUI_USER_ADDONS_INL_
+namespace ImGuiCe   {
+#endif //IMGUIEDITOR_STANDALONE
 
 bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* callback_user_data,ImGuiID* pOptionalItemIDOut)
 {
+    //using namespace ImGuiStb;
 //#define BAD_CODE_EDITOR_HAS_HORIZONTAL_SCROLLBAR  // doesn't work... maybe we can fix it someday... but default ImGui::InputTextMultiline() should be made with it...
 #   ifndef BAD_CODE_EDITOR_HAS_HORIZONTAL_SCROLLBAR
     const ImGuiWindowFlags myChildWindowFlags = 0;

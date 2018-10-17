@@ -269,7 +269,7 @@ add the include folders: $IMGUI_HOME and $IMGUI_HOME/addons/addonName to your pr
 and compile the file $IMGUI_HOME/addons/addonName/addonName.cpp, where "addonName" is the name of the addon you want to use.
 Be warned that some addons might depend on others: e.g. imguipanelmanager depends on imguitoolbar: so you may need to include both addons.
 
-However I'm not sure this approach works for all the addons, since some .cpp files (like imguicodeeditor.cpp and imguipanelmanager.cpp) need to be included after imgui.cpp to access its internals.
+However I'm not sure this approach works for all the addons, since some .cpp files, like imguipanelmanager.cpp (and maybe imguicodeeditor.cpp too), need to be included after imgui.cpp to access its internals.
 There's no guarantee this approach will work for all the addons, but it should in most cases.
 
 if you want to extract some addons like imguicodeeditor and imguipanelmanager, then you're forced to implement
