@@ -275,6 +275,7 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
                 else if (styleEnumNum==ImGuiStyle_GrayCodz01)   ImGui::SetTooltip("%s","\"GrayCodz01\"\nPosted by @codz01 here:\nhttps://github.com/ocornut/imgui/issues/1607\n(hope I can use it)");
                 else if (styleEnumNum==ImGuiStyle_DarkOpaque)   ImGui::SetTooltip("%s","\"DarkOpaque\"\nA dark-grayscale style with\nno transparency (by default)");
                 else if (styleEnumNum==ImGuiStyle_Purple)   ImGui::SetTooltip("%s","\"Purple\"\nPosted by @fallrisk here:\nhttps://github.com/ocornut/imgui/issues/1607\n(hope I can use it)");
+                else if (styleEnumNum==ImGuiStyle_Cherry)   ImGui::SetTooltip("%s","\"Cherry\"\nPosted by @r-lyeh here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
                 else if (styleEnumNum==ImGuiStyle_Soft) ImGui::SetTooltip("%s","\"Soft\"\nPosted by @olekristensen here:\nhttps://github.com/ocornut/imgui/issues/539\n(hope I can use it)");
                 else if (styleEnumNum==ImGuiStyle_EdinBlack || styleEnumNum==ImGuiStyle_EdinWhite) ImGui::SetTooltip("%s","Based on an image posted by @edin_p\n(hope I can use it)");
                 else if (styleEnumNum==ImGuiStyle_Maya) ImGui::SetTooltip("%s","\"Maya\"\nPosted by @ongamex here:\nhttps://gist.github.com/ongamex/4ee36fb23d6c527939d0f4ba72144d29\n(hope I can use it)");

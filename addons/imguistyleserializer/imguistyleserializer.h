@@ -15,7 +15,8 @@ enum ImGuiStyleEnum {
     ImGuiStyle_BlackCodz01, // Posted by @codz01 here: https://github.com/ocornut/imgui/issues/707 (hope I can use it)
     ImGuiStyle_Black2Codz01,// Posted by @codz01 here: https://github.com/ocornut/imgui/issues/1902 (hope I can use it)
     ImGuiStyle_GrayCodz01,  // Posted by @codz01 here: https://github.com/ocornut/imgui/issues/1607 (hope I can use it)
-    ImGuiStyle_Purple,      // Posted by here: https://github.com/ocornut/imgui/issues/1607  (hope I can use it)
+    ImGuiStyle_Purple,      // Posted by @fallrisk here: https://github.com/ocornut/imgui/issues/1607  (hope I can use it)
+    ImGuiStyle_Cherry,      // Posted by @r-lyeh here: https://github.com/ocornut/imgui/issues/707 (hope I can use it)
     ImGuiStyle_DarkOpaque,  // (mine)
     ImGuiStyle_Soft,        // Posted by @olekristensen here: https://github.com/ocornut/imgui/issues/539 (hope I can use it)
     ImGuiStyle_EdinBlack,   // Posted (via image) by edin_p in the screenshot section of Dear ImGui

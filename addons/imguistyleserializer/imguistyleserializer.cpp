@@ -1051,7 +1051,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
     case ImGuiStyle_Purple:
     case ImGuiStyle_PurpleInverse:
     {
-	// Posted by here: https://github.com/ocornut/imgui/issues/1607  (hope I can use it)
+        // Posted by @fallrisk here: https://github.com/ocornut/imgui/issues/1607  (hope I can use it)
 	style.AntiAliasedLines = true;
 	style.AntiAliasedFill = true;
 	style.CurveTessellationTol = 1.25f;
@@ -1106,6 +1106,86 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 	    InvertStyleColors(style);
 	    //style.Colors[ImGuiCol_PopupBg]	     = ImVec4(0.99f, 0.96f, 1.00f, 1.00f);
 	}
+
+    }
+    break;
+    case ImGuiStyle_Cherry: {
+        // Posted by @r-lyeh here: https://github.com/ocornut/imgui/issues/707 (hope I can use it)
+
+        style.WindowPadding            = ImVec2(6, 4);
+        style.WindowRounding           = 0.0f;
+        style.FramePadding             = ImVec2(7, 2);
+        style.FrameRounding            = 3.0f;
+        style.ItemSpacing              = ImVec2(7, 1);
+        style.ItemInnerSpacing         = ImVec2(1, 1);
+        style.TouchExtraPadding        = ImVec2(0, 0);
+        style.IndentSpacing            = 6.0f;
+        style.ScrollbarSize            = 12.0f;
+        style.ScrollbarRounding        = 16.0f;
+        style.GrabMinSize              = 20.0f;
+        style.GrabRounding             = 2.0f;
+
+        style.WindowTitleAlign.x = 0.50f;
+
+        style.FrameBorderSize = 0.0f;
+        style.WindowBorderSize = 1.0f;
+
+        // cherry colors, 3 intensities
+#       define CHERRY_HI(v)   ImVec4(0.502f, 0.075f, 0.256f, v)
+#       define CHERRY_MED(v)  ImVec4(0.455f, 0.198f, 0.301f, v)
+#       define CHERRY_LOW(v)  ImVec4(0.232f, 0.201f, 0.271f, v)
+        // backgrounds (@todo: complete with CHERRY_BG_MED, CHERRY_BG_LOW)
+#       define CHERRY_BG(v)   ImVec4(0.200f, 0.220f, 0.270f, v)
+        // text
+#       define CHERRY_TEXT(v) ImVec4(0.860f, 0.930f, 0.890f, v)
+
+        style.Colors[ImGuiCol_Text]                  = CHERRY_TEXT(0.78f);
+        style.Colors[ImGuiCol_TextDisabled]          = CHERRY_TEXT(0.28f);
+        style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.13f, 0.14f, 0.17f, 1.00f);
+        style.Colors[ImGuiCol_ChildWindowBg]         = CHERRY_BG( 0.58f);
+        style.Colors[ImGuiCol_PopupBg]               = CHERRY_BG( 0.9f);
+        style.Colors[ImGuiCol_Border]                = ImVec4(0.31f, 0.31f, 1.00f, 0.00f);
+        style.Colors[ImGuiCol_BorderShadow]          = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        style.Colors[ImGuiCol_FrameBg]               = CHERRY_BG( 1.00f);
+        style.Colors[ImGuiCol_FrameBgHovered]        = CHERRY_MED( 0.78f);
+        style.Colors[ImGuiCol_FrameBgActive]         = CHERRY_MED( 1.00f);
+        style.Colors[ImGuiCol_TitleBg]               = CHERRY_LOW( 1.00f);
+        style.Colors[ImGuiCol_TitleBgActive]         = CHERRY_HI( 1.00f);
+        style.Colors[ImGuiCol_TitleBgCollapsed]      = CHERRY_BG( 0.75f);
+        style.Colors[ImGuiCol_MenuBarBg]             = CHERRY_BG( 0.47f);
+        style.Colors[ImGuiCol_ScrollbarBg]           = CHERRY_BG( 1.00f);
+        style.Colors[ImGuiCol_ScrollbarGrab]         = ImVec4(0.09f, 0.15f, 0.16f, 1.00f);
+        style.Colors[ImGuiCol_ScrollbarGrabHovered]  = CHERRY_MED( 0.78f);
+        style.Colors[ImGuiCol_ScrollbarGrabActive]   = CHERRY_MED( 1.00f);
+        style.Colors[ImGuiCol_CheckMark]             = ImVec4(0.71f, 0.22f, 0.27f, 1.00f);
+        style.Colors[ImGuiCol_SliderGrab]            = ImVec4(0.47f, 0.77f, 0.83f, 0.14f);
+        style.Colors[ImGuiCol_SliderGrabActive]      = ImVec4(0.71f, 0.22f, 0.27f, 1.00f);
+        style.Colors[ImGuiCol_Button]                = ImVec4(0.47f, 0.77f, 0.83f, 0.14f);
+        style.Colors[ImGuiCol_ButtonHovered]         = CHERRY_MED( 0.86f);
+        style.Colors[ImGuiCol_ButtonActive]          = CHERRY_MED( 1.00f);
+        style.Colors[ImGuiCol_Header]                = CHERRY_MED( 0.76f);
+        style.Colors[ImGuiCol_HeaderHovered]         = CHERRY_MED( 0.86f);
+        style.Colors[ImGuiCol_HeaderActive]          = CHERRY_HI( 1.00f);
+        style.Colors[ImGuiCol_Column]                = ImVec4(0.14f, 0.16f, 0.19f, 1.00f);
+        style.Colors[ImGuiCol_ColumnHovered]         = CHERRY_MED( 0.78f);
+        style.Colors[ImGuiCol_ColumnActive]          = CHERRY_MED( 1.00f);
+        style.Colors[ImGuiCol_ResizeGrip]            = ImVec4(0.47f, 0.77f, 0.83f, 0.04f);
+        style.Colors[ImGuiCol_ResizeGripHovered]     = CHERRY_MED( 0.78f);
+        style.Colors[ImGuiCol_ResizeGripActive]      = CHERRY_MED( 1.00f);
+        style.Colors[ImGuiCol_PlotLines]             = CHERRY_TEXT(0.63f);
+        style.Colors[ImGuiCol_PlotLinesHovered]      = CHERRY_MED( 1.00f);
+        style.Colors[ImGuiCol_PlotHistogram]         = CHERRY_TEXT(0.63f);
+        style.Colors[ImGuiCol_PlotHistogramHovered]  = CHERRY_MED( 1.00f);
+        style.Colors[ImGuiCol_TextSelectedBg]        = CHERRY_MED( 0.43f);
+        // [...]
+        style.Colors[ImGuiCol_ModalWindowDarkening]  = CHERRY_BG( 0.73f);
+        style.Colors[ImGuiCol_Border] = ImVec4(0.539f, 0.479f, 0.255f, 0.162f);
+
+#       undef CHERRY_HI
+#       undef CHERRY_MED
+#       undef CHERRY_LOW
+#       undef CHERRY_BG
+#       undef CHERRY_TEXT
 
     }
     break;
@@ -1347,7 +1427,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 
     return true;
 }
-static const char* DefaultStyleNames[ImGuiStyle_Count]={"DefaultClassic","DefaultDark","DefaultLight","Gray","Light","BlackCodz01","Black2Codz01","GrayCodz01","Purple","DarkOpaque","Soft","EdinBlack","EdinWhite","Maya","LightGreen","Design","Dracula","Greenish","DarkOpaqueInverse","GrayCodz01Inverse","PurpleInverse","LightGreenInverse","DesignInverse"};
+static const char* DefaultStyleNames[ImGuiStyle_Count]={"DefaultClassic","DefaultDark","DefaultLight","Gray","Light","BlackCodz01","Black2Codz01","GrayCodz01","Purple","Cherry","DarkOpaque","Soft","EdinBlack","EdinWhite","Maya","LightGreen","Design","Dracula","Greenish","DarkOpaqueInverse","GrayCodz01Inverse","PurpleInverse","LightGreenInverse","DesignInverse"};
 const char** GetDefaultStyleNames() {return &DefaultStyleNames[0];}
 
 } // namespace ImGui
