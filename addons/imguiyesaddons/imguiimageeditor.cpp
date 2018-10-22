@@ -566,7 +566,10 @@ static unsigned char* svg_load_from_memory(const char* buffer,int size,int& w,in
 
     NSVGrasterizer *rast = nsvgCreateRasterizer();
     if (!rast) return NULL;
-    NSVGimage *image = nsvgParse((char*) buffer,"px",96);
+    char* cbuffer = (char*) buffer; // nsvgParse changes the string and needs a zero-terminated string...
+    //IM_ASSERT(cbuffer[size-1]=='\0'); // .svg files are XML based, but our loading generic method is binary... so this will always assert!
+    cbuffer[size-1]='\0';   // bad stuff but prevents worse things from happening
+    NSVGimage *image = nsvgParse(cbuffer,"px",96);
     if (!image) {
         nsvgDeleteRasterizer(rast);
         nsvgDelete(image);
