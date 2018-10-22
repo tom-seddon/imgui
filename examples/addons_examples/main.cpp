@@ -440,7 +440,7 @@ void DrawGL()	// Mandatory
             else if (styleEnumNum==ImGuiStyle_DefaultLight)      ImGui::SetTooltip("%s","\"DefaultLight\"\nThis is the default\nlight ImGui theme");
             else if (styleEnumNum==ImGuiStyle_Gray)   ImGui::SetTooltip("%s","\"Gray\"\nThis is the default\ntheme of this demo");
             else if (styleEnumNum==ImGuiStyle_BlackCodz01)   ImGui::SetTooltip("%s","\"BlackCodz01\"\nPosted by @codz01 here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
-            else if (styleEnumNum==ImGuiStyle_Black2Codz01) ImGui::SetTooltip("%s","\"Black2Codz01\"\nPosted by @codz01 here:\nhttps://github.com/ocornut/imgui/issues/1902\n(hope I can use it)");
+            else if (styleEnumNum==ImGuiStyle_DarkCodz01) ImGui::SetTooltip("%s","\"DarkCodz01\"\nPosted by @codz01 here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
             else if (styleEnumNum==ImGuiStyle_GrayCodz01)   ImGui::SetTooltip("%s","\"GrayCodz01\"\nPosted by @codz01 here:\nhttps://github.com/ocornut/imgui/issues/1607\n(hope I can use it)");
             else if (styleEnumNum==ImGuiStyle_DarkOpaque)   ImGui::SetTooltip("%s","\"DarkOpaque\"\nA dark-grayscale style with\nno transparency (by default)");
             else if (styleEnumNum==ImGuiStyle_Purple)   ImGui::SetTooltip("%s","\"Purple\"\nPosted by @fallrisk here:\nhttps://github.com/ocornut/imgui/issues/1607\n(hope I can use it)");

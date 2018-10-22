@@ -171,7 +171,8 @@ enum ImGuiTabLabelStyleEnum {
     ImGuiTabLabelStyle_Tidy,
     ImGuiTabLabelStyle_Foxy,
     ImGuiTabLabelStyle_FoxyInverse,
-    ImGuiTabLabelStyle_Fancy,
+    ImGuiTabLabelStyle_FancyRed,
+    ImGuiTabLabelStyle_FancyGreen,
 
     ImGuiTabLabelStyle_Count
 };

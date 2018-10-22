@@ -991,12 +991,23 @@ bool ResetTabLabelStyle(int tabLabelStyleEnum,ImGui::TabLabelStyle& style) {
         TabLabelStyleSetCloseButtonColors(style,ImColor(0.651f,0.000f,0.043f,0.608f),ImColor(0.808f,0.157f,0.200f,0.608f),&btc,&bbc);
     }
         break;
-    case ImGuiTabLabelStyle_Fancy:   {
+    case ImGuiTabLabelStyle_FancyRed:   {
         style.fillColorGradientDeltaIn0_05 = 0.075f;style.rounding = 6.1f;style.borderWidth = 2.040f;
         TabLabelStyleSetSelectedTabColors(style,ImColor(0.749f,0.357f,0.000f,1.000f),ImColor(0.875f,1.000f,0.776f,1.000f),ImColor(1.000f,1.000f,0.125f,1.000f));
         TabLabelStyleSetTabColors(style,ImColor(0.529f,0.325f,0.263f,1.000f),ImColor(0.690f,0.451f,0.345f,0.980f),ImColor(0.745f,0.745f,0.745f,1.000f),ImColor(0.580f,0.533f,0.000f,0.729f));
         style.closeButtonBorderWidth = 1.f;style.closeButtonTextWidth = 2.5f;ImColor btc(0.000f,0.000f,0.000f,1.000f),bbc(0.988f,1.000f,0.125f,1.000f);
         TabLabelStyleSetCloseButtonColors(style,ImColor(1.000f,0.000f,0.071f,1.000f),ImColor(1.000f,0.200f,0.255f,1.000f),&btc,&bbc);
+        style.tabWindowLabelShowAreaSeparator=true;style.tabWindowSplitterColor=ImVec4(1.000f,1.000f,0.000f,1.000f);style.tabWindowSplitterSize=6.f;
+    }
+    break;
+    case ImGuiTabLabelStyle_FancyGreen:   {
+        style.fillColorGradientDeltaIn0_05 = 0.075f;style.rounding = 6.1f;style.borderWidth = 2.040f;
+        TabLabelStyleSetSelectedTabColors(style,ImColor(0.357f,0.663f,0.329f,1.000f),ImColor(0.114f,0.118f,0.114f,1.000f),ImColor(0.012f,0.576f,0.408f,1.000f));
+        TabLabelStyleSetTabColors(style,ImColor(0.384f,0.565f,0.318f,1.000),ImColor(0.486f,0.596f,0.392f,1.000f),ImColor(1.000f,1.000f,1.000f,0.710f),ImColor(0.510f,0.612f,0.000f,1.000f));
+        style.colors[TabLabelStyle::Col_TabLabelActive] = ImColor(0.486f,0.596f,0.392f,1.000f);
+        style.colors[TabLabelStyle::Col_TabLabelSelectedActive] = ImColor(0.357f,0.663f,0.329f,1.000f);
+        style.closeButtonBorderWidth = 1.f;style.closeButtonTextWidth = 3.0f;ImColor btc(1.000f,1.000f,1.000f,1.000f),bbc(0.008f,0.365f,0.055f,1.000f);
+        TabLabelStyleSetCloseButtonColors(style,ImColor(0.996f,0.271f,0.000f,1.000f),ImColor(1.000f,0.416f,0.200f,1.000f),&btc,&bbc);
         style.tabWindowLabelShowAreaSeparator=true;style.tabWindowSplitterColor=ImVec4(1.000f,1.000f,0.000f,1.000f);style.tabWindowSplitterSize=6.f;
     }
     break;
@@ -1006,7 +1017,7 @@ bool ResetTabLabelStyle(int tabLabelStyleEnum,ImGui::TabLabelStyle& style) {
 
     return true;
 }
-static const char* DefaultTabLabelStyleNames[ImGuiTabLabelStyle_Count]={"Default","Dark","Red","Green","Blue","Yellow","Orange","White","Tidy","Foxy","FoxyInverse","Fancy"};
+static const char* DefaultTabLabelStyleNames[ImGuiTabLabelStyle_Count]={"Default","Dark","Red","Green","Blue","Yellow","Orange","White","Tidy","Foxy","FoxyInverse","FancyRed","FancyGreen"};
 const char** GetDefaultTabLabelStyleNames() {return &DefaultTabLabelStyleNames[0];}
 
 

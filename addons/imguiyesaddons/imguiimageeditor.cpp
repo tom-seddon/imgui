@@ -232,7 +232,7 @@ static unsigned char* ZlibCompressFromMemoryStbWrite(const unsigned char* memory
 #ifndef LODEPNG_H
 #if (!defined(IMGUIIMAGEEDITOR_NO_LODEPNG_IMPLEMENTATION) && !defined(IMGUIIMAGEEDITOR_NO_LODE_PNG_IMPLEMENTATION))
 #include "imguiimageeditor_plugins/lodepng.cpp"
-#else ////IMGUIIMAGEEDITOR_NO_LODEPNG_IMPLEMENTATION
+#else //IMGUIIMAGEEDITOR_NO_LODEPNG_IMPLEMENTATION
 #include "imguiimageeditor_plugins/loadpng.h"
 #endif //IMGUIIMAGEEDITOR_NO_LODEPNG_IMPLEMENTATION
 #endif //LODEPNG_H
@@ -299,6 +299,22 @@ static unsigned char* ZlibCompressFromMemoryStbWrite(const unsigned char* memory
 #include "imguiimageeditor_plugins/tiny_ico.h"
 #endif //TINY_ICO_H
 #endif //IMGUIIMAGEEDITOR_NO_TINY_ICO_PLUGIN
+
+#ifndef IMGUIIMAGEEDITOR_NO_NANOSVG_PLUGIN
+#ifndef NANOSVGRAST_H
+#ifndef IMGUIIMAGEEDITOR_NO_NANOSVG_IMPLEMENTATION
+#define NANOSVG_ALL_COLOR_KEYWORDS
+#define NANOSVG_IMPLEMENTATION
+#define NANOSVGRAST_IMPLEMENTATION
+#endif //IMGUIIMAGEEDITOR_NO_NANOSVG_PLUGIN
+//extern "C"  {
+#include "imguiimageeditor_plugins/nanosvg.h"
+#include "imguiimageeditor_plugins/nanosvgrast.h"
+//}
+#define _SVG_
+#endif //NANOSVGRAST_H
+#endif //IMGUIIMAGEEDITOR_NO_NANOSVG_PLUGIN
+
 
 #ifdef IMGUI_USE_LIBTIFF    // This needs libtiff
 extern "C" {
@@ -542,6 +558,37 @@ static unsigned char* webp_load_from_memory(const char* buffer,int size,int& w,i
     return data;
 }
 #endif //_WEBP_
+
+#ifdef _SVG_
+static unsigned char* svg_load_from_memory(const char* buffer,int size,int& w,int& h,int &c) {
+    if (!buffer || size<=0) return NULL;
+    w=h=0;c=4;
+
+    NSVGrasterizer *rast = nsvgCreateRasterizer();
+    if (!rast) return NULL;
+    NSVGimage *image = nsvgParse((char*) buffer,"px",96);
+    if (!image) {
+        nsvgDeleteRasterizer(rast);
+        nsvgDelete(image);
+        return NULL;
+    }
+    w = (int)image->width;
+    h = (int)image->height;
+
+    unsigned char* data = (unsigned char*)STBI_MALLOC(w*h*c);
+    if (!data) {
+        nsvgDeleteRasterizer(rast);
+        nsvgDelete(image);
+        return NULL;
+    }
+    nsvgRasterize(rast, image, 0,0,1, data, w, h, w*c);
+
+    nsvgDeleteRasterizer(rast);
+    nsvgDelete(image);
+
+    return data;
+}
+#endif //_SVG_
 
 // Some old compilers don't have round
 static float round(float x) {return x >= 0.0f ? floor(x + 0.5f) : ceil(x - 0.5f);}
@@ -931,6 +978,9 @@ static void InitSupportedFileExtensions() {
 #       endif
 #       ifdef _WEBP_
         strcat(p,".webp;");
+#       endif
+#       ifdef _SVG_
+        strcat(p,".svg;");
 #       endif
 #       ifndef STBI_NO_BMP
         strcat(p,".bmp;");
@@ -5000,10 +5050,15 @@ struct StbImage {
             image = ImGuiIE::tiff_load_from_memory((const char*) buffer,size,w,h,c);
 #           endif //_TIFF_
         }
-        else if (ext && ((strcmp(ext,".webp")==0) || (strcmp(ext,".webp")==0)))   {
+        else if (ext && (strcmp(ext,".webp")==0))   {
 #           ifdef _WEBP_
             image = ImGuiIE::webp_load_from_memory((const char*) buffer,size,w,h,c);
 #           endif //_WEBP_
+        }
+        else if (ext && (strcmp(ext,".svg")==0))   {
+#           ifdef _SVG_
+            image = ImGuiIE::svg_load_from_memory((const char*) buffer,size,w,h,c);
+#           endif //_SVG_
         }
         else if (!image) image = stbi_load_from_memory(buffer,size,&w,&h,&c,0);
         if (!image) return false;
