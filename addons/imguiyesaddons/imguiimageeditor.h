@@ -129,6 +129,11 @@ NOTES:
 */
 
 /* CHANGELOG:
+ IMGUIIMAGEEDITOR_VERSION 0.34
+ * Fixed the error about lonepng plugin reported in version 0.33.
+ *                      (solved by defining LODEPNG_NO_COMPILE_CPP before its inclusion).
+ *                      So now it should be ok to compile with these defs: YES_IMGUIIMAGEEDITOR IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS
+
  IMGUIIMAGEEDITOR_VERSION 0.33
  * Added .svg support (loading only): nanosvg.h and nanosvgrast.h added to the plugin folder.
  * TOFIX (if possible): I've just discovered that on gcc version 7.3.0, the lodepng plugin is broken:
@@ -138,6 +143,7 @@ NOTES:
  *                      #include_next <stdlib.h>
  *                                     ^~~~~~~~~~
  *                      Hard to debug... luckily I can just disable it by compiling with: YES_IMGUIIMAGEEDITOR IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS IMGUIIMAGEEDITOR_NO_LODEPNG_PLUGIN
+ *                      UPDATE: FIXED in version 0.34
 
  IMGUIIMAGEEDITOR_VERSION 0.32
  * Updated stb_image_write.h
@@ -205,7 +211,7 @@ NOTES:
  * Added an optional callback SetImageEditorEventCallback(...)
 */
 
-#define IMGUIIMAGEEDITOR_VERSION 0.33
+#define IMGUIIMAGEEDITOR_VERSION 0.34
 
 namespace ImGui {
 

@@ -37,6 +37,8 @@ To edit and save a style, you can use the default ImGui example and append to th
 #include <imgui.h>
 #endif //IMGUI_API
 
+#include "imguistyleserializer.h"
+
 // From <imgui.cpp>:--------------------------------------------------------
 #ifndef IM_ARRAYSIZE
 #include <stdio.h>      // vsnprintf

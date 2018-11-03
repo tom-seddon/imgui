@@ -2214,7 +2214,7 @@ void CodeEditor::render()   {
         ImGui::Separator();
         if (ImGui::CollapsingHeader("Load/Save File##serialization",NULL,false))   {
         ImGui::Separator();
-#       ifdef NO_IMGUIFILESYSTEM
+#       ifndef IMGUI_FILESYSTEM_H_
         const char* saveName = "myCodeEditorFile.cpp";
 #       ifndef NO_IMGUICODEEDITOR_SAVE
         if (ImGui::SmallButton("Save##saveGNE")) {
@@ -2227,7 +2227,7 @@ void CodeEditor::render()   {
             load(saveName);
         }
 #		endif //NO_IMGUICODEEDITOR_LOAD
-#       else //NO_IMGUIFILESYSTEM
+#       else //IMGUI_FILESYSTEM_H_
         const char* chosenPath = NULL;                
 #       ifndef NO_IMGUICODEEDITOR_LOAD
         static ImGuiFs::Dialog fsInstanceLoad;
@@ -2243,7 +2243,7 @@ void CodeEditor::render()   {
         chosenPath = fsInstanceSave.saveFileDialog(saveButtonPressed,fsInstanceSave.getChosenPath(),fsv ? fsv->languageExtensions: "");
         if (strlen(chosenPath)>0) save(chosenPath);
 #       endif //NO_IMGUICODEEDITOR_SAVE
-#       endif //NO_IMGUIFILESYSTEM
+#       endif //IMGUI_FILESYSTEM_H_
         }
 #       endif // (!(defined(NO_IMGUICODEEDITOR_SAVE) || !defined(NO_IMGUICODEEDITOR_LOAD)))
         ImGui::Separator();
@@ -4486,13 +4486,13 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         ImGui::SetCursorPosY(oldCurPosY+numLines*textLineHeight);
         //----------------------------------------
 
-        // Debug: -------------------------------
+        /*// Debug: -------------------------------
         static int prevFirstVisibleLineNumber=0;
         if (firstVisibleLineNumber!=prevFirstVisibleLineNumber) {
             prevFirstVisibleLineNumber = firstVisibleLineNumber;
             fprintf(stderr,"firstVisibleLineNumber = %d numVisibleLines = %d lastVisibleLineNumber = %d size.y = %1.2f numLines = %d\n",prevFirstVisibleLineNumber,numVisibleLines,lastVisibleLineNumber,size.y,numLines);
         }
-        // --------------------------------------
+        // --------------------------------------*/
 
         //codeEditorContentWidth = langData.textSizeX;
         ImGui::PopStyleColor();

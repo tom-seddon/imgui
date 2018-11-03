@@ -269,10 +269,10 @@ add the include folders: $IMGUI_HOME and $IMGUI_HOME/addons/addonName to your pr
 and compile the file $IMGUI_HOME/addons/addonName/addonName.cpp, where "addonName" is the name of the addon you want to use.
 Be warned that some addons might depend on others: e.g. imguipanelmanager depends on imguitoolbar: so you may need to include both addons.
 
-However I'm not sure this approach works for all the addons, since some .cpp files, like imguipanelmanager.cpp (and maybe imguicodeeditor.cpp too), need to be included after imgui.cpp to access its internals.
+However I'm not sure this approach works for all the addons, since some .cpp files, like imguipanelmanager.cpp, need to be included after imgui.cpp to access its internals.
 There's no guarantee this approach will work for all the addons, but it should in most cases.
 
-if you want to extract some addons like imguicodeeditor and imguipanelmanager, then you're forced to implement
+if you want to extract some addons like imguipanelmanager, then you're forced to implement
 some kind of  IMGUI_INCLUDE_IMGUI_USER_H / IMGUI_INCLUDE_IMGUI_USER_INL mechanism in your code (without compiling the .cpp files),
 because they use some methods that are static inside imgui.cpp, and not exposed by imgui_internal.h.
 
@@ -281,6 +281,8 @@ P.S. imguibindings is NOT considered an addon that you can easily extract and us
 IMPORTANT: Of course if you don't use the file imgui_user.inl (that includes addons/imgui_user.inl), then you
 need to compile imgui_widgets.cpp too (together with imgui.cpp and imgui_draw.cpp).
 P.S. As I've already written before, addons/imgui_user.inl now includes imgui_widgets.cpp.
+
+TESTED stand-alone addons include: imguifilesystem, imguistyleserializer, imguinodegrapheditor, imguicodeeditor, imguiimageeditor (but many others should work).
 -----------------------------------------------------------------------------------------------------------------------------------
 A MINIMAL EXAMPLE: mainBasic.cpp
 ---------------------------------

@@ -230,6 +230,9 @@ static unsigned char* ZlibCompressFromMemoryStbWrite(const unsigned char* memory
 
 #if (!defined(IMGUIIMAGEEDITOR_NO_LODEPNG_PLUGIN) && !defined(IMGUIIMAGEEDITOR_NO_LODE_PNG_PLUGIN))
 #ifndef LODEPNG_H
+#ifndef LODEPNG_NO_COMPILE_CPP
+#define LODEPNG_NO_COMPILE_CPP
+#endif //LODEPNG_NO_COMPILE_CPP
 #if (!defined(IMGUIIMAGEEDITOR_NO_LODEPNG_IMPLEMENTATION) && !defined(IMGUIIMAGEEDITOR_NO_LODE_PNG_IMPLEMENTATION))
 #include "imguiimageeditor_plugins/lodepng.cpp"
 #else //IMGUIIMAGEEDITOR_NO_LODEPNG_IMPLEMENTATION
