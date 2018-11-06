@@ -1017,6 +1017,14 @@ bool ResetTabLabelStyle(int tabLabelStyleEnum,ImGui::TabLabelStyle& style) {
 
     return true;
 }
+bool SelectTabLabelStyleCombo(const char* label, int* selectedIndex, int maxNumItemsToDisplay, TabLabelStyle* styleToChange)   {
+    bool changed = false;
+    if (!styleToChange) styleToChange=&ImGui::TabLabelStyle::Get();
+    if ((changed=ImGui::Combo(label,selectedIndex,GetDefaultTabLabelStyleNames(),ImGuiTabLabelStyle_Count,maxNumItemsToDisplay))) {
+        ResetTabLabelStyle(*selectedIndex,*styleToChange);
+    }
+    return changed;
+}
 static const char* DefaultTabLabelStyleNames[ImGuiTabLabelStyle_Count]={"Default","Dark","Red","Green","Blue","Yellow","Orange","White","Tidy","Foxy","FoxyInverse","FancyRed","FancyGreen"};
 const char** GetDefaultTabLabelStyleNames() {return &DefaultTabLabelStyleNames[0];}
 

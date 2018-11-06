@@ -272,6 +272,7 @@ static const char* TabStateNames[TAB_STATE_COUNT];
 static const ImFont* ImGuiFonts[FONT_STYLE_COUNT];
 };
 IMGUI_API bool ResetTabLabelStyle(int tabLabelStyleEnum, TabLabelStyle& style);
+IMGUI_API bool SelectTabLabelStyleCombo(const char* label, int* selectedIndex, int maxNumItemsToDisplay=ImGuiTabLabelStyle_Count, TabLabelStyle* styleToChange=NULL);
 IMGUI_API const char** GetDefaultTabLabelStyleNames();   // ImGuiTabLabelStyle_Count names re returned
 // satThresholdForInvertingLuminance: in [0,1] if == 0.f luminance is not inverted at all
 // shiftHue: in [0,1] if == 0.f hue is not changed at all

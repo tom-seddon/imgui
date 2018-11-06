@@ -126,27 +126,20 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
     if (tab) {
         ImGui::PushID(tab);
         if (tab->matchLabel("TabLabelStyle"))  {
-            /*// Color Mode
-            static int colorEditMode = ImGuiColorEditMode_RGB;
-            static const char* btnlbls[2]={"HSV##myColorBtnType1","RGB##myColorBtnType1"};
-            if (colorEditMode!=ImGuiColorEditMode_RGB)  {
-                if (ImGui::SmallButton(btnlbls[0])) {
-                    colorEditMode = ImGuiColorEditMode_RGB;
-                    ImGui::ColorEditMode(colorEditMode);
-                }
-            }
-            else if (colorEditMode!=ImGuiColorEditMode_HSV)  {
-                if (ImGui::SmallButton(btnlbls[1])) {
-                    colorEditMode = ImGuiColorEditMode_HSV;
-                    ImGui::ColorEditMode(colorEditMode);
-                }
-            }
-            ImGui::SameLine(0);ImGui::Text("Color Mode");
-            ImGui::Separator();*/
             ImGui::Spacing();
-            //ImGui::ColorEditMode(colorEditMode);
-            bool changed = ImGui::TabLabelStyle::Edit(ImGui::TabLabelStyle::Get());
-            ImGui::Separator();         
+            static bool editTheme = false;
+            bool changed = false;
+            ImGui::Spacing();
+            ImGui::Checkbox("Edit tab label style",&editTheme);
+            ImGui::Spacing();
+            if (editTheme) changed = ImGui::TabLabelStyle::Edit(ImGui::TabLabelStyle().Get());   // This is good if we want to edit the tab label style
+            else {
+                static int selectedIndex=0;
+                ImGui::PushItemWidth(135);
+                changed = ImGui::SelectTabLabelStyleCombo("select tab label style",&selectedIndex); // Good for just selecting it
+                ImGui::PopItemWidth();
+            }
+            ImGui::Separator();
 #if             (!defined(NO_IMGUIHELPER) && !defined(NO_IMGUIHELPER_SERIALIZATION))
             const char* saveName = "tabLabelStyle.style";
             const char* saveNamePersistent = "/persistent_folder/tabLabelStyle.style";
@@ -261,9 +254,7 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
 #           ifdef IMGUISTYLESERIALIZER_H_
             static int styleEnumNum = 1;
             ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.44f);
-            if (ImGui::Combo("Main Style Chooser",&styleEnumNum,ImGui::GetDefaultStyleNames(),(int) ImGuiStyle_Count,(int) ImGuiStyle_Count)) {
-                ImGui::ResetStyle(styleEnumNum);
-            }
+            ImGui::SelectStyleCombo("Main Style Chooser",&styleEnumNum);
             ImGui::PopItemWidth();
             if (ImGui::IsItemHovered()) {
                 if   (styleEnumNum==ImGuiStyle_DefaultClassic)      ImGui::SetTooltip("%s","\"Default\"\nThis is the default\nclassic ImGui theme");

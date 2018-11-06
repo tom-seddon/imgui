@@ -432,7 +432,7 @@ void DrawGL()	// Mandatory
         ImGui::SameLine();
         static int styleEnumNum = 3;    // Gray style
         ImGui::PushItemWidth(135);
-        ImGui::Combo("###StyleEnumCombo",&styleEnumNum,ImGui::GetDefaultStyleNames(),(int) ImGuiStyle_Count,(int) ImGuiStyle_Count);
+        ImGui::SelectStyleCombo("###StyleEnumCombo",&styleEnumNum);
         ImGui::PopItemWidth();
         if (ImGui::IsItemHovered()) {
             if   (styleEnumNum==ImGuiStyle_DefaultClassic)      ImGui::SetTooltip("%s","\"Default\"\nThis is the default\nclassic ImGui theme");
@@ -1347,7 +1347,19 @@ void DrawGL()	// Mandatory
         // Draw tab page
         ImGui::BeginChild("MyTabLabelsChild",ImVec2(0,150),true);
         ImGui::Text("Tab Page For Tab: \"%s\" here.",selectedTab>=0?tabNames[selectedTab]:"None!");
-        if (selectedTab==0) ImGui::TabLabelStyle::Edit(ImGui::TabLabelStyle().Get());
+        if (selectedTab==0) {
+            static bool editTheme = false;
+            ImGui::Spacing();
+            ImGui::Checkbox("Edit tab label style",&editTheme);
+            ImGui::Spacing();
+            if (editTheme) ImGui::TabLabelStyle::Edit(ImGui::TabLabelStyle().Get());   // This is good if we want to edit the tab label style
+            else {
+                static int selectedIndex=0;
+                ImGui::PushItemWidth(135);
+                ImGui::SelectTabLabelStyleCombo("select tab label style",&selectedIndex); // Good for just selecting it
+                ImGui::PopItemWidth();
+            }
+        }
         ImGui::EndChild();
 
         // ImGui::TabLabelsVertical() are similiar to ImGui::TabLabels(), but they do not support WrapMode.

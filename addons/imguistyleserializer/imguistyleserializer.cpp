@@ -390,6 +390,15 @@ static inline ImVec4 ConvertTitleBgColFromPrevVersion(const ImVec4& win_bg_col, 
     return ImVec4((win_bg_col.x * win_bg_col.w + title_bg_col.x) * k, (win_bg_col.y * win_bg_col.w + title_bg_col.y) * k, (win_bg_col.z * win_bg_col.w + title_bg_col.z) * k, new_a);
 }
 
+bool SelectStyleCombo(const char* label, int* selectedIndex, int maxNumItemsToDisplay, ImGuiStyle* styleToChange)   {
+    bool changed = false;
+    if (!styleToChange) styleToChange=&ImGui::GetStyle();
+    if ((changed=ImGui::Combo(label,selectedIndex,GetDefaultStyleNames(),ImGuiStyle_Count,maxNumItemsToDisplay))) {
+        ResetStyle(*selectedIndex,*styleToChange);
+    }
+    return changed;
+}
+
 bool ResetStyle(int styleEnum,ImGuiStyle& style) {
     if (styleEnum<0 || styleEnum>=ImGuiStyle_Count) return false;
     style = ImGuiStyle();
