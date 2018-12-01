@@ -17,6 +17,8 @@ Dear ImGui is designed to enable fast iterations and to empower programmers to c
 
 Dear ImGui is particularly suited to integration in games engine (for tooling), real-time 3D applications, fullscreen applications, embedded applications, or any applications on consoles platforms where operating system features are non-standard. 
 
+See [Software using dear imgui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui), [Quotes](https://github.com/ocornut/imgui/wiki/Quotes) and [Gallery](https://github.com/ocornut/imgui/issues/1902) pages to get an idea of its use cases.
+
 Dear ImGui is self-contained within a few files that you can easily copy and compile into your application/engine:
 - imgui.cpp
 - imgui.h
@@ -109,7 +111,7 @@ Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/
 _NB: those third-party bindings may be more or less maintained, more or less close to the original API (as people who create language bindings sometimes haven't used the C++ API themselves.. for the good reason that they aren't C++ users). Dear ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, please check the original C++ version first!_
 
 Languages: (third-party bindings)
-- C: [cimgui](https://github.com/cimgui/cimgui) (new 2018 auto-generated version!)
+- C: [cimgui](https://github.com/cimgui/cimgui) (2018: now auto-generated! you can use its json output to generate bindings for other languages)
 - C#/.Net: [ImGui.NET](https://github.com/mellinoe/ImGui.NET)
 - ChaiScript: [imgui-chaiscript](https://github.com/JuJuBoSc/imgui-chaiscript)
 - D: [DerelictImgui](https://github.com/Extrawurst/DerelictImgui)
@@ -126,12 +128,11 @@ Languages: (third-party bindings)
 - Swift [swift-imgui](https://github.com/mnmly/Swift-imgui)
 
 Frameworks:
-- Renderers: DirectX 9, DirectX 10, DirectX 11, DirectX 12, Metal, OpenGL2, OpenGL3+/ES2/ES3, Vulkan: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
+- Renderers: DirectX 9/10/11/12, Metal, OpenGL2, OpenGL3+/ES2/ES3, Vulkan: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - Platform: GLFW, SDL, Win32, OSX, Freeglut: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - Framework: Allegro 5, Marmalade: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - Unmerged PR: SDL2 + OpenGLES + Emscripten: [#336](https://github.com/ocornut/imgui/pull/336)
 - Unmerged PR: Android: [#421](https://github.com/ocornut/imgui/pull/421)
-- Unmerged PR: ORX: [#1843](https://github.com/ocornut/imgui/pull/1843)
 - Cinder: [Cinder-ImGui](https://github.com/simongeilfus/Cinder-ImGui)
 - Cocos2d-x: [imguix](https://github.com/c0i/imguix), [#551](https://github.com/ocornut/imgui/issues/551)
 - Flexium: [FlexGUI](https://github.com/DXsmiley/FlexGUI)
@@ -140,6 +141,7 @@ Frameworks:
 - Ogre: [ogreimgui](https://bitbucket.org/LMCrashy/ogreimgui/src)
 - OpenFrameworks: [ofxImGui](https://github.com/jvcleave/ofxImGui)
 - OpenSceneGraph/OSG: [gist](https://gist.github.com/fulezi/d2442ca7626bf270226014501357042c)
+- ORX: [pr #1843](https://github.com/ocornut/imgui/pull/1843)
 - LÖVE+Lua: [love-imgui](https://github.com/slages/love-imgui)
 - Magnum: [magnum-imgui](https://github.com/lecopivo/magnum-imgui), [MagnumImguiPort](https://github.com/lecopivo/MagnumImguiPort)
 - NanoRT: [syoyo/imgui](https://github.com/syoyo/imgui/tree/nanort)
@@ -152,10 +154,11 @@ For other bindings: see [Bindings](https://github.com/ocornut/imgui/wiki/Binding
 
 Roadmap
 -------
-Some of the goals for 2018-2019 are:
-- Finish work on docking, tabs. (see [#2109](https://github.com/ocornut/imgui/issues/2109))
-- Finish work on viewports and multiple OS windows management. (see [#1542](https://github.com/ocornut/imgui/issues/1542))
+Some of the goals for 2019 are:
+- Finish work on docking, tabs. (see [#2109](https://github.com/ocornut/imgui/issues/2109), public branch looking for feedback)
+- Finish work on multiple viewports / multiple OS windows. (see [#1542](https://github.com/ocornut/imgui/issues/1542), public branch looking for feedback)
 - Finish work on gamepad/keyboard controls. (see [#787](https://github.com/ocornut/imgui/issues/787))
+- Add an automation and testing system, both to test the library and end-user apps.
 - Make Columns better. (they are currently pretty terrible!)
 - Make the examples look better, improve styles, improve font support, make the examples hi-DPI aware.
 
@@ -217,7 +220,7 @@ Support Forums
 
 If you have issues with: compiling, linking, adding fonts, running or displaying Dear ImGui, or wiring inputs: please post on the Discourse forum: https://discourse.dearimgui.org.
 
-For any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues.
+For any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues. Please read and fill the New Issue template carefully.
 
 Frequently Asked Question (FAQ)
 -------------------------------
@@ -238,7 +241,7 @@ You may also peak at the [Multi-Viewport](https://github.com/ocornut/imgui/issue
 
 **Who uses Dear ImGui?**
 
-See the [Software using dear imgui page](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) for an (incomplete) list of games/software which are publicly known to use dear imgui. Please add yours if you can!
+See the [Quotes](https://github.com/ocornut/imgui/wiki/Quotes) and [Software using dear imgui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) pages for an (incomplete) list of games/software which are publicly known to use dear imgui. Please add yours if you can!
 
 **Why the odd dual naming, "dear imgui" vs "ImGui"?**
 
