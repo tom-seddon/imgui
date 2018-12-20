@@ -274,6 +274,7 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
                 else if (styleEnumNum==ImGuiStyle_Design) ImGui::SetTooltip("%s","\"Design\"\nPosted by @usernameiwantedwasalreadytaken here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
                 else if (styleEnumNum==ImGuiStyle_Dracula) ImGui::SetTooltip("%s","\"Dracula\"\nPosted by @ice1000 here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
                 else if (styleEnumNum==ImGuiStyle_Greenish) ImGui::SetTooltip("%s","\"Greenish\"\nPosted by @dertseha here:\nhttps://github.com/ocornut/imgui/issues/1902\n(hope I can use it)");
+                else if (styleEnumNum==ImGuiStyle_C64) ImGui::SetTooltip("%s","\"C64\"\nPosted by @Nullious here:\nhttps://gist.github.com/Nullious/2d598963b346c49fa4500ca16b8e5c67\n(hope I can use it)");
             }
             ImGui::Spacing();ImGui::Separator();ImGui::Spacing();
 #           endif // IMGUISTYLESERIALIZER_H_

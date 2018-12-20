@@ -452,6 +452,8 @@ void DrawGL()	// Mandatory
             else if (styleEnumNum==ImGuiStyle_Design) ImGui::SetTooltip("%s","\"Design\"\nPosted by @usernameiwantedwasalreadytaken here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
             else if (styleEnumNum==ImGuiStyle_Dracula) ImGui::SetTooltip("%s","\"Dracula\"\nPosted by @ice1000 here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
             else if (styleEnumNum==ImGuiStyle_Greenish) ImGui::SetTooltip("%s","\"Greenish\"\nPosted by @dertseha here:\nhttps://github.com/ocornut/imgui/issues/1902\n(hope I can use it)");
+            else if (styleEnumNum==ImGuiStyle_C64) ImGui::SetTooltip("%s","\"C64\"\nPosted by @Nullious here:\nhttps://gist.github.com/Nullious/2d598963b346c49fa4500ca16b8e5c67\n(hope I can use it)");
+
         }
 
         ImGui::SameLine();
@@ -1307,6 +1309,34 @@ void DrawGL()	// Mandatory
         ImGui::KnobFloat("Knob1", &knobValues[0], -10.f, 10.f);ImGui::SameLine();
         ImGui::KnobFloat("Knob2", &knobValues[1], -10.f, 10.f);ImGui::SameLine();
         ImGui::KnobFloat("Knob3", &knobValues[2], -10.f, 10.f);
+
+        // LoadingIndicatorCircle
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Text("LoadingIndicatorCircle(...) from https://github.com/ocornut/imgui/issues/1901");
+        ImGui::Separator();
+        ImGui::TextUnformatted("Test 1:");ImGui::SameLine();
+        ImGui::LoadingIndicatorCircle("MyLIC1");ImGui::SameLine();
+        ImGui::TextUnformatted("Test 2:");ImGui::SameLine();
+        ImGui::LoadingIndicatorCircle("MyLIC2",1.f,&ImGui::GetStyle().Colors[ImGuiCol_Header],&ImGui::GetStyle().Colors[ImGuiCol_HeaderHovered]);
+        ImGui::AlignFirstTextHeightToWidgets();ImGui::TextUnformatted("Test 3:");ImGui::SameLine();ImGui::LoadingIndicatorCircle("MyLIC3",2.0f);
+        ImGui::AlignFirstTextHeightToWidgets();ImGui::TextUnformatted("Test 4:");ImGui::SameLine();ImGui::LoadingIndicatorCircle("MyLIC4",4.0f,&ImGui::GetStyle().Colors[ImGuiCol_Header],&ImGui::GetStyle().Colors[ImGuiCol_HeaderHovered],12,2.f);
+        // No idea why AlignFirstTextHeightToWidgets() does not work...
+
+
+        // LoadingIndicatorCircle2
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Text("LoadingIndicatorCircle2(...) from https://github.com/ocornut/imgui/issues/1901");
+        ImGui::Separator();
+        ImGui::TextUnformatted("Test 1:");ImGui::SameLine();
+        ImGui::LoadingIndicatorCircle2("MyLIC21");ImGui::SameLine();
+        ImGui::TextUnformatted("Test 2:");ImGui::SameLine();
+        ImGui::LoadingIndicatorCircle2("MyLIC22",1.f,1.5f,&ImGui::GetStyle().Colors[ImGuiCol_Header]);
+        ImGui::AlignFirstTextHeightToWidgets();ImGui::TextUnformatted("Test 3:");ImGui::SameLine();ImGui::LoadingIndicatorCircle2("MyLIC23",2.0f);
+        ImGui::AlignFirstTextHeightToWidgets();ImGui::TextUnformatted("Test 4:");ImGui::SameLine();ImGui::LoadingIndicatorCircle2("MyLIC24",4.0f,1.f,&ImGui::GetStyle().Colors[ImGuiCol_Header]);
+        // No idea why AlignFirstTextHeightToWidgets() does not work...
+
 
 #       else //NO_IMGUIVARIOUSCONTROLS
             ImGui::Text("%s","Excluded from this build.\n");

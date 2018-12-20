@@ -132,7 +132,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFramesForResize > 0);
     if (flags & ImGuiWindowFlags_Popup)
     {
-        ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.CurrentPopupStack.Size];
+        ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.BeginPopupStack.Size];
         window_just_activated_by_user |= (window->PopupId != popup_ref.PopupId); // We recycle popups so treat window as activated if popup id changed
         window_just_activated_by_user |= (window != popup_ref.Window);
     }
@@ -146,9 +146,9 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     CheckStacksSize(window, true);
     if (flags & ImGuiWindowFlags_Popup)
     {
-        ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.CurrentPopupStack.Size];
+        ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.BeginPopupStack.Size];
         popup_ref.Window = window;
-        g.CurrentPopupStack.push_back(popup_ref);
+        g.BeginPopupStack.push_back(popup_ref);
         window->PopupId = popup_ref.PopupId;
     }
 
@@ -383,7 +383,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         {
             window->AutoPosLastDirection = ImGuiDir_None;
             if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api)
-                window->Pos = g.CurrentPopupStack.back().OpenPopupPos;
+                window->Pos = g.BeginPopupStack.back().OpenPopupPos;
         }
 
         // Position child window
@@ -583,9 +583,9 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
 
             // Title bar
-            ImU32 title_bar_col = GetColorU32(window->Collapsed ? ImGuiCol_TitleBgCollapsed : title_bar_is_highlight ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
             if (!(flags & ImGuiWindowFlags_NoTitleBar)) {
                 //const bool window_is_focused = g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow;
+                ImU32 title_bar_col = GetColorU32(window->Collapsed ? ImGuiCol_TitleBgCollapsed : title_bar_is_highlight ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
 #               if (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
                 if (gImGuiDockpanelManagerExtendedStyle)    {
                     ImGui::ImDrawListAddRectWithVerticalGradient(window->DrawList,
@@ -735,8 +735,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             // Close & collapse button are on layer 1 (same as menus) and don't default focus
             const ImGuiItemFlags item_flags_backup = window->DC.ItemFlags;
             window->DC.ItemFlags |= ImGuiItemFlags_NoNavDefaultFocus;
-            window->DC.NavLayerCurrent++;
-            window->DC.NavLayerCurrentMask <<= 1;
+            window->DC.NavLayerCurrent = ImGuiNavLayer_Menu;
+            window->DC.NavLayerCurrentMask = (1 << ImGuiNavLayer_Menu);
 
             if (p_opened != NULL)   {
                 //*p_opened = CloseWindowButton(p_opened);
@@ -753,11 +753,11 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 DockWindowButton(p_undocked,p_opened);
 
             // Restore layer
-            window->DC.NavLayerCurrent--;
-            window->DC.NavLayerCurrentMask >>= 1;
+            window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
+            window->DC.NavLayerCurrentMask = (1 << ImGuiNavLayer_Main);
             window->DC.ItemFlags = item_flags_backup;
 
-            // Title text (FIXME: refactor text alignment facilities along with RenderText helpers)
+            // Title bar text (FIXME: refactor text alignment facilities along with RenderText helpers)
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
             if (!(flags & ImGuiWindowFlags_NoCollapse))
                 RenderArrow(window->Pos + style.FramePadding, window->Collapsed ? ImGuiDir_Right : ImGuiDir_Down, 1.0f);
@@ -776,7 +776,31 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             clip_rect.Min = ImVec2(text_min.x, window->Pos.y);
             RenderTextClipped(text_min, text_max, name, NULL, &text_size, style.WindowTitleAlign, &clip_rect);
 
+            /*// Title bar text (with: horizontal alignment, avoiding collapse/close button, optional "unsaved document" marker)
+            // FIXME: Refactor text alignment facilities along with RenderText helpers, this is too much code..
+            const char* UNSAVED_DOCUMENT_MARKER = "*";
+            float marker_size_x = (flags & ImGuiWindowFlags_UnsavedDocument) ? CalcTextSize(UNSAVED_DOCUMENT_MARKER, NULL, false).x : 0.0f;
+            ImVec2 text_size = CalcTextSize(name, NULL, true) + ImVec2(marker_size_x, 0.0f);
+            ImRect text_r = title_bar_rect;
+            float pad_left = (flags & ImGuiWindowFlags_NoCollapse) ? style.FramePadding.x : (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x);
+            float pad_right = (p_open == NULL)                     ? style.FramePadding.x : (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x);
+            if (style.WindowTitleAlign.x > 0.0f)
+                pad_right = ImLerp(pad_right, pad_left, style.WindowTitleAlign.x);
+            text_r.Min.x += pad_left;
+            text_r.Max.x -= pad_right;
+            ImRect clip_rect = text_r;
+            clip_rect.Max.x = window->Pos.x + window->Size.x - (p_open ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x); // Match the size of CloseButton()
+            RenderTextClipped(text_r.Min, text_r.Max, name, NULL, &text_size, style.WindowTitleAlign, &clip_rect);
+            if (flags & ImGuiWindowFlags_UnsavedDocument)
+            {
+                ImVec2 marker_pos = ImVec2(ImMax(text_r.Min.x, text_r.Min.x + (text_r.GetWidth() - text_size.x) * style.WindowTitleAlign.x) + text_size.x, text_r.Min.y) + ImVec2(2 - marker_size_x, 0.0f);
+                ImVec2 off = ImVec2(0.0f, (float)(int)(-g.FontSize * 0.25f));
+                RenderTextClipped(marker_pos + off, text_r.Max + off, UNSAVED_DOCUMENT_MARKER, NULL, NULL, ImVec2(0, style.WindowTitleAlign.y), &clip_rect);
+            }*/
         }
+
+
+
 
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
         window->OuterRectClipped = window->Rect();
@@ -854,7 +878,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->HiddenFramesRegular = 1;
 
     // Update the Hidden flag
-    window->Hidden = (window->HiddenFramesRegular > 0) || (window->HiddenFramesForResize);
+    window->Hidden = (window->HiddenFramesRegular > 0) || (window->HiddenFramesForResize > 0);
 
 
     // Return false if we don't intend to display anything to allow user to perform an early out optimization
@@ -881,7 +905,7 @@ static void DockWindowEnd()
     // NB: we don't clear 'window->RootWindow'. The pointer is allowed to live until the next call to Begin().
     g.CurrentWindowStack.pop_back();
     if (window->Flags & ImGuiWindowFlags_Popup)
-        g.CurrentPopupStack.pop_back();
+        g.BeginPopupStack.pop_back();
     CheckStacksSize(window, false);
     SetCurrentWindow(g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back());
 }
