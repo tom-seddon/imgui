@@ -1472,8 +1472,8 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
         const ImVec4 dgray(80/255.0f,80/255.0f,80/255.0f,1.0f);
         const ImVec4 mgray(120/255.0f,120/255.0f,120/255.0f,1.0f);
         const ImVec4 lgreen(148/255.0f,224/255.0f,137/255.0f,1.0f);
-        const ImVec4 lblue (120/255.0f,105/255.0f,196/255.0f,1.0f);
-        const ImVec4 lgray (159/255.0f,159/255.0f,159/255.0f,1.0f);
+        const ImVec4 lblue(120/255.0f,105/255.0f,196/255.0f,1.0f);
+        const ImVec4 lgray(159/255.0f,159/255.0f,159/255.0f,1.0f);
 
         style.FramePadding = ImVec2(8,1);
         style.FrameRounding = 0;
