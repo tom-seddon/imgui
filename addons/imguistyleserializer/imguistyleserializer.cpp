@@ -554,6 +554,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
         style.Colors[ImGuiCol_TabHovered] = style.Colors[ImGuiCol_TabActive]  = style.Colors[ImGuiCol_ButtonActive];
 
         // ???
+
         style.Colors[ImGuiCol_TabUnfocused] = style.Colors[ImGuiCol_Header];
         style.Colors[ImGuiCol_TabUnfocusedActive] = style.Colors[ImGuiCol_HeaderActive];
 
