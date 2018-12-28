@@ -1217,7 +1217,8 @@ struct DockContext
     {
         // Draw this on top of everything else.
         ImGuiWindow* window = GetCurrentWindow();
-        window->BeginOrderWithinParent = 100000;
+        // window->BeginOrderWithinParent = 100000; /*  warning: implicit conversion from 'int' to 'short' changes value from 100000 to -31072 */
+        window->BeginOrderWithinParent = 32000;
     }
 
         return ret;

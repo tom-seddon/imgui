@@ -398,9 +398,9 @@ FAQ: HOW TO RUN THE (LOCAL) HTML DEMOS
 ================================================
 If the html demos (in the html subfolder) don't run in your browser:
 ->  see if the demos work when they are hosted on a web server. Try these links:
-    https://rawgit.com/Flix01/imgui/2015-10-Addons/examples/addons_examples/html/main.html
-    https://rawgit.com/Flix01/imgui/2015-10-Addons/examples/addons_examples/html/main2.html
-    https://rawgit.com/Flix01/imgui/2015-10-Addons/examples/addons_examples/html/main3.html
+    https://rawgit.com/Flix01/imgui/imgui_with_addons/examples/addons_examples/html/main.html
+    https://rawgit.com/Flix01/imgui/imgui_with_addons/examples/addons_examples/html/main2.html
+    https://rawgit.com/Flix01/imgui/imgui_with_addons/examples/addons_examples/html/main3.html
     If they work they should work locally if you use the Firefox web browser.
     On other browsers you may get exceptions that, in the Javascript console, look like: "XMLHttpRequest cannot load".
     Here is how to solve them (from the emscripten docs):
