@@ -30,15 +30,28 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.67 (In Progress)
+ VERSION 1.68
+-----------------------------------------------------------------------
+
+Other Changes:
+- ImDrawList: Fixed AddCircle(), AddCircleFilled() angle step being off, which was visible when drawing a "circle"
+  with a small number of segments (e.g. an hexagon). (#2287) [@baktery]
+- Fonts: imgui_freetype: Added support for imgui allocators + custom FreeType only SetAllocatorFunctions. (#2285) [@Vuhdo]
+- Examples: Win32: Using GetForegroundWindow() instead of GetActiveWindow() to be compatible with windows created 
+  in a different thread. (#1951, #2087, #2156, #2232) [many people]
+- Examples: Win32: Added support for XInput games (if ImGuiConfigFlags_NavEnableGamepad is enabled).
+
+
+-----------------------------------------------------------------------
+ VERSION 1.67 (Released 2019-01-14)
 -----------------------------------------------------------------------
 
 Breaking Changes:
 
+- Made it illegal to call Begin("") with an empty string. This somehow half-worked before but had various undesirable
+  side-effect because the window would have ID zero. In particular it is causing problems in viewport/docking branches.
 - Renamed io.ConfigResizeWindowsFromEdges to io.ConfigWindowsResizeFromEdges and removed its [Beta] mark.
   The addition of new configuration options in the Docking branch is pushing for a little reorganization of those names.
-- Made it illegal to call Begin("") with an empty string. This somehow accidentally worked before but had various 
-  undesirable side-effect as the window would have ID zero. In particular it is causing problems in viewport/docking branches.
 - Renamed ImFontAtlas::GlyphRangesBuilder to ImFontGlyphRangesBuilder. Keep redirection typedef (will obsolete).
 
 Other Changes:
@@ -51,8 +64,8 @@ Other Changes:
   - Demo: Added "Documents" example app showcasing possible use for tabs.
   This feature was merged from the Docking branch in order to allow the use of regular tabs in your code.
   (It does not provide the docking/splitting/merging of windows available in the Docking branch)
-- Added ImGuiWindowFlags_UnsavedDocument window flag to append '*' to title without altering the ID,
-  as a convenience to avoid using the ### operator. In the Docking branch this also has an effect on tab closing behavior.
+- Added ImGuiWindowFlags_UnsavedDocument window flag to append '*' to title without altering the ID, as a convenience
+  to avoid using the ### operator. In the Docking branch this also has an effect on tab closing behavior.
 - Window, Focus, Popup: Fixed an issue where closing a popup by clicking another window with the _NoMove flag would refocus
   the parent window of the popup instead of the newly clicked window.
 - Window: Contents size is preserved while a window collapsed. Fix auto-resizing window losing their size for one frame when uncollapsed.
@@ -64,6 +77,7 @@ Other Changes:
 - Window: Fixed using SetNextWindowPos() on a child window (which wasn't really documented) position the cursor as expected
   in the parent window, so there is no mismatch between the layout in parent and the position of the child window. 
 - InputFloat: When using ImGuiInputTextFlags_ReadOnly the step buttons are disabled. (#2257)
+- DragFloat: Fixed broken mouse direction change with power!=1.0. (#2174, #2206) [@Joshhua5]
 - Nav: Fixed an keyboard issue where holding Activate/Space for longer than two frames on a button would unnecessary 
   keep the focus on the parent window, which could steal it from newly appearing windows. (#787)
 - Nav: Fixed animated window titles from being updated when displayed in the CTRL+Tab list. (#787)
@@ -72,6 +86,13 @@ Other Changes:
   Missing calls to End(), past the assert, should not lead to crashes or to the fallback Debug window appearing on screen.
   Those changes makes it easier to integrate dear imgui with a scripting language allowing, given asserts are redirected
   into e.g. an error log and stopping the script execution.
+- ImFontAtlas: Stb and FreeType: Atlas width is now properly based on total surface rather than glyph count (unless overridden with TexDesiredWidth).
+- ImFontAtlas: Stb and FreeType: Fixed atlas builder so missing glyphs won't influence the atlas texture width. (#2233)
+- ImFontAtlas: Stb and FreeType: Fixed atlas builder so duplicate glyphs (when merging fonts) won't be included in the rasterized atlas.
+- ImFontAtlas: FreeType: Fixed abnormally high atlas height.
+- ImFontAtlas: FreeType: Fixed support for any values of TexGlyphPadding (not just only 1).
+- ImDrawList: Optimized some of the functions for performance of debug builds where non-inline function call cost are non-negligible.
+  (Our test UI scene on VS2015 Debug Win64 with /RTC1 went ~5.9 ms -> ~4.9 ms. In Release same scene stays at ~0.3 ms.)
 - IO: Added BackendPlatformUserData, BackendRendererUserData, BackendLanguageUserData void* for storage use by back-ends.
 - IO: Renamed InputCharacters[], marked internal as was always intended. Please don't access directly, and use AddInputCharacter() instead!
 - IO: AddInputCharacter() goes into a queue which can receive as many characters as needed during the frame. This is useful

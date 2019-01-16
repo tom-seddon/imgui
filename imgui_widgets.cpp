@@ -1,4 +1,4 @@
-// dear imgui, v1.67 WIP
+// dear imgui, v1.68 WIP
 // (widgets code)
 
 /*
@@ -52,8 +52,14 @@ Index of this file:
 
 // Clang/GCC warnings with -Weverything
 #ifdef __clang__
+#pragma clang diagnostic ignored "-Wold-style-cast"         // warning : use of old-style cast                              // yes, they are more terse.
+#pragma clang diagnostic ignored "-Wfloat-equal"            // warning : comparing floating point with == or != is unsafe   // storing and comparing against same constants (typically 0.0f) is ok.
 #pragma clang diagnostic ignored "-Wformat-nonliteral"      // warning : format string is not a string literal              // passing non-literal to vsnformat(). yes, user passing incorrect format strings can crash the code.
 #pragma clang diagnostic ignored "-Wsign-conversion"        // warning : implicit conversion changes signedness             //
+#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"  // warning : zero as null pointer constant              // some standard header variations use #define NULL 0
+#if __has_warning("-Wdouble-promotion")
+#pragma clang diagnostic ignored "-Wdouble-promotion"       // warning: implicit conversion from 'float' to 'double' when passing argument to function  // using printf() is a misery with this as C++ va_arg ellipsis changes float to double.
+#endif
 #elif defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"        // warning: format not a string literal, format string not checked
 #if __GNUC__ >= 8
@@ -204,7 +210,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         }
 
         ImRect bb(text_pos, text_pos + text_size);
-        ItemSize(bb);
+        ItemSize(text_size);
         ItemAdd(bb, 0);
     }
     else
@@ -548,7 +554,7 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     ImVec2 size = CalcItemSize(size_arg, label_size.x + style.FramePadding.x * 2.0f, label_size.y + style.FramePadding.y * 2.0f);
 
     const ImRect bb(pos, pos + size);
-    ItemSize(bb, style.FramePadding.y);
+    ItemSize(size, style.FramePadding.y);
     if (!ItemAdd(bb, id))
         return false;
 
@@ -602,7 +608,7 @@ bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size_arg)
     const ImGuiID id = window->GetID(str_id);
     ImVec2 size = CalcItemSize(size_arg, 0.0f, 0.0f);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
-    ItemSize(bb);
+    ItemSize(size);
     if (!ItemAdd(bb, id))
         return false;
 
@@ -666,7 +672,7 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
     // Render
     ImVec2 center = bb.GetCenter();
     if (hovered)
-        window->DrawList->AddCircleFilled(center, ImMax(2.0f, radius), GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered), 9);
+        window->DrawList->AddCircleFilled(center, ImMax(2.0f, radius), GetColorU32(held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered), 9);
 
     float cross_extent = (radius * 0.7071f) - 1.0f;
     ImU32 cross_col = GetColorU32(ImGuiCol_Text);
@@ -1660,7 +1666,7 @@ static float GetMinimumStepAtDecimalPrecision(int decimal_precision)
     static const float min_steps[10] = { 1.0f, 0.1f, 0.01f, 0.001f, 0.0001f, 0.00001f, 0.000001f, 0.0000001f, 0.00000001f, 0.000000001f };
     if (decimal_precision < 0)
         return FLT_MIN;
-    return (decimal_precision >= 0 && decimal_precision < 10) ? min_steps[decimal_precision] : ImPow(10.0f, (float)-decimal_precision);
+    return (decimal_precision < IM_ARRAYSIZE(min_steps)) ? min_steps[decimal_precision] : ImPow(10.0f, (float)-decimal_precision);
 }
 
 template<typename TYPE>
@@ -1721,6 +1727,7 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     const ImGuiAxis axis = (flags & ImGuiDragFlags_Vertical) ? ImGuiAxis_Y : ImGuiAxis_X;
     const bool is_decimal = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
     const bool has_min_max = (v_min != v_max);
+    const bool is_power = (power != 1.0f && is_decimal && has_min_max && (v_max - v_min < FLT_MAX));
 
     // Default tweak speed
     if (v_speed == 0.0f && has_min_max && (v_max - v_min < FLT_MAX))
@@ -1752,7 +1759,8 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     // Avoid altering values and clamping when we are _already_ past the limits and heading in the same direction, so e.g. if range is 0..255, current value is 300 and we are pushing to the right side, keep the 300.
     bool is_just_activated = g.ActiveIdIsJustActivated;
     bool is_already_past_limits_and_pushing_outward = has_min_max && ((*v >= v_max && adjust_delta > 0.0f) || (*v <= v_min && adjust_delta < 0.0f));
-    if (is_just_activated || is_already_past_limits_and_pushing_outward)
+    bool is_drag_direction_change_with_power = is_power && ((adjust_delta < 0 && g.DragCurrentAccum > 0) || (adjust_delta > 0 && g.DragCurrentAccum < 0));
+    if (is_just_activated || is_already_past_limits_and_pushing_outward || is_drag_direction_change_with_power)
     {
         g.DragCurrentAccum = 0.0f;
         g.DragCurrentAccumDirty = false;
@@ -1769,7 +1777,6 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     TYPE v_cur = *v;
     FLOATTYPE v_old_ref_for_accum_remainder = (FLOATTYPE)0.0f;
 
-    const bool is_power = (power != 1.0f && is_decimal && has_min_max && (v_max - v_min < FLT_MAX));
     if (is_power)
     {
         // Offset + round to user desired precision, with a curve on the v_min..v_max range to get more precision on one side of the range
@@ -3888,9 +3895,14 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
             if (n + 1 == components)
                 PushItemWidth(w_item_last);
             if (flags & ImGuiColorEditFlags_Float)
-                value_changed = value_changed_as_float = value_changed | DragFloat(ids[n], &f[n], 1.0f/255.0f, 0.0f, hdr ? 0.0f : 1.0f, fmt_table_float[fmt_idx][n]);
+            {
+                value_changed |= DragFloat(ids[n], &f[n], 1.0f/255.0f, 0.0f, hdr ? 0.0f : 1.0f, fmt_table_float[fmt_idx][n]);
+                value_changed_as_float |= value_changed;
+            }
             else
+            {
                 value_changed |= DragInt(ids[n], &i[n], 1.0f, 0, hdr ? 0 : 255, fmt_table_int[fmt_idx][n]);
+            }
             if (!(flags & ImGuiColorEditFlags_NoOptions))
                 OpenPopupOnItemClick("context");
         }
@@ -3993,7 +4005,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     {
         if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F))
         {
-            memcpy((float*)col, payload->Data, sizeof(float) * 3);
+            memcpy((float*)col, payload->Data, sizeof(float) * 3); // Preserve alpha if any
             value_changed = true;
         }
         if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F))
@@ -4575,7 +4587,7 @@ void ImGui::ColorPickerOptionsPopup(const float* ref_col, ImGuiColorEditFlags fl
                 g.ColorEditOptions = (g.ColorEditOptions & ~ImGuiColorEditFlags__PickerMask) | (picker_flags & ImGuiColorEditFlags__PickerMask);
             SetCursorScreenPos(backup_pos);
             ImVec4 dummy_ref_col;
-            memcpy(&dummy_ref_col.x, ref_col, sizeof(float) * (picker_flags & ImGuiColorEditFlags_NoAlpha ? 3 : 4));
+            memcpy(&dummy_ref_col, ref_col, sizeof(float) * ((picker_flags & ImGuiColorEditFlags_NoAlpha) ? 3 : 4));
             ColorPicker4("##dummypicker", &dummy_ref_col.x, picker_flags);
             PopID();
         }
@@ -4978,7 +4990,7 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_open, ImGuiTreeNodeFlags
         ImGuiItemHoveredDataBackup last_item_backup;
         float button_radius = g.FontSize * 0.5f;
         ImVec2 button_center = ImVec2(ImMin(window->DC.LastItemRect.Max.x, window->ClipRect.Max.x) - g.Style.FramePadding.x - button_radius, window->DC.LastItemRect.GetCenter().y);
-        if (CloseButton(window->GetID((void*)(intptr_t)(id+1)), button_center, button_radius))
+        if (CloseButton(window->GetID((void*)((intptr_t)id+1)), button_center, button_radius))
             *p_open = false;
         last_item_backup.Restore();
     }
@@ -5797,6 +5809,7 @@ ImGuiTabBar::ImGuiTabBar()
     ID = 0;
     SelectedTabId = NextSelectedTabId = VisibleTabId = 0;
     CurrFrameVisible = PrevFrameVisible = -1;
+    ContentsHeight = 0.0f;
     OffsetMax = OffsetNextTab = 0.0f;
     ScrollingAnim = ScrollingTarget = 0.0f;
     Flags = ImGuiTabBarFlags_None;
@@ -6286,7 +6299,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         tab->Width = size.x;
         tab_is_new = true;
     }
-    tab_bar->LastTabItemIdx = (short)tab_bar->Tabs.index_from_pointer(tab);
+    tab_bar->LastTabItemIdx = (short)tab_bar->Tabs.index_from_ptr(tab);
     tab->WidthContents = size.x;
 
     const bool tab_bar_appearing = (tab_bar->PrevFrameVisible + 1 < g.FrameCount);
@@ -6410,7 +6423,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         flags |= ImGuiTabItemFlags_NoCloseWithMiddleMouseButton;
 
     // Render tab label, process close button
-    const ImGuiID close_button_id = p_open ? window->GetID((void*)(intptr_t)(id + 1)) : 0;
+    const ImGuiID close_button_id = p_open ? window->GetID((void*)((intptr_t)id + 1)) : 0;
     bool just_closed = TabItemLabelAndCloseButton(display_draw_list, bb, flags, label, id, close_button_id);
     if (just_closed)
     {
