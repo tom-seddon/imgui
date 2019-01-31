@@ -577,6 +577,7 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     //if (pressed && !(flags & ImGuiButtonFlags_DontClosePopups) && (window->Flags & ImGuiWindowFlags_Popup))
     //    CloseCurrentPopup();
 
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags);
     return pressed;
 }
 
@@ -1929,6 +1930,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, floa
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, inner_bb.Min.y), label);
 
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags);
     return value_changed;
 }
 
@@ -2368,6 +2370,7 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags);
     return value_changed;
 }
 
@@ -2577,7 +2580,7 @@ const char* ImParseFormatFindEnd(const char* fmt)
 //  fmt = "%.3f"       -> return fmt
 //  fmt = "hello %.3f" -> return fmt + 6
 //  fmt = "%.3f hello" -> return buf written with "%.3f"
-const char* ImParseFormatTrimDecorations(const char* fmt, char* buf, int buf_size)
+const char* ImParseFormatTrimDecorations(const char* fmt, char* buf, size_t buf_size)
 {
     const char* fmt_start = ImParseFormatFindStart(fmt);
     if (fmt_start[0] != '%')
@@ -2585,7 +2588,7 @@ const char* ImParseFormatTrimDecorations(const char* fmt, char* buf, int buf_siz
     const char* fmt_end = ImParseFormatFindEnd(fmt_start);
     if (fmt_end[0] == 0) // If we only have leading decoration, we don't need to copy the data.
         return fmt_start;
-    ImStrncpy(buf, fmt_start, ImMin((int)(fmt_end + 1 - fmt_start), buf_size));
+    ImStrncpy(buf, fmt_start, ImMin((size_t)(fmt_end - fmt_start) + 1, buf_size));
     return buf;
 }
 
@@ -2614,17 +2617,15 @@ int ImParseFormatPrecision(const char* fmt, int default_precision)
 }
 
 // Create text input in place of an active drag/slider (used when doing a CTRL+Click on drag/slider widgets)
-// FIXME: Logic is awkward and confusing. This should be reworked to facilitate using in other situations.
+// FIXME: Facilitate using this in variety of other situations.
 bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* data_ptr, const char* format)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
 
-    // Our replacement widget will override the focus ID (registered previously to allow for a TAB focus to happen)
-    // On the first frame, g.ScalarAsInputTextId == 0, then on subsequent frames it becomes == id
-    SetActiveID(g.ScalarAsInputTextId, window);
-    SetHoveredID(0);
-    g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
+    // On the first frame, g.ScalarAsInputTextId == 0, then on subsequent frames it becomes == id.
+    // We clear ActiveID on the first frame to allow the InputText() taking it back.
+    if (g.ScalarAsInputTextId == 0)
+        ClearActiveID();
 
     char fmt_buf[32];
     char data_buf[32];
@@ -2633,11 +2634,11 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const c
     ImStrTrimBlanks(data_buf);
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_AutoSelectAll | ((data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double) ? ImGuiInputTextFlags_CharsScientific : ImGuiInputTextFlags_CharsDecimal);
     bool value_changed = InputTextEx(label, data_buf, IM_ARRAYSIZE(data_buf), bb.GetSize(), flags);
-    if (g.ScalarAsInputTextId == 0)     // First frame we started displaying the InputText widget
+    if (g.ScalarAsInputTextId == 0)
     {
-        IM_ASSERT(g.ActiveId == id);    // InputText ID expected to match the Slider ID
+        // First frame we started displaying the InputText widget, we expect it to take the active id.
+        IM_ASSERT(g.ActiveId == id);
         g.ScalarAsInputTextId = g.ActiveId;
-        SetHoveredID(id);
     }
     if (value_changed)
         return DataTypeApplyOpFromText(data_buf, g.InputTextState.InitialText.Data, data_type, data_ptr, NULL);
@@ -3254,8 +3255,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         SetActiveID(id, window);
         SetFocusID(id, window);
         FocusWindow(window);
+        g.ActiveIdBlockNavInputFlags = (1 << ImGuiNavInput_Cancel);
         if (!is_multiline && !(flags & ImGuiInputTextFlags_CallbackHistory))
-            g.ActiveIdAllowNavDirFlags |= ((1 << ImGuiDir_Up) | (1 << ImGuiDir_Down));
+            g.ActiveIdAllowNavDirFlags = ((1 << ImGuiDir_Up) | (1 << ImGuiDir_Down));
     }
     else if (io.MouseClicked[0])
     {
@@ -3585,7 +3587,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             }
 
             // If the underlying buffer resize was denied or not carried to the next frame, apply_new_text_length+1 may be >= buf_size.
-            ImStrncpy(buf, edit_state.TempBuffer.Data, ImMin(apply_new_text_length + 1, buf_size));
+            ImStrncpy(buf, apply_new_text, ImMin(apply_new_text_length + 1, buf_size));
             value_changed = true;
         }
 
@@ -3791,6 +3793,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     if (value_changed)
         MarkItemEdited(id);
 
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags);
     if ((flags & ImGuiInputTextFlags_EnterReturnsTrue) != 0)
         return enter_pressed;
     else
@@ -4007,7 +4010,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     {
         if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F))
         {
-            memcpy((float*)col, payload->Data, sizeof(float) * 3); // Preserve alpha if any
+            memcpy((float*)col, payload->Data, sizeof(float) * 3); // Preserve alpha if any //-V512
             value_changed = true;
         }
         if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F))
@@ -5485,7 +5488,7 @@ bool ImGui::BeginMainMenuBar()
         End();
         return false;
     }
-    return true;
+    return true; //-V1020
 }
 
 void ImGui::EndMainMenuBar()
@@ -6427,7 +6430,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     // Render tab label, process close button
     const ImGuiID close_button_id = p_open ? window->GetID((void*)((intptr_t)id + 1)) : 0;
     bool just_closed = TabItemLabelAndCloseButton(display_draw_list, bb, flags, label, id, close_button_id);
-    if (just_closed)
+    if (just_closed && p_open != NULL)
     {
         *p_open = false;
         TabBarCloseTab(tab_bar, tab);
@@ -6476,9 +6479,9 @@ ImVec2 ImGui::TabItemCalcSize(const char* label, bool has_close_button)
 void ImGui::TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, ImU32 col)
 {
     // While rendering tabs, we trim 1 pixel off the top of our bounding box so they can fit within a regular frame height while looking "detached" from it.
-    (void)flags;
     ImGuiContext& g = *GImGui;
     const float width = bb.GetWidth();
+    IM_UNUSED(flags);
     IM_ASSERT(width > 0.0f);
     const float rounding = ImMax(0.0f, ImMin(g.Style.TabRounding, width * 0.5f - 1.0f));
     float y1 = bb.Min.y + 1.0f;

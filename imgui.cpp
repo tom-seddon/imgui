@@ -1063,11 +1063,11 @@ ImGuiContext*   GImGui = NULL;
 // If you use DLL hotreloading you might need to call SetAllocatorFunctions() after reloading code from this file.
 // Otherwise, you probably don't want to modify them mid-program, and if you use global/static e.g. ImVector<> instances you may need to keep them accessible during program destruction.
 #ifndef IMGUI_DISABLE_DEFAULT_ALLOCATORS
-static void*   MallocWrapper(size_t size, void* user_data)    { (void)user_data; return malloc(size); }
-static void    FreeWrapper(void* ptr, void* user_data)        { (void)user_data; free(ptr); }
+static void*   MallocWrapper(size_t size, void* user_data)    { IM_UNUSED(user_data); return malloc(size); }
+static void    FreeWrapper(void* ptr, void* user_data)        { IM_UNUSED(user_data); free(ptr); }
 #else
-static void*   MallocWrapper(size_t size, void* user_data)    { (void)user_data; (void)size; IM_ASSERT(0); return NULL; }
-static void    FreeWrapper(void* ptr, void* user_data)        { (void)user_data; (void)ptr; IM_ASSERT(0); }
+static void*   MallocWrapper(size_t size, void* user_data)    { IM_UNUSED(user_data); IM_UNUSED(size); IM_ASSERT(0); return NULL; }
+static void    FreeWrapper(void* ptr, void* user_data)        { IM_UNUSED(user_data); IM_UNUSED(ptr); IM_ASSERT(0); }
 #endif
 
 static void*  (*GImAllocatorAllocFunc)(size_t size, void* user_data) = MallocWrapper;
@@ -1278,6 +1278,7 @@ ImVec2 ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c,
     return proj_ca;
 }
 
+// Consider using _stricmp/_strnicmp under Windows or strcasecmp/strncasecmp. We don't actually use either ImStricmp/ImStrnicmp in the codebase any more.
 int ImStricmp(const char* str1, const char* str2)
 {
     int d;
@@ -1294,9 +1295,11 @@ int ImStrnicmp(const char* str1, const char* str2, size_t count)
 
 void ImStrncpy(char* dst, const char* src, size_t count)
 {
-    if (count < 1) return;
-    strncpy(dst, src, count);
-    dst[count-1] = 0;
+    if (count < 1) 
+        return;
+    if (count > 1)
+        strncpy(dst, src, count - 1);
+    dst[count - 1] = 0;
 }
 
 char* ImStrdup(const char* str)
@@ -2641,6 +2644,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     }
     g.ActiveId = id;
     g.ActiveIdAllowNavDirFlags = 0;
+    g.ActiveIdBlockNavInputFlags = 0;
     g.ActiveIdAllowOverlap = false;
     g.ActiveIdWindow = window;
     if (id)
@@ -2706,9 +2710,9 @@ void ImGui::MarkItemEdited(ImGuiID id)
 {
     // This marking is solely to be able to provide info for IsItemDeactivatedAfterEdit().
     // ActiveId might have been released by the time we call this (as in the typical press/release button behavior) but still need need to fill the data.
-    (void)id; // Avoid unused variable warnings when asserts are compiled out.
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.ActiveId == id || g.ActiveId == 0 || g.DragDropActive);
+    IM_UNUSED(id); // Avoid unused variable warnings when asserts are compiled out.
     //IM_ASSERT(g.CurrentWindow->DC.LastItemId == id);
     g.ActiveIdHasBeenEdited = true;
     g.CurrentWindow->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_Edited;
@@ -2795,7 +2799,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     if (id != 0)
-        ImGuiTestEngineHook_ItemAdd(&g, bb, id);
+        ImGuiTestEngineHook_ItemAdd(&g, nav_bb_arg ? *nav_bb_arg : bb, id);
 #endif
 
     // Clipping test
@@ -4039,7 +4043,8 @@ int ImGui::CalcTypematicPressedRepeatAmount(float t, float t_prev, float repeat_
 int ImGui::GetKeyPressedAmount(int key_index, float repeat_delay, float repeat_rate)
 {
     ImGuiContext& g = *GImGui;
-    if (key_index < 0) return false;
+    if (key_index < 0) 
+        return 0;
     IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown));
     const float t = g.IO.KeysDownDuration[key_index];
     return CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, repeat_delay, repeat_rate);
@@ -4048,7 +4053,8 @@ int ImGui::GetKeyPressedAmount(int key_index, float repeat_delay, float repeat_r
 bool ImGui::IsKeyPressed(int user_key_index, bool repeat)
 {
     ImGuiContext& g = *GImGui;
-    if (user_key_index < 0) return false;
+    if (user_key_index < 0) 
+        return false;
     IM_ASSERT(user_key_index >= 0 && user_key_index < IM_ARRAYSIZE(g.IO.KeysDown));
     const float t = g.IO.KeysDownDuration[user_key_index];
     if (t == 0.0f)
@@ -4139,13 +4145,15 @@ ImVec2 ImGui::GetMousePosOnOpeningCurrentPopup()
     return g.IO.MousePos;
 }
 
-// We typically use ImVec2(-FLT_MAX,-FLT_MAX) to denote an invalid mouse position
+// We typically use ImVec2(-FLT_MAX,-FLT_MAX) to denote an invalid mouse position.
 bool ImGui::IsMousePosValid(const ImVec2* mouse_pos)
 {
-    if (mouse_pos == NULL)
-        mouse_pos = &GImGui->IO.MousePos;
+    // The assert is only to silence a false-positive in XCode Static Analysis.
+    // Because GImGui is not dereferenced in every code path, the static analyzer assume that it may be NULL (which it doesn't for other functions).
+    IM_ASSERT(GImGui != NULL);
     const float MOUSE_INVALID = -256000.0f;
-    return mouse_pos->x >= MOUSE_INVALID && mouse_pos->y >= MOUSE_INVALID;
+    ImVec2 p = mouse_pos ? *mouse_pos : GImGui->IO.MousePos;
+    return p.x >= MOUSE_INVALID && p.y >= MOUSE_INVALID;
 }
 
 // Return the delta from the initial clicking position.
@@ -4819,7 +4827,10 @@ void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags
     if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
         window->RootWindowForTitleBarHighlight = parent_window->RootWindowForTitleBarHighlight;
     while (window->RootWindowForNav->Flags & ImGuiWindowFlags_NavFlattened)
+    {
+        IM_ASSERT(window->RootWindowForNav->ParentWindow != NULL);
         window->RootWindowForNav = window->RootWindowForNav->ParentWindow;
+    }
 }
 
 // Push a new ImGui window to add widgets to.
@@ -5082,7 +5093,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Position child window
         if (flags & ImGuiWindowFlags_ChildWindow)
         {
-            IM_ASSERT(parent_window->Active);
+            IM_ASSERT(parent_window && parent_window->Active);
             window->BeginOrderWithinParent = (short)parent_window->DC.ChildWindows.Size;
             parent_window->DC.ChildWindows.push_back(window);
             if (!(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api && !window_is_child_tooltip)
@@ -6830,8 +6841,21 @@ void ImGui::CloseCurrentPopup()
     int popup_idx = g.BeginPopupStack.Size - 1;
     if (popup_idx < 0 || popup_idx >= g.OpenPopupStack.Size || g.BeginPopupStack[popup_idx].PopupId != g.OpenPopupStack[popup_idx].PopupId)
         return;
-    while (popup_idx > 0 && g.OpenPopupStack[popup_idx].Window && (g.OpenPopupStack[popup_idx].Window->Flags & ImGuiWindowFlags_ChildMenu))
+
+    // Closing a menu closes its top-most parent popup (unless a modal)
+    while (popup_idx > 0)
+    {
+        ImGuiWindow* popup_window = g.OpenPopupStack[popup_idx].Window;
+        ImGuiWindow* parent_popup_window = g.OpenPopupStack[popup_idx - 1].Window;
+        bool close_parent = false;
+        if (popup_window && (popup_window->Flags & ImGuiWindowFlags_ChildMenu))
+            if (parent_popup_window == NULL || !(parent_popup_window->Flags & ImGuiWindowFlags_Modal))
+                close_parent = true;
+        if (!close_parent)
+            break;
         popup_idx--;
+    }
+    //IMGUI_DEBUG_LOG("CloseCurrentPopup %d -> %d\n", g.BeginPopupStack.Size - 1, popup_idx);
     ClosePopupToLevel(popup_idx, true);
 
     // A common pattern is to close a popup when selecting a menu item/selectable that will open another window.
@@ -6907,7 +6931,7 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags fla
 
 void ImGui::EndPopup()
 {
-    ImGuiContext& g = *GImGui; (void)g;
+    ImGuiContext& g = *GImGui; 
     IM_ASSERT(g.CurrentWindow->Flags & ImGuiWindowFlags_Popup);  // Mismatched BeginPopup()/EndPopup() calls
     IM_ASSERT(g.BeginPopupStack.Size > 0);
 
@@ -7599,16 +7623,16 @@ static void ImGui::NavUpdate()
     NavUpdateWindowing();
 
     // Set output flags for user application
-    // FIXME: g.NavInitRequest is always false at this point, investigate the intent of operation done here.
     g.IO.NavActive = (nav_keyboard_active || nav_gamepad_active) && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs);
-    g.IO.NavVisible = (g.IO.NavActive && g.NavId != 0 && !g.NavDisableHighlight) || (g.NavWindowingTarget != NULL) || g.NavInitRequest;
+    g.IO.NavVisible = (g.IO.NavActive && g.NavId != 0 && !g.NavDisableHighlight) || (g.NavWindowingTarget != NULL);
 
     // Process NavCancel input (to close a popup, get back to parent, clear focus)
     if (IsNavInputPressed(ImGuiNavInput_Cancel, ImGuiInputReadMode_Pressed))
     {
         if (g.ActiveId != 0)
         {
-            ClearActiveID();
+            if (!(g.ActiveIdBlockNavInputFlags & (1 << ImGuiNavInput_Cancel)))
+                ClearActiveID();
         }
         else if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow) && !(g.NavWindow->Flags & ImGuiWindowFlags_Popup) && g.NavWindow->ParentWindow)
         {
@@ -9276,7 +9300,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                         {
                             ImDrawVert& v = draw_list->VtxBuffer[idx_buffer ? idx_buffer[vtx_i] : vtx_i];
                             triangles_pos[n] = v.pos;
-                            buf_p += ImFormatString(buf_p, (int)(buf_end - buf_p), "%s %04d: pos (%8.2f,%8.2f), uv (%.6f,%.6f), col %08X\n", (n == 0) ? "vtx" : "   ", vtx_i, v.pos.x, v.pos.y, v.uv.x, v.uv.y, v.col);
+                            buf_p += ImFormatString(buf_p, buf_end - buf_p, "%s %04d: pos (%8.2f,%8.2f), uv (%.6f,%.6f), col %08X\n", (n == 0) ? "vtx" : "   ", vtx_i, v.pos.x, v.pos.y, v.uv.x, v.uv.y, v.col);
                         }
                         ImGui::Selectable(buf, false);
                         if (ImGui::IsItemHovered())
@@ -9345,12 +9369,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
         static void NodeTabBar(ImGuiTabBar* tab_bar)
         {
-            // Standalone tab bars (not associated to docking/windows functionality) currently hold no discernable strings.
+            // Standalone tab bars (not associated to docking/windows functionality) currently hold no discernible strings.
             char buf[256];
             char* p = buf;
             const char* buf_end = buf + IM_ARRAYSIZE(buf);
-            p += ImFormatString(p, buf_end - p, "TabBar (%d tabs)%s",
-                tab_bar->Tabs.Size, (tab_bar->PrevFrameVisible < ImGui::GetFrameCount() - 2) ? " *Inactive*" : "");
+            ImFormatString(p, buf_end - p, "TabBar (%d tabs)%s", tab_bar->Tabs.Size, (tab_bar->PrevFrameVisible < ImGui::GetFrameCount() - 2) ? " *Inactive*" : "");
             if (ImGui::TreeNode(tab_bar, "%s", buf))
             {
                 for (int tab_n = 0; tab_n < tab_bar->Tabs.Size; tab_n++)
