@@ -364,6 +364,7 @@ CODE
  When you are not sure about a old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2019/02/01 (1.68) - removed io.DisplayVisibleMin/DisplayVisibleMax (which were marked obsolete and removed from viewport/docking branch already).
  - 2019/01/06 (1.67) - renamed io.InputCharacters[], marked internal as was always intended. Please don't access directly, and use AddInputCharacter() instead!
  - 2019/01/06 (1.67) - renamed ImFontAtlas::GlyphRangesBuilder to ImFontGlyphRangesBuilder. Keep redirection typedef (will obsolete).
  - 2018/12/20 (1.67) - made it illegal to call Begin("") with an empty string. This somehow half-worked before but had various undesirable side-effects.
@@ -1167,7 +1168,6 @@ ImGuiIO::ImGuiIO()
     FontDefault = NULL;
     FontAllowUserScaling = false;
     DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-    DisplayVisibleMin = DisplayVisibleMax = ImVec2(0.0f, 0.0f);
 
     // Miscellaneous options
     MouseDrawCursor = false;
@@ -2636,6 +2636,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     if (g.ActiveIdIsJustActivated)
     {
         g.ActiveIdTimer = 0.0f;
+        g.ActiveIdHasBeenPressed = false;
         g.ActiveIdHasBeenEdited = false;
         if (id != 0)
         {
@@ -4306,8 +4307,6 @@ ImVec2 ImGui::GetItemRectSize()
 static ImRect GetViewportRect()
 {
     ImGuiContext& g = *GImGui;
-    if (g.IO.DisplayVisibleMin.x != g.IO.DisplayVisibleMax.x && g.IO.DisplayVisibleMin.y != g.IO.DisplayVisibleMax.y)
-        return ImRect(g.IO.DisplayVisibleMin, g.IO.DisplayVisibleMax);
     return ImRect(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y);
 }
 
@@ -7320,6 +7319,7 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
         if (new_best)
         {
             result->ID = id;
+            result->SelectScopeId = g.MultiSelectScopeId;
             result->Window = window;
             result->RectRel = nav_bb_rel;
         }
@@ -7331,6 +7331,7 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
                 {
                     result = &g.NavMoveResultLocalVisibleSet;
                     result->ID = id;
+                    result->SelectScopeId = g.MultiSelectScopeId;
                     result->Window = window;
                     result->RectRel = nav_bb_rel;
                 }
@@ -7871,8 +7872,13 @@ static void ImGui::NavUpdateMoveResult()
 
     ClearActiveID();
     g.NavWindow = result->Window;
+    if (g.NavId != result->ID)
+    {
+        // Don't set NavJustMovedToId if just landed on the same spot (which may happen with ImGuiNavMoveFlags_AllowCurrentNavId)
+        g.NavJustMovedToId = result->ID;
+        g.NavJustMovedToSelectScopeId = result->SelectScopeId;
+    }
     SetNavIDWithRectRel(result->ID, g.NavLayer, result->RectRel);
-    g.NavJustMovedToId = result->ID;
     g.NavMoveFromClampedRefRect = false;
 }
 
