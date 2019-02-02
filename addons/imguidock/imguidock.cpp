@@ -267,7 +267,7 @@ struct DockContext
 
     Dock& getDock(const char* label, bool opened, const ImVec2& default_size, const ImVec2& default_pos)
     {
-        ImU32 id = ImHash(label, 0);
+        ImU32 id = ImHashStr((const char*)label, 0);
 	for (int i = 0,iSz = m_docks.size(); i < iSz; ++i)
         {
             if (m_docks[i]->id == id) return *m_docks[i];
@@ -1430,7 +1430,7 @@ void DockDebugWindow()
                 pValue = (void*)"";
             }
 		    m_docks[P.curIndex]->label = ImStrdup((const char*) pValue);
-		    m_docks[P.curIndex]->id = ImHash(m_docks[P.curIndex]->label, 0);
+                    m_docks[P.curIndex]->id = ImHashStr(m_docks[P.curIndex]->label, 0);
 	    }
 	    else if (strcmp(name,"pos")==0) m_docks[P.curIndex]->pos = *((ImVec2*) pValue);
 	    else if (strcmp(name,"size")==0) m_docks[P.curIndex]->size = *((ImVec2*) pValue);

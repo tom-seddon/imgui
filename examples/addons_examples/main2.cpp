@@ -937,7 +937,7 @@ void DrawDockedWindows(ImGui::PanelManagerWindowData& wd)    {
 
             ImGui::Button( ICON_FA_FILE "  File" ); // use string literal concatenation, ouputs a file icon and File
 #           ifndef NO_IMGUIFILESYSTEM // Testing icons inside ImGuiFs::Dialog
-            ImGui::AlignFirstTextHeightToWidgets();ImGui::Text("File:");ImGui::SameLine();
+            ImGui::AlignTextToFramePadding();ImGui::Text("File:");ImGui::SameLine();
             static ImGuiFs::Dialog dlg;
             ImGui::InputText("###fsdlg",(char*)dlg.getChosenPath(),ImGuiFs::MAX_PATH_BYTES,ImGuiInputTextFlags_ReadOnly);
             ImGui::SameLine();

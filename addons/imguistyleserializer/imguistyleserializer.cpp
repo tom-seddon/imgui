@@ -1208,7 +1208,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
         style.Colors[ImGuiCol_Text]                  = CHERRY_TEXT(0.78f);
         style.Colors[ImGuiCol_TextDisabled]          = CHERRY_TEXT(0.28f);
         style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.13f, 0.14f, 0.17f, 1.00f);
-        style.Colors[ImGuiCol_ChildWindowBg]         = CHERRY_BG( 0.58f);
+        style.Colors[ImGuiCol_ChildBg]         = CHERRY_BG( 0.58f);
         style.Colors[ImGuiCol_PopupBg]               = CHERRY_BG( 0.9f);
         style.Colors[ImGuiCol_Border]                = ImVec4(0.31f, 0.31f, 1.00f, 0.00f);
         style.Colors[ImGuiCol_BorderShadow]          = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
@@ -1232,9 +1232,9 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
         style.Colors[ImGuiCol_Header]                = CHERRY_MED( 0.76f);
         style.Colors[ImGuiCol_HeaderHovered]         = CHERRY_MED( 0.86f);
         style.Colors[ImGuiCol_HeaderActive]          = CHERRY_HI( 1.00f);
-        style.Colors[ImGuiCol_Column]                = ImVec4(0.14f, 0.16f, 0.19f, 1.00f);
-        style.Colors[ImGuiCol_ColumnHovered]         = CHERRY_MED( 0.78f);
-        style.Colors[ImGuiCol_ColumnActive]          = CHERRY_MED( 1.00f);
+        style.Colors[ImGuiCol_Separator]                = ImVec4(0.14f, 0.16f, 0.19f, 1.00f);
+        style.Colors[ImGuiCol_SeparatorHovered]         = CHERRY_MED( 0.78f);
+        style.Colors[ImGuiCol_SeparatorActive]          = CHERRY_MED( 1.00f);
         style.Colors[ImGuiCol_ResizeGrip]            = ImVec4(0.47f, 0.77f, 0.83f, 0.04f);
         style.Colors[ImGuiCol_ResizeGripHovered]     = CHERRY_MED( 0.78f);
         style.Colors[ImGuiCol_ResizeGripActive]      = CHERRY_MED( 1.00f);
@@ -1244,7 +1244,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
         style.Colors[ImGuiCol_PlotHistogramHovered]  = CHERRY_MED( 1.00f);
         style.Colors[ImGuiCol_TextSelectedBg]        = CHERRY_MED( 0.43f);
         // [...]
-        style.Colors[ImGuiCol_ModalWindowDarkening]  = CHERRY_BG( 0.73f);
+        style.Colors[ImGuiCol_ModalWindowDimBg]  = CHERRY_BG( 0.73f);
         style.Colors[ImGuiCol_Border] = ImVec4(0.539f, 0.479f, 0.255f, 0.162f);
 
 #       undef CHERRY_HI
@@ -1579,7 +1579,7 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
         style.Colors[ImGuiCol_PlotHistogram]          = white;
         style.Colors[ImGuiCol_PlotHistogramHovered]   = white;
         style.Colors[ImGuiCol_TextSelectedBg]         = black;
-        style.Colors[ImGuiCol_ModalWindowDarkening]   = black;
+        style.Colors[ImGuiCol_ModalWindowDimBg]       = black;
         style.Colors[ImGuiCol_DragDropTarget]         = yellow;
         style.Colors[ImGuiCol_NavHighlight]           = purple;
         style.Colors[ImGuiCol_NavWindowingHighlight]  = pink;

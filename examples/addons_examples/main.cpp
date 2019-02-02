@@ -627,7 +627,7 @@ void DrawGL()	// Mandatory
             // 4 - ChooseColorButton setup: (this does not seem to work as expected on Linux)
             //------------------------------------------------------------------------------------------
             static ImVec4 chosenColor(1,1,1,1);
-            ImGui::AlignFirstTextHeightToWidgets();ImGui::Text("Please choose a color:");ImGui::SameLine();
+            ImGui::AlignTextToFramePadding();ImGui::Text("Please choose a color:");ImGui::SameLine();
             ImGui::PushID(20);  // (I reuse ImGui::ColorButton(...) below without pushing any ID)
             if (ImGui::ColorButton("###MyColorButtonControl",chosenColor))    {
                 unsigned char aoResultRGB[3] = {(unsigned char)(chosenColor.x*255.f),(unsigned char)(chosenColor.y*255.f),(unsigned char)(chosenColor.z*255.f)};
@@ -1319,8 +1319,8 @@ void DrawGL()	// Mandatory
         ImGui::LoadingIndicatorCircle("MyLIC1");ImGui::SameLine();
         ImGui::TextUnformatted("Test 2:");ImGui::SameLine();
         ImGui::LoadingIndicatorCircle("MyLIC2",1.f,&ImGui::GetStyle().Colors[ImGuiCol_Header],&ImGui::GetStyle().Colors[ImGuiCol_HeaderHovered]);
-        ImGui::AlignFirstTextHeightToWidgets();ImGui::TextUnformatted("Test 3:");ImGui::SameLine();ImGui::LoadingIndicatorCircle("MyLIC3",2.0f);
-        ImGui::AlignFirstTextHeightToWidgets();ImGui::TextUnformatted("Test 4:");ImGui::SameLine();ImGui::LoadingIndicatorCircle("MyLIC4",4.0f,&ImGui::GetStyle().Colors[ImGuiCol_Header],&ImGui::GetStyle().Colors[ImGuiCol_HeaderHovered],12,2.f);
+        ImGui::AlignTextToFramePadding();ImGui::TextUnformatted("Test 3:");ImGui::SameLine();ImGui::LoadingIndicatorCircle("MyLIC3",2.0f);
+        ImGui::AlignTextToFramePadding();ImGui::TextUnformatted("Test 4:");ImGui::SameLine();ImGui::LoadingIndicatorCircle("MyLIC4",4.0f,&ImGui::GetStyle().Colors[ImGuiCol_Header],&ImGui::GetStyle().Colors[ImGuiCol_HeaderHovered],12,2.f);
         // No idea why AlignFirstTextHeightToWidgets() does not work...
 
 
@@ -1333,8 +1333,8 @@ void DrawGL()	// Mandatory
         ImGui::LoadingIndicatorCircle2("MyLIC21");ImGui::SameLine();
         ImGui::TextUnformatted("Test 2:");ImGui::SameLine();
         ImGui::LoadingIndicatorCircle2("MyLIC22",1.f,1.5f,&ImGui::GetStyle().Colors[ImGuiCol_Header]);
-        ImGui::AlignFirstTextHeightToWidgets();ImGui::TextUnformatted("Test 3:");ImGui::SameLine();ImGui::LoadingIndicatorCircle2("MyLIC23",2.0f);
-        ImGui::AlignFirstTextHeightToWidgets();ImGui::TextUnformatted("Test 4:");ImGui::SameLine();ImGui::LoadingIndicatorCircle2("MyLIC24",4.0f,1.f,&ImGui::GetStyle().Colors[ImGuiCol_Header]);
+        ImGui::AlignTextToFramePadding();ImGui::TextUnformatted("Test 3:");ImGui::SameLine();ImGui::LoadingIndicatorCircle2("MyLIC23",2.0f);
+        ImGui::AlignTextToFramePadding();ImGui::TextUnformatted("Test 4:");ImGui::SameLine();ImGui::LoadingIndicatorCircle2("MyLIC24",4.0f,1.f,&ImGui::GetStyle().Colors[ImGuiCol_Header]);
         // No idea why AlignFirstTextHeightToWidgets() does not work...
 
 
