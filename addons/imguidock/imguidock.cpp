@@ -819,7 +819,12 @@ struct DockContext
 
                 ImU32 tab_color;
                 if (IsItemHovered())
-                    tab_color = color_hovered;
+                {
+                    if (dock_tab->focus)
+                        tab_color = color_active;
+                    else
+                        tab_color = color_hovered;
+                }
                 else if (dock_tab->active)
                 {
                     if (dock_tab->focus)
