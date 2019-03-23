@@ -1214,7 +1214,6 @@ struct DockContext
     ImVec2 pos = dock.pos;
     ImVec2 size = dock.size;
 
-        // This flag is set, but it isn't used for anything yet.
         bool tab_clicked = false;
 
     if (draw_tabbar)
@@ -1240,6 +1239,12 @@ struct DockContext
 	strcat(tmp, "_docked"); // to avoid https://github.com/ocornut/imgui/issues/713
 	bool ret = BeginChild(tmp, size, true, flags);
 	PopStyleColor(2);
+
+        if (tab_clicked)
+        {
+            // Put focus on the actual dock contents.
+            FocusWindow(GImGui->CurrentWindow);
+        }
 
         dock.focus = IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
 
