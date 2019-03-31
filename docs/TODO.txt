@@ -25,7 +25,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: using SetWindowPos() inside Begin() and moving the window with the mouse reacts a very ugly glitch. We should just defer the SetWindowPos() call.
  - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
  - window: investigate better auto-positioning for new windows.
- - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate.
+ - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. -> this may require enforcing that it is illegal to submit contents if Begin returns false.
  - window/child: the first draw command of a child window could be moved into the current draw command of the parent window (unless child+tooltip?).
  - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
  - scrolling: while holding down a scrollbar, try to keep the same contents visible (at least while not moving mouse)
@@ -42,10 +42,11 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drawlist: would be good to be able to deep copy of ImDrawData (we have a deep copy of ImDrawList now).
  - drawlist: rendering: provide a way for imgui to output to a single/global vertex buffer, re-order indices only at the end of the frame (ref: https://gist.github.com/floooh/10388a0afbe08fce9e617d8aefa7d302)
  - drawlist: callback: add an extra void* in ImDrawCallback to allow passing render-local data to the callback (would break API).
+ - drawlist: AddRect vs AddLine position confusing (#2441)
  - drawlist/opt: store rounded corners in texture to use 1 quad per corner (filled and wireframe) to lower the cost of rounding. (#1962)
  - drawlist/opt: AddRect() axis aligned pixel aligned (no-aa) could use 8 triangles instead of 16 and no normal calculation.
+ - drawlist/opt: thick AA line could be doable in same number of triangles as 1.0 AA line by storing gradient+full color in atlas.
 
- - main: considering adding an Init() function? some constructs are awkward in the implementation because of the lack of them.
  - main: find a way to preserve relative orders of multiple reappearing windows (so an app toggling between "modes" e.g. fullscreen vs all tools) won't lose relative ordering.
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
@@ -54,11 +55,13 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc. (#395)
  - widgets: clean up widgets internal toward exposing everything and stabilizing imgui_internals.h.
  - widgets: add visuals for Disabled/ReadOnly mode and expose publicly (#211)
- - widgets: add always-allow-overlap mode.
+ - widgets: add always-allow-overlap mode. This should perhaps be the default.
  - widgets: start exposing PushItemFlag() and ImGuiItemFlags
  - widgets: alignment options in style (e.g. center Selectable, Right-Align within Button, etc.) #1260
  - widgets: activate by identifier (trigger button, focus given id)
  - widgets: a way to represent "mixed" values, so e.g. all values replaced with **, including check-boxes, colors, etc. with support for multi-components widgets (e.g. SliderFloat3, make only "Y" mixed)
+ - widgets: selectable: generic BeginSelectable()/EndSelectable() mechanism.
+ - widgets: selectable: a way to visualize partial/mixed selection (e.g. parent tree node has children with mixed selection)
 
  - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now and super fragile.
  - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
@@ -132,8 +135,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
  - tabs: persistent order/focus in BeginTabBar() api (#261, #351)
 
- - ext: stl-ish friendly extension (imgui_stl.h) that has wrapper for std::string, std::vector etc.
-
  - button: provide a button that looks framed. (?)
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
@@ -149,7 +150,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - knob: rotating knob widget (#942)
  - drag float: power/logarithmic slider and drags are weird. (#1316)
  - drag float: up/down axis
- - drag float: power != 0.0f with current value being outside the the range keeps the value stuck.
+ - drag float: power != 0.0f with current value being outside the range keeps the value stuck.
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
 
  - combo: use clipper: make it easier to disable clipper with a single flag.
@@ -304,10 +305,13 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - misc: idle: expose "woken up" boolean (set by inputs) and/or animation time (for cursor blink) for back-end to be able stop refreshing easily.
  - misc: idle: if cursor blink if the _only_ visible animation, core imgui could rewrite vertex alpha to avoid CPU pass on ImGui:: calls.
+ - misc: idle: if cursor blink if the _only_ visible animation, could even expose a dirty rectangle that optionally can be leverage by some app to render in a smaller viewport, getting rid of much pixel shading cost.
  - misc: make the ImGuiCond values linear (non-power-of-two). internal storage for ImGuiWindow can use integers to combine into flags (Why?)
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: PushItemFlag(): add a flag to disable keyboard capture when used with mouse? (#1682)
  - misc: use more size_t in public api?
+ - misc: possible compile-time support for string view/range instead of char* would e.g. facilitate usage with Rust (#683)
+ - misc: possible compile-time support for wchar_t instead of char*?
 
  - backend: bgfx? https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
  - web/emscriptem: refactor some examples to facilitate integration with emscripten main loop system. (#1713, #336)
@@ -315,7 +319,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - remote: make a system like RemoteImGui first-class citizen/project (#75)
 
- - demo: find a way to demonstrate textures in the examples application, as it such a a common issue for new users.
+ - demo: find a way to demonstrate textures in the examples application, as it such a common issue for new users.
  - demo: add vertical separator demo
  - demo: add virtual scrolling example?
  - demo: demonstrate Plot offset
@@ -323,6 +327,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - examples: provide a zero frame-rate/idle example.
  - examples: apple: example_apple should be using modern GL3.
  - examples: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // issue: DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
+ - examples: opengl: rename imgui_impl_opengl2 to impl_opengl_legacy and imgui_impl_opengl3 to imgui_impl_opengl? (#1900)
+ - examples: opengl: could use a single vertex buffer and glBufferSubData for uploads?
  - optimization: replace vsnprintf with stb_printf? or enable the defines/infrastructure to allow it (#1038)
  - optimization: add clipping for multi-component widgets (SliderFloatX, ColorEditX, etc.). one problem is that nav branch can't easily clip parent group when there is a move request.
  - optimization: add a flag to disable most of rendering, for the case where the user expect to skip it (#335)

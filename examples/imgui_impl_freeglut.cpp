@@ -1,8 +1,12 @@
 // dear imgui: Platform Binding for FreeGLUT
 // This needs to be used along with a Renderer (e.g. OpenGL2)
 
+// !!! GLUT IS OBSOLETE SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
+// !!! If someone or something is teaching you GLUT in 2019, you are being abused. Please show some resistance. !!!
+
 // Issues:
 //  [ ] Platform: GLUT is unable to distinguish e.g. Backspace from CTRL+H or TAB from CTRL+I
+//  [ ] Platform: Missing clipboard support (not supported by Glut).
 //  [ ] Platform: Missing gamepad support.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
@@ -11,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-03-25: Misc: Made io.DeltaTime always above zero.
 //  2018-11-30: Misc: Setting up io.BackendPlatformName so it can be displayed in the About Window.
 //  2018-03-22: Added FreeGLUT Platform binding.
 
@@ -79,7 +84,10 @@ void ImGui_ImplFreeGLUT_NewFrame()
     // Setup time step
     ImGuiIO& io = ImGui::GetIO();
     int current_time = glutGet(GLUT_ELAPSED_TIME);
-    io.DeltaTime = (current_time - g_Time) / 1000.0f;
+    int delta_time_ms = (current_time - g_Time);
+    if (delta_time_ms <= 0)
+        delta_time_ms = 1;
+    io.DeltaTime = delta_time_ms / 1000.0f;
     g_Time = current_time;
 
     // Start the frame
