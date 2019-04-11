@@ -129,7 +129,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
     // Update the Appearing flag
     bool window_just_activated_by_user = (window->LastFrameActive < current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
-    const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFramesForResize > 0);
+    const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFramesCannotSkipItems > 0);
     if (flags & ImGuiWindowFlags_Popup)
     {
         ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.BeginPopupStack.Size];
@@ -235,20 +235,20 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         // Update contents size from last frame for auto-fitting (or use explicit size)
         window->SizeContents = CalcSizeContents(window);
-        if (window->HiddenFramesRegular > 0)
-            window->HiddenFramesRegular--;
-        if (window->HiddenFramesForResize > 0)
-            window->HiddenFramesForResize--;
+        if (window->HiddenFramesCanSkipItems > 0)
+            window->HiddenFramesCanSkipItems--;
+        if (window->HiddenFramesCannotSkipItems > 0)
+            window->HiddenFramesCannotSkipItems--;
 
         // Hide new windows for one frame until they calculate their size
         if (window_just_created && (!window_size_x_set_by_api || !window_size_y_set_by_api))
-            window->HiddenFramesForResize = 1;
+            window->HiddenFramesCannotSkipItems = 1;
 
         // Hide popup/tooltip window when re-opening while we measure size (because we recycle the windows)
         // We reset Size/SizeContents for reappearing popups/tooltips early in this function, so further code won't be tempted to use the old size.
         if (window_just_activated_by_user && (flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0)
         {
-            window->HiddenFramesForResize = 1;
+            window->HiddenFramesCannotSkipItems = 1;
             if (flags & ImGuiWindowFlags_AlwaysAutoResize)
             {
                 if (!window_size_x_set_by_api)
@@ -335,7 +335,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         // Hide new windows for one frame until they calculate their size
         if (window_just_created && (!window_size_x_set_by_api || !window_size_y_set_by_api))
-            window->HiddenFramesForResize = 1;
+            window->HiddenFramesCannotSkipItems = 1;
 
         // Calculate auto-fit size, handle automatic resize
         const ImVec2 size_auto_fit = CalcSizeAutoFit(window, window->SizeContents);
@@ -410,7 +410,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         //if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api)
         //    window->Pos = window->PosFloat = parent_window->DC.CursorPos;
 
-        const bool window_pos_with_pivot = (window->SetWindowPosVal.x != FLT_MAX && window->HiddenFramesForResize == 0);
+        const bool window_pos_with_pivot = (window->SetWindowPosVal.x != FLT_MAX && window->HiddenFramesCannotSkipItems == 0);
         if (window_pos_with_pivot)
             SetWindowPos(window, ImMax(style.DisplaySafeAreaPadding, window->SetWindowPosVal - window->SizeFull * window->SetWindowPosPivot), 0); // Position given a pivot (e.g. for centering)
         else if ((flags & ImGuiWindowFlags_ChildMenu) != 0)
@@ -463,7 +463,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         }
 
         // Draw modal window background (darkens what is behind them, all viewports)
-        const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetFrontMostPopupModal() && window->HiddenFramesForResize <= 0;
+        const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetFrontMostPopupModal() && window->HiddenFramesCannotSkipItems <= 0;
         const bool dim_bg_for_window_list = g.NavWindowingTargetAnim && (window == g.NavWindowingTargetAnim->RootWindow);
         if (dim_bg_for_modal || dim_bg_for_window_list)
         {
@@ -534,9 +534,11 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 && pDraggingStarted && wd && (wd->dockPos != ImGui::PanelManager::BOTTOM || (flags & ImGuiWindowFlags_NoTitleBar))
             )
             {
+                // Top windows might have a scrollbar on the bottom, and left windows on the right; so we adjust the sizes in these cases to allow dragging scrollbars instead of resizing windows
+                const float resizeSizeBottomRight = gImGuiDockPanelManagerActiveResizeSize<=(style.ScrollbarSize*0.65f)?gImGuiDockPanelManagerActiveResizeSize:(style.ScrollbarSize*0.65f);
                 ImVec2 rectMin(0,0),rectMax(0,0);
                 if (wd->dockPos == ImGui::PanelManager::LEFT)   {
-                    rectMin = window->Rect().GetTR(); rectMin.x-=gImGuiDockPanelManagerActiveResizeSize;rectMin.y+=title_bar_rect.GetHeight();
+                    rectMin = window->Rect().GetTR(); rectMin.x-=resizeSizeBottomRight;rectMin.y+=title_bar_rect.GetHeight();
                     rectMax = window->Rect().GetBR();
                 }
                 else if (wd->dockPos == ImGui::PanelManager::RIGHT) {
@@ -544,7 +546,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                     rectMax = window->Rect().GetBL();rectMax.x+=gImGuiDockPanelManagerActiveResizeSize;
                 }
                 else if (wd->dockPos == ImGui::PanelManager::TOP) {
-                    rectMin = window->Rect().GetBL();rectMin.y-=gImGuiDockPanelManagerActiveResizeSize;
+                    rectMin = window->Rect().GetBL();rectMin.y-=resizeSizeBottomRight;
                     rectMax = window->Rect().GetBR();
                 }
                 else if (wd->dockPos == ImGui::PanelManager::BOTTOM) {
@@ -891,28 +893,31 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         */
         if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
             if (window->OuterRectClipped.Min.x >= window->OuterRectClipped.Max.x || window->OuterRectClipped.Min.y >= window->OuterRectClipped.Max.y)
-                window->HiddenFramesRegular = 1;
+                window->HiddenFramesCanSkipItems = 1;
 
         // Completely hide along with parent or if parent is collapsed
         if (parent_window && (parent_window->Collapsed || parent_window->Hidden))
-            window->HiddenFramesRegular = 1;
+            window->HiddenFramesCanSkipItems = 1;
 
     }
     // Don't render if style alpha is 0.0 at the time of Begin(). This is arbitrary and inconsistent but has been there for a long while (may remove at some point)
     if (style.Alpha <= 0.0f)
         //window->Active = false;
-        window->HiddenFramesRegular = 1;
+        window->HiddenFramesCanSkipItems = 1;
 
     // Update the Hidden flag
-    window->Hidden = (window->HiddenFramesRegular > 0) || (window->HiddenFramesForResize > 0);
+    window->Hidden = (window->HiddenFramesCanSkipItems > 0) || (window->HiddenFramesCannotSkipItems > 0);
 
-
-    // Return false if we don't intend to display anything to allow user to perform an early out optimization
-    window->SkipItems = (window->Collapsed || !window->Active || window->Hidden) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && window->HiddenFramesForResize <= 0;
+    // Update the SkipItems flag, used to early out of all items functions (no layout required)
+    bool skip_items = false;
+    if (window->Collapsed || !window->Active || window->Hidden)
+        if (window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && window->HiddenFramesCannotSkipItems <= 0)
+            skip_items = true;
+    window->SkipItems = skip_items;
 
     if (bg_alpha >= 0.0f) g.Style.Colors[bg_color_idx] = bg_color_backup;
 
-    return !window->SkipItems;
+    return !skip_items;
 }
 static void DockWindowEnd()
 {
