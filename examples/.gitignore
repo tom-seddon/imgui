@@ -31,6 +31,8 @@ xcuserdata
 ## Unix executables
 example_glfw_opengl2/example_glfw_opengl2
 example_glfw_opengl3/example_glfw_opengl3
+example_glut_opengl2/example_glut_opengl2
+example_null/example_null
 example_sdl_opengl2/example_sdl_opengl2
 example_sdl_opengl3/example_sdl_opengl3
 
