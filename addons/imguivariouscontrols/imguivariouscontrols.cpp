@@ -1629,6 +1629,8 @@ int PlotHistogram(const char* label, float (*values_getter)(void* data, int idx,
         for (int i = 0; i < values_count; i++)  {
             for (int h=0;h<num_histograms;h++)  {
                 const float v = values_getter(data, (i + values_offset) % values_count, h);
+                if (v != v) // Ignore NaN values
+                    continue;
                 v_min = ImMin(v_min, v);
                 v_max = ImMax(v_max, v);
             }

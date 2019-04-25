@@ -178,7 +178,9 @@ OTHER_FILES+= $$IMGUI_BASE_PATH"/addons/imgui_user.inl"				    \
 	   $$IMGUI_BASE_PATH"/addons/imguitabwindow/imguitabwindow.cpp"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguidock/imguidock.h"			    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imgui*.cpp"			    \
-	   README_FIRST.txt
+           $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguiimageeditor_plugins/*.h"   \
+           $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imguiimageeditor_plugins/*.cpp" \
+           README_FIRST.txt
 
 
 
