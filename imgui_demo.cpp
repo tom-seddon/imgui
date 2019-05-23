@@ -63,7 +63,7 @@ Index of this file:
 #ifdef _MSC_VER
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic ignored "-Wold-style-cast"             // warning : use of old-style cast                              // yes, they are more terse.
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"    // warning : 'xx' is deprecated: The POSIX name for this item.. // for strdup used in demo code (so user can copy & paste the code)
 #pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"   // warning : cast to 'void *' from smaller integer type 'int'
@@ -568,13 +568,20 @@ static void ShowDemoWindowWidgets()
         if (ImGui::TreeNode("Basic trees"))
         {
             for (int i = 0; i < 5; i++)
+            {
+                // Use SetNextItemOpen() so set the default state of a node to be open. 
+                // We could also use TreeNodeEx() with the ImGuiTreeNodeFlags_DefaultOpen flag to achieve the same thing!
+                if (i == 0)
+                    ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+
                 if (ImGui::TreeNode((void*)(intptr_t)i, "Child %d", i))
                 {
                     ImGui::Text("blah blah");
                     ImGui::SameLine();
-                    if (ImGui::SmallButton("button")) { };
+                    if (ImGui::SmallButton("button")) {};
                     ImGui::TreePop();
                 }
+            }
             ImGui::TreePop();
         }
 
@@ -1533,10 +1540,11 @@ static void ShowDemoWindowWidgets()
         ImGui::RadioButton("Checkbox", &item_type, 2);
         ImGui::RadioButton("SliderFloat", &item_type, 3);
         ImGui::RadioButton("InputText", &item_type, 4);
-        ImGui::RadioButton("ColorEdit4", &item_type, 5);
-        ImGui::RadioButton("MenuItem", &item_type, 6);
-        ImGui::RadioButton("TreeNode (w/ double-click)", &item_type, 7);
-        ImGui::RadioButton("ListBox", &item_type, 8);
+        ImGui::RadioButton("InputFloat3", &item_type, 5);
+        ImGui::RadioButton("ColorEdit4", &item_type, 6);
+        ImGui::RadioButton("MenuItem", &item_type, 7);
+        ImGui::RadioButton("TreeNode (w/ double-click)", &item_type, 8);
+        ImGui::RadioButton("ListBox", &item_type, 9);
         ImGui::Separator();
         bool ret = false;
         if (item_type == 0) { ImGui::Text("ITEM: Text"); }                                              // Testing text items with no identifier/interaction
@@ -1544,10 +1552,11 @@ static void ShowDemoWindowWidgets()
         if (item_type == 2) { ret = ImGui::Checkbox("ITEM: Checkbox", &b); }                            // Testing checkbox
         if (item_type == 3) { ret = ImGui::SliderFloat("ITEM: SliderFloat", &col4f[0], 0.0f, 1.0f); }   // Testing basic item
         if (item_type == 4) { ret = ImGui::InputText("ITEM: InputText", &str[0], IM_ARRAYSIZE(str)); }  // Testing input text (which handles tabbing)
-        if (item_type == 5) { ret = ImGui::ColorEdit4("ITEM: ColorEdit4", col4f); }                     // Testing multi-component items (IsItemXXX flags are reported merged)
-        if (item_type == 6) { ret = ImGui::MenuItem("ITEM: MenuItem"); }                                // Testing menu item (they use ImGuiButtonFlags_PressedOnRelease button policy)
-        if (item_type == 7) { ret = ImGui::TreeNodeEx("ITEM: TreeNode w/ ImGuiTreeNodeFlags_OpenOnDoubleClick", ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_NoTreePushOnOpen); } // Testing tree node with ImGuiButtonFlags_PressedOnDoubleClick button policy.
-        if (item_type == 8) { const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
+        if (item_type == 5) { ret = ImGui::InputFloat3("ITEM: InputFloat3", col4f); }                   // Testing multi-component items (IsItemXXX flags are reported merged)
+        if (item_type == 6) { ret = ImGui::ColorEdit4("ITEM: ColorEdit4", col4f); }                     // Testing multi-component items (IsItemXXX flags are reported merged)
+        if (item_type == 7) { ret = ImGui::MenuItem("ITEM: MenuItem"); }                                // Testing menu item (they use ImGuiButtonFlags_PressedOnRelease button policy)
+        if (item_type == 8) { ret = ImGui::TreeNodeEx("ITEM: TreeNode w/ ImGuiTreeNodeFlags_OpenOnDoubleClick", ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_NoTreePushOnOpen); } // Testing tree node with ImGuiButtonFlags_PressedOnDoubleClick button policy.
+        if (item_type == 9) { const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
         ImGui::BulletText(
             "Return value = %d\n"
             "IsItemFocused() = %d\n"
@@ -1627,6 +1636,9 @@ static void ShowDemoWindowWidgets()
         ImGui::EndChild();
         if (embed_all_inside_a_child_window)
             ImGui::EndChild();
+
+        static char dummy_str[] = "This is a dummy field to be able to tab-out of the widgets above.";
+        ImGui::InputText("dummy", dummy_str, IM_ARRAYSIZE(dummy_str), ImGuiInputTextFlags_ReadOnly);
 
         // Calling IsItemHovered() after begin returns the hovered status of the title bar.
         // This is useful in particular if you want to create a context menu (with BeginPopupContextItem) associated to the title bar of a window.
@@ -2044,14 +2056,17 @@ static void ShowDemoWindowLayout()
         bool scroll_to = ImGui::Button("Scroll To Pos");
         ImGui::SameLine(130); scroll_to |= ImGui::DragInt("##pos_y", &scroll_to_px, 1.00f, 0, 9999, "Y = %d px");
         ImGui::PopItemWidth();
-        if (scroll_to) track = false;
+        if (scroll_to) 
+            track = false;
 
+        ImGuiStyle& style = ImGui::GetStyle();
+        float child_w = (ImGui::GetContentRegionAvail().x - 4 * style.ItemSpacing.x) / 5;
         for (int i = 0; i < 5; i++)
         {
             if (i > 0) ImGui::SameLine();
             ImGui::BeginGroup();
             ImGui::Text("%s", i == 0 ? "Top" : i == 1 ? "25%" : i == 2 ? "Center" : i == 3 ? "75%" : "Bottom");
-            ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)i), ImVec2(ImGui::GetWindowWidth() * 0.17f, 200.0f), true);
+            ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)i), ImVec2(child_w, 200.0f), true);
             if (scroll_to)
                 ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + scroll_to_px, i * 0.25f);
             for (int line = 0; line < 100; line++)
@@ -2066,7 +2081,8 @@ static void ShowDemoWindowLayout()
                     ImGui::Text("Line %d", line);
                 }
             }
-            float scroll_y = ImGui::GetScrollY(), scroll_max_y = ImGui::GetScrollMaxY();
+            float scroll_y = ImGui::GetScrollY();
+            float scroll_max_y = ImGui::GetScrollMaxY();
             ImGui::EndChild();
             ImGui::Text("%.0f/%0.f", scroll_y, scroll_max_y);
             ImGui::EndGroup();
