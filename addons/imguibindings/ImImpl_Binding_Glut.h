@@ -123,7 +123,7 @@ static inline void GlutKeyboardUpDown(unsigned char key,int x,int y,bool down)  
 
     if ((int)key<512-specialCharMapAddend)   {
         io.KeysDown[key] = down;
-        if (down) io.AddInputCharacter(key);
+        if (down) io.AddInputCharacter((unsigned int)key);
     }
 }
 static void GlutKeyboard(unsigned char key,int x,int y)   {

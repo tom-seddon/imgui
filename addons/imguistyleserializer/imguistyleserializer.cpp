@@ -71,6 +71,7 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
     fprintf(f, "[WindowRounding]\n%1.3f\n", style.WindowRounding);
     fprintf(f, "[WindowBorderSize]\n%1.3f\n", style.WindowBorderSize);
     fprintf(f, "[WindowMinSize]\n%1.3f %1.3f\n", style.WindowMinSize.x,style.WindowMinSize.y);
+    fprintf(f, "[WindowMenuButtonPosition]\n%d\n", style.WindowMenuButtonPosition);
     fprintf(f, "[ChildRounding]\n%1.3f\n", style.ChildRounding);
     fprintf(f, "[ChildBorderSize]\n%1.3f\n", style.ChildBorderSize);
     fprintf(f, "[PopupRounding]\n%1.3f\n", style.PopupRounding);
@@ -176,7 +177,8 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
 		else if (strcmp(name, "WindowRounding")==0)		{npf=1;pf[0]=&style.WindowRounding;}
 		else if (strcmp(name, "WindowBorderSize")==0)		{npf=1;pf[0]=&style.WindowBorderSize;}
 		else if (strcmp(name, "WindowMinSize")==0)		{npf=2;pf[0]=&style.WindowMinSize.x;pf[1]=&style.WindowMinSize.y;}
-		else if (strcmp(name, "ChildRounding")==0 ||
+                else if (strcmp(name, "WindowMenuButtonPosition")==0)   {npi=1;pi[0]=&style.WindowMenuButtonPosition;}
+                else if (strcmp(name, "ChildRounding")==0 ||
 			 strcmp(name, "ChildWindowRounding")==0)	{npf=1;pf[0]=&style.ChildRounding;}
 		else if (strcmp(name, "ChildBorderSize")==0)		{npf=1;pf[0]=&style.ChildBorderSize;}
 		else if (strcmp(name, "PopupRounding")==0)		{npf=1;pf[0]=&style.PopupRounding;}

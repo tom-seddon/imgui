@@ -198,7 +198,7 @@ static void glfw_key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/,
     else if (key>=0 && key<512)  io.KeysDown[key] = down;
 }
 static void glfw_char_callback(GLFWwindow* /*window*/, unsigned int c)	{
-    if (c > 0 && c < 0x10000 && !ImGui::GetIO().KeyCtrl) ImGui::GetIO().AddInputCharacter((unsigned short)c);
+    if (c > 0 /*&& c < 0x10000*/ && !ImGui::GetIO().KeyCtrl) ImGui::GetIO().AddInputCharacter((unsigned int)c);
 }
 static void glfw_mouse_enter_leave_callback(GLFWwindow* /*window*/, int entered)	{
     if (entered==GL_FALSE) {

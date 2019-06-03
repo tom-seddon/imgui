@@ -112,7 +112,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     // ---------------------
     case WM_CHAR:
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
-        if (wParam>=0 && wParam<0x10000) io.AddInputCharacter((unsigned short)wParam);
+        if (wParam>=0 /*&& wParam<0x10000*/) io.AddInputCharacter((unsigned int)wParam);
         return 0;
     case WM_MOUSEMOVE:
         io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -FLT_MAX,-FLT_MAX if no mouse / on another screen, etc.)

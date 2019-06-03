@@ -898,7 +898,7 @@ void NodeGraphEditor::render()
 
                 bool nodeInEditMode = false;
                 ImGui::BeginGroup(); // Lock horizontal position
-                ImGui::SetNextTreeNodeOpen(node->isOpen,ImGuiCond_Always);
+                ImGui::SetNextItemOpen(node->isOpen,ImGuiCond_Always);
 
                 ImU32 titleTextColorU32 = 0, titleBgColorU32 = 0;float titleBgGradient = -1.f;
                 node->getDefaultTitleBarColors(titleTextColorU32,titleBgColorU32,titleBgGradient);

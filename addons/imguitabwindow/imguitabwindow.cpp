@@ -1171,7 +1171,7 @@ static bool TabButton(const char *label, bool selected, bool *pCloseButtonPresse
     else label_size = staticLabelSize;
 
     ImVec2 pos = window ? window->DC.CursorPos : ImVec2(0,0);
-    if ((flags & ImGuiButtonFlags_AlignTextBaseLine) && style.FramePadding.y < window->DC.CurrentLineTextBaseOffset)    pos.y += window->DC.CurrentLineTextBaseOffset - style.FramePadding.y;
+    if ((flags & ImGuiButtonFlags_AlignTextBaseLine) && style.FramePadding.y < window->DC.CurrLineTextBaseOffset)    pos.y += window->DC.CurrLineTextBaseOffset - style.FramePadding.y;
     ImVec2 size(label_size.x + (style.FramePadding.x+tabStyle.borderWidth) * 2.0f, label_size.y + (style.FramePadding.y+tabStyle.borderWidth) * 2.0f);
     float btnWidth = label_size.y*0.75f,btnSpacingX = label_size.y*0.25f;
     float extraWidthForBtn = hasCloseButton ? (btnSpacingX*2.f+btnWidth) : 0;
@@ -3310,7 +3310,7 @@ static bool TabButtonVertical(bool rotateCCW,const char *label, bool selected, b
     else label_size = staticLabelSize;
 
     ImVec2 pos = window ? window->DC.CursorPos : ImVec2(0,0);
-    if ((flags & ImGuiButtonFlags_AlignTextBaseLine) && style.FramePadding.y < window->DC.CurrentLineTextBaseOffset)    pos.y += window->DC.CurrentLineTextBaseOffset - style.FramePadding.y;
+    if ((flags & ImGuiButtonFlags_AlignTextBaseLine) && style.FramePadding.y < window->DC.CurrLineTextBaseOffset)    pos.y += window->DC.CurrLineTextBaseOffset - style.FramePadding.y;
     ImVec2 size(label_size.x + (style.FramePadding.x+tabStyle.borderWidth) * 2.0f, label_size.y + (style.FramePadding.y+tabStyle.borderWidth) * 2.0f);
 
     float btnSize = label_size.x*0.75f,btnSpacingY = label_size.x*0.25f;

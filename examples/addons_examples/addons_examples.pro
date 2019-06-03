@@ -89,7 +89,8 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/ImImpl_Binding_Direct3D9.h"	    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/imguibindings.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguibindings/stb_image.h"			    \
-	   $$IMGUI_BASE_PATH"/addons/imguibindings/imguistring/imguistring.h"	    \
+           $$IMGUI_BASE_PATH"/addons/imguibindings/edtaa3func.h"			    \
+           $$IMGUI_BASE_PATH"/addons/imguistring/imguistring.h"                     \
 	   $$IMGUI_BASE_PATH"/addons/imguifilesystem/imguifilesystem.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguifilesystem/dirent_portable.h"		    \
 	   $$IMGUI_BASE_PATH"/addons/imguilistview/imguilistview.h"		    \
@@ -111,7 +112,8 @@ SOURCES+=  $$IMGUI_BASE_PATH"/imgui.cpp" \
            $$IMGUI_BASE_PATH"/imgui_draw.cpp" #\
            #$$IMGUI_BASE_PATH"/imgui_widgets.cpp"
 
-OTHER_FILES+= $$IMGUI_BASE_PATH"/imgui_widgets.cpp" # This (new) file is automatically included in imgui_user.inl. Please don't compile it.
+OTHER_FILES+= $$IMGUI_BASE_PATH"/imgui_widgets.cpp" \ # This (new) file is automatically included in imgui_user.inl. Please don't compile it.
+              $$IMGUI_BASE_PATH"/misc/freetype/*.*"
 
 use_main6 {
 SOURCES+=main6.cpp

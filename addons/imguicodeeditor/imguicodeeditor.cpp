@@ -2653,7 +2653,7 @@ void CodeEditor::render()   {
                 }
                 const bool wasFolded = foldableLine->isFolded();
                 ImGui::PushStyleColor(ImGuiCol_Text,style.color_syntax_highlighting[sht]);
-                ImGui::SetNextTreeNodeOpen(!wasFolded,ImGuiCond_Always);
+                ImGui::SetNextItemOpen(!wasFolded,ImGuiCond_Always);
                 if (!ImGui::TreeNode(line,"%s",""))  {
                     if (!wasFolded)   {
                         // process next lines to make them visible someway
@@ -2715,7 +2715,7 @@ void CodeEditor::TextLineUnformattedWithSH(const char* text, const char* text_en
 
         // Account of baseline offset
         ImVec2 text_pos = window->DC.CursorPos;
-        text_pos.y += window->DC.CurrentLineTextBaseOffset;
+        text_pos.y += window->DC.CurrLineTextBaseOffset;
 
         // I would like to remove the call to CalcText(...) here (in "text_size"), and I could simply retrieve
         // bb.Min after the call to RenderTextLineWrappedWithSH(...) to calculate it for free...
@@ -3442,7 +3442,7 @@ static void MyTextLineUnformattedWithSH(const BadCodeEditorData& ceData,const ch
 
         // Account of baseline offset
         ImVec2 text_pos = window->DC.CursorPos;
-        text_pos.y += window->DC.CurrentLineTextBaseOffset;
+        text_pos.y += window->DC.CurrLineTextBaseOffset;
 
 
         const ImVec2 old_text_pos = text_pos;

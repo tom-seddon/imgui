@@ -132,7 +132,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFramesCannotSkipItems > 0);
     if (flags & ImGuiWindowFlags_Popup)
     {
-        ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.BeginPopupStack.Size];
+        ImGuiPopupData& popup_ref = g.OpenPopupStack[g.BeginPopupStack.Size];
         window_just_activated_by_user |= (window->PopupId != popup_ref.PopupId); // We recycle popups so treat window as activated if popup id changed
         window_just_activated_by_user |= (window != popup_ref.Window);
     }
@@ -146,7 +146,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     CheckStacksSize(window, true);
     if (flags & ImGuiWindowFlags_Popup)
     {
-        ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.BeginPopupStack.Size];
+        ImGuiPopupData& popup_ref = g.OpenPopupStack[g.BeginPopupStack.Size];
         popup_ref.Window = window;
         g.BeginPopupStack.push_back(popup_ref);
         window->PopupId = popup_ref.PopupId;
@@ -158,7 +158,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     // Process SetNextWindow***() calls
     bool window_pos_set_by_api = false;
     bool window_size_x_set_by_api = false, window_size_y_set_by_api = false;
-    if (g.NextWindowData.PosCond)
+    if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasPos)
     {
         window_pos_set_by_api = (window->SetWindowPosAllowFlags & g.NextWindowData.PosCond) != 0;
         if (window_pos_set_by_api && ImLengthSqr(g.NextWindowData.PosPivotVal) > 0.00001f)
@@ -174,16 +174,16 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             SetWindowPos(window, g.NextWindowData.PosVal, g.NextWindowData.PosCond);
         }
     }
-    if (g.NextWindowData.SizeCond)
+    if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasSize)
     {
         window_size_x_set_by_api = (window->SetWindowSizeAllowFlags & g.NextWindowData.SizeCond) != 0 && (g.NextWindowData.SizeVal.x > 0.0f);
         window_size_y_set_by_api = (window->SetWindowSizeAllowFlags & g.NextWindowData.SizeCond) != 0 && (g.NextWindowData.SizeVal.y > 0.0f);
         SetWindowSize(window, g.NextWindowData.SizeVal, g.NextWindowData.SizeCond);
     }
-    if (g.NextWindowData.ContentSizeCond)
+    if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasContentSize)
     {
         // Adjust passed "client size" to become a "window size"
-        window->SizeContentsExplicit = g.NextWindowData.SizeVal;
+        window->SizeContentsExplicit = g.NextWindowData.ContentSizeVal;
         if (window->SizeContentsExplicit.y != 0.0f)
             window->SizeContentsExplicit.y += window->TitleBarHeight() + window->MenuBarHeight();
     }
@@ -191,9 +191,9 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     {
         window->SizeContentsExplicit = ImVec2(0.0f, 0.0f);
     }
-    if (g.NextWindowData.CollapsedCond)
+    if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasCollapsed)
         SetWindowCollapsed(window, g.NextWindowData.CollapsedVal, g.NextWindowData.CollapsedCond);
-    if (g.NextWindowData.FocusCond)
+    if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasFocus)
         FocusWindow(window);
     if (window->Appearing)
         SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, false);
@@ -602,13 +602,12 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             {
                 ImU32 bg_col = GetColorU32(GetWindowBgColorIdxFromFlags(flags));
                 float alpha = 1.0f;
-                if (g.NextWindowData.BgAlphaCond != 0)
+                if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasBgAlpha)
                     alpha = g.NextWindowData.BgAlphaVal;
                 if (alpha != 1.0f)
                     bg_col = (bg_col & ~IM_COL32_A_MASK) | (IM_F32_TO_INT8_SAT(alpha) << IM_COL32_A_SHIFT);
                 window->DrawList->AddRectFilled(window->Pos + ImVec2(0, window->TitleBarHeight()), window->Pos + window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImDrawCornerFlags_All : ImDrawCornerFlags_Bot);
             }
-            g.NextWindowData.BgAlphaCond = 0;
 
 
             // Title bar
@@ -714,8 +713,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->DC.CursorPos = window->DC.CursorStartPos;
         window->DC.CursorPosPrevLine = window->DC.CursorPos;
         window->DC.CursorMaxPos = window->DC.CursorStartPos;
-        window->DC.CurrentLineSize = window->DC.PrevLineSize = ImVec2(0.0f, 0.0f);
-        window->DC.CurrentLineTextBaseOffset = window->DC.PrevLineTextBaseOffset = 0.0f;
+        window->DC.CurrLineSize = window->DC.PrevLineSize = ImVec2(0.0f, 0.0f);
+        window->DC.CurrLineTextBaseOffset = window->DC.PrevLineTextBaseOffset = 0.0f;
         window->DC.NavHideHighlightOneFrame = false;
         window->DC.NavHasScroll = (GetScrollMaxY() > 0.0f);
         window->DC.NavLayerActiveMask = window->DC.NavLayerActiveMaskNext;
@@ -769,9 +768,24 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 //const float pad = 2.0f;
                 //const float rad = (window->TitleBarHeight() - pad*2.0f) * 0.5f;
                 //const bool pressed = CloseButton(window->GetID("#CLOSE"), window->Rect().GetTR() + ImVec2(-pad - rad, pad + rad), rad);
-                const float pad = style.FramePadding.y;
-                const float rad = g.FontSize * 0.5f;
-                const bool pressed = CloseButton(window->GetID("#CLOSE"), window->Rect().GetTR() + ImVec2(-pad - rad, pad + rad), rad + 1);
+
+                // OLD CODE:
+                //const float pad = style.FramePadding.y;
+                //const float rad = g.FontSize * 0.5f;
+                //const bool pressed = CloseButton(window->GetID("#CLOSE"), window->Rect().GetTR() + ImVec2(-pad - rad, pad + rad), rad + 1);
+
+                // NEW CODE:
+                const float pad = style.FramePadding.x*2.f;
+                const float button_sz = g.FontSize;
+                const bool pressed = CloseButton(window->GetID("#CLOSE"), window->Rect().GetTR() - ImVec2(pad+button_sz,0));
+
+                // Example of switch beetween old and new code (to keep as a reference):-------
+                //const float rad = g.FontSize * 0.5f;
+                //if (CloseButton(window->GetID("#CLOSE"), ImVec2(window->Pos.x + window->Size.x - style.FramePadding.x - rad, window->Pos.y + style.FramePadding.y + rad), rad + 1))
+                //const float button_sz = g.FontSize;
+                //if (CloseButton(window->GetID("#CLOSE"), ImVec2(window->Pos.x + window->Size.x - style.FramePadding.x * 2.0f - button_sz, window->Pos.y)))
+                //-----------------------------------------------------------------------------
+
                 if (p_opened != NULL && pressed) *p_opened = false;
                 *p_opened = pressed;    // Bad but safer
             }
@@ -844,10 +858,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         // Inner rectangle
         // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
         // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
-        window->InnerMainRect.Min.x = title_bar_rect.Min.x;
-        window->InnerMainRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight();
-        window->InnerMainRect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x;
-        window->InnerMainRect.Max.y = window->Pos.y + window->Size.y - window->ScrollbarSizes.y;
+        window->InnerRect.Min.x = title_bar_rect.Min.x;
+        window->InnerRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight();
+        window->InnerRect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x;
+        window->InnerRect.Max.y = window->Pos.y + window->Size.y - window->ScrollbarSizes.y;
         //window->DrawList->AddRect(window->InnerRect.Min, window->InnerRect.Max, IM_COL32_WHITE);
 
         // We fill last item data based on Title Bar, in order for IsItemHovered() and IsItemActive() to be usable after Begin().
@@ -861,10 +875,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     // Force round operator last to ensure that e.g. (int)(max.x-min.x) in user's render code produce correct result.
     const float border_size = window->WindowBorderSize;
     ImRect clip_rect;
-    clip_rect.Min.x = ImFloor(0.5f + window->InnerMainRect.Min.x + ImMax(0.0f, ImFloor(window->WindowPadding.x*0.5f - border_size)));
-    clip_rect.Min.y = ImFloor(0.5f + window->InnerMainRect.Min.y);
-    clip_rect.Max.x = ImFloor(0.5f + window->InnerMainRect.Max.x - ImMax(0.0f, ImFloor(window->WindowPadding.x*0.5f - border_size)));
-    clip_rect.Max.y = ImFloor(0.5f + window->InnerMainRect.Max.y);
+    clip_rect.Min.x = ImFloor(0.5f + window->InnerRect.Min.x + ImMax(0.0f, ImFloor(window->WindowPadding.x*0.5f - border_size)));
+    clip_rect.Min.y = ImFloor(0.5f + window->InnerRect.Min.y);
+    clip_rect.Max.x = ImFloor(0.5f + window->InnerRect.Max.x - ImMax(0.0f, ImFloor(window->WindowPadding.x*0.5f - border_size)));
+    clip_rect.Max.y = ImFloor(0.5f + window->InnerRect.Max.y);
     PushClipRect(clip_rect.Min, clip_rect.Max, true);
 
     // Clear 'accessed' flag last thing
@@ -872,7 +886,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->WriteAccessed = false;
 
     window->BeginCount++;
-    g.NextWindowData.Clear();
+    g.NextWindowData.ClearFlags();
 
     if (flags & ImGuiWindowFlags_ChildWindow)
     {
