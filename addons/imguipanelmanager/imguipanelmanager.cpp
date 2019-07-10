@@ -181,16 +181,9 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         SetWindowSize(window, g.NextWindowData.SizeVal, g.NextWindowData.SizeCond);
     }
     if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasContentSize)
-    {
-        // Adjust passed "client size" to become a "window size"
-        window->SizeContentsExplicit = g.NextWindowData.ContentSizeVal;
-        if (window->SizeContentsExplicit.y != 0.0f)
-            window->SizeContentsExplicit.y += window->TitleBarHeight() + window->MenuBarHeight();
-    }
+        window->ContentSizeExplicit = g.NextWindowData.ContentSizeVal;
     else if (first_begin_of_the_frame)
-    {
-        window->SizeContentsExplicit = ImVec2(0.0f, 0.0f);
-    }
+        window->ContentSizeExplicit = ImVec2(0.0f, 0.0f);
     if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasCollapsed)
         SetWindowCollapsed(window, g.NextWindowData.CollapsedVal, g.NextWindowData.CollapsedCond);
     if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasFocus)
@@ -234,7 +227,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         // UPDATE CONTENTS SIZE, UPDATE HIDDEN STATUS
 
         // Update contents size from last frame for auto-fitting (or use explicit size)
-        window->SizeContents = CalcSizeContents(window);
+        window->ContentSize = CalcContentSize(window);
         if (window->HiddenFramesCanSkipItems > 0)
             window->HiddenFramesCanSkipItems--;
         if (window->HiddenFramesCannotSkipItems > 0)
@@ -245,7 +238,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             window->HiddenFramesCannotSkipItems = 1;
 
         // Hide popup/tooltip window when re-opening while we measure size (because we recycle the windows)
-        // We reset Size/SizeContents for reappearing popups/tooltips early in this function, so further code won't be tempted to use the old size.
+        // We reset Size/ContentSize for reappearing popups/tooltips early in this function, so further code won't be tempted to use the old size.
         if (window_just_activated_by_user && (flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0)
         {
             window->HiddenFramesCannotSkipItems = 1;
@@ -255,12 +248,35 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                     window->Size.x = window->SizeFull.x = 0.f;
                 if (!window_size_y_set_by_api)
                     window->Size.y = window->SizeFull.y = 0.f;
-                window->SizeContents = ImVec2(0.f, 0.f);
+                window->ContentSize = ImVec2(0.f, 0.f);
             }
         }
 
         SetCurrentWindow(window);
 
+        // LOCK BORDER SIZE AND PADDING FOR THE FRAME (so that altering them doesn't cause inconsistencies)
+
+        if (flags & ImGuiWindowFlags_ChildWindow)
+            window->WindowBorderSize = style.ChildBorderSize;
+        else
+            window->WindowBorderSize = ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupBorderSize : style.WindowBorderSize;
+        window->WindowPadding = style.WindowPadding;
+        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_Popup)) && window->WindowBorderSize == 0.0f)
+            window->WindowPadding = ImVec2(0.0f, (flags & ImGuiWindowFlags_MenuBar) ? style.WindowPadding.y : 0.0f);
+        window->DC.MenuBarOffset.x = ImMax(ImMax(window->WindowPadding.x, style.ItemSpacing.x), g.NextWindowData.MenuBarOffsetMinVal.x);
+        window->DC.MenuBarOffset.y = g.NextWindowData.MenuBarOffsetMinVal.y;
+
+        // SCROLLING
+
+        // Lock down maximum scrolling
+        // The value of ScrollMax are ahead from ScrollbarX/ScrollbarY which is intentionally using InnerRect from previous rect in order to accommodate
+        // for right/bottom aligned items without creating a scrollbar.
+        window->ScrollMax.x = ImMax(0.0f, window->ContentSize.x + window->WindowPadding.x * 2.0f - window->InnerRect.GetWidth());
+        window->ScrollMax.y = ImMax(0.0f, window->ContentSize.y + window->WindowPadding.y * 2.0f - window->InnerRect.GetHeight());
+
+        // Apply scrolling
+        window->Scroll = CalcNextScrollFromScrollTargetAndClamp(window, true);
+        window->ScrollTarget = ImVec2(FLT_MAX, FLT_MAX);
 
         // Setup draw list and outer clipping rectangle
         window->DrawList->Clear();
@@ -323,13 +339,6 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         }
         //else window->Collapsed = false;
 
-
-        window->WindowBorderSize = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildBorderSize : ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupBorderSize : style.WindowBorderSize;
-        window->WindowPadding = style.WindowPadding;
-        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_Popup)) && window->WindowBorderSize == 0.0f)
-            window->WindowPadding = ImVec2(0.0f, (flags & ImGuiWindowFlags_MenuBar) ? style.WindowPadding.y : 0.0f);
-        window->DC.MenuBarOffset.x = ImMax(ImMax(window->WindowPadding.x, style.ItemSpacing.x), g.NextWindowData.MenuBarOffsetMinVal.x);
-        window->DC.MenuBarOffset.y = g.NextWindowData.MenuBarOffsetMinVal.y;
         const float window_rounding = window->WindowRounding;
         const float window_border_size = window->WindowBorderSize;
 
@@ -338,7 +347,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             window->HiddenFramesCannotSkipItems = 1;
 
         // Calculate auto-fit size, handle automatic resize
-        const ImVec2 size_auto_fit = CalcSizeAutoFit(window, window->SizeContents);
+        const ImVec2 size_auto_fit = CalcSizeAutoFit(window, window->ContentSize);
         ImVec2 size_full_modified(FLT_MAX, FLT_MAX);
         if ((flags & ImGuiWindowFlags_AlwaysAutoResize) && !window->Collapsed)
         {
@@ -370,23 +379,6 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         }*/
         window->Size = window->Collapsed && !(flags & ImGuiWindowFlags_ChildWindow) ? window->TitleBarRect().GetSize() : window->SizeFull;
 
-        // SCROLLBAR STATUS
-
-        // Update scrollbar status (based on the Size that was effective during last frame or the auto-resized Size).
-        if (!window->Collapsed)
-        {
-            // When reading the current size we need to read it after size constraints have been applied
-            float size_x_for_scrollbars = size_full_modified.x != FLT_MAX ? window->SizeFull.x : window->SizeFullAtLastBegin.x;
-            float size_y_for_scrollbars = size_full_modified.y != FLT_MAX ? window->SizeFull.y : window->SizeFullAtLastBegin.y;
-            window->ScrollbarY = (flags & ImGuiWindowFlags_AlwaysVerticalScrollbar) || ((window->SizeContents.y > size_y_for_scrollbars) && !(flags & ImGuiWindowFlags_NoScrollbar));
-            //window->ScrollbarX = (flags & ImGuiWindowFlags_AlwaysHorizontalScrollbar) || ((window->SizeContents.x > size_x_for_scrollbars - (window->ScrollbarY ? style.ScrollbarSize : 0.0f) - window->WindowPadding.x) && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar));
-            window->ScrollbarX = (flags & ImGuiWindowFlags_AlwaysHorizontalScrollbar) || ((window->SizeContents.x > size_x_for_scrollbars - (window->ScrollbarY ? style.ScrollbarSize : 0.0f)) && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar));
-            if (window->ScrollbarX && !window->ScrollbarY)  {
-                //window->ScrollbarY = (window->SizeContents.y > size_y_for_scrollbars + style.ScrollbarSize) && !(flags & ImGuiWindowFlags_NoScrollbar);
-                window->ScrollbarY = (window->SizeContents.y > size_y_for_scrollbars - style.ScrollbarSize) && !(flags & ImGuiWindowFlags_NoScrollbar);
-            }
-            window->ScrollbarSizes = ImVec2(window->ScrollbarY ? style.ScrollbarSize : 0.0f, window->ScrollbarX ? style.ScrollbarSize : 0.0f);
-        }
 
         // POSITION
 
@@ -433,11 +425,33 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         }
         window->Pos = ImFloor(window->Pos);
 
+
+        // SCROLLBAR VISIBILITY
+
+        // Update scrollbar status (based on the Size that was effective during last frame or the auto-resized Size).
+        if (!window->Collapsed)
+        {
+            // When reading the current size we need to read it after size constraints have been applied.
+            // When we use InnerRect here we are intentionally reading last frame size, same for ScrollbarSizes values before we set them again.
+            ImVec2 avail_size_from_current_frame = ImVec2(window->SizeFull.x, window->SizeFull.y - window->TitleBarHeight() - window->MenuBarHeight());
+            ImVec2 avail_size_from_last_frame = window->InnerRect.GetSize() + window->ScrollbarSizes;
+            ImVec2 needed_size_from_last_frame = window_just_created ? ImVec2(0,0) : window->ContentSize + window->WindowPadding * 2.0f;
+            float size_x_for_scrollbars = (size_full_modified.x != FLT_MAX || window_just_created) ? avail_size_from_current_frame.x : avail_size_from_last_frame.x;
+            float size_y_for_scrollbars = (size_full_modified.y != FLT_MAX || window_just_created) ? avail_size_from_current_frame.y : avail_size_from_last_frame.y;
+            window->ScrollbarY = (flags & ImGuiWindowFlags_AlwaysVerticalScrollbar) || ((needed_size_from_last_frame.y > size_y_for_scrollbars) && !(flags & ImGuiWindowFlags_NoScrollbar));
+            window->ScrollbarX = (flags & ImGuiWindowFlags_AlwaysHorizontalScrollbar) || ((needed_size_from_last_frame.x > size_x_for_scrollbars - (window->ScrollbarY ? style.ScrollbarSize : 0.0f)) && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar));
+            if (window->ScrollbarX && !window->ScrollbarY)
+                window->ScrollbarY = (needed_size_from_last_frame.y > size_y_for_scrollbars) && !(flags & ImGuiWindowFlags_NoScrollbar);
+            window->ScrollbarSizes = ImVec2(window->ScrollbarY ? style.ScrollbarSize : 0.0f, window->ScrollbarX ? style.ScrollbarSize : 0.0f);
+        }
+
+
         // Default item width. Make it proportional to window size if window manually resizes
         if (window->Size.x > 0.0f && !(flags & ImGuiWindowFlags_Tooltip) && !(flags & ImGuiWindowFlags_AlwaysAutoResize))
             window->ItemWidthDefault = (float)(int)(window->Size.x * 0.65f);
         else
             window->ItemWidthDefault = (float)(int)(g.FontSize * 16.0f);
+
 
         // Lock window rounding for the frame (so that altering them doesn't cause inconsistencies)
         window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
@@ -447,10 +461,6 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->FocusIdxTabRequestCurrent = (window->FocusIdxTabRequestNext == INT_MAX || window->FocusIdxTabCounter == -1) ? INT_MAX : (window->FocusIdxTabRequestNext + (window->FocusIdxTabCounter+1)) % (window->FocusIdxTabCounter+1);
         window->FocusIdxAllCounter = window->FocusIdxTabCounter = -1;
         window->FocusIdxAllRequestNext = window->FocusIdxTabRequestNext = INT_MAX;*/
-
-        // Apply scrolling
-        window->Scroll = CalcNextScrollFromScrollTargetAndClamp(window, true);
-        window->ScrollTarget = ImVec2(FLT_MAX, FLT_MAX);
 
         // Apply window focus (new and reactivated windows are moved to front)
         bool want_focus = false;
@@ -463,7 +473,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         }
 
         // Draw modal window background (darkens what is behind them, all viewports)
-        const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetFrontMostPopupModal() && window->HiddenFramesCannotSkipItems <= 0;
+        const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetTopMostPopupModal() && window->HiddenFramesCannotSkipItems <= 0;
         const bool dim_bg_for_window_list = g.NavWindowingTargetAnim && (window == g.NavWindowingTargetAnim->RootWindow);
         if (dim_bg_for_modal || dim_bg_for_window_list)
         {
@@ -695,14 +705,11 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), rounding, ~0, 3.0f);
         }
 
-        // Store a backup of SizeFull which we will use next frame to decide if we need scrollbars.
-        window->SizeFullAtLastBegin = window->SizeFull;
-
         // Update ContentsRegionMax. All the variable it depends on are set above in this function.
         window->ContentsRegionRect.Min.x = -window->Scroll.x + window->WindowPadding.x;
         window->ContentsRegionRect.Min.y = -window->Scroll.y + window->WindowPadding.y + window->TitleBarHeight() + window->MenuBarHeight();
-        window->ContentsRegionRect.Max.x = -window->Scroll.x - window->WindowPadding.x + (window->SizeContentsExplicit.x != 0.0f ? window->SizeContentsExplicit.x : (window->Size.x - window->ScrollbarSizes.x));
-        window->ContentsRegionRect.Max.y = -window->Scroll.y - window->WindowPadding.y + (window->SizeContentsExplicit.y != 0.0f ? window->SizeContentsExplicit.y : (window->Size.y - window->ScrollbarSizes.y));
+        window->ContentsRegionRect.Max.x = -window->Scroll.x - window->WindowPadding.x + (window->ContentSizeExplicit.x != 0.0f ? window->ContentSizeExplicit.x : (window->Size.x - window->ScrollbarSizes.x));
+        window->ContentsRegionRect.Max.y = -window->Scroll.y - window->WindowPadding.y + (window->ContentSizeExplicit.y != 0.0f ? window->ContentSizeExplicit.y : (window->Size.y - window->ScrollbarSizes.y));
 
         // Setup drawing context
         // (NB: That term "drawing context / DC" lost its meaning a long time ago. Initially was meant to hold transient data only. Nowadays difference between window-> and window->DC-> is dubious.)
@@ -716,7 +723,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->DC.CurrLineSize = window->DC.PrevLineSize = ImVec2(0.0f, 0.0f);
         window->DC.CurrLineTextBaseOffset = window->DC.PrevLineTextBaseOffset = 0.0f;
         window->DC.NavHideHighlightOneFrame = false;
-        window->DC.NavHasScroll = (GetScrollMaxY() > 0.0f);
+        window->DC.NavHasScroll = (window->ScrollMax.y > 0.0f);
         window->DC.NavLayerActiveMask = window->DC.NavLayerActiveMaskNext;
         window->DC.NavLayerActiveMaskNext = 0x00;
         window->DC.MenuBarAppending = false;
@@ -800,7 +807,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             // Title bar text (FIXME: refactor text alignment facilities along with RenderText helpers)
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
             if (!(flags & ImGuiWindowFlags_NoCollapse))
-                RenderArrow(window->Pos + style.FramePadding, window->Collapsed ? ImGuiDir_Right : ImGuiDir_Down, 1.0f);
+                RenderArrow(window->DrawList,window->Pos + style.FramePadding, window->Collapsed ? ImGuiDir_Right : ImGuiDir_Down, 1.0f);
 
             ImVec2 text_min = window->Pos;
             ImVec2 text_max = window->Pos + ImVec2(window->Size.x, style.FramePadding.y*2 + text_size.y);
@@ -910,8 +917,14 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 window->HiddenFramesCanSkipItems = 1;
 
         // Completely hide along with parent or if parent is collapsed
-        if (parent_window && (parent_window->Collapsed || parent_window->Hidden))
+        //if (parent_window && (parent_window->Collapsed || parent_window->Hidden))
+            //window->HiddenFramesCanSkipItems = 1;
+
+        // Hide along with parent or if parent is collapsed
+        if (parent_window && (parent_window->Collapsed || parent_window->HiddenFramesCanSkipItems > 0))
             window->HiddenFramesCanSkipItems = 1;
+        if (parent_window && (parent_window->Collapsed || parent_window->HiddenFramesCannotSkipItems > 0))
+            window->HiddenFramesCannotSkipItems = 1;
 
     }
     // Don't render if style alpha is 0.0 at the time of Begin(). This is arbitrary and inconsistent but has been there for a long while (may remove at some point)

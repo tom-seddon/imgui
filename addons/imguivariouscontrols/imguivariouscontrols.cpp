@@ -558,7 +558,7 @@ bool ColorCombo(const char* label,ImVec4 *pColorOut,bool supportsAlpha,float wid
                 true, style.FrameRounding);
 
     RenderFrame(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y), frame_bb.Max, GetColorU32(hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button), true, style.FrameRounding); // FIXME-ROUNDING
-    RenderArrow(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y) + style.FramePadding, ImGuiDir_Down);
+    RenderArrow(window->DrawList,ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y) + style.FramePadding,GetColorU32(ImGuiCol_Text), ImGuiDir_Down);
 
     RenderTextClipped(ImVec2(frame_bb.Min.x+color_quad_size,frame_bb.Min.y) + style.FramePadding, value_bb.Max, label, NULL, NULL);
 
