@@ -723,43 +723,30 @@ void NodeGraphEditor::render()
             ImGuiContext& g = *GImGui;
             ImGuiWindow* window = ImGui::GetCurrentWindow();
 
-            // New: to ensure font scaling in subchilds of the nodes too, we MUST track g.Font->Scale,
-            // instead of ImGui::GetCurrentWindow()->FontWindowScale.
-	    // Note that this change could break io.FontAllowUserScaling==true (To test, but it didn't work as expacted anyway)
-            float oldFontScaleToReset = g.Font->Scale;      // We'll clean up at the bottom
-            float fontScaleStored = oldFontWindowScale ? oldFontWindowScale : oldFontScaleToReset;
-            float& fontScaleToTrack = g.Font->Scale;
+            const float windowFontScaleToReset = window->FontWindowScale;
+            if (windowFontScale!=0.f) SetWindowFontScale(windowFontScale);
 
             if (!io.FontAllowUserScaling)   {
-                // Set the correct font scale (3 lines)
-                fontScaleToTrack = fontScaleStored;
-                g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize;
-                g.FontSize = window->CalcFontSize();
-
-                if (io.KeyCtrl && ImGui::GetCurrentWindow()==GImGui->HoveredWindow && (io.MouseWheel || io.MouseClicked[2]))   {
+                if (io.KeyCtrl && ImGui::GetCurrentWindow()==GImGui->HoveredWindow && (io.MouseWheel || io.MouseClicked[2]) && windowFontScale>0.f)   {
                     // Zoom / Scale window
-                    float new_font_scale = ImClamp(fontScaleToTrack + g.IO.MouseWheel * 0.075f, 0.50f, 2.50f);
-                    if (io.MouseClicked[2]) new_font_scale = 1.f;   // MMB = RESET ZOOM
-                    float scale = new_font_scale/fontScaleToTrack;
-                    if (scale!=1)	{
-                        scrolling=scrolling*scale;
-                        // Set the correct font scale (3 lines), and store it
-                        fontScaleStored = fontScaleToTrack = new_font_scale;
-                        g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize;
-                        g.FontSize = window->CalcFontSize();
-                    }
+                    float newWindowFontScale = ImClamp(windowFontScale + g.IO.MouseWheel * 0.075f, 0.50f, 2.50f);
+                    if (io.MouseClicked[2]) newWindowFontScale = 1.f;   // MMB = RESET ZOOM
+                    float scalingDelta = newWindowFontScale/windowFontScale;
+                    scrolling=scrolling*scalingDelta;
+                    windowFontScale=newWindowFontScale;
+                    SetWindowFontScale(windowFontScale);
                 }
             }
 
             // fixes zooming just a bit
             bool nodesHaveZeroSize = false;
-            const float currentFontWindowScale = !io.FontAllowUserScaling ? fontScaleStored : ImGui::GetCurrentWindow()->FontWindowScale;
-            if (oldFontWindowScale==0.f) {
-                oldFontWindowScale = currentFontWindowScale;
+            const float currentFontWindowScale = window->FontWindowScale;
+            if (windowFontScale==0.f) {
+                windowFontScale = currentFontWindowScale;
                 nodesHaveZeroSize = true;   // at start or after clear()
                 scrolling = ImGui::GetWindowSize()*.5f;
             }
-            else if (oldFontWindowScale!=currentFontWindowScale) {
+            else if (windowFontScale!=currentFontWindowScale) {
                 nodesHaveZeroSize = true;
                 for (int i=0,isz=nodes.size();i<isz;i++)    {
                     Node* node = nodes[i];
@@ -767,8 +754,10 @@ void NodeGraphEditor::render()
                 }
                 // These two lines makes the scaling work around the mouse position AFAICS
                 if (io.FontAllowUserScaling)	{
+                    // UNTESTED BRANCH!
                     const ImVec2 delta = (io.MousePos-ImGui::GetCursorScreenPos());//-ImGui::GetWindowSize()*.5f));
-                    scrolling+=(delta*currentFontWindowScale-delta*oldFontWindowScale)/currentFontWindowScale;
+                    scrolling+=(delta*currentFontWindowScale-delta*windowFontScale)/currentFontWindowScale;
+                    // Code removed
                     /*ImGuiWindow* window = ImGui::GetCurrentWindow();
         float scale = currentFontWindowScale / oldFontWindowScale;
         ImVec2 oldWindowSize = window->Size/scale;
@@ -776,7 +765,7 @@ void NodeGraphEditor::render()
         */
                     //------------------------------------------------------------------------
                 }
-                oldFontWindowScale = currentFontWindowScale;
+                windowFontScale = currentFontWindowScale;
                 maxConnectorNameWidth = 0.f;
             }
 
@@ -1609,10 +1598,8 @@ void NodeGraphEditor::render()
             else if (isSomeNodeMoving) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 
             if (!io.FontAllowUserScaling)   {
-                // Reset the font scale (3 lines)
-                fontScaleToTrack = oldFontScaleToReset;
-                g.FontBaseSize = io.FontGlobalScale * g.Font->Scale * g.Font->FontSize;
-                g.FontSize = window->CalcFontSize();
+                // Reset the font scale
+                SetWindowFontScale(windowFontScaleToReset);
             }
         }
         ImGui::EndChild();  // scrolling_region
@@ -2608,7 +2595,7 @@ bool NodeGraphEditor::load(ImGuiHelper::Deserializer& d, const char ** pOptional
 	nodes[i]->onLoaded();
     }
     maxConnectorNameWidth = 0;
-    oldFontWindowScale = 0;
+    windowFontScale = 0;
     //--------------------------------------------
     if (pOptionalBufferStart) *pOptionalBufferStart = amount;
     setModified(false);

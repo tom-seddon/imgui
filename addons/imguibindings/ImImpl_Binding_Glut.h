@@ -344,7 +344,11 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)    {
     io.KeyMap[ImGuiKey_Delete] =    127;      // Delete  (ascii) (0x006F)
     io.KeyMap[ImGuiKey_Backspace] = 8;        // Backspace  (ascii)
     io.KeyMap[ImGuiKey_Enter] = 13;           // Enter  (ascii)
-    io.KeyMap[ImGuiKey_Escape] = 27;          // Escape  (ascii)
+    io.KeyMap[ImGuiKey_Escape] = 27;          // Escape  (ascii)    
+#   ifndef __EMSCRIPTEN__  // emscripten doesn't like it (and triggers a 'NewFrameSanityCheck' or something like that [But tested only with SDL2 binding, so it might work])
+    io.KeyMap[ImGuiKey_KeyPadEnter] = 13;     // Enter  (ascii)
+#   endif
+
     io.KeyMap[ImGuiKey_A] = 1;
     io.KeyMap[ImGuiKey_C] = 3;
     io.KeyMap[ImGuiKey_V] = 22;

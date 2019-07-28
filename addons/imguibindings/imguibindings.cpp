@@ -672,7 +672,7 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
                         IM_ASSERT(pim);
                         if (ncgChannels==4) {
                             const ImU32* pc = (const ImU32*) pim;
-                            if (const ImFontAtlas::CustomRect* rect = io.Fonts->GetCustomRectByIndex(cfg.customRectId))  {
+                            if (const ImFontAtlasCustomRect* rect = io.Fonts->GetCustomRectByIndex(cfg.customRectId))  {
                                 for (int y = 0; y < rect->Height; y++)  {
                                     ImU32* p = (ImU32*)pixels + (rect->Y + y) * width + (rect->X);
                                     for (int x = rect->Width; x > 0; x--)
@@ -682,7 +682,7 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
                         }
                         else if (ncgChannels==1) {
                             const unsigned char* pc = pim;
-                            if (const ImFontAtlas::CustomRect* rect = io.Fonts->GetCustomRectByIndex(cfg.customRectId))  {
+                            if (const ImFontAtlasCustomRect* rect = io.Fonts->GetCustomRectByIndex(cfg.customRectId))  {
                                 for (int y = 0; y < rect->Height; y++)  {
                                     unsigned char* p = pixels + (rect->Y + y) * width + (rect->X);
                                     for (int x = rect->Width; x > 0; x--)
