@@ -1,4 +1,4 @@
-// dear imgui, v1.72 WIP
+// dear imgui, v1.72
 // (main code and documentation)
 
 // Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp for demo code.
@@ -998,6 +998,7 @@ CODE
 // Debug options
 #define IMGUI_DEBUG_NAV_SCORING     0   // Display navigation scoring preview when hovering items. Display last moving direction matches when holding CTRL
 #define IMGUI_DEBUG_NAV_RECTS       0   // Display the reference navigation rectangle for each window
+#define IMGUI_DEBUG_INI_SETTINGS    0   // Save additional comments in .ini file
 
 // Visual Studio warnings
 #ifdef _MSC_VER
@@ -1042,6 +1043,7 @@ static const float NAV_WINDOWING_LIST_APPEAR_DELAY          = 0.15f;    // Time 
 // Window resizing from edges (when io.ConfigWindowsResizeFromEdges = true and ImGuiBackendFlags_HasMouseCursors is set in io.BackendFlags by back-end)
 static const float WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS = 4.0f;     // Extend outside and inside windows. Affect FindHoveredWindow().
 static const float WINDOWS_RESIZE_FROM_EDGES_FEEDBACK_TIMER = 0.04f;    // Reduce visual noise by only highlighting the border after a certain time.
+static const float WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER    = 2.00f;    // Lock scrolled window (so it doesn't pick child windows that are scrolling through) for a certaint time, unless mouse moved.
 
 //-------------------------------------------------------------------------
 // [SECTION] FORWARD DECLARATIONS
@@ -3465,19 +3467,45 @@ static void ImGui::UpdateMouseInputs()
     }
 }
 
+static void StartLockWheelingWindow(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.WheelingWindow == window)
+        return;
+    g.WheelingWindow = window;
+    g.WheelingWindowRefMousePos = g.IO.MousePos;
+    g.WheelingWindowTimer = WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER;
+}
+
 void ImGui::UpdateMouseWheel()
 {
     ImGuiContext& g = *GImGui;
-    if (!g.HoveredWindow || g.HoveredWindow->Collapsed)
-        return;
+
+    // Reset the locked window if we move the mouse or after the timer elapses
+    if (g.WheelingWindow != NULL)
+    {
+        g.WheelingWindowTimer -= g.IO.DeltaTime;
+        if (IsMousePosValid() && ImLengthSqr(g.IO.MousePos - g.WheelingWindowRefMousePos) > g.IO.MouseDragThreshold * g.IO.MouseDragThreshold)
+            g.WheelingWindowTimer = 0.0f;
+        if (g.WheelingWindowTimer <= 0.0f)
+        {
+            g.WheelingWindow = NULL;
+            g.WheelingWindowTimer = 0.0f;
+        }
+    }
+
     if (g.IO.MouseWheel == 0.0f && g.IO.MouseWheelH == 0.0f)
+        return;
+
+    ImGuiWindow* window = g.WheelingWindow ? g.WheelingWindow : g.HoveredWindow;
+    if (!window || window->Collapsed)
         return;
 
     // Zoom / Scale window
     // FIXME-OBSOLETE: This is an old feature, it still works but pretty much nobody is using it and may be best redesigned.
     if (g.IO.MouseWheel != 0.0f && g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
     {
-        ImGuiWindow* window = g.HoveredWindow;
+        StartLockWheelingWindow(window);
         const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
         const float scale = new_font_scale / window->FontWindowScale;
         window->FontWindowScale = new_font_scale;
@@ -3493,20 +3521,19 @@ void ImGui::UpdateMouseWheel()
 
     // Mouse wheel scrolling
     // If a child window has the ImGuiWindowFlags_NoScrollWithMouse flag, we give a chance to scroll its parent
-    // FIXME: Lock scrolling window while not moving (see #2604)
 
     // Vertical Mouse Wheel scrolling
     const float wheel_y = (g.IO.MouseWheel != 0.0f && !g.IO.KeyShift) ? g.IO.MouseWheel : 0.0f;
     if (wheel_y != 0.0f && !g.IO.KeyCtrl)
     {
-        ImGuiWindow* window = g.HoveredWindow;
+        StartLockWheelingWindow(window);
         while ((window->Flags & ImGuiWindowFlags_ChildWindow) && ((window->ScrollMax.y == 0.0f) || ((window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))))
             window = window->ParentWindow;
         if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))
         {
             float max_step = window->InnerRect.GetHeight() * 0.67f;
             float scroll_step = ImFloor(ImMin(5 * window->CalcFontSize(), max_step));
-            SetWindowScrollY(window, window->Scroll.y - wheel_y * scroll_step);
+            SetScrollY(window, window->Scroll.y - wheel_y * scroll_step);
         }
     }
 
@@ -3514,14 +3541,14 @@ void ImGui::UpdateMouseWheel()
     const float wheel_x = (g.IO.MouseWheelH != 0.0f && !g.IO.KeyShift) ? g.IO.MouseWheelH : (g.IO.MouseWheel != 0.0f && g.IO.KeyShift) ? g.IO.MouseWheel : 0.0f;
     if (wheel_x != 0.0f && !g.IO.KeyCtrl)
     {
-        ImGuiWindow* window = g.HoveredWindow;
+        StartLockWheelingWindow(window);
         while ((window->Flags & ImGuiWindowFlags_ChildWindow) && ((window->ScrollMax.x == 0.0f) || ((window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))))
             window = window->ParentWindow;
         if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))
         {
             float max_step = window->InnerRect.GetWidth() * 0.67f;
             float scroll_step = ImFloor(ImMin(2 * window->CalcFontSize(), max_step));
-            SetWindowScrollX(window, window->Scroll.x - wheel_x * scroll_step);
+            SetScrollX(window, window->Scroll.x - wheel_x * scroll_step);
         }
     }
 }
@@ -3908,6 +3935,11 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.DrawDataBuilder.ClearFreeMemory();
     g.BackgroundDrawList.ClearFreeMemory();
     g.ForegroundDrawList.ClearFreeMemory();
+
+    g.TabBars.Clear();
+    g.CurrentTabBarStack.clear();
+    g.ShrinkWidthBuffer.clear();
+
     g.PrivateClipboard.clear();
     g.InputTextState.ClearFreeMemory();
 
@@ -4401,15 +4433,23 @@ bool ImGui::IsMouseDoubleClicked(int button)
     return g.IO.MouseDoubleClicked[button];
 }
 
+// [Internal] This doesn't test if the button is presed
+bool ImGui::IsMouseDragPastThreshold(int button, float lock_threshold)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    if (lock_threshold < 0.0f)
+        lock_threshold = g.IO.MouseDragThreshold;
+    return g.IO.MouseDragMaxDistanceSqr[button] >= lock_threshold * lock_threshold;
+}
+
 bool ImGui::IsMouseDragging(int button, float lock_threshold)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
     if (!g.IO.MouseDown[button])
         return false;
-    if (lock_threshold < 0.0f)
-        lock_threshold = g.IO.MouseDragThreshold;
-    return g.IO.MouseDragMaxDistanceSqr[button] >= lock_threshold * lock_threshold;
+    return IsMouseDragPastThreshold(button, lock_threshold);
 }
 
 ImVec2 ImGui::GetMousePos()
@@ -4764,6 +4804,7 @@ ImGuiWindow* ImGui::FindWindowByName(const char* name)
 static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFlags flags)
 {
     ImGuiContext& g = *GImGui;
+    //IMGUI_DEBUG_LOG("CreateNewWindow '%s', flags = 0x%08X\n", name, flags);
 
     // Create window the first time
     ImGuiWindow* window = IM_NEW(ImGuiWindow)(&g, name);
@@ -5756,6 +5797,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         if (render_decorations_in_parent)
             window->DrawList = parent_window->DrawList;
         
+        // Handle title bar, scrollbar, resize grips and resize borders
         const ImGuiWindow* window_to_highlight = g.NavWindowingTarget ? g.NavWindowingTarget : g.NavWindow;
         const bool title_bar_is_highlight = want_focus || (window_to_highlight && window->RootWindowForTitleBarHighlight == window_to_highlight->RootWindowForTitleBarHighlight);
         RenderWindowDecorations(window, title_bar_rect, title_bar_is_highlight, resize_grip_count, resize_grip_col, resize_grip_draw_size);
@@ -6523,16 +6565,6 @@ ImVec2 ImGui::GetWindowPos()
     return window->Pos;
 }
 
-void ImGui::SetWindowScrollX(ImGuiWindow* window, float new_scroll_x)
-{
-    window->Scroll.x = new_scroll_x;
-}
-
-void ImGui::SetWindowScrollY(ImGuiWindow* window, float new_scroll_y)
-{
-    window->Scroll.y = new_scroll_y;
-}
-
 void ImGui::SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond)
 {
     // Test condition (NB: bit 0 is always true) and clear flags for next time
@@ -6727,7 +6759,8 @@ void ImGui::SetNextWindowBgAlpha(float alpha)
 // FIXME: This is in window space (not screen space!). We should try to obsolete all those functions.
 ImVec2 ImGui::GetContentRegionMax()
 {
-    ImGuiWindow* window = GImGui->CurrentWindow;
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     ImVec2 mx = window->ContentsRegionRect.Max - window->Pos;
     if (window->DC.CurrentColumns)
         mx.x = window->WorkRect.Max.x - window->Pos.x;
@@ -6737,7 +6770,8 @@ ImVec2 ImGui::GetContentRegionMax()
 // [Internal] Absolute coordinate. Saner. This is not exposed until we finishing refactoring work rect features.
 ImVec2 ImGui::GetContentRegionMaxAbs()
 {
-    ImGuiWindow* window = GImGui->CurrentWindow;
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     ImVec2 mx = window->ContentsRegionRect.Max;
     if (window->DC.CurrentColumns)
         mx.x = window->WorkRect.Max.x;
@@ -6917,6 +6951,18 @@ void ImGui::SetScrollY(float scroll_y)
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->ScrollTarget.y = scroll_y;
+    window->ScrollTargetCenterRatio.y = 0.0f;
+}
+
+void ImGui::SetScrollX(ImGuiWindow* window, float new_scroll_x)
+{
+    window->ScrollTarget.x = new_scroll_x;
+    window->ScrollTargetCenterRatio.x = 0.0f;
+}
+
+void ImGui::SetScrollY(ImGuiWindow* window, float new_scroll_y)
+{
+    window->ScrollTarget.y = new_scroll_y;
     window->ScrollTargetCenterRatio.y = 0.0f;
 }
 
@@ -8133,7 +8179,7 @@ static void ImGui::NavUpdate()
     // Update Keyboard->Nav inputs mapping
     if (nav_keyboard_active)
     {
-        #define NAV_MAP_KEY(_KEY, _NAV_INPUT) if (IsKeyDown(g.IO.KeyMap[_KEY])) { g.IO.NavInputs[_NAV_INPUT] = 1.0f; g.NavInputSource = ImGuiInputSource_NavKeyboard; }
+        #define NAV_MAP_KEY(_KEY, _NAV_INPUT)  do { if (IsKeyDown(g.IO.KeyMap[_KEY])) { g.IO.NavInputs[_NAV_INPUT] = 1.0f; g.NavInputSource = ImGuiInputSource_NavKeyboard; } } while (0)
         NAV_MAP_KEY(ImGuiKey_Space,     ImGuiNavInput_Activate );
         NAV_MAP_KEY(ImGuiKey_Enter,     ImGuiNavInput_Input    );
         NAV_MAP_KEY(ImGuiKey_Escape,    ImGuiNavInput_Cancel   );
@@ -8332,9 +8378,9 @@ static void ImGui::NavUpdate()
         if (window->DC.NavLayerActiveMask == 0x00 && window->DC.NavHasScroll && g.NavMoveRequest)
         {
             if (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right)
-                SetWindowScrollX(window, ImFloor(window->Scroll.x + ((g.NavMoveDir == ImGuiDir_Left) ? -1.0f : +1.0f) * scroll_speed));
+                SetScrollX(window, ImFloor(window->Scroll.x + ((g.NavMoveDir == ImGuiDir_Left) ? -1.0f : +1.0f) * scroll_speed));
             if (g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down)
-                SetWindowScrollY(window, ImFloor(window->Scroll.y + ((g.NavMoveDir == ImGuiDir_Up) ? -1.0f : +1.0f) * scroll_speed));
+                SetScrollY(window, ImFloor(window->Scroll.y + ((g.NavMoveDir == ImGuiDir_Up) ? -1.0f : +1.0f) * scroll_speed));
         }
 
         // *Normal* Manual scroll with NavScrollXXX keys
@@ -8342,12 +8388,12 @@ static void ImGui::NavUpdate()
         ImVec2 scroll_dir = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_Down, 1.0f/10.0f, 10.0f);
         if (scroll_dir.x != 0.0f && window->ScrollbarX)
         {
-            SetWindowScrollX(window, ImFloor(window->Scroll.x + scroll_dir.x * scroll_speed));
+            SetScrollX(window, ImFloor(window->Scroll.x + scroll_dir.x * scroll_speed));
             g.NavMoveFromClampedRefRect = true;
         }
         if (scroll_dir.y != 0.0f)
         {
-            SetWindowScrollY(window, ImFloor(window->Scroll.y + scroll_dir.y * scroll_speed));
+            SetScrollY(window, ImFloor(window->Scroll.y + scroll_dir.y * scroll_speed));
             g.NavMoveFromClampedRefRect = true;
         }
     }
@@ -8451,42 +8497,44 @@ static void ImGui::NavUpdateMoveResult()
 static float ImGui::NavUpdatePageUpPageDown(int allowed_dir_flags)
 {
     ImGuiContext& g = *GImGui;
-    if (g.NavMoveDir == ImGuiDir_None && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.NavWindowingTarget && g.NavLayer == 0)
+    if (g.NavMoveDir != ImGuiDir_None || g.NavWindow == NULL)
+        return 0.0f;
+    if ((g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) || g.NavWindowingTarget != NULL || g.NavLayer != 0)
+        return 0.0f;
+
+    ImGuiWindow* window = g.NavWindow;
+    bool page_up_held = IsKeyDown(g.IO.KeyMap[ImGuiKey_PageUp]) && (allowed_dir_flags & (1 << ImGuiDir_Up));
+    bool page_down_held = IsKeyDown(g.IO.KeyMap[ImGuiKey_PageDown]) && (allowed_dir_flags & (1 << ImGuiDir_Down));
+    if (page_up_held != page_down_held) // If either (not both) are pressed
     {
-        ImGuiWindow* window = g.NavWindow;
-        bool page_up_held = IsKeyDown(g.IO.KeyMap[ImGuiKey_PageUp]) && (allowed_dir_flags & (1 << ImGuiDir_Up));
-        bool page_down_held = IsKeyDown(g.IO.KeyMap[ImGuiKey_PageDown]) && (allowed_dir_flags & (1 << ImGuiDir_Down));
-        if (page_up_held != page_down_held) // If either (not both) are pressed
+        if (window->DC.NavLayerActiveMask == 0x00 && window->DC.NavHasScroll)
         {
-            if (window->DC.NavLayerActiveMask == 0x00 && window->DC.NavHasScroll)
+            // Fallback manual-scroll when window has no navigable item
+            if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
+                SetScrollY(window, window->Scroll.y - window->InnerRect.GetHeight());
+            else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
+                SetScrollY(window, window->Scroll.y + window->InnerRect.GetHeight());
+        }
+        else
+        {
+            const ImRect& nav_rect_rel = window->NavRectRel[g.NavLayer];
+            const float page_offset_y = ImMax(0.0f, window->InnerRect.GetHeight() - window->CalcFontSize() * 1.0f + nav_rect_rel.GetHeight());
+            float nav_scoring_rect_offset_y = 0.0f;
+            if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
             {
-                // Fallback manual-scroll when window has no navigable item
-                if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
-                    SetWindowScrollY(window, window->Scroll.y - window->InnerRect.GetHeight());
-                else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
-                    SetWindowScrollY(window, window->Scroll.y + window->InnerRect.GetHeight());
+                nav_scoring_rect_offset_y = -page_offset_y;
+                g.NavMoveDir = ImGuiDir_Down; // Because our scoring rect is offset, we intentionally request the opposite direction (so we can always land on the last item)
+                g.NavMoveClipDir = ImGuiDir_Up;
+                g.NavMoveRequestFlags = ImGuiNavMoveFlags_AllowCurrentNavId | ImGuiNavMoveFlags_AlsoScoreVisibleSet;
             }
-            else
+            else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
             {
-                const ImRect& nav_rect_rel = window->NavRectRel[g.NavLayer];
-                const float page_offset_y = ImMax(0.0f, window->InnerRect.GetHeight() - window->CalcFontSize() * 1.0f + nav_rect_rel.GetHeight());
-                float nav_scoring_rect_offset_y = 0.0f;
-                if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
-                {
-                    nav_scoring_rect_offset_y = -page_offset_y;
-                    g.NavMoveDir = ImGuiDir_Down; // Because our scoring rect is offset, we intentionally request the opposite direction (so we can always land on the last item)
-                    g.NavMoveClipDir = ImGuiDir_Up;
-                    g.NavMoveRequestFlags = ImGuiNavMoveFlags_AllowCurrentNavId | ImGuiNavMoveFlags_AlsoScoreVisibleSet;
-                }
-                else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
-                {
-                    nav_scoring_rect_offset_y = +page_offset_y;
-                    g.NavMoveDir = ImGuiDir_Up; // Because our scoring rect is offset, we intentionally request the opposite direction (so we can always land on the last item)
-                    g.NavMoveClipDir = ImGuiDir_Down;
-                    g.NavMoveRequestFlags = ImGuiNavMoveFlags_AllowCurrentNavId | ImGuiNavMoveFlags_AlsoScoreVisibleSet;
-                }
-                return nav_scoring_rect_offset_y;
+                nav_scoring_rect_offset_y = +page_offset_y;
+                g.NavMoveDir = ImGuiDir_Up; // Because our scoring rect is offset, we intentionally request the opposite direction (so we can always land on the last item)
+                g.NavMoveClipDir = ImGuiDir_Down;
+                g.NavMoveRequestFlags = ImGuiNavMoveFlags_AllowCurrentNavId | ImGuiNavMoveFlags_AlsoScoreVisibleSet;
             }
+            return nav_scoring_rect_offset_y;
         }
     }
     return 0.0f;
@@ -9227,8 +9275,12 @@ ImGuiWindowSettings* ImGui::CreateNewWindowSettings(const char* name)
     ImGuiContext& g = *GImGui;
     g.SettingsWindows.push_back(ImGuiWindowSettings());
     ImGuiWindowSettings* settings = &g.SettingsWindows.back();
-    if (const char* p = strstr(name, "###"))  // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
+#if !IMGUI_DEBUG_INI_SETTINGS
+    // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
+    // Preserve the full string when IMGUI_DEBUG_INI_SETTINGS is set to make .ini inspection easier.
+    if (const char* p = strstr(name, "###"))
         name = p;
+#endif
     settings->Name = ImStrdup(name);
     settings->ID = ImHashStr(name);
     return settings;
@@ -9619,14 +9671,16 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         return;
     }
 
+    // State
     enum { WRT_OuterRect, WRT_OuterRectClipped, WRT_InnerRect, WRT_InnerClipRect, WRT_WorkRect, WRT_Contents, WRT_ContentsRegionRect, WRT_Count }; // Windows Rect Type
     const char* wrt_rects_names[WRT_Count] = { "OuterRect", "OuterRectClipped", "InnerRect", "InnerClipRect", "WorkRect", "Contents", "ContentsRegionRect" };
-
-    static bool show_windows_begin_order = false;
     static bool show_windows_rects = false;
     static int  show_windows_rect_type = WRT_WorkRect;
+    static bool show_windows_begin_order = false;
     static bool show_drawcmd_clip_rects = true;
 
+    // Basic info
+    ImGuiContext& g = *GImGui;
     ImGuiIO& io = ImGui::GetIO();
     ImGui::Text("Dear ImGui %s", ImGui::GetVersion());
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
@@ -9635,6 +9689,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     ImGui::Text("%d active allocations", io.MetricsActiveAllocations);
     ImGui::Separator();
 
+    // Helper functions to display common structures:
+    // - NodeDrawList
+    // - NodeColumns
+    // - NodeWindow
+    // - NodeWindows
+    // - NodeTabBar
     struct Funcs
     {
         static ImRect GetWindowRect(ImGuiWindow* window, int rect_type)
@@ -9666,6 +9726,9 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 fg_draw_list->AddRect(window->Pos, window->Pos + window->Size, IM_COL32(255, 255, 0, 255));
             if (!node_open)
                 return;
+
+            if (window && !window->WasActive)
+                ImGui::Text("(Note: owning Window is inactive: DrawList is not being rendered!)");
 
             int elem_offset = 0;
             for (const ImDrawCmd* pcmd = draw_list->CmdBuffer.begin(); pcmd < draw_list->CmdBuffer.end(); elem_offset += pcmd->ElemCount, pcmd++)
@@ -9745,7 +9808,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
         static void NodeWindow(ImGuiWindow* window, const char* label)
         {
-            if (!ImGui::TreeNode(window, "%s '%s', %d @ 0x%p", label, window->Name, window->Active || window->WasActive, window))
+            if (window == NULL)
+            {
+                ImGui::BulletText("%s: NULL", label);
+                return;
+            }
+            if (!ImGui::TreeNode(window, "%s '%s', %d @ 0x%p", label, window->Name, (window->Active || window->WasActive), window))
                 return;
             ImGuiWindowFlags flags = window->Flags;
             NodeDrawList(window, window->DrawList, "DrawList");
@@ -9799,8 +9867,6 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         }
     };
 
-    // Access private state, we are going to display the draw lists from last frame
-    ImGuiContext& g = *GImGui;
     Funcs::NodeWindows(g.Windows, "Windows");
     if (ImGui::TreeNode("DrawList", "Active DrawLists (%d)", g.DrawDataBuilder.Layers[0].Size))
     {
@@ -9825,6 +9891,20 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             Funcs::NodeTabBar(g.TabBars.GetByIndex(n));
         ImGui::TreePop();
     }
+
+#if 0
+    if (ImGui::TreeNode("Docking"))
+    {
+        ImGui::TreePop();
+    }
+#endif
+
+#if 0
+    if (ImGui::TreeNode("Tables", "Tables (%d)", g.Tables.Data.Size))
+    {
+        ImGui::TreePop();
+    }
+#endif
 
     if (ImGui::TreeNode("Internal state"))
     {
@@ -9872,6 +9952,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::TreePop();
     }
 
+    // Tool: Display windows Rectangles and Begin Order
     if (show_windows_rects || show_windows_begin_order)
     {
         for (int n = 0; n < g.Windows.Size; n++)

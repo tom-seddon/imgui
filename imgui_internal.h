@@ -1,4 +1,4 @@
-// dear imgui, v1.72 WIP
+// dear imgui, v1.72
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
@@ -141,11 +141,14 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #define IM_NEWLINE      "\n"
 #endif
 #define IM_TABSIZE      (4)
-
-#define IMGUI_DEBUG_LOG(_FMT,...)       printf("[%05d] " _FMT, GImGui->FrameCount, __VA_ARGS__)
 #define IM_STATIC_ASSERT(_COND)         typedef char static_assertion_##__line__[(_COND)?1:-1]
 #define IM_F32_TO_INT8_UNBOUND(_VAL)    ((int)((_VAL) * 255.0f + ((_VAL)>=0 ? 0.5f : -0.5f)))   // Unsaturated, for display purpose
 #define IM_F32_TO_INT8_SAT(_VAL)        ((int)(ImSaturate(_VAL) * 255.0f + 0.5f))               // Saturated, always output 0..255
+
+// Debug Logging
+#ifndef IMGUI_DEBUG_LOG
+#define IMGUI_DEBUG_LOG(_FMT,...)       printf("[%05d] " _FMT, GImGui->FrameCount, __VA_ARGS__)
+#endif
 
 // Enforce cdecl calling convention for functions called by the standard library, in case compilation settings changed the default to e.g. __vectorcall
 #ifdef _MSC_VER
@@ -358,7 +361,8 @@ enum ImGuiSelectableFlagsPrivate_
     ImGuiSelectableFlags_PressedOnClick     = 1 << 21,
     ImGuiSelectableFlags_PressedOnRelease   = 1 << 22,
     ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 23,  // FIXME: We may be able to remove this (added in 6251d379 for menus)
-    ImGuiSelectableFlags_AllowItemOverlap   = 1 << 24
+    ImGuiSelectableFlags_AllowItemOverlap   = 1 << 24,
+    ImGuiSelectableFlags_DrawHoveredWhenHeld= 1 << 25   // Always show active when held, even is not hovered. This concept could probably be renamed/formalized somehow.
 };
 
 // Extend ImGuiTreeNodeFlags_
@@ -827,13 +831,13 @@ struct ImGuiShrinkWidthItem
     float           Width;
 };
 
-struct ImGuiTabBarRef
+struct ImGuiPtrOrIndex
 {
-    ImGuiTabBar*    Ptr;                    // Either field can be set, not both. Dock node tab bars are loose while BeginTabBar() ones are in a pool.
-    int             IndexInMainPool;
+    void*           Ptr;                // Either field can be set, not both. e.g. Dock node tab bars are loose while BeginTabBar() ones are in a pool.
+    int             Index;              // Usually index in a main pool.
 
-    ImGuiTabBarRef(ImGuiTabBar* ptr)        { Ptr = ptr; IndexInMainPool = -1; }
-    ImGuiTabBarRef(int index_in_main_pool)  { Ptr = NULL; IndexInMainPool = index_in_main_pool; }
+    ImGuiPtrOrIndex(void* ptr)          { Ptr = ptr; Index = -1; }
+    ImGuiPtrOrIndex(int index)          { Ptr = NULL; Index = index; }
 };
 
 //-----------------------------------------------------------------------------
@@ -868,6 +872,9 @@ struct ImGuiContext
     ImGuiWindow*            HoveredWindow;                      // Will catch mouse inputs
     ImGuiWindow*            HoveredRootWindow;                  // Will catch mouse inputs (for focus/move only)
     ImGuiWindow*            MovingWindow;                       // Track the window we clicked on (in order to preserve focus). The actually window that is moved is generally MovingWindow->RootWindow.
+    ImGuiWindow*            WheelingWindow;
+    ImVec2                  WheelingWindowRefMousePos;
+    float                   WheelingWindowTimer;
 
     // Item/widgets state and tracking information
     ImGuiID                 HoveredId;                          // Hovered widget
@@ -983,9 +990,9 @@ struct ImGuiContext
     unsigned char           DragDropPayloadBufLocal[8];         // Local buffer for small payloads
 
     // Tab bars
-    ImPool<ImGuiTabBar>             TabBars;
     ImGuiTabBar*                    CurrentTabBar;
-    ImVector<ImGuiTabBarRef>        CurrentTabBarStack;
+    ImPool<ImGuiTabBar>             TabBars;
+    ImVector<ImGuiPtrOrIndex>       CurrentTabBarStack;
     ImVector<ImGuiShrinkWidthItem>  ShrinkWidthBuffer;
 
     // Widget state
@@ -1058,6 +1065,8 @@ struct ImGuiContext
         HoveredWindow = NULL;
         HoveredRootWindow = NULL;
         MovingWindow = NULL;
+        WheelingWindow = NULL;
+        WheelingWindowTimer = 0.0f;
 
         HoveredId = 0;
         HoveredIdAllowOverlap = false;
@@ -1420,7 +1429,7 @@ struct ImGuiTabBar
     float               ScrollingSpeed;
     ImGuiTabBarFlags    Flags;
     ImGuiID             ReorderRequestTabId;
-    int                 ReorderRequestDir;
+    ImS8                ReorderRequestDir;
     bool                WantLayout;
     bool                VisibleTabWasSubmitted;
     short               LastTabItemIdx;         // For BeginTabItem()/EndTabItem()
@@ -1460,8 +1469,8 @@ namespace ImGui
     IMGUI_API ImVec2        CalcWindowExpectedSize(ImGuiWindow* window);
     IMGUI_API bool          IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent);
     IMGUI_API bool          IsWindowNavFocusable(ImGuiWindow* window);
-    IMGUI_API void          SetWindowScrollX(ImGuiWindow* window, float new_scroll_x);
-    IMGUI_API void          SetWindowScrollY(ImGuiWindow* window, float new_scroll_y);
+    IMGUI_API void          SetScrollX(ImGuiWindow* window, float new_scroll_x);
+    IMGUI_API void          SetScrollY(ImGuiWindow* window, float new_scroll_y);
     IMGUI_API ImRect        GetWindowAllowedExtentRect(ImGuiWindow* window);
     IMGUI_API void          SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond = 0);
     IMGUI_API void          SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond = 0);
@@ -1547,6 +1556,7 @@ namespace ImGui
     IMGUI_API void          SetNavIDWithRectRel(ImGuiID id, int nav_layer, const ImRect& rect_rel);
 
     // Inputs
+    inline bool             IsMouseDragPastThreshold(int button, float lock_threshold = -1.0f);
     inline bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true)           { const int key_index = GImGui->IO.KeyMap[key]; return (key_index >= 0) ? IsKeyPressed(key_index, repeat) : false; }
     inline bool             IsNavInputDown(ImGuiNavInput n)                             { return GImGui->IO.NavInputs[n] > 0.0f; }
     inline bool             IsNavInputPressed(ImGuiNavInput n, ImGuiInputReadMode mode) { return GetNavInputAmount(n, mode) > 0.0f; }

@@ -1,4 +1,4 @@
-// dear imgui, v1.72 WIP
+// dear imgui, v1.72
 // (demo code)
 
 // Message to the person tempted to delete this file when integrating Dear ImGui into their code base:
@@ -539,8 +539,19 @@ static void ShowDemoWindowWidgets()
             static float f1=0.123f, f2=0.0f;
             ImGui::SliderFloat("slider float", &f1, 0.0f, 1.0f, "ratio = %.3f");
             ImGui::SliderFloat("slider float (curve)", &f2, -10.0f, 10.0f, "%.4f", 2.0f);
+
             static float angle = 0.0f;
             ImGui::SliderAngle("slider angle", &angle);
+
+            // Using the format string to display a name instead of an integer.
+            // Here we completely omit '%d' from the format string, so it'll only display a name.
+            // This technique can also be used with DragInt().
+            enum Element { Element_Fire, Element_Earth, Element_Air, Element_Water, Element_COUNT };
+            const char* element_names[Element_COUNT] = { "Fire", "Earth", "Air", "Water" };
+            static int current_element = Element_Fire;
+            const char* current_element_name = (current_element >= 0 && current_element < Element_COUNT) ? element_names[current_element] : "Unknown";
+            ImGui::SliderInt("slider enum", &current_element, 0, Element_COUNT - 1, current_element_name);
+            ImGui::SameLine(); HelpMarker("Using the format string parameter to display a name instead of the underlying integer.");
         }
 
         {
@@ -1112,7 +1123,7 @@ static void ShowDemoWindowWidgets()
         ImGui::Checkbox("With Drag and Drop", &drag_and_drop);
         ImGui::Checkbox("With Options Menu", &options_menu); ImGui::SameLine(); HelpMarker("Right-click on the individual color widget to show options.");
         ImGui::Checkbox("With HDR", &hdr); ImGui::SameLine(); HelpMarker("Currently all this does is to lift the 0..1 limits on dragging widgets.");
-        int misc_flags = (hdr ? ImGuiColorEditFlags_HDR : 0) | (drag_and_drop ? 0 : ImGuiColorEditFlags_NoDragDrop) | (alpha_half_preview ? ImGuiColorEditFlags_AlphaPreviewHalf : (alpha_preview ? ImGuiColorEditFlags_AlphaPreview : 0)) | (options_menu ? 0 : ImGuiColorEditFlags_NoOptions);
+        ImGuiColorEditFlags misc_flags = (hdr ? ImGuiColorEditFlags_HDR : 0) | (drag_and_drop ? 0 : ImGuiColorEditFlags_NoDragDrop) | (alpha_half_preview ? ImGuiColorEditFlags_AlphaPreviewHalf : (alpha_preview ? ImGuiColorEditFlags_AlphaPreview : 0)) | (options_menu ? 0 : ImGuiColorEditFlags_NoOptions);
 
         ImGui::Text("Color widget:");
         ImGui::SameLine(); HelpMarker("Click on the colored square to open a color picker.\nCTRL+click on individual component to input value.\n");
@@ -1782,9 +1793,9 @@ static void ShowDemoWindowLayout()
         ImGui::Text("SetNextItemWidth/PushItemWidth(-1)");
         ImGui::SameLine(); HelpMarker("Align to right edge");
         ImGui::PushItemWidth(-1);
-        ImGui::DragFloat("float##5a", &f);
-        ImGui::DragFloat("float##5b", &f);
-        ImGui::DragFloat("float##5c", &f);
+        ImGui::DragFloat("##float5a", &f);
+        ImGui::DragFloat("##float5b", &f);
+        ImGui::DragFloat("##float5c", &f);
         ImGui::PopItemWidth();
 
         ImGui::TreePop();
@@ -3449,7 +3460,7 @@ struct ExampleAppConsole
         Commands.push_back("CLEAR");
         Commands.push_back("CLASSIFY");  // "classify" is only here to provide an example of "C"+[tab] completing to "CL" and displaying matches.
         AutoScroll = true;
-        ScrollToBottom = true;
+        ScrollToBottom = false;
         AddLog("Welcome to Dear ImGui!");
     }
     ~ExampleAppConsole()
@@ -3470,7 +3481,6 @@ struct ExampleAppConsole
         for (int i = 0; i < Items.Size; i++)
             free(Items[i]);
         Items.clear();
-        ScrollToBottom = true;
     }
 
     void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
@@ -3483,8 +3493,6 @@ struct ExampleAppConsole
         buf[IM_ARRAYSIZE(buf)-1] = 0;
         va_end(args);
         Items.push_back(Strdup(buf));
-        if (AutoScroll)
-            ScrollToBottom = true;
     }
 
     void    Draw(const char* title, bool* p_open)
@@ -3513,8 +3521,7 @@ struct ExampleAppConsole
         if (ImGui::SmallButton("Add Dummy Text"))  { AddLog("%d some text", Items.Size); AddLog("some more text"); AddLog("display very important message here!"); } ImGui::SameLine();
         if (ImGui::SmallButton("Add Dummy Error")) { AddLog("[error] something went wrong"); } ImGui::SameLine();
         if (ImGui::SmallButton("Clear")) { ClearLog(); } ImGui::SameLine();
-        bool copy_to_clipboard = ImGui::SmallButton("Copy"); ImGui::SameLine();
-        if (ImGui::SmallButton("Scroll to bottom")) ScrollToBottom = true;
+        bool copy_to_clipboard = ImGui::SmallButton("Copy");
         //static float t = 0.0f; if (ImGui::GetTime() - t > 0.02f) { t = ImGui::GetTime(); AddLog("Spam %f", t); }
 
         ImGui::Separator();
@@ -3522,9 +3529,7 @@ struct ExampleAppConsole
         // Options menu
         if (ImGui::BeginPopup("Options"))
         {
-            if (ImGui::Checkbox("Auto-scroll", &AutoScroll))
-                if (AutoScroll)
-                    ScrollToBottom = true;
+            ImGui::Checkbox("Auto-scroll", &AutoScroll);
             ImGui::EndPopup();
         }
 
@@ -3573,9 +3578,11 @@ struct ExampleAppConsole
         }
         if (copy_to_clipboard)
             ImGui::LogFinish();
-        if (ScrollToBottom)
+
+        if (ScrollToBottom || (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()))
             ImGui::SetScrollHereY(1.0f);
         ScrollToBottom = false;
+
         ImGui::PopStyleVar();
         ImGui::EndChild();
         ImGui::Separator();
@@ -3767,13 +3774,11 @@ struct ExampleAppLog
     ImGuiTextBuffer     Buf;
     ImGuiTextFilter     Filter;
     ImVector<int>       LineOffsets;        // Index to lines offset. We maintain this with AddLog() calls, allowing us to have a random access on lines
-    bool                AutoScroll;
-    bool                ScrollToBottom;
+    bool                AutoScroll;     // Keep scrolling if already at the bottom
 
     ExampleAppLog()
     {
         AutoScroll = true;
-        ScrollToBottom = false;
         Clear();
     }
 
@@ -3794,8 +3799,6 @@ struct ExampleAppLog
         for (int new_size = Buf.size(); old_size < new_size; old_size++)
             if (Buf[old_size] == '\n')
                 LineOffsets.push_back(old_size + 1);
-        if (AutoScroll)
-            ScrollToBottom = true;
     }
 
     void    Draw(const char* title, bool* p_open = NULL)
@@ -3809,9 +3812,7 @@ struct ExampleAppLog
         // Options menu
         if (ImGui::BeginPopup("Options"))
         {
-            if (ImGui::Checkbox("Auto-scroll", &AutoScroll))
-                if (AutoScroll)
-                    ScrollToBottom = true;
+            ImGui::Checkbox("Auto-scroll", &AutoScroll);
             ImGui::EndPopup();
         }
 
@@ -3876,9 +3877,9 @@ struct ExampleAppLog
         }
         ImGui::PopStyleVar();
 
-        if (ScrollToBottom)
+        if (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
             ImGui::SetScrollHereY(1.0f);
-        ScrollToBottom = false;
+
         ImGui::EndChild();
         ImGui::End();
     }
