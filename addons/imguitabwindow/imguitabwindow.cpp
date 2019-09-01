@@ -1244,8 +1244,34 @@ static bool TabButton(const char *label, bool selected, bool *pCloseButtonPresse
 }
 //========================================================================================
 // Main code starts here
-
-
+TabWindow::TabLabel::TabLabel(const TabLabel &o) {
+    // https://github.com/Flix01/imgui/issues/54
+    label = tooltip = userText = NULL;
+    userPtr = NULL;userInt=0;
+    closable = draggable = true;
+    mustCloseNextFrame = false;
+    mustSelectNextFrame = false;
+    wndFlags = 0;
+    modified = false;
+    *this=o;
+}
+TabWindow::TabLabel& TabWindow::TabLabel::operator=(const TabWindow::TabLabel &o) {
+    // https://github.com/Flix01/imgui/issues/54
+    if(this != &o) {
+        userPtr = o.userPtr;
+        userInt = o.userInt;
+        closable = o.closable;
+        draggable = o.draggable;
+        mustCloseNextFrame = o.mustCloseNextFrame;
+        mustSelectNextFrame = o.mustSelectNextFrame;
+        wndFlags = o.wndFlags;
+        modified = o.modified;
+        setLabel(o.label,o.modified);
+        setTooltip(o.tooltip);
+        setUserText(o.userText);
+    }
+    return *this;
+}
 void TabWindow::TabLabel::DestroyTabLabel(TabWindow::TabLabel*& tab)  {
     if (TabWindow::TabLabelDeletingCb) TabWindow::TabLabelDeletingCb(tab);
     tab->~TabLabel();

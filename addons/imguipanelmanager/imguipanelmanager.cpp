@@ -140,6 +140,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     if (window->Appearing)
         SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, true);
 
+    // We allow window memory to be compacted so recreate the base stack when needed.
+        if (window->IDStack.Size == 0)
+            window->IDStack.push_back(window->ID);
+
     // Add to stack
     g.CurrentWindowStack.push_back(window);
     SetCurrentWindow(window);
@@ -210,7 +214,12 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->BeginCount = 0;
         window->ClipRect = ImVec4(-FLT_MAX,-FLT_MAX,+FLT_MAX,+FLT_MAX);
         window->LastFrameActive = current_frame;
+        window->LastTimeActive = (float) g.Time;
         window->IDStack.resize(1);
+
+        // Restore buffer capacity when woken from a compacted state, to avoid
+        if (window->MemoryCompacted)
+            GcAwakeTransientWindowBuffers(window);
 
         // Update stored window name when it changes (which can _only_ happen with the "###" operator, so the ID would stay unchanged).
         // The title bar always display the 'name' parameter, so we only update the string storage if it needs to be visible to the end-user elsewhere.
@@ -227,7 +236,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         // UPDATE CONTENTS SIZE, UPDATE HIDDEN STATUS
 
         // Update contents size from last frame for auto-fitting (or use explicit size)
-        window->ContentSize = CalcContentSize(window);
+        window->ContentSize = CalcWindowContentSize(window);
         if (window->HiddenFramesCanSkipItems > 0)
             window->HiddenFramesCanSkipItems--;
         if (window->HiddenFramesCannotSkipItems > 0)
@@ -347,7 +356,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             window->HiddenFramesCannotSkipItems = 1;
 
         // Calculate auto-fit size, handle automatic resize
-        const ImVec2 size_auto_fit = CalcSizeAutoFit(window, window->ContentSize);
+        const ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, window->ContentSize);
         ImVec2 size_full_modified(FLT_MAX, FLT_MAX);
         if ((flags & ImGuiWindowFlags_AlwaysAutoResize) && !window->Collapsed)
         {
@@ -370,7 +379,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         }
 
         // Apply minimum/maximum window size constraints and final size
-        window->SizeFull = CalcSizeAfterConstraint(window, window->SizeFull);
+        window->SizeFull = CalcWindowSizeAfterConstraint(window, window->SizeFull);
         /*window->Size = window->Collapsed ? window->TitleBarRect().GetSize() : window->SizeFull;
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup))
         {

@@ -306,6 +306,8 @@ protected:
         wndFlags = 0;
         modified = false;
     }
+    TabLabel(const TabLabel& o);
+    TabLabel& operator=(const TabWindow::TabLabel &o);
     virtual ~TabLabel() {
         if (label) {ImGui::MemFree(label);label=NULL;}
         if (tooltip) {ImGui::MemFree(tooltip);tooltip=NULL;}
