@@ -2648,16 +2648,6 @@ class ColorNode : public Node {
 
     ImVec4 Color;       // field
 
-    // Support static method for enumIndex (the signature is the same used by ImGui::Combo(...))
-    static bool GetTextFromEnumIndex(void* ,int value,const char** pTxt) {
-        if (!pTxt) return false;
-        static const char* values[] = {"APPLE","LEMON","ORANGE"};
-        static int numValues = (int)(sizeof(values)/sizeof(values[0]));
-        if (value>=0 && value<numValues) *pTxt = values[value];
-        else *pTxt = "UNKNOWN";
-        return true;
-    }
-
     virtual const char* getTooltip() const {return "ColorNode tooltip.";}
     virtual const char* getInfo() const {return "ColorNode info.\n\nThis is supposed to display some info about this node.";}
     /*virtual void getDefaultTitleBarColors(ImU32& defaultTitleTextColorOut,ImU32& defaultTitleBgColorOut,float& defaultTitleBgColorGradientOut) const {
@@ -2698,7 +2688,7 @@ class CombineNode : public Node {
     CombineNode() : Base() {}
     static const int TYPE = MNT_COMBINE_NODE;
 
-    float fraction;
+    float fraction; // field
 
     virtual const char* getTooltip() const {return "CombineNode tooltip.";}
     virtual const char* getInfo() const {return "CombineNode info.\n\nThis is supposed to display some info about this node.";}
@@ -2961,7 +2951,7 @@ class TextureNode : public Node {
     void onEditField(FieldInfo& /*f*/,int widgetIndex) {
         //fprintf(stderr,"TextureNode::onEditField(\"%s\",%i);\n",f.label,widgetIndex);
         if (widgetIndex==1)         startBrowseDialogNextFrame = true;  // browsing button pressed
-        else if (widgetIndex==0)    processPath(imagePath);             // text edited (= "return" pressed in out case)
+        else if (widgetIndex==0)    processPath(imagePath);             // text edited (= "return" pressed in our case)
     }
     static void StaticEditFieldCallback(FieldInfo& f,int widgetIndex) {
         reinterpret_cast<ThisClass*>(f.userData)->onEditField(f,widgetIndex);
