@@ -3496,6 +3496,10 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
             return false;
     }
 
+    // We ignore Ascii representation of delete (emitted from Backspace on OSX, see #2578, #2817)
+     if (c == 127)
+         return false;
+
     if (c >= 0xE000 && c <= 0xF8FF) // Filter private Unicode range. I don't imagine anybody would want to input them. GLFW on OSX seems to send private characters for special keys like arrow keys.
         return false;
 
