@@ -5,9 +5,8 @@
 #include <imgui.h>
 #endif //IMGUI_API
 
-// This addon is available here:                        https://gist.github.com/Flix01/2cdf1db8d936100628c0
-// and is bundled in the "ImGui Addons Branch" here:    https://github.com/Flix01/imgui/tree/2015-10-Addons
-// Wiki about the "ImGui Addons Branch" is here:        https://github.com/Flix01/imgui/wiki/ImGui-Addons-Branch-Home
+// This addon is bundled in the "ImGui Addons Branch" here: https://github.com/Flix01/imgui/tree/imgui_with_addons
+// Wiki about the "ImGui Addons Branch" is here:			https://github.com/Flix01/imgui/wiki/ImGui-Addons-Branch-Home
 
 
 // USAGE:

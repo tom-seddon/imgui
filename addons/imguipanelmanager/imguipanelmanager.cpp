@@ -95,7 +95,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     const ImGuiStyle& style = g.Style;
     IM_ASSERT(name != NULL && name[0] != '\0');                        // Window name required
     IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
-    IM_ASSERT(g.FrameScopeActive);                  // Forgot to call ImGui::NewFrame()
+    IM_ASSERT(g.WithinFrameScope);                  // Forgot to call ImGui::NewFrame()
     IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // Called ImGui::Render() or ImGui::EndFrame() and haven't called ImGui::NewFrame() again yet
 
     // Find or create
@@ -147,7 +147,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     // Add to stack
     g.CurrentWindowStack.push_back(window);
     SetCurrentWindow(window);
-    CheckStacksSize(window, true);
+    ErrorCheckBeginEndCompareStacksSize(window, true);
     if (flags & ImGuiWindowFlags_Popup)
     {
         ImGuiPopupData& popup_ref = g.OpenPopupStack[g.BeginPopupStack.Size];
@@ -715,10 +715,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         }
 
         // Update ContentsRegionMax. All the variable it depends on are set above in this function.
-        window->ContentsRegionRect.Min.x = -window->Scroll.x + window->WindowPadding.x;
-        window->ContentsRegionRect.Min.y = -window->Scroll.y + window->WindowPadding.y + window->TitleBarHeight() + window->MenuBarHeight();
-        window->ContentsRegionRect.Max.x = -window->Scroll.x - window->WindowPadding.x + (window->ContentSizeExplicit.x != 0.0f ? window->ContentSizeExplicit.x : (window->Size.x - window->ScrollbarSizes.x));
-        window->ContentsRegionRect.Max.y = -window->Scroll.y - window->WindowPadding.y + (window->ContentSizeExplicit.y != 0.0f ? window->ContentSizeExplicit.y : (window->Size.y - window->ScrollbarSizes.y));
+        window->ContentRegionRect.Min.x = -window->Scroll.x + window->WindowPadding.x;
+        window->ContentRegionRect.Min.y = -window->Scroll.y + window->WindowPadding.y + window->TitleBarHeight() + window->MenuBarHeight();
+        window->ContentRegionRect.Max.x = -window->Scroll.x - window->WindowPadding.x + (window->ContentSizeExplicit.x != 0.0f ? window->ContentSizeExplicit.x : (window->Size.x - window->ScrollbarSizes.x));
+        window->ContentRegionRect.Max.y = -window->Scroll.y - window->WindowPadding.y + (window->ContentSizeExplicit.y != 0.0f ? window->ContentSizeExplicit.y : (window->Size.y - window->ScrollbarSizes.y));
 
         // Setup drawing context
         // (NB: That term "drawing context / DC" lost its meaning a long time ago. Initially was meant to hold transient data only. Nowadays difference between window-> and window->DC-> is dubious.)
@@ -973,7 +973,7 @@ static void DockWindowEnd()
     g.CurrentWindowStack.pop_back();
     if (window->Flags & ImGuiWindowFlags_Popup)
         g.BeginPopupStack.pop_back();
-    CheckStacksSize(window, false);
+    ErrorCheckBeginEndCompareStacksSize(window, false);
     SetCurrentWindow(g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back());
 }
 

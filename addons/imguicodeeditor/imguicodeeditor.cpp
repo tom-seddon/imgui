@@ -3864,7 +3864,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     }
 
     const bool user_clicked = hovered && io.MouseClicked[0];
-    const bool user_scrolled = g.ActiveId == 0 && state != NULL && g.ActiveIdPreviousFrame == GetScrollbarID(draw_window, ImGuiAxis_Y);
+    const bool user_scrolled = g.ActiveId == 0 && state != NULL && g.ActiveIdPreviousFrame == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
     const bool user_nav_input_start = (g.ActiveId != id) && ((g.NavInputId == id) || (g.NavActivateId == id && g.NavInputSource == ImGuiInputSource_NavKeyboard));
 
     bool clear_active_id = false;
@@ -4286,7 +4286,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x, frame_bb.Min.y + size.y); // Not using frame_bb.Max because we have adjusted size
     ImVec2 draw_pos = draw_window->DC.CursorPos;
 
-    const bool canModifyText = g.ActiveId == id || (state != NULL && g.ActiveId == GetScrollbarID(draw_window, ImGuiAxis_Y));
+    const bool canModifyText = g.ActiveId == id || (state != NULL && g.ActiveId == GetWindowScrollbarID(draw_window, ImGuiAxis_Y));
     ImVec2 cursor_offset(0,0),draw_scroll(0,0);
     if (canModifyText)
     {

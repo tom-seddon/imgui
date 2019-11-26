@@ -1916,7 +1916,7 @@ void ImImpl_NewFramePaused()    {
     IM_ASSERT(g.Initialized);
     g.Time += g.IO.DeltaTime;
 
-    g.FrameScopeActive = true;  // Is this necessary ?
+    g.WithinFrameScope = true;  // Is this necessary ?
     //g.FrameCount += 1;  // Not sure this is correct
     g.TooltipOverrideCount = 0;
     g.WindowsActiveCount = 0;
