@@ -159,6 +159,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     if (window_just_appearing_after_hidden_for_resize && !(flags & ImGuiWindowFlags_ChildWindow))
         window->NavLastIds[0] = 0;
 
+    // Update ->RootWindow and others pointers (before any possible call to FocusWindow)
+    if (first_begin_of_the_frame)
+        UpdateWindowParentAndRootLinks(window, flags, parent_window);
+
     // Process SetNextWindow***() calls
     bool window_pos_set_by_api = false;
     bool window_size_x_set_by_api = false, window_size_y_set_by_api = false;
@@ -206,7 +210,6 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     {
         // Initialize
         const bool window_is_child_tooltip = (flags & ImGuiWindowFlags_ChildWindow) && (flags & ImGuiWindowFlags_Tooltip); // FIXME-WIP: Undocumented behavior of Child+Tooltip for pinned tooltip (#1345)
-        UpdateWindowParentAndRootLinks(window, flags, parent_window);
 
         window->Active = true;
         window->BeginOrderWithinParent = 0;
@@ -747,10 +750,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->DC.TextWrapPosStack.resize(0);
         window->DC.CurrentColumns = NULL;
         window->DC.TreeDepth = 0;
-        window->DC.TreeMayJumpToParentOnPopMask = 0x00;
+        window->DC.TreeJumpToParentOnPopMask = 0x00;
         window->DC.StateStorage = &window->StateStorage;
         window->DC.GroupStack.resize(0);
-        window->MenuColumns.Update(3, style.ItemSpacing.x, window_just_activated_by_user);
+        window->DC.MenuColumns.Update(3, style.ItemSpacing.x, window_just_activated_by_user);
 
         if ((flags & ImGuiWindowFlags_ChildWindow) && (window->DC.ItemFlags != parent_window->DC.ItemFlags))
         {

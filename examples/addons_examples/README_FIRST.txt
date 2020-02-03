@@ -37,7 +37,7 @@ cl /O2 /MT /I"../../" /I"../libs/gl3w/" ../libs/gl3w/GL/gl3w.c ../../imgui.cpp .
 # With DIRECT3D9:	-> This should work with no dependencies <-
 cl /nologo /O2 /MT /I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_DIRECT3D9_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /link /out:imgui_addons_example1.exe d3d9.lib d3dx9.lib gdi32.lib Shell32.lib advapi32.lib user32.lib kernel32.lib
 # With GLFW3 + GLEW static:
-cl /nologo /O2 /MT /I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLEW_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /link /out:imgui_addons_example1.exe glfw3.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
+cl /nologo /O2 /MT /I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLFW_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /link /out:imgui_addons_example1.exe glfw3.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # TODO: Add the last command-line for SDL2
 
 P.S. currently GLEW is required to compile all the Windows bindings except Direct3D9.

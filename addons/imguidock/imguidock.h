@@ -33,7 +33,8 @@ SOFTWARE.
         // Outside any ImGuiWindow:
 
         // Windowed:
-        if (ImGui::Begin("imguidock window (= lumix engine's dock system)",NULL,ImVec2(500, 500),0.95f,ImGuiWindowFlags_NoScrollbar)) {
+		ImGui::SetNextWindowSize(ImVec2(500, 500),ImGuiCond_Once);        
+        if (ImGui::Begin("imguidock window (= lumix engine's dock system)",NULL,ImGuiWindowFlags_NoScrollbar)) {
             ImGui::BeginDockspace();
             static char tmp[128];
             for (int i=0;i<10;i++)  {
@@ -50,10 +51,11 @@ SOFTWARE.
 
 
         // Fullscreen (without visual artifacts):
+		ImGui::SetNextWindowPos(ImVec2(0,0));        
         ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
         const ImGuiWindowFlags flags =  (ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar);
         const float oldWindowRounding = ImGui::GetStyle().WindowRounding;ImGui::GetStyle().WindowRounding = 0;
-        const bool visible = ImGui::Begin("imguidock window (= lumix engine's dock system)",NULL,ImVec2(0, 0),1.0f,flags);
+        const bool visible = ImGui::Begin("imguidock window (= lumix engine's dock system)",NULL,flags);
         ImGui::GetStyle().WindowRounding = oldWindowRounding;
         if (visible) {
             ImGui::BeginDockspace();

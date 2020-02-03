@@ -279,6 +279,8 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
                 else if (styleEnumNum==ImGuiStyle_CorporateGreyFlat) ImGui::SetTooltip("%s","\"CorporateGreyFlat\"\nPosted by @malamanteau here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
                 else if (styleEnumNum==ImGuiStyle_CorporateGreyFramed) ImGui::SetTooltip("%s","\"CorporateGreyFramed\"\nPosted by @malamanteau here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
                 else if (styleEnumNum==ImGuiStyle_VisualDark) ImGui::SetTooltip("%s","\"VisualDark\"\nPosted by @mnurzia here:\nhttps://github.com/ocornut/imgui/issues/2529\n(hope I can use it)");
+                else if (styleEnumNum==ImGuiStyle_SteamingLife) ImGui::SetTooltip("%s","\"SteamingLife\"\nPosted by @metasprite here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
+                else if (styleEnumNum==ImGuiStyle_SoftLife) ImGui::SetTooltip("%s","\"SoftLife\"\nA quick variation of the \"SteamingLife\" style.");
             }
             ImGui::Spacing();ImGui::Separator();ImGui::Spacing();
 #           endif // IMGUISTYLESERIALIZER_H_

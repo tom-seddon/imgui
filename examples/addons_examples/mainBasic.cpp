@@ -11,7 +11,8 @@ void DrawGL()	// Mandatory
    		ImImpl_ClearColorBuffer(ImVec4(0.6f, 0.6f, 0.6f, 1.0f));    // Warning: it does not clear the depth buffer
 
         static bool open = true;
-        ImGui::Begin("Debug", &open, ImVec2(300,300)); 
+		ImGui::SetNextWindowSize(ImVec2(300,300),ImGuiCond_Once);        
+        ImGui::Begin("Debug", &open, 0); 
         ImGui::Text("Hello, world!");
 		ImGui::End();
 

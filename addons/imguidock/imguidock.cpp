@@ -808,7 +808,7 @@ struct DockContext
                     m_next_parent = dock_tab;
                 }
 
-                if (IsItemActive() && IsMouseDragging())
+                if (IsItemActive() && IsMouseDragging(0))
                 {
                     m_drag_offset = GetMousePos() - dock_tab->pos;
                     doUndock(*dock_tab);
