@@ -1,4 +1,4 @@
-// dear imgui, v1.76 WIP
+// dear imgui, v1.77 WIP
 // (widgets code)
 
 /*
@@ -391,8 +391,10 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
 // - ArrowButton()
 // - CloseButton() [Internal]
 // - CollapseButton() [Internal]
-// - ScrollbarEx() [Internal]
+// - GetWindowScrollbarID() [Internal]
+// - GetWindowScrollbarRect() [Internal]
 // - Scrollbar() [Internal]
+// - ScrollbarEx() [Internal]
 // - Image()
 // - ImageButton()
 // - Checkbox()
@@ -484,7 +486,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     if (id != 0 && window->DC.LastItemId != id)
-        ImGuiTestEngineHook_ItemAdd(&g, bb, id);
+        IMGUI_TEST_ENGINE_ITEM_ADD(bb, id);
 #endif
 
     bool pressed = false;
@@ -498,11 +500,13 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     if (g.DragDropActive && (flags & ImGuiButtonFlags_PressedOnDragDropHold) && !(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoHoldToOpenOthers))
         if (IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
         {
+            const float DRAG_DROP_HOLD_TIMER = 0.70f;
             hovered = true;
             SetHoveredID(id);
-            if (CalcTypematicRepeatAmount(g.HoveredIdTimer + 0.0001f - g.IO.DeltaTime, g.HoveredIdTimer + 0.0001f, 0.70f, 0.00f))
+            if (CalcTypematicRepeatAmount(g.HoveredIdTimer + 0.0001f - g.IO.DeltaTime, g.HoveredIdTimer + 0.0001f, DRAG_DROP_HOLD_TIMER, 0.00f))
             {
                 pressed = true;
+                g.DragDropHoldJustPressedId = id;
                 FocusWindow(window);
             }
         }
@@ -812,6 +816,49 @@ ImGuiID ImGui::GetWindowScrollbarID(ImGuiWindow* window, ImGuiAxis axis)
     return window->GetIDNoKeepAlive(axis == ImGuiAxis_X ? "#SCROLLX" : "#SCROLLY");
 }
 
+// Return scrollbar rectangle, must only be called for corresponding axis if window->ScrollbarX/Y is set.
+ImRect ImGui::GetWindowScrollbarRect(ImGuiWindow* window, ImGuiAxis axis)
+{
+    const ImRect outer_rect = window->Rect();
+    const ImRect inner_rect = window->InnerRect;
+    const float border_size = window->WindowBorderSize;
+    const float scrollbar_size = window->ScrollbarSizes[axis ^ 1]; // (ScrollbarSizes.x = width of Y scrollbar; ScrollbarSizes.y = height of X scrollbar)
+    IM_ASSERT(scrollbar_size > 0.0f);
+    if (axis == ImGuiAxis_X)
+        return ImRect(inner_rect.Min.x, ImMax(outer_rect.Min.y, outer_rect.Max.y - border_size - scrollbar_size), inner_rect.Max.x, outer_rect.Max.y);
+    else
+        return ImRect(ImMax(outer_rect.Min.x, outer_rect.Max.x - border_size - scrollbar_size), inner_rect.Min.y, outer_rect.Max.x, inner_rect.Max.y);
+}
+
+void ImGui::Scrollbar(ImGuiAxis axis)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    const ImGuiID id = GetWindowScrollbarID(window, axis);
+    KeepAliveID(id);
+
+    // Calculate scrollbar bounding box
+    ImRect bb = GetWindowScrollbarRect(window, axis);
+    ImDrawCornerFlags rounding_corners = 0;
+    if (axis == ImGuiAxis_X)
+    {
+        rounding_corners |= ImDrawCornerFlags_BotLeft;
+        if (!window->ScrollbarY)
+            rounding_corners |= ImDrawCornerFlags_BotRight;
+    }
+    else
+    {
+        if ((window->Flags & ImGuiWindowFlags_NoTitleBar) && !(window->Flags & ImGuiWindowFlags_MenuBar))
+            rounding_corners |= ImDrawCornerFlags_TopRight;
+        if (!window->ScrollbarX)
+            rounding_corners |= ImDrawCornerFlags_BotRight;
+    }
+    float size_avail = window->InnerRect.Max[axis] - window->InnerRect.Min[axis];
+    float size_contents = window->ContentSize[axis] + window->WindowPadding[axis] * 2.0f;
+    ScrollbarEx(bb, id, axis, &window->Scroll[axis], size_avail, size_contents, rounding_corners);
+}
+
 // Vertical/Horizontal scrollbar
 // The entire piece of code below is rather confusing because:
 // - We handle absolute seeking (when first clicking outside the grab) and relative manipulation (afterward or when clicking inside the grab)
@@ -830,7 +877,7 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, floa
     if (bb_frame_width <= 0.0f || bb_frame_height <= 0.0f)
         return false;
 
-    // When we are too small, start hiding and disabling the grab (this reduce visual noise on very small window and facilitate using the resize grab)
+    // When we are too small, start hiding and disabling the grab (this reduce visual noise on very small window and facilitate using the window resize grab)
     float alpha = 1.0f;
     if ((axis == ImGuiAxis_Y) && bb_frame_height < g.FontSize + g.Style.FramePadding.y * 2.0f)
         alpha = ImSaturate((bb_frame_height - g.FontSize) / (g.Style.FramePadding.y * 2.0f));
@@ -839,13 +886,12 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, floa
 
     const ImGuiStyle& style = g.Style;
     const bool allow_interaction = (alpha >= 1.0f);
-    const bool horizontal = (axis == ImGuiAxis_X);
 
     ImRect bb = bb_frame;
     bb.Expand(ImVec2(-ImClamp(IM_FLOOR((bb_frame_width - 2.0f) * 0.5f), 0.0f, 3.0f), -ImClamp(IM_FLOOR((bb_frame_height - 2.0f) * 0.5f), 0.0f, 3.0f)));
 
     // V denote the main, longer axis of the scrollbar (= height for a vertical scrollbar)
-    const float scrollbar_size_v = horizontal ? bb.GetWidth() : bb.GetHeight();
+    const float scrollbar_size_v = (axis == ImGuiAxis_X) ? bb.GetWidth() : bb.GetHeight();
 
     // Calculate the height of our grabbable box. It generally represent the amount visible (vs the total scrollable amount)
     // But we maintain a minimum size in pixel to allow for the user to still aim inside.
@@ -861,11 +907,11 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, floa
 
     float scroll_max = ImMax(1.0f, size_contents_v - size_avail_v);
     float scroll_ratio = ImSaturate(*p_scroll_v / scroll_max);
-    float grab_v_norm = scroll_ratio * (scrollbar_size_v - grab_h_pixels) / scrollbar_size_v;
+    float grab_v_norm = scroll_ratio * (scrollbar_size_v - grab_h_pixels) / scrollbar_size_v; // Grab position in normalized space
     if (held && allow_interaction && grab_h_norm < 1.0f)
     {
-        float scrollbar_pos_v = horizontal ? bb.Min.x : bb.Min.y;
-        float mouse_pos_v = horizontal ? g.IO.MousePos.x : g.IO.MousePos.y;
+        float scrollbar_pos_v = bb.Min[axis];
+        float mouse_pos_v = g.IO.MousePos[axis];
 
         // Click position in scrollbar normalized space (0.0f->1.0f)
         const float clicked_v_norm = ImSaturate((mouse_pos_v - scrollbar_pos_v) / scrollbar_size_v);
@@ -882,7 +928,7 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, floa
                 g.ScrollbarClickDeltaToGrabCenter = clicked_v_norm - grab_v_norm - grab_h_norm * 0.5f;
         }
 
-        // Apply scroll
+        // Apply scroll (p_scroll_v will generally point on one member of window->Scroll)
         // It is ok to modify Scroll here because we are being called in Begin() after the calculation of ContentSize and before setting up our starting position
         const float scroll_v_norm = ImSaturate((clicked_v_norm - g.ScrollbarClickDeltaToGrabCenter - grab_h_norm * 0.5f) / (1.0f - grab_h_norm));
         *p_scroll_v = IM_ROUND(scroll_v_norm * scroll_max);//(win_size_contents_v - win_size_v));
@@ -897,48 +943,17 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, floa
     }
 
     // Render
-    window->DrawList->AddRectFilled(bb_frame.Min, bb_frame.Max, GetColorU32(ImGuiCol_ScrollbarBg), window->WindowRounding, rounding_corners);
+    const ImU32 bg_col = GetColorU32(ImGuiCol_ScrollbarBg);
     const ImU32 grab_col = GetColorU32(held ? ImGuiCol_ScrollbarGrabActive : hovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab, alpha);
+    window->DrawList->AddRectFilled(bb_frame.Min, bb_frame.Max, bg_col, window->WindowRounding, rounding_corners);
     ImRect grab_rect;
-    if (horizontal)
+    if (axis == ImGuiAxis_X)
         grab_rect = ImRect(ImLerp(bb.Min.x, bb.Max.x, grab_v_norm), bb.Min.y, ImLerp(bb.Min.x, bb.Max.x, grab_v_norm) + grab_h_pixels, bb.Max.y);
     else
         grab_rect = ImRect(bb.Min.x, ImLerp(bb.Min.y, bb.Max.y, grab_v_norm), bb.Max.x, ImLerp(bb.Min.y, bb.Max.y, grab_v_norm) + grab_h_pixels);
     window->DrawList->AddRectFilled(grab_rect.Min, grab_rect.Max, grab_col, style.ScrollbarRounding);
 
     return held;
-}
-
-void ImGui::Scrollbar(ImGuiAxis axis)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    const ImGuiID id = GetWindowScrollbarID(window, axis);
-    KeepAliveID(id);
-
-    // Calculate scrollbar bounding box
-    const ImRect outer_rect = window->Rect();
-    const ImRect inner_rect = window->InnerRect;
-    const float border_size = window->WindowBorderSize;
-    const float scrollbar_size = window->ScrollbarSizes[axis ^ 1];
-    IM_ASSERT(scrollbar_size > 0.0f);
-    const float other_scrollbar_size = window->ScrollbarSizes[axis];
-    ImDrawCornerFlags rounding_corners = (other_scrollbar_size <= 0.0f) ? ImDrawCornerFlags_BotRight : 0;
-    ImRect bb;
-    if (axis == ImGuiAxis_X)
-    {
-        bb.Min = ImVec2(inner_rect.Min.x, ImMax(outer_rect.Min.y, outer_rect.Max.y - border_size - scrollbar_size));
-        bb.Max = ImVec2(inner_rect.Max.x, outer_rect.Max.y);
-        rounding_corners |= ImDrawCornerFlags_BotLeft;
-    }
-    else
-    {
-        bb.Min = ImVec2(ImMax(outer_rect.Min.x, outer_rect.Max.x - border_size - scrollbar_size), inner_rect.Min.y);
-        bb.Max = ImVec2(outer_rect.Max.x, window->InnerRect.Max.y);
-        rounding_corners |= ((window->Flags & ImGuiWindowFlags_NoTitleBar) && !(window->Flags & ImGuiWindowFlags_MenuBar)) ? ImDrawCornerFlags_TopRight : 0;
-    }
-    ScrollbarEx(bb, id, axis, &window->Scroll[axis], inner_rect.Max[axis] - inner_rect.Min[axis], window->ContentSize[axis] + window->WindowPadding[axis] * 2.0f, rounding_corners);
 }
 
 void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
@@ -1119,6 +1134,7 @@ bool ImGui::RadioButton(const char* label, bool active)
     if (label_size.x > 0.0f)
         RenderText(ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y), label);
 
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags);
     return pressed;
 }
 
@@ -2329,7 +2345,7 @@ float ImGui::SliderCalcRatioFromValueT(ImGuiDataType data_type, TYPE v, TYPE v_m
     return (float)((FLOATTYPE)(v_clamped - v_min) / (FLOATTYPE)(v_max - v_min));
 }
 
-// FIXME: Move some of the code into SliderBehavior(). Current responsability is larger than what the equivalent DragBehaviorT<> does, we also do some rendering, etc.
+// FIXME: Move some of the code into SliderBehavior(). Current responsibility is larger than what the equivalent DragBehaviorT<> does, we also do some rendering, etc.
 template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
 bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, TYPE* v, const TYPE v_min, const TYPE v_max, const char* format, float power, ImGuiSliderFlags flags, ImRect* out_grab_bb)
 {
@@ -2926,7 +2942,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
     if ((flags & (ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsScientific)) == 0)
         flags |= ImGuiInputTextFlags_CharsDecimal;
     flags |= ImGuiInputTextFlags_AutoSelectAll;
-    flags |= ImGuiInputTextFlags_NoMarkEdited;  // We call MarkItemEdited() ourselve by comparing the actual data rather than the string.
+    flags |= ImGuiInputTextFlags_NoMarkEdited;  // We call MarkItemEdited() ourselves by comparing the actual data rather than the string.
 
     if (p_step != NULL)
     {
@@ -3344,7 +3360,7 @@ void ImGuiInputTextCallbackData::InsertChars(int pos, const char* new_text, cons
         if (!is_resizable)
             return;
 
-        // Contrary to STB_TEXTEDIT_INSERTCHARS() this is working in the UTF8 buffer, hence the midly similar code (until we remove the U16 buffer alltogether!)
+        // Contrary to STB_TEXTEDIT_INSERTCHARS() this is working in the UTF8 buffer, hence the mildly similar code (until we remove the U16 buffer altogether!)
         ImGuiContext& g = *GImGui;
         ImGuiInputTextState* edit_state = &g.InputTextState;
         IM_ASSERT(edit_state->ID != 0 && g.ActiveId == edit_state->ID);
@@ -4729,7 +4745,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         if (flags & ImGuiColorEditFlags_DisplayRGB || (flags & ImGuiColorEditFlags__DisplayMask) == 0)
             if (ColorEdit4("##rgb", col, sub_flags | ImGuiColorEditFlags_DisplayRGB))
             {
-                // FIXME: Hackily differenciating using the DragInt (ActiveId != 0 && !ActiveIdAllowOverlap) vs. using the InputText or DropTarget.
+                // FIXME: Hackily differentiating using the DragInt (ActiveId != 0 && !ActiveIdAllowOverlap) vs. using the InputText or DropTarget.
                 // For the later we don't want to run the hue-wrap canceling code. If you are well versed in HSV picker please provide your input! (See #2050)
                 value_changed_fix_hue_wrap = (g.ActiveId != 0 && !g.ActiveIdAllowOverlap);
                 value_changed = true;
@@ -5344,13 +5360,14 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // - Double-click on label = Toggle on MouseDoubleClick (when _OpenOnDoubleClick=1)
     // - Double-click on arrow = Toggle on MouseDoubleClick (when _OpenOnDoubleClick=1 and _OpenOnArrow=0)
     // This makes _OpenOnArrow have a subtle effect on _OpenOnDoubleClick: arrow click reacts on Down rather than Up.
-    // It is rather standard that arrow click react on Down rather than Up and we'd be tempted to make it the default 
-    // (by removing the _OpenOnArrow test below), however this would have a perhaps surprising effect on CollapsingHeader()? 
+    // It is rather standard that arrow click react on Down rather than Up and we'd be tempted to make it the default
+    // (by removing the _OpenOnArrow test below), however this would have a perhaps surprising effect on CollapsingHeader()?
     // So right now we are making this optional. May evolve later.
+    // We set ImGuiButtonFlags_PressedOnClickRelease on OpenOnDoubleClick because we want the item to be active on the initial MouseDown in order for drag and drop to work.
     if (is_mouse_x_over_arrow && (flags & ImGuiTreeNodeFlags_OpenOnArrow))
         button_flags |= ImGuiButtonFlags_PressedOnClick;
     else if (flags & ImGuiTreeNodeFlags_OpenOnDoubleClick)
-        button_flags |= ImGuiButtonFlags_PressedOnDoubleClick;
+        button_flags |= ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnDoubleClick;
     else
         button_flags |= ImGuiButtonFlags_PressedOnClickRelease;
 
@@ -5362,7 +5379,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     bool toggled = false;
     if (!is_leaf)
     {
-        if (pressed)
+        if (pressed && g.DragDropHoldJustPressedId != id)
         {
             if ((flags & (ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick)) == 0 || (g.NavActivateId == id))
                 toggled = true;
@@ -5370,8 +5387,12 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
                 toggled |= is_mouse_x_over_arrow && !g.NavDisableMouseHover; // Lightweight equivalent of IsMouseHoveringRect() since ButtonBehavior() already did the job
             if ((flags & ImGuiTreeNodeFlags_OpenOnDoubleClick) && g.IO.MouseDoubleClicked[0])
                 toggled = true;
-            if (g.DragDropActive && is_open) // When using Drag and Drop "hold to open" we keep the node highlighted after opening, but never close it again.
-                toggled = false;
+        }
+        else if (pressed && g.DragDropHoldJustPressedId == id)
+        {
+            IM_ASSERT(button_flags & ImGuiButtonFlags_PressedOnDragDropHold);
+            if (!is_open) // When using Drag and Drop "hold to open" we keep the node highlighted after opening, but never close it again.
+                toggled = true;
         }
 
         if (g.NavId == id && g.NavMoveRequest && g.NavMoveDir == ImGuiDir_Left && is_open)
@@ -5472,7 +5493,8 @@ void ImGui::TreePush(const void* ptr_id)
 
 void ImGui::TreePushOverrideID(ImGuiID id)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     Indent();
     window->DC.TreeDepth++;
     window->IDStack.push_back(id);
@@ -5948,7 +5970,7 @@ int ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_get
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, inner_bb.Min.y), label);
 
-    // Return hovered index or -1 if none are hovered. 
+    // Return hovered index or -1 if none are hovered.
     // This is currently not exposed in the public API because we need a larger redesign of the whole thing, but in the short-term we are making it available in PlotEx().
     return idx_hovered;
 }
@@ -6227,7 +6249,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         g.NavWindow = window;  // Odd hack to allow hovering across menus of a same menu-set (otherwise we wouldn't be able to hover parent)
 
     // The reference position stored in popup_pos will be used by Begin() to find a suitable position for the child menu,
-    // However the final position is going to be different! It is choosen by FindBestWindowPosForPopup().
+    // However the final position is going to be different! It is chosen by FindBestWindowPosForPopup().
     // e.g. Menus tend to overlap each other horizontally to amplify relative Z-ordering.
     ImVec2 popup_pos, pos = window->DC.CursorPos;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
@@ -7010,6 +7032,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     const ImGuiID id = TabBarCalcTabID(tab_bar, label);
 
     // If the user called us with *p_open == false, we early out and don't render. We make a dummy call to ItemAdd() so that attempts to use a contextual popup menu with an implicit ID won't use an older ID.
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags);
     if (p_open && !*p_open)
     {
         PushItemFlag(ImGuiItemFlags_NoNav | ImGuiItemFlags_NoNavDefaultFocus, true);
