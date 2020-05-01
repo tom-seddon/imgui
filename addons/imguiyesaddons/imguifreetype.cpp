@@ -274,7 +274,7 @@ bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 extra_flags=0,const ImVector<ImU3
     IM_ASSERT(atlas->ConfigData.Size > 0);
     IM_ASSERT(atlas->TexGlyphPadding == 1); // Not supported
 
-    ImFontAtlasBuildRegisterDefaultCustomRects(atlas);
+    ImFontAtlasBuildInit(atlas);
 
     atlas->TexID = NULL;
     atlas->TexWidth = atlas->TexHeight = 0;

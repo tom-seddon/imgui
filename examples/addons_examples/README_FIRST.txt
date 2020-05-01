@@ -395,22 +395,22 @@ so that when a filesystem dialog is open, you can hold CTRL down and right-click
 ================================================
 FAQ: HOW TO RUN THE (LOCAL) HTML DEMOS
 ================================================
-If the html demos (in the html subfolder) don't run in your browser:
-->  see if the demos work when they are hosted on a web server. Try these links:
+The html demos (in the html subfolder) don't run in the browser simply by clicking on them:
+they work only when served (or hosted) by a webserver.
+->  To run them online, please try these links:
     https://rawgit.com/Flix01/imgui/imgui_with_addons/examples/addons_examples/html/main.html
     https://rawgit.com/Flix01/imgui/imgui_with_addons/examples/addons_examples/html/main2.html
     https://rawgit.com/Flix01/imgui/imgui_with_addons/examples/addons_examples/html/main3.html
-    If they work they should work locally if you use the Firefox web browser.
-    On other browsers you may get exceptions that, in the Javascript console, look like: "XMLHttpRequest cannot load".
-    Here is how to solve them (from the emscripten docs):
-    "Unfortunately Chrome and Internet Explorer do not support file:// XHR requests, and can’t directly load the local
-    file in which preloaded data is stored. For these browsers you’ll need to serve the files using a webserver.
-    The easiest way to do this is to use the python SimpleHTTPServer"
-    (in a console/terminal opened in the html subfolder type: python -m SimpleHTTPServer 8080 
-	and then open http://localhost:8080/main.html from your browser).
-	Another way of making it work locally is to use the emrun program from a console/terminal opened 
-	in the html subfolder: emrun main.html	[Never tested, but it should work better.]
-
-->  otherwise it must be something related to your system or the configuration of your browser.
-
+->  To run them locally you'll need to serve the files using a webserver manually.
+    The easiest way to do this is to use the python http server.
+    ->  In a console/terminal opened in the html subfolder type:
+        with python2:
+            python  -m SimpleHTTPServer 8080
+        or with python3:
+            python3 -m http.server 8080
+        and then type:
+            http://localhost:8080/main.html
+        in your browser (and http://localhost:8080/main2.html for main2.html of course).
+    ->  Another way of making it work locally is to use the emrun program from a console/terminal opened
+        in the html subfolder: emrun main.html	[Never tested]
 
