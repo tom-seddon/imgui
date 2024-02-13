@@ -98,6 +98,8 @@
 #include <emscripten/html5.h>
 #endif
 
+#include "imgui_internal.h"
+
 // We gather version tests as define in order to easily see which features are version-dependent.
 #define GLFW_VERSION_COMBINED           (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 + GLFW_VERSION_REVISION)
 #ifdef GLFW_RESIZE_NESW_CURSOR          // Let's be nice to people who pulled GLFW between 2019-04-16 (3.4 define) and 2019-11-29 (cursors defines) // FIXME: Remove when GLFW 3.4 is released?
@@ -390,6 +392,11 @@ void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int keycode, int scancode, i
     ImGuiKey imgui_key = ImGui_ImplGlfw_KeyToImGuiKey(keycode);
     io.AddKeyEvent(imgui_key, (action == GLFW_PRESS));
     io.SetKeyEventNativeData(imgui_key, keycode, scancode); // To support legacy indexing (<1.87 user code)
+
+    if (imgui_key == ImGuiKey_None)
+        IMGUI_DEBUG_LOG("Key Scancode:%d Keycode:%d = *UNHANDLED\n", scancode, keycode);
+    else
+        IMGUI_DEBUG_LOG("Key Scancode:%d Keycode:%d = '%s'\n", scancode, keycode, ImGui::GetKeyName(imgui_key));
 }
 
 void ImGui_ImplGlfw_WindowFocusCallback(GLFWwindow* window, int focused)

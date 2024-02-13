@@ -93,6 +93,8 @@
 #include <TargetConditionals.h>
 #endif
 
+#include "imgui_internal.h"
+
 #if SDL_VERSION_ATLEAST(2,0,4) && !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !(defined(__APPLE__) && TARGET_OS_IOS) && !defined(__amigaos4__)
 #define SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE    1
 #else
@@ -355,6 +357,10 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
             ImGuiKey key = ImGui_ImplSDL2_KeycodeToImGuiKey(event->key.keysym.sym);
             io.AddKeyEvent(key, (event->type == SDL_KEYDOWN));
             io.SetKeyEventNativeData(key, event->key.keysym.sym, event->key.keysym.scancode, event->key.keysym.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
+            if (key == ImGuiKey_None)
+                IMGUI_DEBUG_LOG("Key: Scancode=%d, Keycode=%d (%08X) *UNHANDLED*\n", event->key.keysym.scancode, event->key.keysym.sym, event->key.keysym.sym);
+            else
+                IMGUI_DEBUG_LOG("Key: Scancode=%d, Keycode=%d (%08X) = '%s'\n", event->key.keysym.scancode, event->key.keysym.sym, event->key.keysym.sym, ImGui::GetKeyName(key));
             return true;
         }
         case SDL_WINDOWEVENT:

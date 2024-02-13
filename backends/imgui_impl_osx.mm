@@ -26,6 +26,7 @@
 #import <Carbon/Carbon.h>
 #import <GameController/GameController.h>
 #import <time.h>
+#include "imgui_internal.h"
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
@@ -737,6 +738,11 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         ImGuiKey key = ImGui_ImplOSX_KeyCodeToImGuiKey(key_code);
         io.AddKeyEvent(key, event.type == NSEventTypeKeyDown);
         io.SetKeyEventNativeData(key, key_code, -1); // To support legacy indexing (<1.87 user code)
+        
+        if (key == ImGuiKey_None)
+            IMGUI_DEBUG_LOG("Key: Key code = 0x%x, *UNHANDLED*\n", key_code);
+        else
+            IMGUI_DEBUG_LOG("Key: Key code = 0x%x, '%s'\n", key_code, ImGui::GetKeyName(key));
 
         return io.WantCaptureKeyboard;
     }
