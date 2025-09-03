@@ -980,6 +980,14 @@ static void DemoWindowWidgetsBasic()
             static int i0 = 123;
             ImGui::InputInt("input int", &i0);
 
+            static int i1=124;
+            int tmp=i1;//i.e., call getter
+            if(ImGui::InputInt("input int (2)",&tmp)){
+                if(ImGui::IsItemDeactivatedAfterEdit()){
+                    i1=tmp;//i.e., call setter
+                }
+            }
+
             static float f0 = 0.001f;
             ImGui::InputFloat("input float", &f0, 0.01f, 1.0f, "%.3f");
 
